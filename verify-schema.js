@@ -1,0 +1,11 @@
+const fs = require('fs');
+const c = fs.readFileSync('prisma/schema.prisma', 'utf8');
+const lines = c.split('\n');
+const rels = lines.filter(l => l.includes('@relation'));
+console.log('@relation remaining:', rels.length);
+const userIdLines = lines.filter(l => l.includes('user_id Int'));
+console.log('user_id Int lines:', userIdLines.length);
+console.log('Sample:', userIdLines[0]);
+const nonAscii = lines.filter(l => /[^\u0009\u000a\u000d\u0020-\u007e]/.test(l) && l.includes('user_id'));
+console.log('Non-ASCII user_id lines:', nonAscii.length);
+console.log('Schema lines:', lines.length);

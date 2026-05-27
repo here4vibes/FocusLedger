@@ -1,0 +1,60 @@
+{
+  "compilerOptions": {
+    // Check JavaScript files using JSDoc type annotations
+    "checkJs": true,
+    "allowJs": true,
+    "noEmit": true,
+
+    // Strict checks — enabled incrementally
+    // Full strict: add strictNullChecks + noImplicitAny as JSDoc coverage grows
+    "strictNullChecks": false,
+    "noImplicitAny": false,
+    "strictFunctionTypes": false,
+
+    // Catches real bugs
+    "noUnusedLocals": false,        // ESLint handles this better
+    "noUnusedParameters": false,    // ESLint handles this better
+    "noFallthroughCasesInSwitch": true,
+    "exactOptionalPropertyTypes": false,
+
+    // Node.js environment
+    "target": "ES2022",
+    "module": "commonjs",
+    "lib": ["ES2022"],
+    "moduleResolution": "node10",
+    "ignoreDeprecations": "6.0",
+
+    // Type definitions
+    "types": ["node"],
+    "typeRoots": ["./types", "./node_modules/@types"],
+
+    // Path aliases (for clean imports across routes/db/lib)
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./*"],
+      "@lib/*": ["./lib/*"],
+      "@middleware/*": ["./middleware/*"],
+      "@routes/*": ["./routes/*"],
+      "@db/*": ["./db/*"],
+      "@services/*": ["./services/*"],
+      "@config/*": ["./config/*"]
+    }
+  },
+  "include": [
+    "types/**/*.d.ts",
+    "server.js",
+    "migrate.js",
+    "morningNudge.js",
+    "routes/**/*.js",
+    "middleware/**/*.js",
+    "lib/**/*.js"
+  ],
+  "exclude": [
+    "node_modules",
+    "public",
+    "playwright-report",
+    "test-results",
+    ".tmp",
+    "debug"
+  ]
+}
