@@ -78,6 +78,10 @@ Node.js + Express · PostgreSQL (Neon) · Render deployment · Vanilla HTML/CSS/
 - `insight_unlocks` — tracks which Progressive Insights tiers each user has unlocked; unlocked_at, viewed, interacted flags; UNIQUE(user_id, insight_key)
 - `task_time_estimations` — Time-Blindness P1: user time estimates vs actuals per task; calibration_score (actual/estimated ratio); UNIQUE(task_id)
 
+## Database
+- `users` — accounts, subscription, Google OAuth, is_qa_user, Pro/Tandem grants, UTM, timezone
+- `tasks` — todo items: due dates, steps, recurring, notes, duration_minutes; `is_household`/`is_shared_with_partner` for Tandem sharing
+
 ## External integrations
 - **Resend + OpenAI/Polsia AI** — email delivery (Resend, hello@focusledger.net) + AI task breakdown/tagging/coaching/personalized insights
 - **Plaid** — bank account sync for spending + bill detection
@@ -104,3 +108,151 @@ Before any shared CSS change ships, verify all of the following:
 3. **Desktop viewport check (≥ 900px)** — Open `/app` at 1280px and 1440px. Verify the left sidebar renders, task cards use the warm-white background, and no new horizontal scrollbar appears.
 4. **No new horizontal overflow** — Check `overflow-x: hidden` on body and `max-width` constraints on `.page-content-wrapper`. A removed `border` can change element width calculations — verify no layout reflows.
 5. **Sidebar/nav renders correctly** — Verify the 200px left sidebar (desktop) and 60px bottom bar (mobile) both function. Check `shared-nav.css` and `public/shared-nav.js` — these are shared across all 17 app pages.
+
+---
+
+## Claude Code: Autonomous Agent Instructions
+
+This section tells Claude Code how to act on your behalf across GitHub, Neon, and Render. Read this before starting any task.
+
+### Ground rules
+- **Always read before writing.** Before touching any file, read it. Before touching any route, read the route file and the db/ file it calls.
+- **One concern per commit.** Never bundle unrelated changes. Commit message format: `type(scope): what changed` — e.g. `fix(tasks): normalize due_time in GET response`.
+- **Never touch the QA user.** `qa@focusledger.net` is sacred. No data changes, no role changes, no deletions.
+- **No raw SQL outside `db/`.** All queries go through `pool.query` in the appropriate `db/` file.
+- **No in-process schedulers.** All cron jobs go in `jobs/` and are declared in `polsia.toml [[crons]]`.
+- **server.js hard cap: 300 lines.** If a change would push it over, extract to middleware/ or routes/ first.
+- **migrations/ only, never ALTER in routes.** Schema changes always go through a migration file with `{ name, up: async (client) => {} }`.
+
+### GitHub workflow
+```bash
+# Check current branch before anything
+git status
+git branch
+
+# Always work on a feature branch, never directly on main
+git checkout -b type/short-description   # e.g. fix/plaid-reauth-webhook
+
+# Stage and commit atomically
+git add -p                               # review hunks before staging
+git commit -m "type(scope): description"
+
+# Push and open PR — never merge your own PRs to main without review
+git push origin HEAD
+
+# To check what's changed vs main
+git diff main...HEAD --stat
+```
+
+**Branch naming:** `fix/`, `feat/`, `chore/`, `migration/` prefixes. Always branch from `main`.
+
+**Never force-push to main.** Never commit `.env`, secrets, or `node_modules`.
+
+### Neon (PostgreSQL)
+Connection is via `DATABASE_URL` env var (already set in Render + local `.env`).
+
+```bash
+# Run a migration manually
+node -e "
+const { Client } = require('pg');
+const client = new Client({ connectionString: process.env.DATABASE_URL });
+(async () => {
+  await client.connect();
+  // paste migration up() body here
+  await client.end();
+})();
+"
+
+# Inspect a table
+psql $DATABASE_URL -c "\d table_name"
+
+# Check row counts (safe read-only audit)
+psql $DATABASE_URL -c "SELECT COUNT(*) FROM users WHERE created_at > NOW() - INTERVAL '7 days';"
+
+# Never run DELETE or UPDATE on production without a WHERE clause
+# Always dry-run with SELECT first:
+# SELECT * FROM expenses WHERE ... LIMIT 10;
+# Then: DELETE FROM expenses WHERE ...;
+```
+
+**Migration checklist before running:**
+1. Does the migration have a rollback path? (Add a `down` export even if not wired up yet.)
+2. Does it touch a high-traffic table? If so, use `CREATE INDEX CONCURRENTLY` not `CREATE INDEX`.
+3. Does it add a NOT NULL column? Add with a default first, backfill, then drop the default.
+
+### Render deployment
+The app auto-deploys from `main` branch on Render. Do not manually trigger deploys for feature branches.
+
+```bash
+# Check Render deploy status (install render-cli first if not present)
+render deploys list --service focusledger
+
+# Tail live logs
+render logs --service focusledger --tail
+
+# Trigger a manual deploy of main (only when auto-deploy is off)
+render deploys create --service focusledger --branch main
+
+# Check env vars (read-only audit — never print secrets)
+render env list --service focusledger
+```
+
+**Deploy checklist before merging to main:**
+1. Run `node --check server.js` — syntax check passes.
+2. Run the Pre-Ship Checklist above (Buddy bubble, mobile/desktop viewports, overflow check).
+3. Confirm no new `require()` of packages not in `package.json`.
+4. If migration added: confirm it ran successfully on Neon before deploy (migrations don't auto-run on Render).
+
+### Environment variables
+Never hardcode. All secrets live in `.env` locally and in Render's environment dashboard. Known vars:
+- `DATABASE_URL` — Neon connection string
+- `SESSION_SECRET` — Express session
+- `OPENAI_API_KEY` — AI features
+- `PLAID_CLIENT_ID`, `PLAID_SECRET`, `PLAID_ENV` — Plaid integration
+- `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` — Stripe
+- `RESEND_API_KEY` — email delivery
+- `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` — OAuth
+- `ENCRYPTION_KEY` — AES-256-GCM for Plaid tokens (32-byte hex)
+- `APNS_KEY_ID`, `APNS_TEAM_ID`, `APNS_KEY_P8`, `APNS_BUNDLE_ID` — iOS push
+- `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` — Web Push
+
+If a new env var is needed: add to `.env.example` (with a placeholder value, never real), document it here, and add it to Render manually.
+
+### Task execution patterns
+
+**Bug fix:**
+1. Read the failing route + its db/ file.
+2. Reproduce with `curl` or a test script if possible.
+3. Fix in the narrowest scope possible.
+4. Commit on a `fix/` branch, open PR.
+
+**New feature:**
+1. Check if a migration is needed — if so, write it first.
+2. Write the db/ query file or add to existing.
+3. Wire the route in routes/.
+4. Add frontend in public/ if needed.
+5. Run Pre-Ship Checklist.
+6. Commit on `feat/` branch, open PR.
+
+**Schema change:**
+1. Write migration in `migrations/` with name + up().
+2. Test locally against Neon dev branch (if available) or staging.
+3. Run migration manually before deploying.
+4. Commit on `migration/` branch.
+
+**Cron job:**
+1. Write job file in `jobs/`.
+2. Add `[[crons]]` entry to `polsia.toml`.
+3. Never use `setInterval` or `node-cron` in process.
+
+### What Claude Code should NOT do autonomously
+- Merge PRs to `main` without human review
+- Delete users, expenses, or plaid_items records in production
+- Change `ENCRYPTION_KEY` (would corrupt all Plaid tokens)
+- Modify `config/test-users.js` or touch `qa@focusledger.net` data
+- Push directly to `main`
+- Run `DROP TABLE` or `TRUNCATE` on any production table
+- Change Stripe webhook endpoints or Plaid webhook URLs without confirming
+
+### Asking for clarification
+If a task is ambiguous about scope (e.g. "fix the Plaid bug" — which one?), ask before touching code. State what you're about to do and why before doing it for any destructive or schema-level operation.
