@@ -1,0 +1,1691 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Task — FocusLedger</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --navy:        #011e5c;
+            --navy-hover:  #022a6b;
+            --orange:      #c9a84c;
+            --orange-warm: #8a6e1a;
+            --cream:       #faf9f7;
+            --cream-warm:  #f5f0e8;
+            --surface:     #ffffff;
+            --text-dark:   #1a1a1a;
+            --text-mid:    #4a4a4a;
+            --text-muted:  #888888;
+            --border:      #e5e0d8;
+            --green:       #5BA4A4;
+            --green-muted: #4A9292;
+            --success:     #2e7d32;
+            --danger:      #c62828;
+            --danger-deep: #c0392b;
+            --danger-light:#fff5f0;
+            --danger-hover:#a01e1e;
+            --overdue-color:#D63031;
+            --overdue-bg:  #fff5f0;
+            --due-soon-color:#B8860B;
+            --due-soon-bg: #fff9e0;
+            --shadow-sm:   0 2px 8px rgba(0,0,0,0.08);
+            --shadow-md:   0 4px 20px rgba(0,0,0,0.12);
+            --radius:      16px;
+            --radius-pill: 999px;
+        }
+
+        html, body {
+            min-height: 100%;
+            min-height: 100dvh;
+            font-family: 'DM Sans', system-ui, sans-serif;
+            background: var(--cream-warm);
+            color: var(--text-dark);
+        }
+
+        h1, h2, h3 { font-family: 'Space Grotesk', sans-serif; }
+
+        /* ── Loading ── */
+        #loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100dvh;
+            font-size: 1rem;
+            color: var(--text-muted);
+        }
+        #loading.hidden { display: none; }
+
+        /* ── Auth error ── */
+        #auth-error {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100dvh;
+            gap: 16px;
+            text-align: center;
+            padding: 32px;
+        }
+        #auth-error.visible { display: flex; }
+
+        /* ── Error state ── */
+        #task-error {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100dvh;
+            gap: 12px;
+            text-align: center;
+            padding: 32px;
+        }
+        #task-error.visible { display: flex; }
+        #task-error h2 { color: var(--danger); font-size: 1.3rem; }
+        #task-error p { color: var(--text-muted); }
+        #task-error a { color: var(--navy); font-weight: 600; text-decoration: none; }
+
+        /* ── App shell ── */
+        #task-app {
+            display: none;
+            flex-direction: column;
+            min-height: 100dvh;
+        }
+        #task-app.visible { display: flex; }
+
+        /* ── Header / back nav ── */
+        .task-header {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: rgba(250, 248, 244, 0.94);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(0,0,0,0.06);
+            padding: max(env(safe-area-inset-top, 0px), 16px) 20px 14px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+        .back-btn {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 6px 0;
+            font-family: 'DM Sans', sans-serif;
+            transition: color 0.15s;
+        }
+        .back-btn:hover { color: var(--navy); }
+        .back-btn svg { width: 18px; height: 18px; }
+        .header-actions {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        .btn-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border: 1.5px solid var(--border);
+            background: var(--surface);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-muted);
+            font-size: 1rem;
+            transition: all 0.15s;
+        }
+        .btn-icon:hover { background: var(--cream); color: var(--text-dark); }
+        .btn-icon.danger:hover { color: var(--danger); border-color: var(--danger); background: var(--danger-light); }
+
+        /* ── Elapsed timer banner (sticky anchor P1 feature) ── */
+        .timer-banner {
+            background: var(--navy);
+            color: white;
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+        .timer-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .timer-label {
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            opacity: 0.65;
+            font-weight: 600;
+        }
+        .timer-display {
+            font-family: 'Space Grotesk', monospace;
+            font-size: clamp(1.2rem, 4vw, 1.6rem);
+            font-weight: 700;
+            letter-spacing: 0.02em;
+            line-height: 1;
+        }
+        .timer-controls {
+            display: flex;
+            gap: 8px;
+        }
+        .timer-btn {
+            background: rgba(255,255,255,0.15);
+            border: 1px solid rgba(255,255,255,0.25);
+            color: white;
+            border-radius: 8px;
+            padding: 6px 12px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.8rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        .timer-btn:hover { background: rgba(255,255,255,0.25); }
+        .timer-btn.running { background: rgba(201,168,76,0.35); border-color: rgba(201,168,76,0.6); }
+
+        /* ── P2: Estimation prompt ── */
+        .estimate-prompt {
+            background: var(--surface);
+            border: 1.5px solid var(--border);
+            border-radius: 14px;
+            padding: 16px 18px;
+            margin: 16px 0;
+            display: none;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            transition: border-color 0.2s;
+        }
+        .estimate-prompt.visible { display: flex; }
+        .estimate-prompt:hover { border-color: var(--orange); }
+        .estimate-label {
+            font-size: 0.88rem;
+            font-weight: 600;
+            color: var(--navy);
+            white-space: nowrap;
+        }
+        .estimate-input-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex: 1;
+            min-width: 100px;
+        }
+        #estimate-minutes {
+            width: 72px;
+            padding: 7px 10px;
+            border: 1.5px solid var(--border);
+            border-radius: 9px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--navy);
+            background: var(--cream);
+            outline: none;
+            text-align: center;
+            transition: border-color 0.15s;
+        }
+        #estimate-minutes:focus { border-color: var(--green); }
+        #estimate-minutes::placeholder { color: var(--text-muted); }
+        .estimate-unit { font-size: 0.82rem; color: var(--text-muted); font-weight: 500; }
+        .suggestion-badge {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            background: var(--cream);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 2px 8px;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .suggestion-badge:hover { background: var(--cream-warm); border-color: var(--orange); color: var(--navy); }
+        .btn-ghost {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 0.82rem;
+            font-weight: 500;
+            cursor: pointer;
+            padding: 6px 8px;
+            border-radius: 7px;
+            transition: all 0.15s;
+            font-family: 'DM Sans', sans-serif;
+        }
+        .btn-ghost:hover { background: var(--cream); color: var(--navy); }
+        .btn-save-estimate {
+            background: var(--navy);
+            color: white;
+            border: none;
+            border-radius: 9px;
+            padding: 7px 14px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        .btn-save-estimate:hover { background: var(--navy-hover); }
+        .btn-save-estimate:disabled { opacity: 0.4; cursor: not-allowed; }
+
+        /* ── P2: Completion comparison card ── */
+        .comparison-card {
+            display: none;
+            background: var(--surface);
+            border: 1.5px solid var(--border);
+            border-radius: 14px;
+            padding: 18px 20px;
+            margin: 16px 0;
+            animation: cardIn 0.3s cubic-bezier(0.22,1,0.36,1) forwards;
+        }
+        .comparison-card.visible { display: block; }
+        @keyframes cardIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        .comparison-title {
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-muted);
+            margin-bottom: 12px;
+        }
+        .comparison-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+            flex-wrap: wrap;
+        }
+        .comparison-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.88rem;
+            font-weight: 600;
+            color: var(--navy);
+        }
+        .comparison-item .lbl {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            font-weight: 400;
+        }
+        .comparison-divider {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            font-weight: 400;
+        }
+        .comparison-score {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.82rem;
+            font-weight: 700;
+            padding: 4px 10px;
+            border-radius: var(--radius-pill);
+        }
+        .comparison-score.accurate {
+            background: rgba(91,164,164,0.12);
+            color: var(--green-muted);
+        }
+        .comparison-score.near {
+            background: rgba(201,168,76,0.12);
+            color: var(--orange-warm);
+        }
+        .comparison-score.off {
+            background: rgba(230,122,95,0.12);
+            color: var(--danger-deep);
+        }
+        .comparison-hint {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            margin-top: 8px;
+            line-height: 1.5;
+        }
+
+        /* ── Main content ── */
+        .task-content {
+            flex: 1;
+            padding: 24px 20px;
+            max-width: 640px;
+            width: 100%;
+            margin: 0 auto;
+        }
+
+        /* Task status badge */
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            padding: 4px 10px;
+            border-radius: var(--radius-pill);
+            margin-bottom: 12px;
+        }
+        .status-badge.open {
+            background: rgba(91,164,164,0.12);
+            color: var(--green-muted);
+        }
+        .status-badge.done {
+            background: rgba(201,168,76,0.12);
+            color: var(--orange-warm);
+        }
+
+        /* Task title */
+        .task-title-display {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: clamp(1.4rem, 4vw, 1.9rem);
+            font-weight: 700;
+            color: var(--navy);
+            line-height: 1.25;
+            margin-bottom: 8px;
+            word-break: break-word;
+        }
+        .task-title-display.struck {
+            text-decoration: line-through;
+            color: var(--text-muted);
+        }
+
+        /* Edit title input */
+        .task-title-input {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: clamp(1.4rem, 4vw, 1.9rem);
+            font-weight: 700;
+            color: var(--navy);
+            line-height: 1.25;
+            margin-bottom: 8px;
+            width: 100%;
+            border: 2px solid var(--green);
+            border-radius: 10px;
+            padding: 8px 12px;
+            outline: none;
+            background: var(--surface);
+            display: none;
+        }
+        .task-title-input.visible { display: block; }
+
+        /* Routine tag */
+        .routine-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 0.73rem;
+            font-weight: 600;
+            color: var(--orange);
+            background: rgba(201,168,76,0.1);
+            border: 1px solid rgba(201,168,76,0.25);
+            border-radius: var(--radius-pill);
+            padding: 3px 10px;
+            margin-bottom: 12px;
+        }
+
+        /* Metadata row */
+        .meta-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 20px;
+            align-items: center;
+        }
+        .meta-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-pill);
+            padding: 4px 10px;
+        }
+        .meta-chip svg { width: 12px; height: 12px; flex-shrink: 0; }
+        .meta-chip.overdue { color: var(--overdue-color); border-color: var(--overdue-color); background: var(--overdue-bg); }
+        .meta-chip.due-soon { color: var(--due-soon-color); border-color: var(--due-soon-color); background: var(--due-soon-bg); }
+
+        /* Notes section */
+        .section-label {
+            font-size: 0.72rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+        }
+        .notes-display {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 14px 16px;
+            font-size: 0.95rem;
+            color: var(--text-mid);
+            line-height: 1.6;
+            white-space: pre-wrap;
+            margin-bottom: 20px;
+            cursor: pointer;
+            transition: border-color 0.15s;
+            min-height: 60px;
+        }
+        .notes-display:hover { border-color: var(--green); }
+        .notes-display.placeholder { color: var(--text-muted); font-style: italic; }
+        .notes-textarea {
+            width: 100%;
+            background: var(--surface);
+            border: 2px solid var(--green);
+            border-radius: 12px;
+            padding: 14px 16px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.95rem;
+            color: var(--text-dark);
+            line-height: 1.6;
+            resize: vertical;
+            outline: none;
+            margin-bottom: 20px;
+            min-height: 80px;
+            display: none;
+        }
+        .notes-textarea.visible { display: block; }
+
+        /* Steps */
+        .steps-section {
+            margin-bottom: 20px;
+        }
+        .step-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 10px 0;
+            border-bottom: 1px solid var(--border);
+        }
+        .step-item:last-child { border-bottom: none; }
+        .step-check {
+            width: 20px;
+            height: 20px;
+            border-radius: 6px;
+            border: 2px solid var(--border);
+            flex-shrink: 0;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-top: 2px;
+            transition: all 0.2s;
+            background: white;
+        }
+        .step-check:hover { border-color: var(--green); }
+        .step-check.done { background: var(--green); border-color: var(--green); }
+        .step-check.done::after {
+            content: '';
+            display: block;
+            width: 5px;
+            height: 9px;
+            border: 2px solid white;
+            border-top: none;
+            border-left: none;
+            transform: rotate(45deg) translateY(-1px);
+        }
+        .step-text {
+            flex: 1;
+            font-size: 0.92rem;
+            color: var(--text-mid);
+            line-height: 1.4;
+            padding-top: 1px;
+        }
+        .step-text.struck { text-decoration: line-through; color: var(--text-muted); }
+
+        /* Divider */
+        .divider {
+            height: 1px;
+            background: var(--border);
+            margin: 20px 0;
+        }
+
+        /* Info section (created date, etc) */
+        .info-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+        }
+        .info-row svg { width: 13px; height: 13px; flex-shrink: 0; }
+
+        /* ── Action bar (sticky bottom) ── */
+        .action-bar {
+            position: sticky;
+            bottom: 0;
+            background: rgba(250, 248, 244, 0.96);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-top: 1px solid rgba(0,0,0,0.06);
+            padding: 12px 20px calc(12px + env(safe-area-inset-bottom, 0px));
+            display: flex;
+            gap: 10px;
+        }
+        .btn-complete {
+            flex: 1;
+            padding: 14px 20px;
+            border-radius: var(--radius);
+            border: none;
+            background: var(--navy);
+            color: white;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        .btn-complete:hover { background: var(--navy-hover); transform: translateY(-1px); box-shadow: var(--shadow-sm); }
+        .btn-complete:active { transform: translateY(0); }
+        .btn-complete.completed {
+            background: var(--green);
+            cursor: not-allowed;
+        }
+        .btn-focus {
+            padding: 14px 18px;
+            border-radius: var(--radius);
+            border: 1.5px solid var(--border);
+            background: var(--surface);
+            color: var(--text-mid);
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            white-space: nowrap;
+            text-decoration: none;
+        }
+        .btn-focus:hover { border-color: var(--orange); color: var(--navy); }
+        .btn-buddy {
+            padding: 14px 18px;
+            border-radius: var(--radius);
+            border: 1.5px solid rgba(201,168,76,0.3);
+            background: rgba(201,168,76,0.06);
+            color: var(--orange-warm);
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            white-space: nowrap;
+        }
+        .btn-buddy:hover { background: rgba(201,168,76,0.14); border-color: rgba(201,168,76,0.6); }
+
+        /* ── Delete confirm ── */
+        .confirm-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 2000;
+            background: rgba(1, 30, 92, 0.6);
+            backdrop-filter: blur(4px);
+            align-items: flex-end;
+            justify-content: center;
+        }
+        .confirm-overlay.visible { display: flex; }
+        .confirm-sheet {
+            background: var(--surface);
+            border-radius: 20px 20px 0 0;
+            width: 100%;
+            max-width: 480px;
+            padding: 24px 24px calc(24px + env(safe-area-inset-bottom, 0px));
+            animation: sheetUp 0.25s cubic-bezier(0.22,1,0.36,1) forwards;
+        }
+        @keyframes sheetUp {
+            from { transform: translateY(50px); opacity: 0; }
+            to   { transform: translateY(0);    opacity: 1; }
+        }
+        .confirm-handle {
+            width: 36px; height: 4px;
+            background: var(--border);
+            border-radius: 2px;
+            margin: 0 auto 20px;
+        }
+        .confirm-title {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--text-dark);
+            margin-bottom: 8px;
+        }
+        .confirm-desc {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            margin-bottom: 20px;
+        }
+        .confirm-btns { display: flex; gap: 10px; }
+        .btn-confirm-delete {
+            flex: 1;
+            padding: 14px;
+            border-radius: 12px;
+            border: none;
+            background: var(--danger);
+            color: white;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        .btn-confirm-delete:hover { background: var(--danger-hover); }
+        .btn-cancel-delete {
+            flex: 1;
+            padding: 14px;
+            border-radius: 12px;
+            border: 1.5px solid var(--border);
+            background: transparent;
+            color: var(--text-mid);
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.95rem;
+            cursor: pointer;
+        }
+
+        /* ── Toast ── */
+        #toast {
+            position: fixed;
+            bottom: 90px;
+            left: 50%;
+            transform: translateX(-50%) translateY(16px);
+            background: var(--navy);
+            color: white;
+            padding: 10px 22px;
+            border-radius: var(--radius-pill);
+            font-size: 0.9rem;
+            font-weight: 500;
+            opacity: 0;
+            transition: all 0.3s ease;
+            pointer-events: none;
+            z-index: 3000;
+            white-space: nowrap;
+        }
+        #toast.visible { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+        /* Reduced motion */
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.001ms !important;
+                transition-duration: 0.001ms !important;
+            }
+        }
+
+        /* ── Mobile: 320px–390px ── */
+        @media (max-width: 390px) {
+            /* Header: tighter padding on small screens */
+            .task-header {
+                padding: max(env(safe-area-inset-top, 0px), 12px) 14px 10px;
+                gap: 8px;
+            }
+
+            /* Timer banner: tighter padding, smaller controls */
+            .timer-banner {
+                padding: 10px 14px;
+                gap: 8px;
+            }
+            .timer-label {
+                font-size: 0.65rem;
+            }
+            .timer-btn {
+                font-size: 0.72rem;
+                padding: 5px 9px;
+            }
+
+            /* Content: reduce horizontal padding */
+            .task-content {
+                padding: 20px 14px;
+            }
+
+            /* Meta chips: smaller font and padding on small screens */
+            .meta-chip {
+                font-size: 0.72rem;
+                padding: 3px 8px;
+            }
+            .meta-chip svg {
+                width: 11px;
+                height: 11px;
+            }
+
+            /* Status badge: smaller */
+            .status-badge {
+                font-size: 0.65rem;
+                padding: 3px 8px;
+            }
+
+            /* Action bar: compact layout, prevent overflow */
+            .action-bar {
+                padding: 10px 14px calc(10px + env(safe-area-inset-bottom, 0px));
+                gap: 8px;
+            }
+            .btn-complete {
+                font-size: 0.9rem;
+                padding: 12px 16px;
+            }
+            .btn-focus,
+            .btn-buddy {
+                font-size: 0.82rem;
+                padding: 12px 14px;
+            }
+
+            /* Estimate prompt: wrap gracefully */
+            .estimate-prompt {
+                padding: 12px 14px;
+                gap: 8px;
+            }
+            .estimate-label {
+                font-size: 0.82rem;
+            }
+
+            /* Comparison card: smaller text */
+            .comparison-card {
+                padding: 14px 16px;
+            }
+
+            /* Toast: raise it slightly on small screens to avoid bottom nav */
+            #toast {
+                bottom: 80px;
+            }
+        }
+
+        /* ── Mobile: 320px–374px (tiny screens) ── */
+        @media (max-width: 374px) {
+            .timer-display {
+                font-size: clamp(1rem, 3.8vw, 1.2rem);
+            }
+            .task-content {
+                padding: 16px 12px;
+            }
+            .action-bar {
+                padding: 8px 12px calc(8px + env(safe-area-inset-bottom, 0px));
+            }
+            .btn-complete {
+                font-size: 0.85rem;
+                padding: 11px 12px;
+            }
+            .btn-focus,
+            .btn-buddy {
+                font-size: 0.78rem;
+                padding: 11px 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="loading">Loading task…</div>
+
+    <div id="auth-error" style="flex-direction:column;align-items:center;justify-content:center;gap:16px;text-align:center;padding:32px;">
+        <h2 style="color:var(--navy);font-family:'Space Grotesk',sans-serif;">Sign in required</h2>
+        <p style="color:var(--text-muted);">You need to be signed in to view this task.</p>
+        <a href="/login" style="color:var(--orange);font-weight:600;text-decoration:none;">Go to sign in →</a>
+    </div>
+
+    <div id="task-error">
+        <h2 id="task-error-title">Task not found</h2>
+        <p id="task-error-msg">This task doesn't exist or you don't have access.</p>
+        <a href="/app/tasks">← Back to tasks</a>
+    </div>
+
+    <div id="task-app">
+
+        <!-- Header -->
+        <header class="task-header">
+            <button class="back-btn" id="back-btn">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
+                </svg>
+                Tasks
+            </button>
+            <div class="header-actions">
+                <button class="btn-icon" id="btn-edit" title="Edit title">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" width="16" height="16">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 012.828 2.828L11.828 15.828a2 2 0 01-2.828 0L9 16v-3z"/>
+                    </svg>
+                </button>
+                <button class="btn-icon danger" id="btn-delete" title="Delete task">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" width="16" height="16">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22M8 7V5a1 1 0 011-1h6a1 1 0 011 1v2"/>
+                    </svg>
+                </button>
+            </div>
+        </header>
+
+        <!-- Elapsed Timer Banner (Time-Blindness P1) -->
+        <div class="timer-banner" id="timer-banner">
+            <div class="timer-left">
+                <div>
+                    <div class="timer-label">Time elapsed</div>
+                    <div class="timer-display" id="timer-display">00:00:00</div>
+                </div>
+            </div>
+            <div class="timer-controls">
+                <button class="timer-btn" id="timer-toggle">▶ Start</button>
+                <button class="timer-btn" id="timer-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- P2: Estimation input prompt -->
+        <div class="estimate-prompt" id="estimate-prompt">
+            <span class="estimate-label">How long will this take?</span>
+            <div class="estimate-input-row">
+                <input type="number" id="estimate-minutes" min="1" max="480" placeholder="?">
+                <span class="estimate-unit">min</span>
+                <span class="suggestion-badge" id="suggestion-badge" title="Tap to use this suggestion"></span>
+            </div>
+            <button class="btn-save-estimate" id="btn-save-estimate">Set</button>
+            <button class="btn-ghost" id="btn-skip-estimate">Skip</button>
+        </div>
+
+        <!-- Main content -->
+        <div class="task-content">
+
+            <!-- P2: Completion comparison (shows after task is marked complete) -->
+            <div class="comparison-card" id="comparison-card">
+                <div class="comparison-title">Time Calibration</div>
+                <div class="comparison-row">
+                    <div class="comparison-item">
+                        <span id="comp-thought">?</span>
+                        <span class="lbl">min thought</span>
+                    </div>
+                    <span class="comparison-divider">→</span>
+                    <div class="comparison-item">
+                        <span id="comp-actual">?</span>
+                        <span class="lbl">min actual</span>
+                    </div>
+                    <span id="comp-score-badge" class="comparison-score"></span>
+                </div>
+                <div class="comparison-hint" id="comparison-hint"></div>
+            </div>
+
+            <div class="status-badge open" id="status-badge">● Open</div>
+
+            <h1 class="task-title-display" id="task-title">Loading…</h1>
+            <input
+                class="task-title-input"
+                id="task-title-input"
+                type="text"
+                autocorrect="off"
+                autocapitalize="off"
+                autocomplete="off"
+                placeholder="Task title"
+            />
+
+            <div id="routine-tag-container"></div>
+
+            <div class="meta-row" id="meta-row"></div>
+
+            <!-- Notes -->
+            <div class="section-label">Notes</div>
+            <div class="notes-display placeholder" id="notes-display">Add notes…</div>
+            <textarea
+                class="notes-textarea"
+                id="notes-textarea"
+                placeholder="Add notes…"
+                rows="3"
+                autocorrect="off"
+            ></textarea>
+
+            <!-- Steps -->
+            <div id="steps-section" class="steps-section" style="display:none">
+                <div class="section-label">Steps</div>
+                <div id="steps-list"></div>
+            </div>
+
+            <div class="divider"></div>
+
+            <!-- Info -->
+            <div class="info-row" id="info-created">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                </svg>
+                <span id="info-created-text">Created —</span>
+            </div>
+
+            <div style="height: 100px"></div><!-- spacer for action bar -->
+        </div>
+    </div>
+
+    <!-- Action bar -->
+    <div class="action-bar" id="action-bar" style="display:none">
+        <button class="btn-complete" id="btn-complete">✓ Mark Complete</button>
+        <a class="btn-focus" id="btn-focus" href="#" title="Enter Focus Mode">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" width="16" height="16">
+                <circle cx="12" cy="12" r="10"/>
+                <circle cx="12" cy="12" r="3"/>
+            </svg>
+            Focus
+        </a>
+        <button class="btn-buddy" id="btn-buddy" title="Get help from Buddy">
+            💬
+        </button>
+    </div>
+
+    <!-- Delete confirm -->
+    <div class="confirm-overlay" id="confirm-overlay">
+        <div class="confirm-sheet">
+            <div class="confirm-handle"></div>
+            <div class="confirm-title">Delete this task?</div>
+            <div class="confirm-desc" id="confirm-task-title">This can't be undone.</div>
+            <div class="confirm-btns">
+                <button class="btn-cancel-delete" id="btn-cancel-delete">Cancel</button>
+                <button class="btn-confirm-delete" id="btn-confirm-delete">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div id="toast"></div>
+
+<script>
+(function() {
+    'use strict';
+
+    // ── Auth ────────────────────────────────────────────────────────────────────
+    const token = localStorage.getItem('fl_token');
+    if (!token) {
+        document.getElementById('loading').classList.add('hidden');
+        document.getElementById('auth-error').classList.add('visible');
+        return;
+    }
+    const authHeader = 'Bearer ' + token;
+
+    // ── Task ID from URL (/app/task/:taskId) ─────────────────────────────────
+    const pathParts = window.location.pathname.split('/');
+    const taskId = pathParts[pathParts.length - 1];
+
+    if (!taskId || taskId === 'task') {
+        window.location.replace('/app');
+        return;
+    }
+
+    // ── State ────────────────────────────────────────────────────────────────
+    let task = null;
+    let timerRunning = false;
+    let timerElapsed = 0;  // seconds
+    let timerInterval = null;
+    let timerStartedAt = null;
+    // P2: Time estimation state
+    let currentEstimate = null;   // set when user sets an estimate
+    let calibrationResult = null; // set after completion: { estimated, actual, ratio, pct, label }
+
+    // Timer persists via localStorage keyed by taskId
+    const TIMER_KEY = 'task_timer_' + taskId;
+
+    // ── Helpers ──────────────────────────────────────────────────────────────
+    function escapeHtml(str) {
+        if (!str) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
+
+    function formatElapsed(secs) {
+        const h = Math.floor(secs / 3600);
+        const m = Math.floor((secs % 3600) / 60);
+        const s = secs % 60;
+        return [
+            String(h).padStart(2, '0'),
+            String(m).padStart(2, '0'),
+            String(s).padStart(2, '0')
+        ].join(':');
+    }
+
+    function showToast(msg, duration = 3000) {
+        const el = document.getElementById('toast');
+        el.textContent = msg;
+        el.classList.add('visible');
+        setTimeout(() => el.classList.remove('visible'), duration);
+    }
+
+    // ── Timer persistence ────────────────────────────────────────────────────
+    function loadTimerState() {
+        try {
+            const saved = JSON.parse(localStorage.getItem(TIMER_KEY) || 'null');
+            if (!saved) return;
+            timerElapsed = saved.elapsed || 0;
+            if (saved.running && saved.startedAt) {
+                // Timer was running — compute how many seconds passed while away
+                const away = Math.floor((Date.now() - saved.startedAt) / 1000);
+                timerElapsed += away;
+                timerRunning = true;
+                timerStartedAt = Date.now();
+            }
+        } catch (_) {}
+    }
+
+    function saveTimerState() {
+        try {
+            localStorage.setItem(TIMER_KEY, JSON.stringify({
+                elapsed: timerElapsed,
+                running: timerRunning,
+                startedAt: timerRunning ? timerStartedAt : null
+            }));
+        } catch (_) {}
+    }
+
+    function clearTimerState() {
+        try { localStorage.removeItem(TIMER_KEY); } catch (_) {}
+    }
+
+    // ── P2: Estimation state (persists alongside timer) ───────────────────
+    const EST_KEY = 'task_est_' + taskId;
+
+    function saveEstState(est) {
+        try {
+            localStorage.setItem(EST_KEY, JSON.stringify(est));
+        } catch (_) {}
+    }
+
+    function loadEstState() {
+        try {
+            return JSON.parse(localStorage.getItem(EST_KEY) || 'null');
+        } catch (_) { return null; }
+    }
+
+    function clearEstState() {
+        try { localStorage.removeItem(EST_KEY); } catch (_) {}
+    }
+
+    // ── Timer UI ─────────────────────────────────────────────────────────────
+    function updateTimerDisplay() {
+        document.getElementById('timer-display').textContent = formatElapsed(timerElapsed);
+    }
+
+    function startTimerInterval() {
+        if (timerInterval) clearInterval(timerInterval);
+        timerInterval = setInterval(() => {
+            timerElapsed++;
+            updateTimerDisplay();
+            saveTimerState();
+        }, 1000);
+    }
+
+    function stopTimerInterval() {
+        if (timerInterval) clearInterval(timerInterval);
+        timerInterval = null;
+    }
+
+    function updateTimerToggleBtn() {
+        const btn = document.getElementById('timer-toggle');
+        if (timerRunning) {
+            btn.textContent = '⏸ Pause';
+            btn.classList.add('running');
+        } else {
+            btn.textContent = '▶ Start';
+            btn.classList.remove('running');
+        }
+    }
+
+    function initTimer() {
+        loadTimerState();
+        updateTimerDisplay();
+        updateTimerToggleBtn();
+        if (timerRunning) startTimerInterval();
+
+        document.getElementById('timer-toggle').addEventListener('click', () => {
+            if (timerRunning) {
+                timerRunning = false;
+                stopTimerInterval();
+            } else {
+                timerRunning = true;
+                timerStartedAt = Date.now();
+                startTimerInterval();
+            }
+            saveTimerState();
+            updateTimerToggleBtn();
+        });
+
+        document.getElementById('timer-reset').addEventListener('click', () => {
+            timerRunning = false;
+            timerElapsed = 0;
+            timerStartedAt = null;
+            stopTimerInterval();
+            clearTimerState();
+            updateTimerDisplay();
+            updateTimerToggleBtn();
+        });
+    }
+
+    // ── P2: Estimation prompt ───────────────────────────────────────────────
+    function initEstimation() {
+        // Load saved estimate from localStorage
+        const saved = loadEstState();
+        if (saved && saved.estimated_minutes) {
+            currentEstimate = saved;
+            document.getElementById('estimate-minutes').value = saved.estimated_minutes;
+        }
+
+        // Fetch suggestion from similar past tasks
+        if (task && task.title) {
+            fetch('/api/v1/time-estimates/suggest?title=' + encodeURIComponent(task.title), {
+                headers: { Authorization: authHeader }
+            }).then(function(r) { return r.json(); })
+              .then(function(data) {
+                  if (data && data.success && data.suggestion && data.suggestion.suggested_minutes) {
+                      const mins = data.suggestion.suggested_minutes;
+                      const badge = document.getElementById('suggestion-badge');
+                      badge.textContent = 'Try ' + mins + ' min';
+                      badge.style.display = '';
+                      badge.onclick = function() {
+                          document.getElementById('estimate-minutes').value = mins;
+                      };
+                  }
+              }).catch(function() {});
+        }
+
+        // Show prompt for incomplete tasks
+        if (!task.is_completed) {
+            document.getElementById('estimate-prompt').classList.add('visible');
+        }
+
+        // Save estimate button
+        document.getElementById('btn-save-estimate').addEventListener('click', function() {
+            var input = document.getElementById('estimate-minutes');
+            var mins = parseInt(input.value, 10);
+            if (!mins || mins < 1 || mins > 480) {
+                showToast('Enter a time between 1 and 480 minutes');
+                return;
+            }
+            fetch('/api/v1/tasks/' + taskId + '/estimate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Authorization: authHeader },
+                body: JSON.stringify({ estimated_minutes: mins })
+            }).then(function(r) { return r.json(); })
+              .then(function(data) {
+                  if (data && data.success && data.estimation) {
+                      currentEstimate = data.estimation;
+                      saveEstState({ estimated_minutes: mins, calibration_score: null, actual_minutes: null });
+                      document.getElementById('estimate-prompt').classList.remove('visible');
+                      updateMetaRow();
+                      showToast('Estimation set: ' + mins + ' min');
+                  }
+              }).catch(function() {
+                  showToast('Could not save estimate');
+              });
+        });
+
+        // Skip button — hide prompt, remember skip
+        document.getElementById('btn-skip-estimate').addEventListener('click', function() {
+            document.getElementById('estimate-prompt').classList.remove('visible');
+        });
+    }
+
+    // ── Render task ──────────────────────────────────────────────────────────
+    function formatDate(dateStr) {
+        if (!dateStr) return null;
+        try {
+            const d = new Date(dateStr + 'T00:00:00');
+            return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+        } catch (_) { return dateStr; }
+    }
+
+    function dueBadgeClass(dateStr) {
+        if (!dateStr) return '';
+        const today = new Date();
+        today.setHours(0,0,0,0);
+        const due = new Date(dateStr + 'T00:00:00');
+        const diff = Math.floor((due - today) / (1000 * 60 * 60 * 24));
+        if (diff < 0) return 'overdue';
+        if (diff === 0) return 'due-soon';
+        if (diff <= 2) return 'due-soon';
+        return '';
+    }
+
+    // ── P2: Build meta row (called on render + when estimate changes) ───────
+    function updateMetaRow() {
+        const metaRow = document.getElementById('meta-row');
+        if (!metaRow || !task) return;
+        let html = '';
+
+        // Due date
+        if (task.due_date) {
+            const cls = dueBadgeClass(task.due_date);
+            const label = cls === 'overdue' ? 'Overdue · ' : (cls === 'due-soon' ? 'Due soon · ' : 'Due · ');
+            html += '<span class="meta-chip ' + cls + '">' +
+                '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>' +
+                label + formatDate(task.due_date) +
+                (task.due_time ? ' ' + task.due_time.slice(0,5) : '') +
+                '</span>';
+        }
+
+        // Task-level duration estimate (from task creation)
+        if (task.duration_minutes) {
+            html += '<span class="meta-chip">' +
+                '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><circle cx="12" cy="12" r="10"/><path stroke-linecap="round" d="M12 6v6l4 2"/></svg>' +
+                'Est. ' + task.duration_minutes + ' min</span>';
+        }
+
+        // P2: User-set estimate (from currentEstimate)
+        if (currentEstimate && currentEstimate.estimated_minutes) {
+            html += '<span class="meta-chip" style="border-color: var(--orange); color: var(--orange-warm); background: rgba(201,168,76,0.08);">' +
+                '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><circle cx="12" cy="12" r="10"/><path stroke-linecap="round" d="M12 6v6l4 2"/></svg>' +
+                'You: ' + currentEstimate.estimated_minutes + ' min</span>';
+        }
+
+        metaRow.innerHTML = html;
+    }
+
+    function renderTask() {
+        if (!task) return;
+
+        // Status badge
+        const badge = document.getElementById('status-badge');
+        if (task.is_completed) {
+            badge.textContent = '✓ Completed';
+            badge.className = 'status-badge done';
+        } else {
+            badge.textContent = '● Open';
+            badge.className = 'status-badge open';
+        }
+
+        // Title
+        const titleEl = document.getElementById('task-title');
+        titleEl.textContent = task.title || '(Untitled)';
+        if (task.is_completed) titleEl.classList.add('struck');
+        else titleEl.classList.remove('struck');
+
+        // Routine tag
+        const routineContainer = document.getElementById('routine-tag-container');
+        if (task.routine_name) {
+            routineContainer.innerHTML = '<span class="routine-tag">🔁 ' + escapeHtml(task.routine_name) + '</span>';
+        } else {
+            routineContainer.innerHTML = '';
+        }
+
+        // Meta row (due date, duration, estimate)
+        const metaRow = document.getElementById('meta-row');
+        updateMetaRow();
+
+        // Notes
+
+        // Notes
+        const notesDisplay = document.getElementById('notes-display');
+        if (task.notes && task.notes.trim()) {
+            notesDisplay.textContent = task.notes;
+            notesDisplay.classList.remove('placeholder');
+        } else {
+            notesDisplay.textContent = 'Add notes…';
+            notesDisplay.classList.add('placeholder');
+        }
+        document.getElementById('notes-textarea').value = task.notes || '';
+
+        // Steps
+        const stepsSection = document.getElementById('steps-section');
+        const stepsList = document.getElementById('steps-list');
+        const steps = task.steps || [];
+        if (steps.length > 0) {
+            stepsSection.style.display = '';
+            stepsList.innerHTML = steps.map(s =>
+                '<div class="step-item">' +
+                '<div class="step-check ' + (s.is_completed ? 'done' : '') + '" data-step-id="' + s.id + '"></div>' +
+                '<span class="step-text ' + (s.is_completed ? 'struck' : '') + '">' + escapeHtml(s.title) + '</span>' +
+                '</div>'
+            ).join('');
+        } else {
+            stepsSection.style.display = 'none';
+        }
+
+        // Info
+        const createdAt = task.created_at ? new Date(task.created_at) : null;
+        if (createdAt) {
+            document.getElementById('info-created-text').textContent =
+                'Created ' + createdAt.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+        }
+
+        // Complete button
+        const btnComplete = document.getElementById('btn-complete');
+        if (task.is_completed) {
+            btnComplete.textContent = '✓ Completed';
+            btnComplete.classList.add('completed');
+        } else {
+            btnComplete.textContent = '✓ Mark Complete';
+            btnComplete.classList.remove('completed');
+        }
+
+        // Timer — hide when completed
+        const timerBanner = document.getElementById('timer-banner');
+        if (task.is_completed) {
+            timerBanner.style.display = 'none';
+        } else {
+            timerBanner.style.display = '';
+        }
+
+        // Focus / buddy links
+        document.getElementById('btn-focus').href = '/app/focus/' + task.id;
+        document.getElementById('btn-buddy').setAttribute('data-task-id', task.id);
+        document.getElementById('btn-buddy').setAttribute('data-task-title', task.title || '');
+    }
+
+    // ── Load task ─────────────────────────────────────────────────────────────
+    async function loadTask() {
+        try {
+            const res = await fetch('/api/tasks/' + taskId, {
+                headers: { Authorization: authHeader }
+            });
+
+            if (res.status === 401 || res.status === 403) {
+                document.getElementById('loading').classList.add('hidden');
+                document.getElementById('task-error-title').textContent = 'Access denied';
+                document.getElementById('task-error-msg').textContent = "You don't have permission to view this task.";
+                document.getElementById('task-error').classList.add('visible');
+                return;
+            }
+            if (res.status === 404) {
+                document.getElementById('loading').classList.add('hidden');
+                document.getElementById('task-error').classList.add('visible');
+                return;
+            }
+            if (!res.ok) throw new Error('Fetch failed');
+
+            const data = await res.json();
+            task = data.task || data;
+
+            renderTask();
+            initTimer();
+            initEstimation();
+
+            document.getElementById('loading').classList.add('hidden');
+            document.getElementById('task-app').classList.add('visible');
+            document.getElementById('action-bar').style.display = '';
+
+        } catch (err) {
+            console.error('[task-detail] loadTask error:', err);
+            document.getElementById('loading').classList.add('hidden');
+            document.getElementById('task-error-title').textContent = 'Something went wrong';
+            document.getElementById('task-error-msg').textContent = 'Could not load the task. Please try again.';
+            document.getElementById('task-error').classList.add('visible');
+        }
+    }
+
+    // ── Back navigation ──────────────────────────────────────────────────────
+    document.getElementById('back-btn').addEventListener('click', () => {
+        if (document.referrer && document.referrer.includes('/app')) {
+            history.back();
+        } else {
+            window.location.href = '/app';
+        }
+    });
+
+    // ── Complete task ─────────────────────────────────────────────────────────
+
+    // P2: Show comparison card with calibration result
+    function showCompletionResults(estimatedMins, actualMins) {
+        const ratio = estimatedMins > 0 ? actualMins / estimatedMins : 0;
+        const pct = Math.round(Math.abs(1 - ratio) * 100);
+        let label, badgeCls, color, hint;
+        if (ratio >= 0.8 && ratio <= 1.2) {
+            label = pct + '% off — great estimate!';
+            badgeCls = 'accurate';
+            color = 'var(--green-muted)';
+            hint = 'Your estimates are accurate! Keep tracking to build your internal clock.';
+        } else if (ratio > 1.2) {
+            label = 'Under by ' + pct + '%';
+            badgeCls = ratio <= 1.5 ? 'near' : 'off';
+            color = ratio <= 1.5 ? 'var(--orange-warm)' : 'var(--danger-deep)';
+            hint = 'You took longer than expected. That is okay — planning more time next time helps.';
+        } else {
+            label = 'Over by ' + pct + '%';
+            badgeCls = ratio >= 0.5 ? 'near' : 'off';
+            color = ratio >= 0.5 ? 'var(--orange-warm)' : 'var(--danger-deep)';
+            hint = 'You finished faster than expected. Your ADHD hyperfocus worked in your favor!';
+        }
+        document.getElementById('comp-thought').textContent = estimatedMins;
+        document.getElementById('comp-actual').textContent = actualMins;
+        const badge = document.getElementById('comp-score-badge');
+        badge.textContent = label;
+        badge.className = 'comparison-score ' + badgeCls;
+        badge.style.color = color;
+        document.getElementById('comparison-hint').textContent = hint;
+        document.getElementById('comparison-card').classList.add('visible');
+    }
+
+    document.getElementById('btn-complete').addEventListener('click', async () => {
+        if (!task || task.is_completed) return;
+
+        // Optimistic update
+        task.is_completed = true;
+        renderTask();
+
+        // Stop + clear timer
+        timerRunning = false;
+        stopTimerInterval();
+        clearTimerState();
+
+        // Prompt for actual time spent (Time-Blindness)
+        const actualSecs = timerElapsed;
+
+        try {
+            await fetch('/api/tasks/' + taskId, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json', Authorization: authHeader },
+                body: JSON.stringify({ is_completed: true })
+            });
+
+            // Record actual duration + show comparison if estimate was set
+            if (actualSecs > 10) {
+                const actualMins = Math.round(actualSecs / 60);
+                fetch('/api/v1/tasks/' + taskId + '/complete-with-time', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', Authorization: authHeader },
+                    body: JSON.stringify({ actual_minutes: actualMins })
+                }).then(function(r) { return r.json(); })
+                  .then(function(data) {
+                      if (currentEstimate && currentEstimate.estimated_minutes) {
+                          currentEstimate.actual_minutes = actualMins;
+                          if (data && data.result && data.result.calibration_score !== undefined) {
+                              currentEstimate.calibration_score = data.result.calibration_score;
+                          }
+                          saveEstState(currentEstimate);
+                      }
+                  }).catch(function() {});
+
+                // P2: Show comparison card if user set an estimate
+                if (currentEstimate && currentEstimate.estimated_minutes) {
+                    showCompletionResults(currentEstimate.estimated_minutes, actualMins);
+                }
+            }
+
+            showToast('Task complete! 🎉');
+            setTimeout(() => { window.location.href = '/app'; }, 1500);
+        } catch (err) {
+            console.error('[task-detail] complete error:', err);
+            task.is_completed = false;
+            renderTask();
+            showToast('Failed to complete task. Try again.');
+        }
+    });
+
+    // ── Edit title ────────────────────────────────────────────────────────────
+    let editingTitle = false;
+
+    function enterTitleEdit() {
+        if (task.is_completed) return;
+        editingTitle = true;
+        const input = document.getElementById('task-title-input');
+        input.value = task.title || '';
+        input.classList.add('visible');
+        document.getElementById('task-title').style.display = 'none';
+        setTimeout(() => { input.focus(); input.select(); }, 0);
+    }
+
+    async function saveTitleEdit() {
+        if (!editingTitle) return;
+        editingTitle = false;
+        const input = document.getElementById('task-title-input');
+        const newTitle = input.value.trim();
+        input.classList.remove('visible');
+        document.getElementById('task-title').style.display = '';
+
+        if (!newTitle || newTitle === task.title) {
+            renderTask(); // Restore original
+            return;
+        }
+
+        task.title = newTitle;
+        renderTask();
+
+        try {
+            await fetch('/api/tasks/' + taskId, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json', Authorization: authHeader },
+                body: JSON.stringify({ title: newTitle })
+            });
+        } catch (err) {
+            console.error('[task-detail] save title error:', err);
+            showToast('Could not save title.');
+        }
+    }
+
+    document.getElementById('btn-edit').addEventListener('click', enterTitleEdit);
+    document.getElementById('task-title').addEventListener('click', () => {
+        if (!task || task.is_completed) return;
+        enterTitleEdit();
+    });
+    document.getElementById('task-title-input').addEventListener('blur', saveTitleEdit);
+    document.getElementById('task-title-input').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); saveTitleEdit(); }
+        if (e.key === 'Escape') {
+            editingTitle = false;
+            document.getElementById('task-title-input').classList.remove('visible');
+            document.getElementById('task-title').style.display = '';
+            renderTask();
+        }
+    });
+
+    // ── Edit notes ────────────────────────────────────────────────────────────
+    let editingNotes = false;
+
+    document.getElementById('notes-display').addEventListener('click', () => {
+        if (editingNotes) return;
+        editingNotes = true;
+        const textarea = document.getElementById('notes-textarea');
+        textarea.classList.add('visible');
+        document.getElementById('notes-display').style.display = 'none';
+        setTimeout(() => textarea.focus(), 0);
+    });
+
+    async function saveNotesEdit() {
+        if (!editingNotes) return;
+        editingNotes = false;
+        const textarea = document.getElementById('notes-textarea');
+        const newNotes = textarea.value;
+        textarea.classList.remove('visible');
+        document.getElementById('notes-display').style.display = '';
+
+        task.notes = newNotes;
+        renderTask();
+
+        try {
+            await fetch('/api/tasks/' + taskId, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json', Authorization: authHeader },
+                body: JSON.stringify({ notes: newNotes })
+            });
+        } catch (err) {
+            console.error('[task-detail] save notes error:', err);
+        }
+    }
+
+    document.getElementById('notes-textarea').addEventListener('blur', saveNotesEdit);
+
+    // ── Step toggle ───────────────────────────────────────────────────────────
+    document.getElementById('steps-list').addEventListener('click', async (e) => {
+        const check = e.target.closest('.step-check');
+        if (!check) return;
+        const stepId = check.getAttribute('data-step-id');
+        if (!stepId) return;
+
+        const step = (task.steps || []).find(s => String(s.id) === String(stepId));
+        if (!step) return;
+
+        step.is_completed = !step.is_completed;
+        check.classList.toggle('done', step.is_completed);
+        check.nextElementSibling && check.nextElementSibling.classList.toggle('struck', step.is_completed);
+
+        try {
+            await fetch('/api/tasks/' + taskId + '/steps/' + stepId, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json', Authorization: authHeader },
+                body: JSON.stringify({ is_completed: step.is_completed })
+            });
+        } catch (err) {
+            console.error('[task-detail] step toggle error:', err);
+        }
+    });
+
+    // ── Delete task ───────────────────────────────────────────────────────────
+    document.getElementById('btn-delete').addEventListener('click', () => {
+        document.getElementById('confirm-task-title').textContent =
+            '"' + (task && task.title ? task.title : 'this task') + '" will be permanently deleted.';
+        document.getElementById('confirm-overlay').classList.add('visible');
+    });
+    document.getElementById('btn-cancel-delete').addEventListener('click', () => {
+        document.getElementById('confirm-overlay').classList.remove('visible');
+    });
+    document.getElementById('confirm-overlay').addEventListener('click', (e) => {
+        if (e.target === document.getElementById('confirm-overlay')) {
+            document.getElementById('confirm-overlay').classList.remove('visible');
+        }
+    });
+    document.getElementById('btn-confirm-delete').addEventListener('click', async () => {
+        document.getElementById('confirm-overlay').classList.remove('visible');
+        try {
+            await fetch('/api/tasks/' + taskId, {
+                method: 'DELETE',
+                headers: { Authorization: authHeader }
+            });
+            clearTimerState();
+            window.location.href = '/app';
+        } catch (err) {
+            console.error('[task-detail] delete error:', err);
+            showToast('Could not delete task. Try again.');
+        }
+    });
+
+    // ── Buddy button ──────────────────────────────────────────────────────────
+    document.getElementById('btn-buddy').addEventListener('click', () => {
+        const taskTitle = encodeURIComponent(task && task.title ? task.title : '');
+        window.location.href = '/buddy?taskId=' + taskId + '&taskTitle=' + taskTitle;
+    });
+
+    // ── Keyboard shortcuts ────────────────────────────────────────────────────
+    document.addEventListener('keydown', (e) => {
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+        if (e.key === 'Escape') { window.location.href = '/app'; }
+    });
+
+    // ── Boot ──────────────────────────────────────────────────────────────────
+    loadTask();
+
+})();
+</script>
+</body>
+</html>

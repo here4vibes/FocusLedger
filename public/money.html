@@ -1,0 +1,1582 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#011e5c">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="FocusLedger">
+  <link rel="icon" type="image/png" sizes="32x32" href="/icons/fl-icon.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/icons/fl-icon.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>FocusLedger — Money Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+  .fab{position:fixed;bottom:78px;right:20px;width:58px;height:58px;border-radius:16px;background:#c9a84c;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(201,168,76,0.35);z-index:300;transition:transform .2s,box-shadow .2s;font-size:1.8rem;color:white;line-height:1}
+  .fab:hover{transform:scale(1.08);box-shadow:0 6px 20px rgba(201,168,76,0.45)}
+  .fab:active{transform:scale(0.95)}
+  @media(min-width:900px){.fab{bottom:28px;right:28px}}
+  .qa-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.35);z-index:500;align-items:flex-end;justify-content:center;padding:0 1rem 2rem}
+  @media(min-width:500px){.qa-overlay{align-items:center}}
+  .qa-overlay.open{display:flex}
+  .qa-sheet{background:white;border-radius:20px 20px 0 0;width:100%;max-width:480px;padding:1.5rem 1.25rem 1.75rem;box-shadow:0 -8px 40px rgba(0,0,0,0.15);animation:sheetUp .22s ease-out}
+  @media(min-width:500px){.qa-sheet{border-radius:20px;margin-bottom:0}}
+  @keyframes sheetUp{from{transform:translateY(60px);opacity:0}to{transform:translateY(0);opacity:1}}
+  .qa-title-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem}
+  .qa-title-row h3{font-family:'Space Grotesk',sans-serif;font-size:0.95rem;font-weight:700;color:#011e5c}
+  .qa-close{width:28px;height:28px;border-radius:8px;border:none;background:#faf9f7;cursor:pointer;font-size:1.1rem;color:#6b6b6b;display:flex;align-items:center;justify-content:center}
+  .qa-input-row{display:flex;gap:0.5rem;align-items:flex-end;margin-bottom:0.75rem}
+  .qa-input{flex:1;padding:0.85rem 1rem;border:2px solid #e8e5e0;border-radius:12px;font-family:'DM Sans',sans-serif;font-size:1rem;color:#1a1a1a;background:white;outline:none;transition:border-color .2s}
+  .qa-input:focus{border-color:#c9a84c}
+  .qa-save{padding:0.85rem 1.25rem;background:#c9a84c;border:none;border-radius:12px;font-family:'DM Sans',sans-serif;font-size:0.9rem;font-weight:600;color:white;cursor:pointer;white-space:nowrap;transition:background .15s}
+  .qa-save:hover{background:#d4b56a}
+  .qa-save:disabled{opacity:0.45;cursor:not-allowed}
+  .qa-chips{display:flex;flex-wrap:wrap;gap:0.4rem;min-height:32px;align-items:center}
+  .qa-chip{display:inline-flex;align-items:center;gap:0.3rem;padding:0.3rem 0.75rem;background:#faf9f7;border:1.5px solid #e8e5e0;border-radius:20px;font-size:0.78rem;font-weight:500;color:#011e5c;cursor:pointer;transition:border-color .15s,background .15s;user-select:none}
+  .qa-chip:hover{border-color:#c9a84c;background:rgba(201,168,76,0.08)}
+  .qa-chip .chip-dot{width:7px;height:7px;border-radius:50%;background:#5BA4A4}
+  </style>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    :root{
+      --orange:#c9a84c;--orange-light:#d4b56a;--navy:#011e5c;--navy-mid:#02287a;
+      --cream:#faf9f7;--cream-dark:#f5f3ef;--text-dark:#1a1a1a;--text-muted:#6b6b6b;
+      --green:#5BA4A4;--border:#e8e5e0;--surface:#FFFFFF;--error:#E07A5F;
+      --impulse:#E07A5F;--planned:#7DB87D;--untriaged:#B0ADA8;
+      --skeleton-base:#f0f0f0;--skeleton-highlight:#e8e8e8;
+    }
+    @media(prefers-color-scheme:dark){:root{--skeleton-base:#2a2a2a;--skeleton-highlight:#3a3a3a}}
+    html{scroll-behavior:smooth}
+    body{font-family:'DM Sans',sans-serif;color:var(--text-dark);background:var(--cream);min-height:100vh;padding-bottom:90px;overflow-x:hidden}
+    h1,h2,h3,h4{font-family:'Space Grotesk',sans-serif}
+
+    /* NAV */
+    .top-nav{position:sticky;top:0;z-index:100;background:var(--navy);padding:0 1.25rem;height:52px;display:flex;align-items:center;justify-content:space-between}
+    .nav-logo{font-family:'Space Grotesk',sans-serif;font-size:1.1rem;font-weight:700;color:white;display:flex;align-items:center;gap:0.4rem;text-decoration:none}
+    .logo-dot{width:9px;height:9px;background:var(--orange);border-radius:2px;transform:rotate(45deg)}
+    .nav-title{font-family:'Space Grotesk',sans-serif;font-size:1rem;font-weight:600;color:rgba(255,255,255,0.9)}
+
+    /* PAGE WRAP */
+    .page-wrap{max-width:480px;margin:0 auto;padding:1rem 1rem 1.5rem}
+
+    /* ── DASHBOARD CARDS ─────────────────────────────────────────────────────── */
+
+    .dash-section-label{font-size:0.7rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);font-weight:600;margin-bottom:0.6rem}
+
+    /* Card base styles */
+    .dash-card{
+      background:var(--surface);
+      border-radius:12px;
+      box-shadow:0 2px 8px rgba(0,0,0,0.08);
+      padding:1.1rem 1.25rem;
+      margin-bottom:0.75rem;
+      position:relative;
+      overflow:hidden;
+    }
+
+    .card-row{display:flex;align-items:flex-start;justify-content:space-between;gap:0.75rem}
+    .card-left{flex:1;min-width:0}
+    .card-label{font-size:0.75rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.3rem}
+    .card-amount{font-family:'Space Grotesk',sans-serif;font-size:1.75rem;font-weight:700;color:var(--navy);line-height:1.1}
+    .card-meta{font-size:0.75rem;color:var(--text-muted);margin-top:0.25rem}
+    .card-right{text-align:right;flex-shrink:0}
+    .card-icon-badge{font-size:1.4rem;line-height:1}
+
+    /* Trend pill */
+    .trend-pill{display:inline-flex;align-items:center;gap:0.2rem;padding:0.2rem 0.55rem;border-radius:100px;font-size:0.72rem;font-weight:600}
+    .trend-up{background:#fde8e4;color:#c0503a}
+    .trend-down{background:#e8f5e9;color:#3a8a3a}
+    .trend-flat{background:var(--cream);color:var(--text-muted)}
+
+    /* Progress bar for unlock hint */
+    .unlock-hint{display:flex;align-items:center;gap:0.5rem;margin-top:0.6rem}
+    .unlock-bar{flex:1;height:4px;background:var(--border);border-radius:100px;overflow:hidden}
+    .unlock-fill{height:100%;background:var(--orange);border-radius:100px;transition:width 0.4s}
+    .unlock-label{font-size:0.7rem;color:var(--text-muted);white-space:nowrap}
+
+    /* Connect bank CTA */
+    .connect-card{background:linear-gradient(135deg,#faf9f7,#f0ede6);border:1.5px dashed var(--border);border-radius:12px;padding:1.25rem;text-align:center;margin-bottom:0.75rem}
+    .connect-emoji{font-size:1.75rem;margin-bottom:0.5rem}
+    .connect-title{font-family:'Space Grotesk',sans-serif;font-size:0.95rem;font-weight:700;color:var(--navy);margin-bottom:0.3rem}
+    .connect-sub{font-size:0.78rem;color:var(--text-muted);margin-bottom:0.85rem;line-height:1.45}
+    .btn-connect{background:var(--navy);color:white;border:none;padding:0.6rem 1.5rem;border-radius:10px;font-family:'Space Grotesk',sans-serif;font-size:0.88rem;font-weight:600;cursor:pointer;transition:background 0.15s;min-height:40px}
+    .btn-connect:hover{background:var(--navy-mid)}
+
+    /* Account summary specific */
+    .account-inst{font-size:0.78rem;color:var(--text-muted);margin-top:0.2rem}
+    .last-updated{font-size:0.7rem;color:var(--text-muted);margin-top:0.15rem}
+
+    /* This Week card */
+    .week-breakdown{display:flex;gap:0.5rem;margin-top:0.5rem}
+    .week-stat{flex:1;background:var(--cream);border-radius:8px;padding:0.4rem 0.6rem;text-align:center}
+    .week-stat .ws-val{font-family:'Space Grotesk',sans-serif;font-size:0.88rem;font-weight:700;color:var(--navy)}
+    .week-stat .ws-lbl{font-size:0.62rem;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);margin-top:0.1rem}
+
+    /* Impulse vs Planned card */
+    .split-bar{height:8px;background:var(--border);border-radius:100px;overflow:hidden;display:flex;margin:0.75rem 0 0.5rem}
+    .split-impulse{background:var(--impulse);height:100%;transition:width 0.5s}
+    .split-planned{background:var(--planned);height:100%;transition:width 0.5s}
+    .split-legend{display:flex;gap:0.75rem}
+    .split-legend-item{display:flex;align-items:center;gap:0.3rem;font-size:0.75rem}
+    .split-dot{width:8px;height:8px;border-radius:50%}
+    .split-dot-impulse{background:var(--impulse)}
+    .split-dot-planned{background:var(--planned)}
+
+    /* Categories card */
+    .cat-bar-wrap{flex:2;height:6px;background:var(--border);border-radius:100px;overflow:hidden}
+    .cat-bar-fill{height:100%;background:var(--orange);border-radius:100px;transition:width 0.4s}
+
+    /* Locked placeholder card */
+    .locked-card{
+      background:var(--cream);
+      border-radius:12px;
+      padding:1.1rem 1.25rem;
+      margin-bottom:0.75rem;
+      border:1.5px dashed var(--border);
+      display:flex;
+      align-items:center;gap:0.75rem;
+    }
+    .locked-icon{font-size:1.4rem;opacity:0.4;flex-shrink:0}
+    .locked-text{font-size:0.82rem;color:var(--text-muted);line-height:1.4}
+
+    /* Divider between dashboard and quick-add */
+    .section-divider{height:1px;background:var(--border);margin:0.75rem 0}
+
+    /* ── EXISTING STYLES (kept for quick-add + expenses) ───────────────────── */
+
+    /* TODAY STAT CARD — kept below dashboard */
+    .today-card{background:var(--navy);color:white;border-radius:18px;padding:1.25rem 1.5rem;margin-bottom:1rem}
+    .today-label{font-size:0.75rem;letter-spacing:0.08em;text-transform:uppercase;opacity:0.65;margin-bottom:0.35rem}
+    .today-amount{font-family:'Space Grotesk',sans-serif;font-size:2.25rem;font-weight:700;margin-bottom:0.75rem}
+    .today-pills{display:flex;gap:0.5rem;flex-wrap:wrap}
+    .pill{display:inline-flex;align-items:center;gap:0.3rem;padding:0.25rem 0.7rem;border-radius:100px;font-size:0.72rem;font-weight:500}
+    .pill-impulse{background:rgba(224,122,95,0.25);color:#f0a091}
+    .pill-planned{background:rgba(125,184,125,0.25);color:#a8d8a8}
+    .pill-untriaged{background:rgba(176,173,168,0.2);color:rgba(255,255,255,0.65)}
+
+    /* TRIAGE BANNER */
+    .triage-banner{background:#fff8f0;border:1.5px solid #f0c070;border-radius:14px;padding:1rem 1.25rem;margin-bottom:1rem;display:none}
+    .triage-banner.visible{display:block}
+    .triage-banner-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:0.6rem}
+    .triage-banner-title{font-family:'Space Grotesk',sans-serif;font-size:0.95rem;font-weight:600;color:var(--navy)}
+    .triage-count-badge{background:#f0c070;color:#7a4e00;padding:0.15rem 0.6rem;border-radius:100px;font-size:0.7rem;font-weight:700}
+    .triage-desc{font-size:0.8rem;color:var(--text-muted);margin-bottom:0.75rem}
+    .btn-triage-open{background:var(--orange);color:white;border:none;padding:0.5rem 1.1rem;border-radius:8px;font-size:0.85rem;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;min-height:40px;transition:background 0.15s}
+    .btn-triage-open:hover{background:var(--orange-light)}
+
+    /* QUICK ADD */
+    .section-label{font-size:0.7rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);font-weight:600;margin-bottom:0.6rem}
+    .quick-add-card{background:var(--surface);border-radius:16px;padding:1.25rem;box-shadow:0 1px 3px rgba(0,0,0,0.06);margin-bottom:1rem}
+
+    /* Amount input */
+    .amount-row{display:flex;align-items:center;gap:0.5rem;margin-bottom:1.1rem}
+    .currency-sign{font-family:'Space Grotesk',sans-serif;font-size:1.6rem;font-weight:700;color:var(--navy);line-height:1}
+    .amount-input{flex:1;font-family:'Space Grotesk',sans-serif;font-size:2rem;font-weight:700;color:var(--navy);border:none;background:transparent;outline:none;min-width:0;padding:0}
+    .amount-input::placeholder{color:#D8D5D0}
+
+    /* Category pills */
+    .cat-grid{display:flex;flex-wrap:wrap;gap:0.4rem;margin-bottom:1rem}
+    .cat-pill{padding:0.35rem 0.7rem;border-radius:100px;font-size:0.78rem;font-weight:500;border:1.5px solid var(--border);background:white;cursor:pointer;color:var(--text-dark);transition:all 0.12s;min-height:36px;display:flex;align-items:center}
+    .cat-pill.selected{background:var(--navy);border-color:var(--navy);color:white}
+
+    /* Impulse toggle */
+    .impulse-row{display:flex;align-items:center;gap:0.75rem;margin-bottom:1.1rem;padding:0.75rem 1rem;background:var(--cream);border-radius:10px}
+    .impulse-label{flex:1;font-size:0.85rem;color:var(--text-dark);font-weight:500}
+    .impulse-label small{display:block;font-size:0.72rem;color:var(--text-muted);margin-top:0.15rem;font-weight:400}
+    .toggle-wrap{display:flex;gap:0.4rem}
+    .toggle-btn{padding:0.3rem 0.85rem;border-radius:100px;font-size:0.78rem;font-weight:600;border:1.5px solid var(--border);background:white;cursor:pointer;color:var(--text-muted);transition:all 0.12s;min-height:36px}
+    .toggle-btn.active-yes{background:var(--impulse);border-color:var(--impulse);color:white}
+    .toggle-btn.active-no{background:var(--planned);border-color:var(--planned);color:white}
+
+    /* Note + date */
+    .row-inputs{display:flex;gap:0.5rem;margin-bottom:1rem}
+    .note-input,.date-input{flex:1;padding:0.55rem 0.85rem;border:1.5px solid var(--border);border-radius:10px;font-family:'DM Sans',sans-serif;font-size:0.85rem;color:var(--text-dark);background:white;outline:none;transition:border-color 0.15s}
+    .note-input:focus,.date-input:focus{border-color:var(--orange)}
+    .date-input{max-width:140px}
+
+    /* Submit */
+    .btn-submit{width:100%;padding:0.8rem;background:var(--navy);color:white;border:none;border-radius:12px;font-family:'Space Grotesk',sans-serif;font-size:1rem;font-weight:600;cursor:pointer;transition:background 0.15s;min-height:48px}
+    .btn-submit:hover{background:var(--navy-mid)}
+    .btn-submit:active{transform:scale(0.98)}
+    .submit-toast{display:none;text-align:center;font-size:0.82rem;color:var(--green);margin-top:0.5rem;font-weight:500}
+    .submit-toast.visible{display:block}
+
+    /* EXPENSE LIST */
+    .expenses-section{background:var(--surface);border-radius:16px;padding:1.25rem;box-shadow:0 1px 3px rgba(0,0,0,0.06);margin-bottom:1rem}
+    .period-tabs{display:flex;gap:0.3rem;margin-bottom:1rem}
+    .period-tab{padding:0.3rem 0.85rem;border-radius:100px;font-size:0.78rem;font-weight:600;border:1.5px solid var(--border);background:white;cursor:pointer;color:var(--text-muted);transition:all 0.12s}
+    .period-tab.active{background:var(--navy);border-color:var(--navy);color:white}
+
+    /* Category breakdown bar */
+    .breakdown-bar{height:8px;border-radius:100px;background:var(--border);margin-bottom:1rem;overflow:hidden;display:flex}
+    .bar-segment{height:100%;transition:width 0.4s}
+
+    /* Summary stats row */
+    .stat-row{display:flex;gap:0.75rem;margin-bottom:1rem}
+    .stat-box{flex:1;background:var(--cream);border-radius:10px;padding:0.6rem 0.75rem;text-align:center}
+    .stat-box .stat-val{font-family:'Space Grotesk',sans-serif;font-size:1.05rem;font-weight:700;color:var(--navy)}
+    .stat-box .stat-lbl{font-size:0.67rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-muted);margin-top:0.1rem}
+    .impulse-fact{font-size:0.8rem;color:var(--text-muted);text-align:center;margin-bottom:1rem;line-height:1.5}
+    .impulse-fact strong{color:var(--impulse)}
+
+    /* Category list */
+    .cat-breakdown{display:flex;flex-direction:column;gap:0.5rem;margin-bottom:1rem}
+    .cat-row{display:flex;align-items:center;gap:0.6rem}
+    .cat-icon{font-size:1rem;width:28px;text-align:center}
+    .cat-name{flex:1;font-size:0.85rem;color:var(--text-dark)}
+    .cat-total{font-size:0.82rem;font-weight:600;color:var(--navy);min-width:52px;text-align:right}
+
+    /* Expense list items */
+    .expense-list{display:flex;flex-direction:column;gap:0.5rem}
+    .expense-item{display:flex;align-items:center;gap:0.75rem;padding:0.65rem 0;border-bottom:1px solid var(--border)}
+    .expense-item:last-child{border-bottom:none}
+    .exp-icon{font-size:1.1rem;width:32px;height:32px;display:flex;align-items:center;justify-content:center;background:var(--cream);border-radius:8px;flex-shrink:0}
+    .exp-info{flex:1;min-width:0}
+    .exp-merchant{font-size:0.88rem;font-weight:500;color:var(--text-dark);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .exp-meta{font-size:0.72rem;color:var(--text-muted);display:flex;gap:0.4rem;align-items:center;margin-top:0.1rem}
+    .exp-tag{padding:0.1rem 0.4rem;border-radius:4px;font-size:0.65rem;font-weight:600;text-transform:uppercase;letter-spacing:0.04em}
+    .tag-impulse{background:#faeae5;color:#c0503a}
+    .tag-planned{background:#eaf5ea;color:#3a8a3a}
+    .tag-untriaged{background:#f0f0f0;color:#888}
+    .exp-amount{font-family:'Space Grotesk',sans-serif;font-size:0.92rem;font-weight:700;color:var(--navy)}
+    .empty-state{text-align:center;padding:2rem 1rem;color:var(--text-muted);font-size:0.88rem}
+
+    /* TRIAGE MODAL */
+    .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;display:none;align-items:flex-end;justify-content:center}
+    .modal-overlay.open{display:flex}
+    .modal-sheet{background:white;width:100%;max-width:480px;border-radius:24px 24px 0 0;padding:1.5rem 1.25rem 2.5rem;max-height:85vh;overflow-y:auto}
+    .modal-handle{width:36px;height:4px;background:var(--border);border-radius:100px;margin:0 auto 1.25rem;cursor:pointer}
+    .modal-title{font-family:'Space Grotesk',sans-serif;font-size:1.1rem;font-weight:700;color:var(--navy);margin-bottom:0.3rem}
+    .modal-subtitle{font-size:0.8rem;color:var(--text-muted);margin-bottom:1.25rem}
+
+    /* Triage card */
+    .triage-card{background:var(--cream);border-radius:14px;padding:1rem 1.25rem;margin-bottom:1rem}
+    .triage-card-top{display:flex;align-items:center;gap:0.75rem;margin-bottom:0.75rem}
+    .triage-merchant{flex:1}
+    .triage-merchant .name{font-weight:600;font-size:0.95rem;color:var(--navy)}
+    .triage-merchant .meta{font-size:0.75rem;color:var(--text-muted);margin-top:0.15rem}
+    .triage-amount{font-family:'Space Grotesk',sans-serif;font-size:1.2rem;font-weight:700;color:var(--navy)}
+
+    /* Category chips in triage */
+    .triage-cats{display:flex;flex-wrap:wrap;gap:0.35rem;margin-bottom:0.85rem}
+    .triage-cat{padding:0.25rem 0.6rem;border-radius:100px;font-size:0.72rem;border:1.5px solid var(--border);background:white;cursor:pointer;color:var(--text-muted);transition:all 0.12s}
+    .triage-cat.selected{background:var(--navy);border-color:var(--navy);color:white}
+
+    /* Yes/No impulse buttons */
+    .triage-btns{display:flex;gap:0.5rem}
+    .btn-impulse,.btn-planned{flex:1;padding:0.7rem;border:none;border-radius:12px;font-family:'Space Grotesk',sans-serif;font-size:0.95rem;font-weight:600;cursor:pointer;transition:all 0.15s;min-height:48px}
+    .btn-impulse{background:#faeae5;color:var(--impulse)}
+    .btn-impulse:hover{background:var(--impulse);color:white}
+    .btn-planned{background:#eaf5ea;color:#3a8a3a}
+    .btn-planned:hover{background:#7DB87D;color:white}
+
+    /* Progress */
+    .triage-progress{display:flex;align-items:center;gap:0.6rem;margin-bottom:1rem}
+    .progress-bar{flex:1;height:6px;background:var(--border);border-radius:100px;overflow:hidden}
+    .progress-fill{height:100%;background:var(--orange);border-radius:100px;transition:width 0.3s}
+    .progress-text{font-size:0.75rem;color:var(--text-muted)}
+
+    .btn-skip-all{width:100%;margin-top:0.75rem;padding:0.55rem;background:transparent;border:1.5px solid var(--border);border-radius:10px;font-size:0.82rem;color:var(--text-muted);cursor:pointer;font-family:'DM Sans',sans-serif}
+    .btn-skip-all:hover{border-color:var(--text-muted)}
+
+    /* SPENDING ALERT BANNER */
+    .spending-alert-banner{display:none;background:linear-gradient(135deg,#fff8f0,#fef3e2);border:1.5px solid #f0c070;border-radius:14px;padding:1rem 1.25rem;margin-bottom:1rem}
+    .spending-alert-banner.visible{display:block}
+    .alert-header{display:flex;align-items:flex-start;gap:0.75rem}
+    .alert-emoji{font-size:1.5rem;flex-shrink:0}
+    .alert-body{flex:1}
+    .alert-text{font-size:0.88rem;color:var(--navy);line-height:1.5;margin-bottom:0.5rem;font-weight:500}
+    .btn-dismiss-alert{background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:0.75rem;padding:0;display:inline-block}
+    .btn-dismiss-alert:hover{color:var(--text-dark)}
+    .btn-check-in{background:var(--orange);color:white;border:none;padding:0.45rem 1rem;border-radius:8px;font-size:0.82rem;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;min-height:36px;transition:background 0.15s;margin-top:0.35rem}
+    .btn-check-in:hover{background:var(--orange-light)}
+
+    /* REFLECTION CARD */
+    .reflection-card{display:none;background:linear-gradient(135deg,#fef9f0,#fff5e8);border:1.5px solid #e8d5a8;border-radius:12px;padding:0.85rem 1.1rem;margin-bottom:0.85rem;text-align:center}
+    .reflection-card.visible{display:block}
+    .reflection-title{font-family:'Space Grotesk',sans-serif;font-size:0.9rem;font-weight:700;color:var(--navy);margin-bottom:0.2rem}
+    .reflection-sub{font-size:0.78rem;color:var(--text-muted);margin-bottom:0.6rem}
+    .reflection-btns{display:flex;gap:0.5rem;justify-content:center}
+    .btn-reflection-add{background:var(--navy);color:white;border:none;padding:0.45rem 1rem;border-radius:8px;font-size:0.82rem;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;min-height:36px;transition:background 0.15s}
+    .btn-reflection-add:hover{background:var(--navy-mid)}
+    .btn-reflection-skip{background:white;border:1.5px solid var(--border);color:var(--text-muted);padding:0.45rem 1rem;border-radius:8px;font-size:0.82rem;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;min-height:36px;transition:all 0.15s}
+    .btn-reflection-skip:hover{border-color:var(--orange);color:var(--navy)}
+
+    /* DELAY MODAL */
+    .delay-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:2000;display:none;align-items:center;justify-content:center;padding:1rem}
+    .delay-modal-overlay.open{display:flex}
+    .delay-modal{background:white;width:100%;max-width:380px;border-radius:20px;padding:2rem 1.75rem;text-align:center}
+    .delay-emoji{font-size:3rem;margin-bottom:0.75rem}
+    .delay-title{font-family:'Space Grotesk',sans-serif;font-size:1.15rem;font-weight:700;color:var(--navy);margin-bottom:0.35rem}
+    .delay-sub{font-size:0.82rem;color:var(--text-muted);line-height:1.5;margin-bottom:1.5rem}
+    .delay-countdown{font-family:'Space Grotesk',sans-serif;font-size:2.75rem;font-weight:700;color:var(--navy);margin-bottom:0.5rem;letter-spacing:-0.02em}
+    .delay-countdown-label{font-size:0.72rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:1.25rem}
+    .delay-progress-bar{height:6px;background:var(--border);border-radius:100px;overflow:hidden;margin-bottom:1.25rem}
+    .delay-progress-fill{height:100%;background:var(--orange);border-radius:100px;transition:width 1s linear}
+    .delay-subtext{font-size:0.75rem;color:var(--text-muted);margin-bottom:1.25rem;font-style:italic}
+    .btn-proceed-soon{background:var(--impulse);color:white;border:none;padding:0.7rem 1.5rem;border-radius:12px;font-family:'Space Grotesk',sans-serif;font-size:0.95rem;font-weight:600;cursor:pointer;min-height:48px;transition:background 0.15s}
+    .btn-proceed-soon:hover{background:#c06040}
+    .btn-proceed-soon:disabled{opacity:0.4;cursor:not-allowed}
+    .btn-cancel-delay{width:100%;margin-top:0.5rem;padding:0.5rem;background:transparent;border:none;color:var(--text-muted);cursor:pointer;font-family:'DM Sans',sans-serif;font-size:0.82rem}
+
+    /* Loading skeleton */
+    .skeleton{background:linear-gradient(90deg,var(--skeleton-base) 25%,var(--skeleton-highlight) 50%,var(--skeleton-base) 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:6px;height:1em}
+    @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+    @media(prefers-reduced-motion:reduce){
+      .skeleton,.sk-label,.sk-amount,.sk-meta{animation:none;background:var(--skeleton-base)}
+    }
+
+    /* Dashboard card skeletons */
+    .dash-skeleton{background:var(--surface);border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.08);padding:1.1rem 1.25rem;margin-bottom:0.75rem}
+    .sk-label{height:0.7rem;width:60%;border-radius:4px;margin-bottom:0.5rem;animation:shimmer 1.5s infinite;background-size:200% 100%;background:linear-gradient(90deg,var(--skeleton-base) 25%,var(--skeleton-highlight) 50%,var(--skeleton-base) 75%)}
+    .sk-amount{height:1.8rem;width:45%;border-radius:4px;margin-bottom:0.4rem;animation:shimmer 1.5s infinite;background-size:200% 100%;background:linear-gradient(90deg,var(--skeleton-base) 25%,var(--skeleton-highlight) 50%,var(--skeleton-base) 75%)}
+    .sk-meta{height:0.6rem;width:40%;border-radius:4px;animation:shimmer 1.5s infinite;background-size:200% 100%;background:linear-gradient(90deg,var(--skeleton-base) 25%,var(--skeleton-highlight) 50%,var(--skeleton-base) 75%)}
+
+    @media(min-width:520px){
+      .page-wrap{padding:1.5rem 1.5rem 2rem}
+    }
+  </style>
+  <link rel="stylesheet" href="/shared-nav.css">
+  <link rel="stylesheet" href="/css/interaction-quality.css">
+</head>
+<body>
+
+<!-- TOP NAV -->
+<nav class="top-nav">
+  <a href="/home" class="nav-logo">
+    <span class="logo-dot"></span>FocusLedger
+  </a>
+  <span class="nav-title">💰 Money Dashboard</span>
+</nav>
+
+<div class="page-wrap">
+
+  <!-- ── DASHBOARD CARDS ────────────────────────────────────────────────── -->
+  <div class="dash-section-label">Spending overview</div>
+
+  <!-- CARD 1: Account Summary (always shown, but CTA if no connection) -->
+  <div id="card1-placeholder">
+    <div class="dash-skeleton">
+      <div class="sk-label"></div>
+      <div class="sk-amount"></div>
+      <div class="sk-meta"></div>
+    </div>
+  </div>
+
+  <!-- CARD 2: Today's Spending (always shown) -->
+  <div id="card2-placeholder">
+    <div class="dash-skeleton">
+      <div class="sk-label"></div>
+      <div class="sk-amount"></div>
+      <div class="sk-meta"></div>
+    </div>
+  </div>
+
+  <!-- CARD 3: This Week (unlocks at day 3) -->
+  <div id="card3-placeholder"></div>
+
+  <!-- CARD 4: Impulse vs Planned (unlocks after first Evening Swipe) -->
+  <div id="card4-placeholder"></div>
+
+  <!-- CARD 5: Top Categories (unlocks at day 7) -->
+  <div id="card5-placeholder"></div>
+
+  <!-- ── QUICK ADD + EXPENSES (existing sections) ──────────────────────── -->
+
+  <div class="section-divider"></div>
+
+  <!-- SPENDING ALERT BANNER -->
+  <div class="spending-alert-banner" id="spendingAlertBanner">
+    <div class="alert-header">
+      <span class="alert-emoji">💭</span>
+      <div class="alert-body">
+        <div class="alert-text" id="alertText"></div>
+        <button class="btn-check-in" onclick="onCheckIn()">Check in now</button>
+        <button class="btn-dismiss-alert" onclick="dismissAlert()">Dismiss</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TRIAGE BANNER -->
+  <div class="triage-banner" id="triageBanner">
+    <div class="triage-banner-header">
+      <span class="triage-banner-title">Spending check-in</span>
+      <span class="triage-count-badge" id="triageBadge">0</span>
+    </div>
+    <p class="triage-desc" id="triageDesc">Some bank transactions need a quick "impulse or planned?" check.</p>
+    <button class="btn-triage-open" onclick="openTriageModal()">Review now</button>
+  </div>
+
+  <!-- QUICK ADD CARD -->
+  <div class="section-label">Log Spend</div>
+  <div class="quick-add-card">
+    <div class="amount-row">
+      <span class="currency-sign">$</span>
+      <input class="amount-input" type="number" id="amountInput" inputmode="decimal" placeholder="0.00" min="0.01" step="0.01" autofocus>
+    </div>
+
+    <!-- Category pills -->
+    <div class="section-label">Category</div>
+    <div class="cat-grid" id="catGrid">
+      <!-- populated by JS -->
+    </div>
+
+    <!-- Reflection card -->
+    <div class="reflection-card" id="reflectionCard">
+      <div class="reflection-title" id="reflectionTitle">Just a moment…</div>
+      <div class="reflection-sub" id="reflectionSub">"Will this still matter to you tomorrow?"</div>
+      <div class="reflection-btns">
+        <button class="btn-reflection-add" id="btnReflectionAdd" onclick="proceedWithReflection(true)">Add to plan</button>
+        <button class="btn-reflection-skip" onclick="proceedWithReflection(false)">Log anyway</button>
+      </div>
+    </div>
+
+    <!-- Impulse toggle -->
+    <div class="impulse-row">
+      <div class="impulse-label">
+        Was this planned?
+        <small>Impulse data = patterns, not guilt</small>
+      </div>
+      <div class="toggle-wrap">
+        <button class="toggle-btn" id="btnYes" onclick="setImpulse(false)">Yes</button>
+        <button class="toggle-btn" id="btnNo" onclick="setImpulse(true)">Nope</button>
+      </div>
+    </div>
+
+    <!-- Note + Date -->
+    <div class="row-inputs">
+      <input class="note-input" type="text" id="noteInput" placeholder="Note (optional)">
+      <input class="date-input" type="date" id="dateInput">
+    </div>
+
+    <button class="btn-submit" onclick="submitExpense()">+ Log Spend</button>
+    <div class="submit-toast" id="submitToast">✓ Logged!</div>
+  </div>
+
+  <!-- EXPENSES SECTION -->
+  <div class="expenses-section">
+    <div class="section-label">Spending overview</div>
+    <div class="period-tabs">
+      <button class="period-tab active" onclick="setPeriod('week', this)">This week</button>
+      <button class="period-tab" onclick="setPeriod('month', this)">This month</button>
+    </div>
+
+    <!-- Impulse fact -->
+    <div class="impulse-fact" id="impulseFact" style="display:none"></div>
+
+    <!-- Stats -->
+    <div class="stat-row" id="statRow" style="display:none">
+      <div class="stat-box">
+        <div class="stat-val" id="statTotal">—</div>
+        <div class="stat-lbl">Total</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-val" id="statImpulse" style="color:var(--impulse)">—</div>
+        <div class="stat-lbl">Impulse</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-val" id="statPlanned" style="color:var(--planned)">—</div>
+        <div class="stat-lbl">Planned</div>
+      </div>
+    </div>
+
+    <!-- Category breakdown -->
+    <div class="cat-breakdown" id="catBreakdown"></div>
+
+    <!-- Recent expenses -->
+    <div class="section-label" style="margin-top:0.5rem">Recent</div>
+    <div class="expense-list" id="expenseList">
+      <div class="empty-state">Loading…</div>
+    </div>
+  </div>
+
+</div><!-- /page-wrap -->
+
+<!-- TRIAGE MODAL -->
+<div class="modal-overlay" id="triageModal" onclick="closeTriageOnOverlay(event)">
+  <div class="modal-sheet">
+    <div class="modal-handle" onclick="closeTriageModal()"></div>
+    <div class="modal-title">Spending check-in</div>
+    <div class="modal-subtitle" id="triageModalSubtitle">Let's tag a few transactions. Takes 30 seconds.</div>
+
+    <div class="triage-progress">
+      <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+      <span class="progress-text" id="progressText">0 / 0</span>
+    </div>
+
+    <div id="triageCardContainer">
+      <!-- filled by JS -->
+    </div>
+
+    <button class="btn-skip-all" onclick="skipAllTriage()">Skip remaining</button>
+  </div>
+</div>
+
+<!-- DELAY MODAL -->
+<div class="delay-modal-overlay" id="delayModal">
+  <div class="delay-modal">
+    <div class="delay-emoji" id="delayEmoji">⏸️</div>
+    <div class="delay-title" id="delayTitle">One breath before you buy</div>
+    <div class="delay-sub" id="delaySub">Taking a moment helps you decide with clarity, not impulse.</div>
+    <div class="delay-countdown" id="delayCountdown">10:00</div>
+    <div class="delay-countdown-label">minutes remaining</div>
+    <div class="delay-progress-bar"><div class="delay-progress-fill" id="delayProgressFill" style="width:0%"></div></div>
+    <div class="delay-subtext">This pause helps you show up how you want to.</div>
+    <button class="btn-proceed-soon" id="btnProceed" onclick="proceedAfterDelay()" disabled>Wait… (10:00)</button>
+    <button class="btn-cancel-delay" onclick="cancelDelay()">Cancel</button>
+  </div>
+</div>
+
+<script>
+// ─── Auth ────────────────────────────────────────────────────────────────────
+const token = localStorage.getItem('fl_token');
+if (!token) { window.location.href = '/login'; }
+
+function api(path, opts = {}) {
+  return fetch(path, {
+    ...opts,
+    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json', ...(opts.headers || {}) },
+  }).then(r => r.json());
+}
+
+function go(href) { window.location.href = href; }
+function fmt(n) { return '$' + parseFloat(n || 0).toFixed(2); }
+function fmtCents(c) { return fmt((parseInt(c, 10) || 0) / 100); }
+
+// ─── State ───────────────────────────────────────────────────────────────────
+const CATS = [
+  { slug:'housing',       label:'🏠 Housing' },
+  { slug:'bills',         label:'📄 Bills' },
+  { slug:'groceries',     label:'🛒 Groceries' },
+  { slug:'food_delivery', label:'🍕 Food & Delivery' },
+  { slug:'subscriptions', label:'🔄 Subscriptions' },
+  { slug:'shopping',      label:'🛍️ Shopping' },
+  { slug:'transport',     label:'🚗 Transport' },
+  { slug:'health',        label:'🏥 Health' },
+  { slug:'fun',           label:'🎮 Fun' },
+  { slug:'other',         label:'📦 Other' },
+];
+
+const CAT_ICON_MAP = {
+  'Food & Dining':'🍕','Groceries':'🛒','Shopping':'🛍️','Bills & Utilities':'📄',
+  'Entertainment':'🎮','Health':'🏥','Transport':'🚗','Housing':'🏠',
+  'Subscriptions':'🔄','Other':'📦',
+  food_delivery:'🍕',groceries:'🛒',shopping:'🛍️',bills:'📄',fun:'🎮',
+  health:'🏥',transport:'🚗',housing:'🏠',subscriptions:'🔄',other:'📦',
+};
+
+let selectedCat = 'other';
+let selectedImpulse = null;
+let currentPeriod = 'week';
+let untriagedList = [];
+let triageIndex = 0;
+let triageCatSelected = null;
+let nudgeConfig = { delayThreshold: 75, reflectionMin: 25 };
+let reflectionShown = false;
+let delayCountdownInterval = null;
+let delayRemainingSeconds = 0;
+let pendingExpenseData = null;
+
+// Unlock state
+let unlockState = { day1: true, day3: false, afterFirstSwipe: false, day7: false };
+let daysSinceFirstTx = 0;
+
+// ─── Init ────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  buildCatGrid();
+  document.getElementById('dateInput').value = new Date().toISOString().split('T')[0];
+  loadNudgeConfig();
+  loadSpendingAlerts();
+  checkUntriaged();
+
+  // Watch amount input for reflection card trigger
+  document.getElementById('amountInput').addEventListener('input', onAmountChange);
+
+  // Load dashboard data
+  window.onBankSyncStatusChanged = loadAccountCard;
+  initDashboard();
+});
+
+// ─── Dashboard init ──────────────────────────────────────────────────────────
+async function initDashboard() {
+  await Promise.all([
+    loadAccountCard(),
+    loadTodaySpendingCard(),
+    checkUnlockConditions(),
+  ]);
+  // Stagger-fade card reveals
+  staggerRevealCards();
+}
+
+// ── Stagger-fade reveal for dashboard cards ──────────────────────────────────
+function staggerRevealCards() {
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  var cards = document.querySelectorAll('.dash-card');
+  cards.forEach(function(card, i) {
+    card.style.opacity = '0';
+    card.style.transform = 'translateY(8px)';
+    card.style.transition = 'opacity 200ms ease, transform 200ms ease';
+    setTimeout(function() {
+      card.style.opacity = '1';
+      card.style.transform = 'translateY(0)';
+    }, i * 80); // 80ms stagger for fewer items
+  });
+}
+
+// ─── Unlock conditions ───────────────────────────────────────────────────────
+async function checkUnlockConditions() {
+  // Check first transaction date from localStorage (seeded on first transaction load)
+  const storedFirstTx = localStorage.getItem('fl_first_transaction_date');
+  if (storedFirstTx) {
+    const firstDate = new Date(storedFirstTx);
+    const today = new Date();
+    daysSinceFirstTx = Math.floor((today - firstDate) / (1000 * 60 * 60 * 24));
+  }
+
+  // Check first Evening Swipe completion from localStorage
+  const swipeDone = localStorage.getItem('fl_evening_swipe_done') === 'true';
+
+  unlockState = {
+    day1: true,
+    day3: daysSinceFirstTx >= 3,
+    afterFirstSwipe: swipeDone,
+    day7: daysSinceFirstTx >= 7,
+  };
+
+  // Load all cards
+  await Promise.all([
+    loadWeekCard(),
+    loadImpulseCard(),
+    loadCategoriesCard(),
+  ]);
+}
+
+// ─── Card 1: Account Summary / Bank Sync ─────────────────────────────────────
+async function loadAccountCard() {
+  const container = document.getElementById('card1-placeholder');
+
+  // Not connected — use PlaidService to show the connect CTA inline
+  // (opens Plaid Link directly instead of redirecting to Settings)
+  function renderConnectCTA() {
+    var html = '<div class="connect-card">';
+    html += '<div class="connect-emoji">🏦</div>';
+    html += '<div class="connect-title">Connect your bank</div>';
+    html += '<div class="connect-sub">Sync transactions automatically and unlock your full spending picture.</div>';
+    html += '<button id="money-connect-bank" class="btn-connect">Connect Bank</button>';
+    html += '<div id="bankErrorMsg" style="display:none;margin-top:0.6rem;font-size:0.78rem;color:#E05252;"></div>';
+    html += '</div>';
+    container.innerHTML = html;
+    var btn = document.getElementById('money-connect-bank');
+    if (btn) {
+      var _t = false;
+      btn.addEventListener('touchend', function(e) { e.preventDefault(); _t = true; PlaidService.initPlaidLink(btn); });
+      btn.addEventListener('click', function() { if (_t) { _t = false; return; } PlaidService.initPlaidLink(btn); });
+    }
+  }
+
+  function renderConnectedState(r, balances) {
+    // balances: { items: [{ item_id, institution, accounts: [{ account_id, balances }] }] }
+    var balanceMap = {};
+    if (balances && balances.success && balances.items) {
+      for (var bi = 0; bi < balances.items.length; bi++) {
+        var bItem = balances.items[bi];
+        for (var ba = 0; ba < (bItem.accounts || []).length; ba++) {
+          var bAcc = bItem.accounts[ba];
+          balanceMap[bAcc.account_id] = bAcc.balances;
+        }
+      }
+    }
+
+    // Map from /api/money/accounts response format:
+    // { connected, items: [{ id, institution, lastSynced, accounts }] }
+    var items = r.items || [];
+    var firstItem = items[0];
+    var lastSynced = firstItem && firstItem.lastSynced ? PlaidService.relativeTime(firstItem.lastSynced) : null;
+    var accounts = firstItem ? (firstItem.accounts || []) : [];
+    var primary = accounts.find(function(a) { return a.type === 'depository'; }) || accounts[0];
+    // Merge in live balance from /api/plaid/balances
+    if (primary) {
+      var dbAccountId = primary.id; // this is the DB row id, not Plaid account_id
+      // Find the account in balances by matching account name + type
+      var liveBalances = null;
+      for (var ai = 0; ai < accounts.length; ai++) {
+        var acc = accounts[ai];
+        // Try to match by name
+        for (var bi2 = 0; bi2 < (balances && balances.items ? balances.items.length : 0); bi2++) {
+          var bItem2 = balances.items[bi2];
+          for (var ba2 = 0; ba2 < (bItem2.accounts || []).length; ba2++) {
+            var bAcc2 = bItem2.accounts[ba2];
+            if (bAcc2.name === acc.name && bAcc2.type === acc.type) {
+              liveBalances = bAcc2.balances;
+              break;
+            }
+          }
+          if (liveBalances) break;
+        }
+        if (liveBalances) break;
+      }
+      if (primary._balances) {
+        // Already merged
+      }
+    }
+    var balance = null;
+    if (primary && balances && balances.items) {
+      // Try to match primary account by name
+      outer: for (var i = 0; i < balances.items.length; i++) {
+        for (var j = 0; j < (balances.items[i].accounts || []).length; j++) {
+          var accBal = balances.items[i].accounts[j];
+          if (accBal.name === primary.name || accBal.name === (primary.official_name || primary.name)) {
+            balance = accBal.balances && accBal.balances.current != null ? fmt(accBal.balances.current) : null;
+            break outer;
+          }
+        }
+      }
+    }
+    if (balance === null && primary && primary._balances) {
+      balance = primary._balances.current != null ? fmt(primary._balances.current) : null;
+    }
+
+    var accountName = primary ? primary.name : (firstItem && firstItem.institution ? firstItem.institution : 'Connected Account');
+    var mask = primary && primary.mask ? ' ••' + primary.mask : '';
+    var syncedLine = lastSynced ? 'Updated ' + lastSynced : '';
+    var itemId = firstItem ? firstItem.id : null;
+
+    var html = '<div class="dash-card">';
+    html += '<div class="card-row">';
+    html += '<div class="card-left">';
+    html += '<div class="card-label">Account</div>';
+    html += '<div class="card-amount">' + (balance || '—') + '</div>';
+    html += '<div class="account-inst">' + accountName + mask + '</div>';
+    if (syncedLine) html += '<div class="last-updated">' + syncedLine + '</div>';
+    html += '</div>';
+    html += '<div class="card-right"><div class="card-icon-badge">💳</div></div>';
+    html += '</div>';
+    // Disconnect option
+    html += '<div style="margin-top:0.5rem;padding-top:0.5rem;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">';
+    html += '<span style="font-size:0.72rem;color:var(--text-muted);">Bank via Plaid · AES-256 encrypted</span>';
+    html += '<button id="money-disconnect-btn" style="font-size:0.72rem;color:var(--text-muted);background:none;border:none;cursor:pointer;text-decoration:underline;text-underline-offset:2px;">Disconnect</button>';
+    html += '</div>';
+    html += '</div>';
+    container.innerHTML = html;
+
+    var discBtn = document.getElementById('money-disconnect-btn');
+    if (discBtn) {
+      discBtn.addEventListener('click', function() {
+        if (!itemId) return;
+        if (confirm('Disconnect this account? This will stop syncing transactions.')) {
+          PlaidService.disconnectBankAccount(itemId);
+          loadAccountCard();
+        }
+      });
+    }
+  }
+
+  try {
+    var r = await api('/api/money/accounts');
+
+    if (!r.connected) {
+      renderConnectCTA();
+      return;
+    }
+
+    // Fetch live balances from Plaid in parallel
+    var balances = { success: false, items: [] };
+    try {
+      balances = await api('/api/plaid/balances');
+    } catch (e) {
+      // Balances unavailable — render without them
+    }
+
+    renderConnectedState(r, balances);
+  } catch (e) {
+    container.innerHTML = '<div class="dash-card"><div class="card-label">Account</div><div class="card-amount" style="color:var(--text-muted)">—</div></div>';
+  }
+}
+
+// ─── Card 2: Today's Spending ───────────────────────────────────────────────
+async function loadTodaySpendingCard() {
+  const container = document.getElementById('card2-placeholder');
+
+  try {
+    const [spend] = await Promise.all([
+      api('/api/money/expenses/today'),
+    ]);
+    const total = fmt(spend.total || 0);
+    const txCount = (spend.total > 0 ? 1 : 0); // spend.today doesn't count txs, just total
+
+    container.innerHTML = `
+      <div class="dash-card" onclick="go('/app/money')" style="cursor:pointer">
+        <div class="card-row">
+          <div class="card-left">
+            <div class="card-label">Today's spend</div>
+            <div class="card-amount">${total}</div>
+            <div class="card-meta">${spend.total > 0 ? '1' : '0'} transaction${spend.total > 0 ? '' : 's'}</div>
+          </div>
+          <div class="card-right">
+            <div class="card-icon-badge">📅</div>
+          </div>
+        </div>
+      </div>`;
+
+    // Seed first transaction date if we have spend
+    if (spend.total > 0 && !localStorage.getItem('fl_first_transaction_date')) {
+      const today = new Date().toISOString().split('T')[0];
+      localStorage.setItem('fl_first_transaction_date', today);
+    }
+  } catch (e) {
+    container.innerHTML = `
+      <div class="dash-card">
+        <div class="card-label">Today's spend</div>
+        <div class="card-amount" style="color:var(--text-muted)">—</div>
+      </div>`;
+  }
+}
+
+// ─── Card 3: This Week ───────────────────────────────────────────────────────
+async function loadWeekCard() {
+  const container = document.getElementById('card3-placeholder');
+  const days = daysSinceFirstTx;
+
+  if (!unlockState.day3) {
+    const progress = Math.min(days / 3, 1);
+    container.innerHTML = `
+      <div class="locked-card">
+        <div class="locked-icon">📊</div>
+        <div class="locked-text">
+          <strong>This Week</strong> — unlocks after 3 days of tracking.<br>
+          <span style="color:var(--text-muted)">Come back soon!</span>
+          <div class="unlock-hint">
+            <div class="unlock-bar"><div class="unlock-fill" style="width:${Math.round(progress * 100)}%"></div></div>
+            <span class="unlock-label">${days}/3 days</span>
+          </div>
+        </div>
+      </div>`;
+    return;
+  }
+
+  try {
+    // Compute week ranges
+    const now = new Date();
+    const thisWeekStart = getWeekStart(now);
+    const thisWeekEnd = formatDate(now);
+    const lastWeekStart = getWeekStart(new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000));
+    const lastWeekEnd = formatDate(new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000));
+
+    const [thisAgg, lastAgg] = await Promise.all([
+      api(`/api/money/transactions/aggregate?from=${thisWeekStart}&to=${thisWeekEnd}`),
+      api(`/api/money/transactions/aggregate?from=${lastWeekStart}&to=${lastWeekEnd}`),
+    ]);
+
+    const thisTotal = parseInt(thisAgg.total_spend, 10) || 0;
+    const lastTotal = parseInt(lastAgg.total_spend, 10) || 0;
+    const diff = lastTotal > 0 ? ((thisTotal - lastTotal) / lastTotal) : 0;
+    const diffPct = Math.abs(Math.round(diff * 100));
+    const isUp = diff >= 0;
+    const trendClass = isUp ? 'trend-up' : 'trend-down';
+    const trendLabel = isUp ? `↑ ${diffPct}%` : `↓ ${diffPct}%`;
+
+    container.innerHTML = `
+      <div class="dash-card">
+        <div class="card-row">
+          <div class="card-left">
+            <div class="card-label">This week</div>
+            <div class="card-amount">${fmtCents(thisTotal)}</div>
+            <span class="trend-pill ${trendClass}">${trendLabel} vs last week</span>
+          </div>
+          <div class="card-right">
+            <div class="card-icon-badge">📊</div>
+          </div>
+        </div>
+        <div class="week-breakdown">
+          <div class="week-stat">
+            <div class="ws-val">${fmtCents(lastTotal)}</div>
+            <div class="ws-lbl">Last week</div>
+          </div>
+          <div class="week-stat">
+            <div class="ws-val">${diff >= 0 ? '+' : ''}${fmtCents(Math.abs(thisTotal - lastTotal))}</div>
+            <div class="ws-lbl">${isUp ? '↑' : '↓'} change</div>
+          </div>
+        </div>
+      </div>`;
+  } catch (e) {
+    container.innerHTML = `
+      <div class="dash-card">
+        <div class="card-label">This week</div>
+        <div class="card-amount" style="color:var(--text-muted)">—</div>
+      </div>`;
+  }
+}
+
+// ─── Card 4: Impulse vs Planned ─────────────────────────────────────────────
+async function loadImpulseCard() {
+  const container = document.getElementById('card4-placeholder');
+
+  if (!unlockState.afterFirstSwipe) {
+    container.innerHTML = `
+      <div class="locked-card">
+        <div class="locked-icon">⚡</div>
+        <div class="locked-text">
+          <strong>Impulse vs Planned</strong> — unlock after your first check-in session.<br>
+          <span style="color:var(--text-muted)">Start a spending session to see your breakdown.</span>
+        </div>
+      </div>`;
+    return;
+  }
+
+  try {
+    const r = await api('/api/money/spending-sessions/stats');
+    const totalClassified = r.total_classified || 0;
+    const impulseCount = r.impulse_count || 0;
+    const plannedCount = r.planned_count || 0;
+
+    if (totalClassified === 0) {
+      container.innerHTML = `
+        <div class="dash-card">
+          <div class="card-label">Impulse vs Planned</div>
+          <div class="card-amount" style="font-size:1rem;color:var(--text-muted);margin-top:0.3rem">
+            No classified transactions yet.
+          </div>
+        </div>`;
+      return;
+    }
+
+    const impulsePct = Math.round((impulseCount / totalClassified) * 100);
+    const plannedPct = 100 - impulsePct;
+
+    container.innerHTML = `
+      <div class="dash-card">
+        <div class="card-row">
+          <div class="card-left">
+            <div class="card-label">Impulse vs Planned</div>
+            <div class="card-amount" style="font-size:1.4rem">${impulsePct}% impulse</div>
+          </div>
+          <div class="card-right">
+            <div class="card-icon-badge">⚡</div>
+          </div>
+        </div>
+        <div class="split-bar">
+          <div class="split-impulse" style="width:${impulsePct}%"></div>
+          <div class="split-planned" style="width:${plannedPct}%"></div>
+        </div>
+        <div class="split-legend" style="margin-top:0.5rem">
+          <span class="split-legend-item"><span class="split-dot split-dot-impulse"></span>${impulsePct}% impulse</span>
+          <span class="split-legend-item"><span class="split-dot split-dot-planned"></span>${plannedPct}% planned</span>
+        </div>
+      </div>`;
+  } catch (e) {
+    container.innerHTML = `
+      <div class="dash-card">
+        <div class="card-label">Impulse vs Planned</div>
+        <div class="card-amount" style="color:var(--text-muted)">—</div>
+      </div>`;
+  }
+}
+
+// ─── Card 5: Top Categories ─────────────────────────────────────────────────
+async function loadCategoriesCard() {
+  const container = document.getElementById('card5-placeholder');
+  const days = daysSinceFirstTx;
+
+  if (!unlockState.day7) {
+    const progress = Math.min(days / 7, 1);
+    container.innerHTML = `
+      <div class="locked-card">
+        <div class="locked-icon">📁</div>
+        <div class="locked-text">
+          <strong>Top Categories</strong> — unlocks after 7 days of tracking.<br>
+          <div class="unlock-hint">
+            <div class="unlock-bar"><div class="unlock-fill" style="width:${Math.round(progress * 100)}%"></div></div>
+            <span class="unlock-label">${days}/7 days</span>
+          </div>
+        </div>
+      </div>`;
+    return;
+  }
+
+  try {
+    const now = new Date();
+    const weekStart = getWeekStart(now);
+    const weekEnd = formatDate(now);
+
+    const r = await api(`/api/money/transactions/aggregate?from=${weekStart}&to=${weekEnd}`);
+    const cats = (r.by_category || []).filter(c => parseFloat(c.total) > 0).slice(0, 3);
+    const maxTotal = cats.length ? Math.max(...cats.map(c => parseFloat(c.total))) : 1;
+
+    if (cats.length === 0) {
+      container.innerHTML = `
+        <div class="dash-card">
+          <div class="card-label">Top categories</div>
+          <div class="card-amount" style="font-size:1rem;color:var(--text-muted);margin-top:0.3rem">No spending data yet.</div>
+        </div>`;
+      return;
+    }
+
+    const catRows = cats.map(c => {
+      const pct = Math.round((parseFloat(c.total) / maxTotal) * 100);
+      const icon = c.category ? (CAT_ICON_MAP[c.category] || '📦') : '📦';
+      return `
+        <div class="cat-row">
+          <span class="cat-icon">${icon}</span>
+          <span class="cat-name">${c.category || 'Other'}</span>
+          <div class="cat-bar-wrap"><div class="cat-bar-fill" style="width:${pct}%"></div></div>
+          <span class="cat-total">${fmtCents(c.total)}</span>
+        </div>`;
+    }).join('');
+
+    container.innerHTML = `
+      <div class="dash-card">
+        <div class="card-row">
+          <div class="card-left">
+            <div class="card-label">Top categories</div>
+            <div class="card-meta">This week</div>
+          </div>
+          <div class="card-right">
+            <div class="card-icon-badge">📁</div>
+          </div>
+        </div>
+        ${catRows}
+      </div>`;
+  } catch (e) {
+    container.innerHTML = `
+      <div class="dash-card">
+        <div class="card-label">Top categories</div>
+        <div class="card-amount" style="color:var(--text-muted)">—</div>
+      </div>`;
+  }
+}
+
+// ─── Evening swipe completion ────────────────────────────────────────────────
+async function markEveningSwipeDone() {
+  try {
+    const session = await api('/api/v1/spending-sessions/today');
+    if (session.success && session.session && session.complete) {
+      localStorage.setItem('fl_evening_swipe_done', 'true');
+    }
+  } catch (e) { /* silent */ }
+}
+
+// ─── Utilities ───────────────────────────────────────────────────────────────
+function getWeekStart(date) {
+  const d = new Date(date);
+  const day = d.getDay();
+  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+  d.setDate(diff);
+  return formatDate(d);
+}
+
+function formatDate(d) {
+  return d.toISOString().split('T')[0];
+}
+
+function relativeTime(isoString) {
+  if (!isoString) return null;
+  const diff = Date.now() - new Date(isoString).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins} min ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
+}
+
+// ─── Category grid ───────────────────────────────────────────────────────────
+function buildCatGrid() {
+  const grid = document.getElementById('catGrid');
+  grid.innerHTML = CATS.map(c => `
+    <button class="cat-pill${c.slug === selectedCat ? ' selected' : ''}"
+            data-slug="${c.slug}"
+            onclick="selectCat('${c.slug}')">
+      ${c.label}
+    </button>
+  `).join('');
+}
+
+function selectCat(slug) {
+  selectedCat = slug;
+  document.querySelectorAll('.cat-pill').forEach(b => {
+    b.classList.toggle('selected', b.dataset.slug === slug);
+  });
+}
+
+function setImpulse(isImpulse) {
+  selectedImpulse = isImpulse;
+  document.getElementById('btnYes').className = 'toggle-btn' + (!isImpulse ? ' active-no' : '');
+  document.getElementById('btnNo').className  = 'toggle-btn' + (isImpulse  ? ' active-yes' : '');
+}
+
+// ─── Nudge config + spending alerts ──────────────────────────────────────────
+async function loadNudgeConfig() {
+  try {
+    const r = await api('/api/money/nudge-config');
+    if (r.success) nudgeConfig = r;
+  } catch (e) { /* silent */ }
+}
+
+async function loadSpendingAlerts() {
+  try {
+    const r = await api('/api/money/alerts');
+    if (!r.success) return;
+    if (r.pendingAlert) {
+      const banner = document.getElementById('spendingAlertBanner');
+      document.getElementById('alertText').textContent = r.pendingAlert.message;
+      banner.classList.add('visible');
+    }
+  } catch (e) { /* silent */ }
+}
+
+async function dismissAlert() {
+  const banner = document.getElementById('spendingAlertBanner');
+  banner.classList.remove('visible');
+  try {
+    const r = await api('/api/money/alerts');
+    if (r.alerts && r.alerts.length > 0) {
+      await api(`/api/money/alerts/${r.alerts[0].id}`, { method: 'DELETE' });
+    }
+  } catch (e) { /* silent */ }
+}
+
+function onCheckIn() {
+  dismissAlert();
+  openTriageModal();
+}
+
+// ─── Reflection card ─────────────────────────────────────────────────────────
+function onAmountChange() {
+  const amount = parseFloat(document.getElementById('amountInput').value) || 0;
+  checkReflectionCard(amount);
+}
+
+function checkReflectionCard(amount) {
+  const card = document.getElementById('reflectionCard');
+  if (!card) return;
+
+  if (amount >= nudgeConfig.reflectionMin && !reflectionShown) {
+    reflectionShown = true;
+    const titleEl = document.getElementById('reflectionTitle');
+    const subEl   = document.getElementById('reflectionSub');
+    if (amount >= 200) {
+      titleEl.textContent = 'Big spend ahead';
+      subEl.textContent   = '"Will this still matter to you in a week?"';
+    } else {
+      titleEl.textContent = 'Just a moment…';
+      subEl.textContent   = '"Will this still matter to you tomorrow?"';
+    }
+    card.classList.add('visible');
+  } else if (amount < nudgeConfig.reflectionMin) {
+    reflectionShown = false;
+    card.classList.remove('visible');
+  }
+}
+
+function proceedWithReflection(addToPlan) {
+  const card = document.getElementById('reflectionCard');
+  card.classList.remove('visible');
+  if (addToPlan) {
+    selectedImpulse = false;
+    setImpulse(false);
+  }
+  doSubmitExpense();
+}
+
+// ─── Delay modal ─────────────────────────────────────────────────────────────
+function showDelayModal(amount) {
+  const modal = document.getElementById('delayModal');
+  const emoji = document.getElementById('delayEmoji');
+  const title = document.getElementById('delayTitle');
+  const sub   = document.getElementById('delaySub');
+
+  emoji.textContent = amount >= 200 ? '⏸️' : amount >= 100 ? '💭' : '⏳';
+  title.textContent = 'One breath before you buy';
+  sub.textContent    = amount >= 200
+    ? "Taking a moment before a big purchase helps you show up how you want to."
+    : "Taking a moment helps you decide with clarity, not impulse.";
+
+  modal.classList.add('open');
+  startDelayCountdown(amount);
+}
+
+function startDelayCountdown(amount) {
+  delayRemainingSeconds = 600;
+  updateDelayUI();
+
+  const btn = document.getElementById('btnProceed');
+  btn.disabled = true;
+  btn.textContent = 'Wait… (10:00)';
+
+  if (delayCountdownInterval) clearInterval(delayCountdownInterval);
+  delayCountdownInterval = setInterval(() => {
+    delayRemainingSeconds--;
+    updateDelayUI();
+    if (delayRemainingSeconds <= 0) {
+      clearInterval(delayCountdownInterval);
+      delayCountdownInterval = null;
+      btn.disabled = false;
+      btn.textContent = 'Proceed';
+    }
+  }, 1000);
+}
+
+function updateDelayUI() {
+  const mins = Math.floor(delayRemainingSeconds / 60);
+  const secs = delayRemainingSeconds % 60;
+  const display = `${mins}:${secs.toString().padStart(2, '0')}`;
+  document.getElementById('delayCountdown').textContent = display;
+  document.getElementById('btnProceed').textContent = delayRemainingSeconds > 0
+    ? `Wait… (${display})`
+    : 'Proceed';
+
+  const pct = ((600 - delayRemainingSeconds) / 600) * 100;
+  document.getElementById('delayProgressFill').style.width = pct + '%';
+}
+
+function proceedAfterDelay() {
+  closeDelayModal();
+  doSubmitExpense();
+}
+
+function cancelDelay() {
+  closeDelayModal();
+}
+
+function closeDelayModal() {
+  if (delayCountdownInterval) clearInterval(delayCountdownInterval);
+  delayCountdownInterval = null;
+  document.getElementById('delayModal').classList.remove('open');
+  reflectionShown = false;
+}
+
+// ─── Submit expense ───────────────────────────────────────────────────────────
+async function submitExpense() {
+  const amount = parseFloat(document.getElementById('amountInput').value);
+  if (!amount || amount <= 0) {
+    document.getElementById('amountInput').focus();
+    return;
+  }
+
+  pendingExpenseData = {
+    amount,
+    category: selectedCat,
+    is_impulse: selectedImpulse,
+    note: document.getElementById('noteInput').value.trim() || null,
+    expense_date: document.getElementById('dateInput').value,
+  };
+
+  if (amount >= nudgeConfig.delayThreshold) {
+    showDelayModal(amount);
+    return;
+  }
+
+  const reflCard = document.getElementById('reflectionCard');
+  if (reflCard && reflCard.classList.contains('visible')) {
+    return;
+  }
+
+  doSubmitExpense();
+}
+
+async function doSubmitExpense() {
+  if (!pendingExpenseData) return;
+  const body = pendingExpenseData;
+  pendingExpenseData = null;
+
+  try {
+    const res = await api('/api/money/expenses', { method: 'POST', body: JSON.stringify(body) });
+    if (res.success) {
+      document.getElementById('amountInput').value = '';
+      document.getElementById('noteInput').value = '';
+      selectedImpulse = null;
+      document.getElementById('btnYes').className = 'toggle-btn';
+      document.getElementById('btnNo').className  = 'toggle-btn';
+      reflectionShown = false;
+      document.getElementById('reflectionCard').classList.remove('visible');
+
+      const toast = document.getElementById('submitToast');
+      toast.classList.add('visible');
+      setTimeout(() => toast.classList.remove('visible'), 2000);
+
+      // Mark evening swipe done and refresh dashboard
+      markEveningSwipeDone();
+      await Promise.all([initDashboard(), loadExpenses(currentPeriod)]);
+    }
+  } catch (e) {
+    console.error('Submit expense error:', e);
+  }
+}
+
+// ─── Untriaged / triage banner ───────────────────────────────────────────────
+async function checkUntriaged() {
+  try {
+    const r = await api('/api/money/expenses/untriaged');
+    if (!r.success) return;
+    untriagedList = r.expenses || [];
+    const count = untriagedList.length;
+    if (count === 0) return;
+
+    const banner = document.getElementById('triageBanner');
+    document.getElementById('triageBadge').textContent = count;
+    document.getElementById('triageDesc').textContent =
+      count === 1
+        ? `1 transaction needs a quick "impulse or planned?" check.`
+        : `${count} transactions need a quick "impulse or planned?" check.`;
+    banner.classList.add('visible');
+  } catch (e) { /* silent */ }
+}
+
+// ─── Expenses list ────────────────────────────────────────────────────────────
+async function loadExpenses(period) {
+  try {
+    const [expRes, sumRes] = await Promise.all([
+      api(`/api/money/expenses?period=${period}`),
+      api(`/api/money/expenses/summary?period=${period}`),
+    ]);
+
+    if (sumRes.success) renderSummary(sumRes.summary);
+    if (expRes.success) renderExpenses(expRes.expenses || []);
+  } catch (e) {
+    document.getElementById('expenseList').innerHTML = '<div class="empty-state">Could not load expenses.</div>';
+  }
+}
+
+function renderSummary(s) {
+  document.getElementById('statRow').style.display = 'flex';
+  document.getElementById('statTotal').textContent   = fmt(s.total);
+  document.getElementById('statImpulse').textContent = fmt(s.impulse_total);
+  document.getElementById('statPlanned').textContent = fmt(s.planned_total);
+
+  const fact = document.getElementById('impulseFact');
+  if (s.total > 0 && (s.impulse_count > 0 || s.untriaged_count > 0)) {
+    fact.style.display = '';
+    if (s.untriaged_count > 0) {
+      fact.innerHTML = `<strong>${s.untriaged_count}</strong> transactions not yet tagged — check in to see your real impulse rate.`;
+    } else if (s.impulse_pct > 0) {
+      fact.innerHTML = `<strong>${s.impulse_pct}%</strong> of your ${s.period === 'week' ? 'week' : 'month'}'s spend was unplanned.`;
+    } else {
+      fact.innerHTML = `All tracked spending this ${s.period === 'week' ? 'week' : 'month'} was planned. Solid.`;
+      fact.style.display = '';
+    }
+  } else {
+    fact.style.display = 'none';
+  }
+
+  const cats = (s.by_category || []).filter(c => parseFloat(c.total) > 0);
+  const maxTotal = cats.length ? Math.max(...cats.map(c => parseFloat(c.total))) : 1;
+  const bd = document.getElementById('catBreakdown');
+  if (cats.length === 0) { bd.innerHTML = ''; return; }
+  bd.innerHTML = cats.map(c => {
+    const pct = Math.round((parseFloat(c.total) / maxTotal) * 100);
+    const icon = c.category_icon || CAT_ICON_MAP[c.category_name] || '📦';
+    return `
+      <div class="cat-row">
+        <span class="cat-icon">${icon}</span>
+        <span class="cat-name">${c.category_name || 'Other'}</span>
+        <div class="cat-bar-wrap"><div class="cat-bar-fill" style="width:${pct}%"></div></div>
+        <span class="cat-total">${fmt(c.total)}</span>
+      </div>`;
+  }).join('');
+}
+
+function renderExpenses(expenses) {
+  const list = document.getElementById('expenseList');
+  if (expenses.length === 0) {
+    list.innerHTML = '<div class="empty-state">No expenses yet — log your first spend above.</div>';
+    return;
+  }
+
+  list.innerHTML = expenses.slice(0, 30).map(e => {
+    const icon = e.category_icon || CAT_ICON_MAP[e.category_name] || '📦';
+    const tagClass = e.is_impulse === true ? 'tag-impulse'
+                   : e.is_impulse === false ? 'tag-planned'
+                   : 'tag-untriaged';
+    const tagLabel = e.is_impulse === true ? 'Impulse'
+                   : e.is_impulse === false ? 'Planned'
+                   : e.source === 'plaid' ? 'Review' : '';
+    return `
+      <div class="expense-item">
+        <div class="exp-icon">${icon}</div>
+        <div class="exp-info">
+          <div class="exp-merchant">${e.description || e.merchant_name || '—'}</div>
+          <div class="exp-meta">
+            <span>${e.expense_date}</span>
+            ${tagLabel ? `<span class="exp-tag ${tagClass}">${tagLabel}</span>` : ''}
+          </div>
+        </div>
+        <div class="exp-amount">${fmt(e.amount)}</div>
+      </div>`;
+  }).join('');
+
+  // Also update dashboard cards when expenses load
+  initDashboard();
+}
+
+function setPeriod(period, btn) {
+  currentPeriod = period;
+  document.querySelectorAll('.period-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  loadExpenses(period);
+}
+
+// ─── Triage modal ─────────────────────────────────────────────────────────────
+function openTriageModal() {
+  if (untriagedList.length === 0) return;
+  triageIndex = 0;
+  triageCatSelected = null;
+  document.getElementById('triageModal').classList.add('open');
+  renderTriageCard();
+}
+
+function closeTriageModal() {
+  document.getElementById('triageModal').classList.remove('open');
+  initDashboard();
+  loadExpenses(currentPeriod);
+  checkUntriaged();
+}
+
+function closeTriageOnOverlay(e) {
+  if (e.target === document.getElementById('triageModal')) closeTriageModal();
+}
+
+function renderTriageCard() {
+  const remaining = untriagedList.slice(triageIndex);
+  const total = untriagedList.length;
+  const done = triageIndex;
+
+  const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressText').textContent = `${done} / ${total}`;
+
+  if (remaining.length === 0) {
+    document.getElementById('triageCardContainer').innerHTML = `
+      <div style="text-align:center;padding:2rem 1rem">
+        <div style="font-size:2rem;margin-bottom:0.75rem">✅</div>
+        <div style="font-family:'Space Grotesk',sans-serif;font-weight:700;color:var(--navy);margin-bottom:0.4rem">All caught up!</div>
+        <div style="font-size:0.82rem;color:var(--text-muted)">Your spending picture is complete for now.</div>
+      </div>`;
+    document.querySelector('.btn-skip-all').style.display = 'none';
+    setTimeout(closeTriageModal, 1800);
+    return;
+  }
+
+  const showBatch = total > 5 && done === 0;
+  document.getElementById('triageModalSubtitle').textContent = showBatch
+    ? `You have ${total} transactions. Let's check the top ones by amount.`
+    : `Takes 30 seconds — impulse vs planned?`;
+
+  const exp = remaining[0];
+  triageCatSelected = guessSlugFromCategory(exp.category_name);
+
+  const catChips = CATS.map(c => `
+    <span class="triage-cat${c.slug === triageCatSelected ? ' selected' : ''}"
+          data-slug="${c.slug}"
+          onclick="selectTriageCat('${c.slug}')">
+      ${c.label}
+    </span>`).join('');
+
+  document.getElementById('triageCardContainer').innerHTML = `
+    <div class="triage-card">
+      <div class="triage-card-top">
+        <div class="triage-merchant">
+          <div class="name">${exp.description || '—'}</div>
+          <div class="meta">${exp.expense_date}${exp.category_name ? ' · ' + exp.category_name : ''}</div>
+        </div>
+        <div class="triage-amount">${fmt(exp.amount)}</div>
+      </div>
+      <div class="triage-cats" id="triageCats">${catChips}</div>
+      <div class="triage-btns">
+        <button class="btn-planned" onclick="triageExpense(${exp.id}, false)">✓ Planned</button>
+        <button class="btn-impulse" onclick="triageExpense(${exp.id}, true)">⚡ Impulse</button>
+      </div>
+    </div>`;
+}
+
+function guessSlugFromCategory(catName) {
+  if (!catName) return 'other';
+  const n = catName.toLowerCase();
+  if (n.includes('groc') || n.includes('supermarket')) return 'groceries';
+  if (n.includes('food') || n.includes('dining') || n.includes('restaurant')) return 'food_delivery';
+  if (n.includes('shop') || n.includes('amazon') || n.includes('cloth')) return 'shopping';
+  if (n.includes('bill') || n.includes('util')) return 'bills';
+  if (n.includes('enter') || n.includes('recreat')) return 'fun';
+  if (n.includes('health') || n.includes('medical')) return 'health';
+  if (n.includes('transport') || n.includes('travel')) return 'transport';
+  if (n.includes('housing') || n.includes('rent') || n.includes('mortgage')) return 'housing';
+  if (n.includes('subscript')) return 'subscriptions';
+  return 'other';
+}
+
+function selectTriageCat(slug) {
+  triageCatSelected = slug;
+  document.querySelectorAll('.triage-cat').forEach(el => {
+    el.classList.toggle('selected', el.dataset.slug === slug);
+  });
+}
+
+async function triageExpense(expenseId, isImpulse) {
+  try {
+    await api(`/api/money/expenses/${expenseId}/triage`, {
+      method: 'PATCH',
+      body: JSON.stringify({ is_impulse: isImpulse, category: triageCatSelected }),
+    });
+  } catch (e) { /* continue regardless */ }
+
+  triageIndex++;
+  if (untriagedList.length > 5 && triageIndex >= 5) {
+    renderTriageCard();
+    return;
+  }
+  renderTriageCard();
+}
+
+async function skipAllTriage() {
+  closeTriageModal();
+}
+
+</script>
+<script src="/js/services/plaid-service.js"></script>
+<script src="/shared-nav.js"></script>
+    <script src="/buddy-widget.js"></script>
+<script src="/js/date-parser.js"></script>
+<script>
+(function(){
+  var fabEl=null,qOverlay=null;
+  function openQA(){qOverlay=document.getElementById('qaOverlay')||createQASheet();qOverlay.classList.add('open');setTimeout(function(){var i=document.getElementById('qaInput');if(i)i.focus();},50)}
+  function closeQA(){if(qOverlay)qOverlay.classList.remove('open');var i=document.getElementById('qaInput');if(i){i.value='';document.getElementById('qaChips').innerHTML='';document.getElementById('qaSave').disabled=true}}
+  function createQASheet(){
+    var div=document.createElement('div');div.id='qaOverlay';div.className='qa-overlay';
+    div.innerHTML='<div class="qa-sheet"><div class="qa-title-row"><h3>Quick Add</h3><button class="qa-close" id="qaClose">×</button></div><div class="qa-input-row"><input type="text" class="qa-input" id="qaInput" placeholder="What needs to get done?" maxlength="150" autocomplete="off"><button class="qa-save" id="qaSave" disabled>Add</button></div><div class="qa-chips" id="qaChips"></div></div>';
+    document.body.appendChild(div);
+    div.addEventListener('click',function(e){if(e.target===div)closeQA()});
+    document.getElementById('qaClose').addEventListener('click',closeQA);
+    document.getElementById('qaInput').addEventListener('input',function(){
+      var v=this.value.trim();document.getElementById('qaSave').disabled=!v;
+      if(!v){document.getElementById('qaChips').innerHTML='';return}
+      var res=window._qaParse?window._qaParse(this.value):{parsed:{date:null,time:null},remaining:this.value};
+      var lbl=window._qaChipLabel?window._qaChipLabel(res.parsed):null;
+      var c=document.getElementById('qaChips');
+      c.innerHTML=lbl?'<span class="qa-chip"><span class="chip-dot"></span>'+lbl+'</span>':'';
+    });
+    document.getElementById('qaInput').addEventListener('keydown',function(e){
+      if(e.key==='Enter'&&!e.target.disabled)qaSave();
+      if(e.key==='Escape')closeQA();
+    });
+    document.getElementById('qaSave').addEventListener('click',qaSave);
+    return div;
+  }
+  function qaSave(){
+    var v=document.getElementById('qaInput').value.trim();if(!v)return;
+    var res=window._qaParse?window._qaParse(v):{parsed:{date:null,time:null},remaining:v};
+    var body={title:res.remaining};if(res.parsed.date)body.due_date=res.parsed.date;if(res.parsed.time)body.due_time=res.parsed.time;
+    fetch('/api/tasks',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify(body)}).then(function(r){return r.json()}).then(function(d){
+      if(d.success){closeQA();}else{var t=document.createElement('div');t.textContent=d.message||'Failed to add task';t.style.cssText='position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:#011e5c;color:white;padding:0.65rem 1.25rem;border-radius:10px;font-size:0.85rem;font-weight:500;z-index:9999';document.body.appendChild(t);setTimeout(function(){t.remove()},2500);}
+    });
+  }
+  window._qaParse=parseNaturalLanguage;window._qaChipLabel=chipLabel;
+  fabEl=document.createElement('button');fabEl.className='fab';fabEl.title='Quick add task';fabEl.textContent='+';fabEl.addEventListener('click',openQA);document.body.appendChild(fabEl);
+  var s=document.createElement('style');s.textContent='.fab{position:fixed;bottom:78px;right:20px;width:58px;height:58px;border-radius:16px;background:#c9a84c;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(201,168,76,0.35);z-index:300;transition:transform .2s,box-shadow .2s;font-size:1.8rem;color:white;line-height:1}.fab:hover{transform:scale(1.08);box-shadow:0 6px 20px rgba(201,168,76,0.45)}.fab:active{transform:scale(0.95)}@media(min-width:900px){.fab{bottom:28px;right:28px}}.qa-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.35);z-index:500;align-items:flex-end;justify-content:center;padding:0 1rem 2rem}@media(min-width:500px){.qa-overlay{align-items:center}}.qa-overlay.open{display:flex}.qa-sheet{background:white;border-radius:20px 20px 0 0;width:100%;max-width:480px;padding:1.5rem 1.25rem 1.75rem;box-shadow:0 -8px 40px rgba(0,0,0,0.15);animation:sheetUp .22s ease-out}@media(min-width:500px){.qa-sheet{border-radius:20px;margin-bottom:0}}@keyframes sheetUp{from{transform:translateY(60px);opacity:0}to{transform:translateY(0);opacity:1}}.qa-title-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem}.qa-title-row h3{font-family:Space Grotesk,sans-serif;font-size:0.95rem;font-weight:700;color:#011e5c}.qa-close{width:28px;height:28px;border-radius:8px;border:none;background:#faf9f7;cursor:pointer;font-size:1.1rem;color:#6b6b6b;display:flex;align-items:center;justify-content:center}.qa-input-row{display:flex;gap:0.5rem;align-items:flex-end;margin-bottom:0.75rem}.qa-input{flex:1;padding:0.85rem 1rem;border:2px solid #e8e5e0;border-radius:12px;font-family:DM Sans,sans-serif;font-size:1rem;color:#1a1a1a;background:white;outline:none;transition:border-color .2s}.qa-input:focus{border-color:#c9a84c}.qa-save{padding:0.85rem 1.25rem;background:#c9a84c;border:none;border-radius:12px;font-family:DM Sans,sans-serif;font-size:0.9rem;font-weight:600;color:white;cursor:pointer;white-space:nowrap;transition:background .15s}.qa-save:hover{background:#d4b56a}.qa-save:disabled{opacity:0.45;cursor:not-allowed}.qa-chips{display:flex;flex-wrap:wrap;gap:0.4rem;min-height:32px;align-items:center}.qa-chip{display:inline-flex;align-items:center;gap:0.3rem;padding:0.3rem 0.75rem;background:#faf9f7;border:1.5px solid #e8e5e0;border-radius:20px;font-size:0.78rem;font-weight:500;color:#011e5c;cursor:pointer;transition:border-color .15s,background .15s;user-select:none}.qa-chip:hover{border-color:#c9a84c;background:rgba(201,168,76,0.08)}.qa-chip .chip-dot{width:7px;height:7px;border-radius:50%;background:#5BA4A4}';document.head.appendChild(s);
+})();
+</script>
+</body>
+</html>

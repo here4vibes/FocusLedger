@@ -1,0 +1,676 @@
+// Phase 3B: Plaid integration backed by Prisma.
+// Owns: Plaid Link flow, token exchange, transaction sync, bill detection, task matching.
+// Does NOT own: auth middleware, expense CRUD (routes/money-prisma.js).
+const express = require('express');
+const crypto = require('crypto');
+const { checkProStatus } = require('../middleware/proUtils');
+const { prisma } = require('../lib/prisma');
+
+// ── Auth: session cookie (fl_sid) OR Bearer JWT ──────────────────────────────
+function requireAuth(req, res, next) {
+  if (req.session?.user) { req.user = req.session.user; return next(); }
+  const token = (req.headers['authorization'] || '').split(' ')[1];
+  if (!token) return res.status(401).json({ success: false, message: 'Authentication required' });
+  try {
+    const { verifyToken } = require('../middleware/auth');
+    req.user = verifyToken(token);
+    next();
+  } catch {
+    res.status(401).json({ success: false, message: 'Invalid or expired token' });
+  }
+}
+const {
+  upsertPlaidItem,
+  deletePlaidItem,
+  updateItemCursor,
+  upsertPlaidAccount,
+  getAccountMap,
+  getCategoriesMap,
+  insertPlaidTransaction,
+  trackBillMerchant,
+  getDisabledMerchantKeys,
+} = require('../db/money-prisma');
+
+// ── Token encryption (AES-256-GCM) ──────────────────────────────────────────
+const _plaidEncKey = Buffer.from(
+  crypto.createHash('sha256')
+    .update(process.env.PLAID_ENCRYPTION_KEY || process.env.JWT_SECRET || 'focusledger-plaid-enc')
+    .digest('hex'),
+  'hex'
+).subarray(0, 32);
+
+function encryptPlaidToken(plaintext) {
+  if (!plaintext) return null;
+  const iv = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv('aes-256-gcm', _plaidEncKey, iv);
+  const enc = Buffer.concat([cipher.update(plaintext, 'utf8'), cipher.final()]);
+  const tag = cipher.getAuthTag();
+  return Buffer.concat([iv, tag, enc]).toString('base64');
+}
+
+function decryptPlaidToken(ciphertext) {
+  if (!ciphertext) return null;
+  try {
+    const data = Buffer.from(ciphertext, 'base64');
+    if (data.length < 29) return ciphertext;
+    const iv  = data.subarray(0, 12);
+    const tag = data.subarray(12, 28);
+    const enc = data.subarray(28);
+    const decipher = crypto.createDecipheriv('aes-256-gcm', _plaidEncKey, iv);
+    decipher.setAuthTag(tag);
+    return Buffer.concat([decipher.update(enc), decipher.final()]).toString('utf8');
+  } catch {
+    return ciphertext;
+  }
+}
+
+// ── Category classification ─────────────────────────────────────────────────
+const PLAID_CATEGORY_MAP = {
+  GROCERIES:                   'Groceries',
+  FOOD_AND_DRINK:              'Food & Dining',
+  RESTAURANTS:                 'Food & Dining',
+  TRANSPORTATION:              'Transport',
+  TRAVEL:                      'Transport',
+  GENERAL_MERCHANDISE:         'Shopping',
+  CLOTHING_AND_ACCESSORIES:    'Shopping',
+  ONLINE_MARKETPLACES:         'Shopping',
+  SPORTING_GOODS:              'Shopping',
+  HOBBY:                       'Shopping',
+  GIFTS_AND_DONATIONS:        'Shopping',
+  UTILITIES:                  'Bills & Utilities',
+  BILL_PAYMENTS:              'Bills & Utilities',
+  RENT_AND_UTILITIES:         'Bills & Utilities',
+  HOME_IMPROVEMENT:            'Bills & Utilities',
+  LOAN_PAYMENTS:              'Bills & Utilities',
+  BANK_FEES:                  'Bills & Utilities',
+  ENTERTAINMENT:              'Entertainment',
+  RECREATION:                 'Entertainment',
+  SPORTS:                     'Entertainment',
+  MEDICAL:                    'Health',
+  PERSONAL_CARE:               'Health',
+  FITNESS:                    'Health',
+};
+
+const LEGACY_CATEGORY_MAP = {
+  'Food and Drink':             'Food & Dining',
+  'Supermarkets and Groceries': 'Groceries',
+  'Travel':                    'Transport',
+  'Shops':                     'Shopping',
+  'Recreation':               'Entertainment',
+  'Healthcare':                'Health',
+  'Service':                   'Bills & Utilities',
+  'Payment':                   'Bills & Utilities',
+};
+
+const BILL_PLAID_CATEGORIES = new Set([
+  'UTILITIES', 'BILL_PAYMENTS', 'RENT_AND_UTILITIES',
+  'LOAN_PAYMENTS', 'INSURANCE', 'SUBSCRIPTION', 'RENT',
+]);
+
+const BILL_MERCHANT_PATTERNS = [
+  { pattern: /netflix/i, type: 'subscription', label: 'Netflix' },
+  { pattern: /spotify/i, type: 'subscription', label: 'Spotify' },
+  { pattern: /hulu/i, type: 'subscription', label: 'Hulu' },
+  { pattern: /disney+?/i, type: 'subscription', label: 'Disney+' },
+  { pattern: /apple.*(tv|music|one)/i, type: 'subscription', label: 'Apple Subscription' },
+  { pattern: /amazon.*(prime|video)/i, type: 'subscription', label: 'Amazon Prime' },
+  { pattern: /youtube.*premium/i, type: 'subscription', label: 'YouTube Premium' },
+  { pattern: /hbo|max\b/i, type: 'subscription', label: 'HBO Max' },
+  { pattern: /paramount/i, type: 'subscription', label: 'Paramount+' },
+  { pattern: /peacock/i, type: 'subscription', label: 'Peacock' },
+  { pattern: /adobe/i, type: 'subscription', label: 'Adobe' },
+  { pattern: /microsoft *(365|office)/i, type: 'subscription', label: 'Microsoft 365' },
+  { pattern: /dropbox/i, type: 'subscription', label: 'Dropbox' },
+  { pattern: /icloud/i, type: 'subscription', label: 'iCloud' },
+  { pattern: /google *(one|workspace)/i, type: 'subscription', label: 'Google One' },
+  { pattern: /sirius.*xm|siriusxm/i, type: 'subscription', label: 'SiriusXM' },
+  { pattern: /audible/i, type: 'subscription', label: 'Audible' },
+  { pattern: /con *ed|consolidated *edison/i, type: 'utility', label: 'Con Edison' },
+  { pattern: /pge|pacific *gas/i, type: 'utility', label: 'PG&E' },
+  { pattern: /duke *energy/i, type: 'utility', label: 'Duke Energy' },
+  { pattern: /dominion *energy/i, type: 'utility', label: 'Dominion Energy' },
+  { pattern: /xcel *energy/i, type: 'utility', label: 'Xcel Energy' },
+  { pattern: /national *grid/i, type: 'utility', label: 'National Grid' },
+  { pattern: /eversource/i, type: 'utility', label: 'Eversource' },
+  { pattern: /pepco|potomac *electric/i, type: 'utility', label: 'PEPCO' },
+  { pattern: /nicor *gas/i, type: 'utility', label: 'Nicor Gas' },
+  { pattern: /national *fuel/i, type: 'utility', label: 'National Fuel Gas' },
+  { pattern: /water *(authority|service|works|dept|utility)/i, type: 'utility', label: 'Water Utility' },
+  { pattern: /american *water/i, type: 'utility', label: 'American Water' },
+  { pattern: /verizon/i, type: 'utility', label: 'Verizon' },
+  { pattern: /at&t|\batatt\b/i, type: 'utility', label: 'AT&T' },
+  { pattern: /t.?mobile/i, type: 'utility', label: 'T-Mobile' },
+  { pattern: /comcast|xfinity/i, type: 'utility', label: 'Comcast/Xfinity' },
+  { pattern: /spectrum/i, type: 'utility', label: 'Spectrum' },
+  { pattern: /cox *communications/i, type: 'utility', label: 'Cox' },
+  { pattern: /centurylink|lumen/i, type: 'utility', label: 'CenturyLink' },
+  { pattern: /geico/i, type: 'insurance', label: 'GEICO' },
+  { pattern: /state *farm/i, type: 'insurance', label: 'State Farm' },
+  { pattern: /progressive/i, type: 'insurance', label: 'Progressive' },
+  { pattern: /allstate/i, type: 'insurance', label: 'Allstate' },
+  { pattern: /liberty *mutual/i, type: 'insurance', label: 'Liberty Mutual' },
+  { pattern: /usaa/i, type: 'insurance', label: 'USAA' },
+  { pattern: /aetna/i, type: 'insurance', label: 'Aetna' },
+  { pattern: /blue *cross|bcbs/i, type: 'insurance', label: 'Blue Cross' },
+  { pattern: /united *health(care)?/i, type: 'insurance', label: 'UnitedHealthcare' },
+  { pattern: /cigna/i, type: 'insurance', label: 'Cigna' },
+  { pattern: /humana/i, type: 'insurance', label: 'Humana' },
+  { pattern: /rent *payment|property *management/i, type: 'rent', label: 'Rent Payment' },
+  { pattern: /wells *fargo *mortgage/i, type: 'rent', label: 'Wells Fargo Mortgage' },
+  { pattern: /chase *mortgage/i, type: 'rent', label: 'Chase Mortgage' },
+  { pattern: /rocket *mortgage/i, type: 'rent', label: 'Rocket Mortgage' },
+  { pattern: /student *loan|sallie *mae|navient/i, type: 'loan', label: 'Student Loan' },
+  { pattern: /auto *loan|car *payment/i, type: 'loan', label: 'Car Payment' },
+];
+
+function normalizeMerchantKey(name) {
+  return (name || '')
+    .toLowerCase().replace(/[^a-z0-9]/g, '_').replace(/_+/g, '_').replace(/^_+|_+$/g, '').substring(0, 100);
+}
+
+function detectBillType(tx) {
+  if (tx.personal_finance_category) {
+    const primary = tx.personal_finance_category.primary;
+    if (BILL_PLAID_CATEGORIES.has(primary)) {
+      if (primary === 'SUBSCRIPTION') return { type: 'subscription', label: null };
+      if (primary === 'LOAN_PAYMENTS') return { type: 'loan', label: null };
+      if (primary === 'INSURANCE') return { type: 'insurance', label: null };
+      if (primary === 'RENT_AND_UTILITIES' || primary === 'UTILITIES') return { type: 'utility', label: null };
+      if (primary === 'RENT') return { type: 'rent', label: null };
+      return { type: 'other_bill', label: null };
+    }
+  }
+  if (tx.category) {
+    const catStr = tx.category.join(' ').toLowerCase();
+    if (catStr.includes('subscription') || catStr.includes('recurring')) return { type: 'subscription', label: null };
+    if (catStr.includes('utilities') || catStr.includes('electric') || catStr.includes('internet') || catStr.includes('phone')) return { type: 'utility', label: null };
+    if (catStr.includes('insurance')) return { type: 'insurance', label: null };
+    if (catStr.includes('rent') || catStr.includes('mortgage')) return { type: 'rent', label: null };
+  }
+  const merchantName = tx.merchant_name || tx.name || '';
+  for (const p of BILL_MERCHANT_PATTERNS) {
+    if (p.pattern.test(merchantName)) return { type: p.type, label: p.label };
+  }
+  return null;
+}
+
+function getBillTypeLabel(type) {
+  const labels = { subscription: 'Subscription', utility: 'Utility', insurance: 'Insurance', rent: 'Rent/Mortgage', loan: 'Loan Payment', other_bill: 'Bill' };
+  return labels[type] || 'Bill';
+}
+
+function classifyTransaction(transaction) {
+  if (transaction.personal_finance_category) {
+    const primary = transaction.personal_finance_category.primary;
+    const detailed = transaction.personal_finance_category.detailed || '';
+    if (primary === 'FOOD_AND_DRINK' && (detailed.includes('GROCERY') || detailed.includes('SUPERMARKET'))) return 'Groceries';
+    if (PLAID_CATEGORY_MAP[primary]) return PLAID_CATEGORY_MAP[primary];
+  }
+  if (transaction.category && transaction.category.length > 0) {
+    for (let i = transaction.category.length - 1; i >= 0; i--) {
+      const cat = transaction.category[i];
+      if (LEGACY_CATEGORY_MAP[cat]) return LEGACY_CATEGORY_MAP[cat];
+    }
+    const catStr = transaction.category.join(' ').toLowerCase();
+    if (catStr.includes('grocer') || catStr.includes('supermarket')) return 'Groceries';
+  }
+  if (transaction.merchant_name) {
+    const merchant = transaction.merchant_name.toLowerCase();
+    if (merchant.includes('walmart') || merchant.includes('whole foods') || merchant.includes('trader joe') || merchant.includes('kroger') || merchant.includes('safeway') || merchant.includes('aldi') || merchant.includes('publix') || merchant.includes('costco')) return 'Groceries';
+    if (merchant.includes('mcdonald') || merchant.includes('starbucks') || merchant.includes('chipotle') || merchant.includes('domino') || merchant.includes('subway') || merchant.includes('doordash') || merchant.includes('uber eats') || merchant.includes('grubhub')) return 'Food & Dining';
+    if (merchant.includes('uber') || merchant.includes('lyft') || merchant.includes('delta') || merchant.includes('united airlines') || merchant.includes('american airlines')) return 'Transport';
+    if (merchant.includes('amazon') || merchant.includes('target') || merchant.includes('ebay') || merchant.includes('etsy')) return 'Shopping';
+    if (merchant.includes('netflix') || merchant.includes('spotify') || merchant.includes('hulu') || merchant.includes('disney') || (merchant.includes('apple') && merchant.includes('entertainment'))) return 'Entertainment';
+    if (merchant.includes('cvs') || merchant.includes('walgreens') || merchant.includes('rite aid') || merchant.includes('pharmacy')) return 'Health';
+  }
+  return 'Other';
+}
+
+// ── Plaid client factory ────────────────────────────────────────────────────
+function getPlaidClient() {
+  // WHY trim: env vars set via dashboard UIs sometimes include trailing whitespace/newlines
+  const clientId = (process.env.PLAID_CLIENT_ID || '').trim();
+  const secret   = (process.env.PLAID_SECRET || '').trim();
+  const plaidEnv = (process.env.PLAID_ENV || 'sandbox').trim();
+  if (!clientId || !secret) return null;
+  try {
+    const { PlaidApi, PlaidEnvironments, Configuration } = require('plaid');
+    const basePath = PlaidEnvironments[plaidEnv];
+    if (!basePath) {
+      console.error(`[Plaid] Invalid PLAID_ENV="${plaidEnv}" — must be sandbox, development, or production`);
+      return null;
+    }
+    const config = new Configuration({
+      basePath,
+      baseOptions: { headers: { 'PLAID-CLIENT-ID': clientId, 'PLAID-SECRET': secret } },
+    });
+    return new PlaidApi(config);
+  } catch (e) {
+    console.error('[Plaid] Failed to initialize client:', e.message);
+    return null;
+  }
+}
+
+// ── Sync transactions ────────────────────────────────────────────────────────
+async function syncTransactions(item) {
+  const plaid = getPlaidClient();
+  if (!plaid) return 0;
+
+  const accessToken = decryptPlaidToken(item.access_token);
+  let cursor = item.cursor || null;
+  let hasMore = true;
+  let added = 0;
+  const billCandidates = [];
+
+  const accountMap = await getAccountMap(item.id);
+  const categoriesByName = await getCategoriesMap();
+
+  while (hasMore) {
+    const response = await plaid.transactionsSync({ access_token: accessToken, cursor: cursor || undefined, count: 100 });
+    const { added: newTransactions, removed, next_cursor, has_more } = response.data;
+
+    for (const tx of newTransactions) {
+      if (tx.amount <= 0) continue;
+      const plaidAccountId = accountMap[tx.account_id];
+      if (!plaidAccountId) continue;
+
+      const categoryName = classifyTransaction(tx);
+      const category = categoriesByName[categoryName.toLowerCase()] || categoriesByName['other'];
+      const plaidCategoryStr = tx.personal_finance_category
+        ? `${tx.personal_finance_category.primary}/${tx.personal_finance_category.detailed}`
+        : (tx.category ? tx.category.join(' > ') : null);
+
+      await insertPlaidTransaction({
+        plaidAccountId, userId: item.user_id, transactionId: tx.transaction_id,
+        amount: tx.amount, description: tx.merchant_name || tx.name || 'Unknown',
+        merchantName: tx.merchant_name || null, categoryId: category?.id || null,
+        plaidCategory: plaidCategoryStr, transactionDate: tx.date, isPending: tx.pending || false,
+      });
+      added++;
+      billCandidates.push({ ...tx, transaction_date: tx.date });
+    }
+
+    for (const removedTx of removed) {
+      await prisma.plaid_transaction.deleteMany({
+        where: { transaction_id: removedTx.transaction_id, user_id: item.user_id, is_confirmed: false },
+      });
+    }
+
+    cursor = next_cursor;
+    hasMore = has_more;
+    if (!hasMore) break;
+  }
+
+  await updateItemCursor(item.id, cursor);
+  console.log(`[Plaid] Synced item ${item.id} for user ${item.user_id}: ${added} new transactions`);
+
+  if (billCandidates.length > 0) {
+    detectAndCreateBillTasks(item.user_id, billCandidates).catch(e => console.error('[BillTasks] Error:', e.message));
+  }
+  return added;
+}
+
+// ── Bill detection + auto-task creation ──────────────────────────────────────
+async function detectAndCreateBillTasks(userId, newTransactionData) {
+  if (!newTransactionData || newTransactionData.length === 0) return;
+  const disabledMerchants = await getDisabledMerchantKeys(userId);
+  const tasksCreated = [];
+
+  for (const tx of newTransactionData) {
+    const billInfo = detectBillType(tx);
+    if (!billInfo) continue;
+    const merchantName = tx.merchant_name || tx.name || tx.description || 'Unknown';
+    const merchantKey = normalizeMerchantKey(merchantName);
+    if (!merchantKey || disabledMerchants.has(merchantKey)) continue;
+    const displayName = billInfo.label || merchantName;
+
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - 35);
+    const existing = await prisma.task.findFirst({
+      where: { user_id: userId, source: 'auto_bill', bill_merchant_key: merchantKey, is_completed: false, created_at: { gte: cutoff } },
+    });
+    if (existing) continue;
+
+    const txDate = tx.transaction_date ? new Date(tx.transaction_date) : new Date();
+    const dueDate = new Date(txDate);
+    dueDate.setDate(dueDate.getDate() + 3);
+
+    await prisma.task.create({
+      data: {
+        user_id: userId, title: `Pay ${displayName}`,
+        description: `Auto-detected from bank sync. ${getBillTypeLabel(billInfo.type)} payment.`,
+        priority: 'high', due_date: dueDate, source: 'auto_bill',
+        bill_merchant_key: merchantKey, bill_type: billInfo.type,
+      },
+    });
+    tasksCreated.push({ merchantKey, displayName, type: billInfo.type });
+    await trackBillMerchant(userId, merchantKey, displayName, billInfo.type);
+  }
+
+  if (tasksCreated.length > 0) {
+    console.log(`[BillTasks] Created ${tasksCreated.length} bill task(s) for user ${userId}:`, tasksCreated.map(t => t.displayName).join(', '));
+  }
+}
+
+// ── Express Router ────────────────────────────────────────────────────────────
+module.exports = function() {
+  const router = express.Router();
+
+  // GET /api/plaid/diagnostic — test Plaid API keys directly, no auth required
+  router.get('/diagnostic', async (req, res) => {
+    const clientId = (process.env.PLAID_CLIENT_ID || '').trim();
+    const secret   = (process.env.PLAID_SECRET || '').trim();
+    const plaidEnv = (process.env.PLAID_ENV || 'sandbox').trim();
+    const plaid = getPlaidClient();
+    // WHY expose lengths/prefixes: helps identify truncated or swapped credentials
+    // without leaking the full secret
+    const diagInfo = {
+      env: plaidEnv,
+      has_client_id: !!clientId,
+      has_secret: !!secret,
+      client_id_length: clientId.length,
+      secret_length: secret.length,
+      client_id_prefix: clientId.substring(0, 6) + '...',
+      secret_prefix: secret.substring(0, 4) + '...',
+    };
+    if (!plaid) {
+      return res.json({
+        success: false, configured: false, ...diagInfo,
+        message: 'PLAID_CLIENT_ID or PLAID_SECRET not set in environment',
+      });
+    }
+    try {
+      await plaid.linkTokenCreate({
+        user: { client_user_id: 'diagnostic-test' },
+        client_name: 'FocusLedger Diagnostic',
+        products: ['transactions'],
+        country_codes: ['US'],
+        options: { language: 'en' },
+      });
+      res.json({ success: true, configured: true, ...diagInfo, message: 'Plaid API keys are working. Environment: ' + plaidEnv });
+    } catch (err) {
+      const plaidErr = err.response?.data || err.message;
+      const errorCode = plaidErr?.error_code || 'unknown';
+      const errorMsg  = plaidErr?.error_message || plaidErr?.display_message || err.message;
+      const errorType = plaidErr?.error_type || 'api_error';
+      console.error('[Plaid] Diagnostic failed: code=' + errorCode + ' type=' + errorType + ' msg=' + errorMsg);
+      // WHY hint: INVALID_API_KEYS with correct lengths usually means the secret
+      // value is wrong, or sandbox keys are being used against production (or vice versa)
+      const hint = errorCode === 'INVALID_API_KEYS'
+        ? `Credentials rejected by Plaid (env=${plaidEnv}). Verify: (1) the secret matches what's in Plaid Dashboard > Keys for the "${plaidEnv}" environment, (2) the secret wasn't truncated during copy-paste, (3) you're not mixing sandbox and production keys.`
+        : null;
+      res.json({
+        success: false, configured: true, ...diagInfo,
+        error_code: errorCode, error_type: errorType, error_message: errorMsg,
+        hint,
+        message: 'Plaid API error: ' + errorMsg + ' (' + errorCode + ')',
+      });
+    }
+  });
+
+  router.use(requireAuth);
+
+  // GET /api/plaid/balances — returns live balances for all connected Plaid items
+  // Used by money.html Account Summary card to show actual account balances.
+  router.get('/balances', async (req, res) => {
+    try {
+      const userId = req.user.id;
+      const plaid = getPlaidClient();
+      if (!plaid) return res.status(503).json({ success: false, message: 'Bank sync not configured' });
+
+      const items = await prisma.plaid_item.findMany({
+        where: { user_id: userId },
+        orderBy: { created_at: 'desc' },
+        include: { plaid_accounts: { select: { account_id: true, name: true, type: true, subtype: true, mask: true } } },
+      });
+
+      const resultItems = [];
+      for (const item of items) {
+        const accessToken = decryptPlaidToken(item.access_token);
+        if (!accessToken) continue;
+
+        try {
+          const resp = await plaid.accountsBalanceGet({ access_token: accessToken });
+          const accounts = resp.data.accounts.map(a => ({
+            account_id: a.account_id,
+            name: a.name,
+            official_name: a.official_name,
+            type: a.type,
+            subtype: a.subtype,
+            mask: a.mask,
+            balances: {
+              available: a.balances.available,
+              current: a.balances.current,
+              iso_currency_code: a.balances.iso_currency_code,
+            },
+          }));
+          resultItems.push({ item_id: item.id, institution: item.institution_name, accounts });
+        } catch (e) {
+          // Per-item failure shouldn't block the whole response
+          console.warn('[Plaid] Balance fetch failed for item', item.id, ':', e.message);
+        }
+      }
+
+      res.json({ success: true, items: resultItems });
+    } catch (err) {
+      console.error('[Plaid] Balances error:', err);
+      res.status(500).json({ success: false, message: 'Failed to fetch balances' });
+    }
+  });
+
+  router.get('/status', async (req, res) => {
+    try {
+      const userId = req.user.id;
+      const isConfigured = !!(process.env.PLAID_CLIENT_ID && process.env.PLAID_SECRET);
+      const plaidEnv = process.env.PLAID_ENV || 'sandbox';
+      // WHY prisma not prisma.pool: PrismaClient has no .pool prop; checkProStatus's
+      // queryRaw() detects Prisma via .$queryRawUnsafe and handles it directly.
+      const isPro = await checkProStatus(prisma, userId);
+      const items = await prisma.plaid_item.findMany({
+        where: { user_id: userId },
+        include: { plaid_accounts: { select: { id: true, name: true, type: true, subtype: true, mask: true } } },
+        orderBy: { created_at: 'desc' },
+      });
+      const pendingCount = await prisma.plaid_transaction.count({ where: { user_id: userId, is_confirmed: false, is_pending: false } });
+      res.json({ success: true, is_configured: isConfigured, plaid_env: plaidEnv, is_pro: isPro, items, pending_review_count: pendingCount });
+    } catch (err) {
+      console.error('[Plaid] Error getting status:', err);
+      res.status(500).json({ success: false, message: 'Failed to get Plaid status' });
+    }
+  });
+
+  router.post('/create-link-token', async (req, res) => {
+    try {
+      const userId = req.user.id;
+      const isPro = await checkProStatus(prisma, userId).catch(() => false);
+      if (!isPro) return res.status(403).json({ success: false, message: 'Bank sync is an Autopilot feature.' });
+      const plaid = getPlaidClient();
+      if (!plaid) {
+        console.error('[Plaid] create-link-token: Plaid client not initialized — PLAID_CLIENT_ID or PLAID_SECRET missing');
+        return res.status(503).json({ success: false, message: 'Bank sync is being set up.' });
+      }
+      const response = await plaid.linkTokenCreate({
+        user: { client_user_id: String(userId) },
+        client_name: 'FocusLedger',
+        products: ['transactions'],
+        country_codes: ['US'],
+        options: { language: 'en' },
+      });
+      res.json({ success: true, link_token: response.data.link_token });
+    } catch (err) {
+      const plaidErr = err.response?.data || err.message;
+      const errorCode = plaidErr?.error_code || 'unknown';
+      const errorMsg  = plaidErr?.error_message || plaidErr?.display_message || err.message;
+      const errorType = plaidErr?.error_type || 'api_error';
+      console.error(`[Plaid] Error creating link token: userId=${req.user?.id} code=${errorCode} type=${errorType} msg=${errorMsg}`);
+      const userMsg = errorCode === 'INVALID_PRODUCT'   ? 'Bank sync is not available for this account type.'
+                 : errorCode === 'INVALID_API_KEYS'     ? 'Bank connection credentials need to be updated. We\'re on it — check back soon.'
+                 : errorCode === 'PRODUCT_NOT_READY'    ? 'Bank sync is still initializing. Try again in a moment.'
+                 :                                       'Connection did not start. Give it another try?';
+      res.status(500).json({ success: false, message: userMsg, error_code: errorCode });
+    }
+  });
+
+  router.post('/exchange-token', async (req, res) => {
+    try {
+      const userId = req.user.id;
+      const { public_token, institution_name, institution_id } = req.body;
+      if (!public_token) return res.status(400).json({ success: false, message: 'public_token required' });
+      const isPro = await checkProStatus(prisma, userId).catch(() => false);
+      if (!isPro) return res.status(403).json({ success: false, message: 'Bank sync is an Autopilot feature.' });
+      const plaid = getPlaidClient();
+      if (!plaid) return res.status(503).json({ success: false, message: 'Bank sync is being set up.' });
+      const exchangeResponse = await plaid.itemPublicTokenExchange({ public_token });
+      const { access_token, item_id } = exchangeResponse.data;
+      const plaidItem = await upsertPlaidItem(userId, encryptPlaidToken(access_token), item_id, institution_name || 'Unknown Bank', institution_id || null);
+      const accountsResponse = await plaid.accountsGet({ access_token });
+      for (const acc of accountsResponse.data.accounts) {
+        await upsertPlaidAccount(plaidItem.id, userId, acc.account_id, acc.name, acc.official_name || null, acc.type, acc.subtype || null, acc.mask || null);
+      }
+      syncTransactions(plaidItem).catch(e => console.error('[Plaid] Initial sync error:', e.message));
+      res.json({ success: true, message: 'Connected. Bringing in your transactions.', item_id: plaidItem.id, institution_name: plaidItem.institution_name });
+    } catch (err) {
+      console.error('[Plaid] Error exchanging token:', err.response?.data || err.message);
+      res.status(500).json({ success: false, message: 'That connection did not go through. Try again?' });
+    }
+  });
+
+  router.post('/sync', async (req, res) => {
+    try {
+      const userId = req.user.id;
+      const { item_id } = req.body;
+      const where = item_id ? { id: parseInt(item_id), user_id: userId } : { user_id: userId };
+      const items = await prisma.plaid_item.findMany({ where });
+      let totalAdded = 0;
+      for (const item of items) { totalAdded += await syncTransactions(item); }
+      res.json({ success: true, transactions_added: totalAdded, message: `${totalAdded} new transactions ready to review` });
+    } catch (err) {
+      console.error('[Plaid] Error syncing:', err.response?.data || err.message);
+      res.status(500).json({ success: false, message: 'Sync did not complete. Try again in a moment.' });
+    }
+  });
+
+  router.get('/transactions/pending', async (req, res) => {
+    try {
+      const userId = req.user.id;
+      const txs = await prisma.plaid_transaction.findMany({
+        where: { user_id: userId, is_confirmed: false, is_pending: false },
+        orderBy: [{ transaction_date: 'desc' }, { created_at: 'desc' }], take: 50,
+        include: { categories: { select: { name: true, color: true, icon: true } }, plaid_account: { select: { name: true, mask: true } } },
+      });
+      res.json({ success: true, transactions: txs });
+    } catch (err) { console.error('[Plaid] Error fetching pending:', err); res.status(500).json({ success: false, message: 'Failed to fetch pending transactions' }); }
+  });
+
+  router.patch('/transactions/:id/category', async (req, res) => {
+    try {
+      const userId = req.user.id; const { id } = req.params; const { category_name } = req.body;
+      if (!category_name) return res.status(400).json({ success: false, message: 'category_name required' });
+      const cat = await prisma.categories.findFirst({ where: { name: { equals: category_name, mode: 'insensitive' } } });
+      if (!cat) return res.status(404).json({ success: false, message: 'Category not found' });
+      const count = await prisma.plaid_transaction.count({ where: { id: parseInt(id), user_id: userId } });
+      if (count === 0) return res.status(404).json({ success: false, message: 'Transaction not found' });
+      await prisma.plaid_transaction.update({ where: { id: parseInt(id) }, data: { category_id: cat.id, updated_at: new Date() } });
+      res.json({ success: true, category_id: cat.id });
+    } catch (err) { console.error('[Plaid] Error updating category:', err); res.status(500).json({ success: false, message: 'Category did not save. Worth retrying.' }); }
+  });
+
+  router.post('/transactions/:id/confirm', async (req, res) => {
+    try {
+      const userId = req.user.id; const { id } = req.params;
+      const tx = await prisma.plaid_transaction.findFirst({ where: { id: parseInt(id), user_id: userId, is_confirmed: false } });
+      if (!tx) return res.status(404).json({ success: false, message: 'Transaction not found' });
+      const expense = await prisma.expense.create({
+        data: { user_id: userId, amount: parseFloat(tx.amount), description: tx.description || tx.merchant_name || 'Unknown', category_id: tx.category_id, expense_date: tx.transaction_date ? new Date(tx.transaction_date + 'T00:00:00Z') : new Date(), source: 'plaid', plaid_transaction_id: tx.transaction_id },
+      });
+      await prisma.plaid_transaction.update({ where: { id: parseInt(id) }, data: { is_confirmed: true, expense_id: expense.id, updated_at: new Date() } });
+      res.json({ success: true, expense_id: expense.id });
+    } catch (err) { console.error('[Plaid] Error confirming:', err); res.status(500).json({ success: false, message: 'Could not confirm that one. Try again?' }); }
+  });
+
+  router.post('/task-suggestions/:taskId/accept', async (req, res) => {
+    try {
+      const userId = req.user.id; const { taskId } = req.params; const { transaction_id, amount, merchant, date } = req.body;
+      const task = await prisma.task.findFirst({ where: { id: parseInt(taskId), user_id: userId, is_completed: false } });
+      if (!task) return res.status(404).json({ success: false, message: 'Task not found or already completed' });
+      const note = `Auto-completed — $${parseFloat(amount || 0).toFixed(2)} from ${merchant || 'bank'} on ${date || 'unknown date'}`;
+      await prisma.task.update({ where: { id: parseInt(taskId) }, data: { is_completed: true, completed_at: new Date(), updated_at: new Date(), auto_complete_note: note, auto_complete_transaction_id: transaction_id || null } });
+      res.json({ success: true, task: { id: task.id, title: task.title, auto_complete_note: note } });
+    } catch (err) { console.error('[Plaid] Error accepting task suggestion:', err); res.status(500).json({ success: false, message: 'Failed to complete task' }); }
+  });
+
+  router.post('/transactions/confirm-all', async (req, res) => {
+    try {
+      const userId = req.user.id;
+      const pending = await prisma.plaid_transaction.findMany({ where: { user_id: userId, is_confirmed: false, is_pending: false }, select: { id: true } });
+      let confirmed = 0;
+      for (const row of pending) {
+        try {
+          const tx = await prisma.plaid_transaction.findFirst({ where: { id: row.id, is_confirmed: false } });
+          if (!tx) continue;
+          const expense = await prisma.expense.create({ data: { user_id: userId, amount: parseFloat(tx.amount), description: tx.description || tx.merchant_name || 'Unknown', category_id: tx.category_id, expense_date: tx.transaction_date ? new Date(tx.transaction_date + 'T00:00:00Z') : new Date(), source: 'plaid', plaid_transaction_id: tx.transaction_id } });
+          await prisma.plaid_transaction.update({ where: { id: row.id }, data: { is_confirmed: true, expense_id: expense.id, updated_at: new Date() } });
+          confirmed++;
+        } catch (e) { console.error('[Plaid] Error confirming tx:', row.id, e.message); }
+      }
+      res.json({ success: true, confirmed_count: confirmed });
+    } catch (err) { console.error('[Plaid] Error bulk confirming:', err); res.status(500).json({ success: false, message: 'Failed to confirm transactions' }); }
+  });
+
+  router.post('/transactions/:id/dismiss', async (req, res) => {
+    try {
+      const userId = req.user.id; const { id } = req.params;
+      const count = await prisma.plaid_transaction.count({ where: { id: parseInt(id), user_id: userId } });
+      if (count === 0) return res.status(404).json({ success: false, message: 'Transaction not found' });
+      await prisma.plaid_transaction.update({ where: { id: parseInt(id) }, data: { is_confirmed: true, updated_at: new Date() } });
+      res.json({ success: true });
+    } catch (err) { console.error('[Plaid] Error dismissing:', err); res.status(500).json({ success: false, message: 'Failed to dismiss transaction' }); }
+  });
+
+  router.get('/bills', async (req, res) => {
+    try {
+      const userId = req.user.id;
+      const result = await prisma.$queryRaw`
+        SELECT bp.merchant_key, bp.merchant_display_name, bp.bill_type, bp.is_disabled,
+               COUNT(t.id) FILTER (WHERE t.is_completed = false)::int AS active_tasks,
+               MAX(t.created_at) AS last_task_created_at
+        FROM bill_preferences bp
+        LEFT JOIN tasks t ON t.bill_merchant_key = bp.merchant_key AND t.user_id = bp.user_id
+        WHERE bp.user_id = ${userId}
+        GROUP BY bp.merchant_key, bp.merchant_display_name, bp.bill_type, bp.is_disabled
+        ORDER BY bp.merchant_display_name
+      `;
+      res.json({ success: true, bills: result });
+    } catch (err) { console.error('[BillTasks] Error fetching bills:', err); res.status(500).json({ success: false, message: 'Failed to fetch bill preferences' }); }
+  });
+
+  router.post('/bills/:key/disable', async (req, res) => {
+    try {
+      const userId = req.user.id; const { key } = req.params;
+      await prisma.bill_preferences.upsert({ where: { user_id_merchant_key: { user_id: userId, merchant_key: key } }, create: { user_id: userId, merchant_key: key, is_disabled: true }, update: { is_disabled: true, updated_at: new Date() } });
+      res.json({ success: true, message: 'Auto-tasks disabled for this bill' });
+    } catch (err) { console.error('[BillTasks] Error disabling bill:', err); res.status(500).json({ success: false, message: 'Could not update that bill. Try again?' }); }
+  });
+
+  router.post('/bills/:key/enable', async (req, res) => {
+    try {
+      const userId = req.user.id; const { key } = req.params;
+      await prisma.bill_preferences.upsert({ where: { user_id_merchant_key: { user_id: userId, merchant_key: key } }, create: { user_id: userId, merchant_key: key, is_disabled: false }, update: { is_disabled: false, updated_at: new Date() } });
+      res.json({ success: true, message: 'Auto-tasks re-enabled for this bill' });
+    } catch (err) { console.error('[BillTasks] Error enabling bill:', err); res.status(500).json({ success: false, message: 'Could not update that bill. Try again?' }); }
+  });
+
+  router.delete('/items/:id', async (req, res) => {
+    try {
+      const userId = req.user.id; const { id } = req.params;
+      const item = await prisma.plaid_item.findFirst({ where: { id: parseInt(id), user_id: userId } });
+      if (!item) return res.status(404).json({ success: false, message: 'Item not found' });
+      const plaid = getPlaidClient();
+      if (plaid) { try { await plaid.itemRemove({ access_token: decryptPlaidToken(item.access_token) }); } catch (e) { console.warn('[Plaid] Could not remove item from Plaid:', e.message); } }
+      await deletePlaidItem(parseInt(id), userId);
+      res.json({ success: true, message: 'Account disconnected.' });
+    } catch (err) { console.error('[Plaid] Error removing item:', err); res.status(500).json({ success: false, message: 'Could not disconnect. Try again?' }); }
+  });
+
+  return router;
+};

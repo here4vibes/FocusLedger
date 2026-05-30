@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#011e5c">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="FocusLedger">
+  <link rel="icon" type="image/png" sizes="32x32" href="/icons/fl-icon.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/icons/fl-icon.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/icons/fl-icon.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Life — FocusLedger</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --orange: #c9a84c;
+      --navy: #011e5c;
+      --cream: #faf9f7;
+      --cream-dark: #f5f3ef;
+      --text-dark: #1a1a1a;
+      --text-muted: #6b6b6b;
+      --border: #e8e5e0;
+      --surface: #fff;
+      /* Life section accents */
+      --sage: #DCFCE7;
+      --sage-border: #A7F3D0;
+      --teal: #0891B2;
+      --teal-light: #22D3EE;
+      --teal-dark: #0E7490;
+    }
+    body {
+      font-family: 'DM Sans', sans-serif;
+      color: var(--text-dark);
+      background: var(--cream);
+      min-height: 100vh;
+      padding-bottom: calc(80px + env(safe-area-inset-bottom));
+    }
+    h1, h2, h3 { font-family: 'Space Grotesk', sans-serif; }
+
+    /* NAV */
+    .portal-nav {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 1.25rem; height: 56px; background: var(--navy);
+      position: sticky; top: 0; z-index: 200; width: 100%;
+    }
+    .portal-logo {
+      font-family: system-ui, sans-serif; font-size: 1.25rem; font-weight: 700;
+      color: white; display: flex; align-items: center; gap: 0.5rem; text-decoration: none;
+    }
+    .logo-dot { width: 10px; height: 10px; background: var(--orange); border-radius: 2px; transform: rotate(45deg); }
+    .nav-links { display: flex; gap: 0.15rem; flex-wrap: wrap; }
+    .nav-link {
+      padding: 0.4rem 0.75rem; font-size: 0.875rem; font-weight: 500;
+      color: rgba(255,255,255,0.75); transition: all 0.15s; white-space: nowrap; text-decoration: none;
+    }
+    .nav-link:hover { background: rgba(255,255,255,0.1); color: white; }
+    .nav-link.active { color: white; border-bottom: 2px solid var(--orange); }
+    .nav-right { display: flex; align-items: center; gap: 0.5rem; }
+    .logout-btn {
+      font-size: 0.8rem; color: rgba(255,255,255,0.65); background: none;
+      border: none; cursor: pointer; padding: 0.35rem 0.6rem; border-radius: 4px;
+      transition: all 0.15s; font-family: system-ui, sans-serif;
+    }
+    .logout-btn:hover { color: var(--orange); background: rgba(255,255,255,0.08); }
+    @media (max-width: 900px) { .nav-links { display: none; } }
+
+    /* PAGE */
+    .page-wrap { max-width: 900px; margin: 0 auto; padding: 2rem 1.25rem; }
+
+    /* HEADER */
+    .life-header {
+      display: flex; align-items: center; gap: 1rem;
+      margin-bottom: 2rem;
+    }
+    .life-icon {
+      width: 52px; height: 52px; border-radius: 14px;
+      background: var(--sage); display: flex; align-items: center;
+      justify-content: center; font-size: 1.6rem; flex-shrink: 0;
+    }
+    .life-header h1 { font-size: 1.75rem; color: var(--navy); margin-bottom: 0.15rem; }
+    .life-header p { font-size: 0.9rem; color: var(--text-muted); }
+
+    /* HEALTH SCORE RING */
+    .health-ring-section {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 16px; padding: 1.5rem; margin-bottom: 1.75rem;
+      display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap;
+      cursor: pointer; transition: border-color 0.15s, box-shadow 0.15s;
+      text-decoration: none; color: inherit;
+    }
+    .health-ring-section:hover {
+      border-color: var(--teal); box-shadow: 0 4px 16px rgba(8,145,178,0.1);
+    }
+    .ring-wrap { position: relative; width: 80px; height: 80px; flex-shrink: 0; }
+    .ring-svg { width: 80px; height: 80px; transform: rotate(-90deg); }
+    .ring-bg { fill: none; stroke: var(--sage); stroke-width: 8; }
+    .ring-fill {
+      fill: none; stroke: var(--teal); stroke-width: 8;
+      stroke-dasharray: 201; stroke-dashoffset: 201; stroke-linecap: round;
+      transition: stroke-dashoffset 1s ease;
+    }
+    .ring-label {
+      position: absolute; inset: 0; display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      font-family: 'Space Grotesk', sans-serif; font-size: 1.25rem;
+      font-weight: 700; color: var(--navy); line-height: 1;
+    }
+    .ring-label.loading { color: #b0aca7; }
+    .ring-label span { font-size: 0.6rem; font-weight: 500; color: var(--text-muted); margin-top: 2px; }
+    .health-info h3 { font-size: 1rem; color: var(--navy); margin-bottom: 0.3rem; }
+    .health-info p { font-size: 0.85rem; color: var(--text-muted); line-height: 1.5; }
+    .health-view-btn {
+      display: inline-flex; align-items: center; gap: 0.3rem;
+      margin-top: 0.5rem; background: var(--sage);
+      color: var(--teal-dark); font-size: 0.75rem; font-weight: 600;
+      padding: 0.25rem 0.65rem; border-radius: 50px;
+    }
+    .health-setup-msg {
+      display: inline-block; margin-top: 0.5rem; background: var(--cream-dark);
+      color: var(--text-muted); font-size: 0.75rem; font-weight: 500;
+      padding: 0.25rem 0.65rem; border-radius: 50px;
+    }
+
+    /* QUICK LINKS */
+    .section-label {
+      font-family: 'Space Grotesk', sans-serif; font-size: 0.8rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.06em;
+      color: var(--text-muted); margin-bottom: 0.85rem;
+    }
+    .quick-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 1rem; margin-bottom: 2rem;
+    }
+    .quick-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 14px; padding: 1.25rem 1.25rem 1rem;
+      text-decoration: none; color: inherit;
+      transition: border-color 0.15s, box-shadow 0.15s;
+      display: flex; flex-direction: column; gap: 0.6rem;
+      min-height: 44px;
+    }
+    .quick-card:hover {
+      border-color: var(--teal); box-shadow: 0 4px 16px rgba(8,145,178,0.1);
+    }
+    .qc-icon {
+      width: 40px; height: 40px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center; font-size: 1.2rem;
+      background: var(--sage);
+    }
+    .qc-title { font-family: 'Space Grotesk', sans-serif; font-size: 1rem; font-weight: 600; color: var(--navy); }
+    .qc-desc { font-size: 0.82rem; color: var(--text-muted); line-height: 1.4; }
+    .qc-badge {
+      display: inline-block; margin-top: auto; font-size: 0.72rem; font-weight: 600;
+      padding: 0.2rem 0.6rem; border-radius: 50px;
+      background: var(--sage); color: #065F46;
+    }
+    .qc-badge.coming { background: var(--cream-dark); color: var(--text-muted); }
+
+    /* NUDGE BANNER */
+    .nudge-banner {
+      display: none;
+      background: #FFF8EE;
+      border: 1px solid #F0D398;
+      border-left: 4px solid var(--orange);
+      border-radius: 10px;
+      padding: 0.85rem 1rem;
+      margin-bottom: 1.25rem;
+      display: flex;
+      align-items: flex-start;
+      gap: 0.75rem;
+    }
+    .nudge-banner.urgent {
+      background: #FFF4F2;
+      border-color: #F0B8B0;
+      border-left-color: #E07A5F;
+    }
+    .nudge-banner-text { flex: 1; font-size: 0.9rem; line-height: 1.5; color: var(--text-dark); }
+    .nudge-banner-dismiss {
+      background: none; border: none; cursor: pointer;
+      color: var(--text-muted); font-size: 1rem; padding: 0.1rem 0.2rem;
+      line-height: 1; touch-action: manipulation;
+      min-width: 28px; min-height: 28px;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 4px; flex-shrink: 0;
+    }
+    .nudge-banner-dismiss:hover { color: var(--text-dark); background: #F0E8D8; }
+
+      </style>
+  <link rel="stylesheet" href="/css/design-system.css">
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="portal-nav">
+  <a href="/home" class="portal-logo"><span class="logo-dot"></span>FocusLedger</a>
+  <div class="nav-links">
+    <a href="/home" class="nav-link">Home</a>
+    <a href="/app/tasks" class="nav-link">Tasks</a>
+    <a href="/app/money" class="nav-link">Money</a>
+    <a href="/app/life" class="nav-link active">Life</a>
+    <a href="/news" class="nav-link">News</a>
+    <a href="/app/vault" class="nav-link">Vault</a>
+    <a href="/ideas" class="nav-link">Ideas</a>
+    <a href="/journal" class="nav-link">Journal</a>
+    <a href="/settings" class="nav-link">Settings</a>
+  </div>
+  <div class="nav-right">
+    <button class="logout-btn" id="logoutBtn">Logout</button>
+  </div>
+</nav>
+
+<!-- PAGE -->
+<div class="page-wrap">
+
+  <!-- NUDGE BANNER — rendered by JS if banner_enabled and nudges pending -->
+  <div id="lifenNudgeBanner" style="display:none;"></div>
+
+  <!-- HEADER -->
+  <div class="life-header">
+    <div class="life-icon">🌿</div>
+    <div>
+      <h1>Life</h1>
+      <p>Your documents, insurance, and life admin — organized so you don't have to think about it.</p>
+    </div>
+  </div>
+
+  <!-- HEALTH SCORE — live ring, taps to /app/life/score -->
+  <a href="/app/life/score" class="health-ring-section" id="healthScoreCard">
+    <div class="ring-wrap">
+      <svg class="ring-svg" viewBox="0 0 80 80">
+        <circle class="ring-bg" cx="40" cy="40" r="32"/>
+        <circle class="ring-fill" id="lifeRingFill" cx="40" cy="40" r="32"/>
+      </svg>
+      <div class="ring-label loading" id="lifeRingLabel">—<span>score</span></div>
+    </div>
+    <div class="health-info">
+      <h3>Adulting Score</h3>
+      <p id="healthInfoText">Your overall life admin health — documents, insurance, tasks, and bills. Calculated daily.</p>
+      <span class="health-view-btn" id="healthViewBtn" style="display:none;">View breakdown →</span>
+      <span class="health-setup-msg" id="healthSetupMsg">Add documents to start tracking</span>
+    </div>
+  </a>
+
+  <!-- QUICK LINKS -->
+  <div class="section-label">Your Life Sections</div>
+  <div class="quick-grid">
+    <a href="/app/vault" class="quick-card">
+      <div class="qc-icon">🔒</div>
+      <div class="qc-title">Document Vault</div>
+      <div class="qc-desc">Store and search your insurance policies, contracts, IDs, and important files. AI extracts key details automatically.</div>
+      <span class="qc-badge">Ready</span>
+    </a>
+
+    <a href="/app/life/insurance" class="quick-card">
+      <div class="qc-icon">🏥</div>
+      <div class="qc-title">Insurance Coverage</div>
+      <div class="qc-desc">Track your health, auto, home, and life policies. See coverage gaps and upcoming renewals at a glance.</div>
+      <span class="qc-badge">Ready</span>
+    </a>
+
+    <a href="/app/life/nudges" class="quick-card">
+      <div class="qc-icon">🔔</div>
+      <div class="qc-title">Nudges</div>
+      <div class="qc-desc">Proactive alerts for expiring documents, coverage gaps, and score drops. Your ADHD-friendly heads-up feed.</div>
+      <span class="qc-badge" id="nudgesCardBadge">Ready</span>
+    </a>
+
+    <div class="quick-card" style="opacity:0.65;cursor:default;">
+      <div class="qc-icon">📋</div>
+      <div class="qc-title">Subscriptions</div>
+      <div class="qc-desc">Track all your recurring subscriptions in one place. See what's costing you and when renewals hit.</div>
+      <span class="qc-badge coming">Coming soon</span>
+    </div>
+
+    <div class="quick-card" style="opacity:0.65;cursor:default;">
+      <div class="qc-icon">📅</div>
+      <div class="qc-title">Important Dates</div>
+      <div class="qc-desc">Never miss a renewal, deadline, or appointment. Smart reminders based on your documents and life events.</div>
+      <span class="qc-badge coming">Coming soon</span>
+    </div>
+  </div>
+
+</div>
+
+<!-- Shared navigation (bottom bar mobile, left sidebar desktop) -->
+<link rel="stylesheet" href="/shared-nav.css">
+<script src="/shared-nav.js"></script>
+<script src="/buddy-widget.js"></script>
+<script>
+(function() {
+  var token = localStorage.getItem('fl_token');
+  if (!token) { window.location.href = '/login'; return; }
+
+  document.getElementById('logoutBtn').addEventListener('click', function() {
+    localStorage.removeItem('fl_token');
+    window.location.href = '/login';
+  });
+
+  // ── Health Score ring ──────────────────────────────────────────────────────
+  fetch('/api/health-score/today', { headers: authHdr })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (!data.success || !data.score) return;
+      var score = data.score.overall_score;
+      // Update ring: stroke-dasharray 201 (2π×32)
+      var circ = 201;
+      var fill = document.getElementById('lifeRingFill');
+      var label = document.getElementById('lifeRingLabel');
+      if (fill) fill.style.strokeDashoffset = circ - (score / 100) * circ;
+      if (label) {
+        label.className = 'ring-label';
+        label.innerHTML = score + '<span>/ 100</span>';
+      }
+      document.getElementById('healthViewBtn').style.display = '';
+      document.getElementById('healthSetupMsg').style.display = 'none';
+      // Positive status line
+      var p = document.getElementById('healthInfoText');
+      if (p) {
+        if (score >= 80) p.textContent = 'You\'re crushing it. Everything\'s in great shape.';
+        else if (score >= 60) p.textContent = 'Solid adulting. A couple of things to tighten up.';
+        else p.textContent = 'A few areas need attention. Tap for the full breakdown.';
+      }
+    })
+    .catch(function() {});
+
+  // ── Nudge banner — only shown when banner_enabled preference is true ──────
+  // Fetch preferences first to avoid showing banner to users who opted out.
+  var authHdr = { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' };
+
+  fetch('/api/nudge-system/preferences', { headers: authHdr })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var bannerEnabled = data.preferences && data.preferences.banner_enabled === true;
+      if (!bannerEnabled) return;
+      return fetch('/api/nudge-system/pending', { headers: authHdr })
+        .then(function(r) { return r.json(); })
+        .then(function(nudgeData) {
+          if (!nudgeData.nudges || nudgeData.nudges.length === 0) return;
+          renderNudgeBanner(nudgeData.nudges[0]); // show most urgent only
+        });
+    })
+    .catch(function() {}); // fail silently
+
+  function renderNudgeBanner(nudge) {
+    var banner = document.getElementById('lifenNudgeBanner');
+    if (!banner) return;
+    var cls = 'nudge-banner' + (nudge.urgency === 'urgent' ? ' urgent' : '');
+    banner.innerHTML =
+      '<div class="' + cls + '">' +
+        '<div class="nudge-banner-text">' + escHtml(nudge.message) + '</div>' +
+        '<button class="nudge-banner-dismiss" data-nudge-id="' + nudge.id + '" aria-label="Dismiss">✕</button>' +
+      '</div>';
+    banner.style.display = '';
+
+    banner.addEventListener('click', function(e) {
+      var btn = e.target.closest('[data-nudge-id]');
+      if (!btn) return;
+      banner.style.display = 'none';
+      fetch('/api/nudge-system/dismiss/' + btn.dataset.nudgeId, {
+        method: 'POST', headers: authHdr
+      }).catch(function() {});
+    });
+  }
+
+  // ── Nudge badge on Life tab + nudges card ─────────────────────────────────
+  // Fetch pending count separately (doesn't affect banner logic above).
+  fetch('/api/nudge-system/feed', { headers: authHdr })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (!data.success) return;
+      var pending = (data.nudges || []).filter(function(n) {
+        return n.status === 'pending' || n.status === 'delivered';
+      });
+      var count = pending.length;
+      if (count === 0) return;
+
+      // Badge on bottom-nav Life tab icon
+      var lifeTabIcon = document.querySelector('#tabLife .tab-btn-icon');
+      if (lifeTabIcon && !lifeTabIcon.querySelector('.tab-badge')) {
+        var badge = document.createElement('span');
+        badge.className = 'tab-badge';
+        badge.textContent = count > 9 ? '9+' : String(count);
+        lifeTabIcon.appendChild(badge);
+      }
+
+      // Update nudges card badge text
+      var cardBadge = document.getElementById('nudgesCardBadge');
+      if (cardBadge) {
+        cardBadge.textContent = count + ' pending';
+        cardBadge.style.background = '#FEF3C7';
+        cardBadge.style.color = '#92400E';
+      }
+    })
+    .catch(function() {});
+
+  function escHtml(s) {
+    return String(s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+})();
+</script>
+<script src="/js/analytics.js"></script>
+<script>(function(){try{var u=JSON.parse(localStorage.getItem('fl_user')||'{}');if(u.id)FLA.setUser(u.id);}catch(e){}FLA.trackPage('life');})()</script>
+
+<!-- Service worker registration -->
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' })
+    .then(function(reg) {
+      reg.addEventListener('updatefound', function() {
+        var newWorker = reg.installing;
+        newWorker.addEventListener('statechange', function() {
+          if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+            window.dispatchEvent(new Event('SW_UPDATED'));
+          }
+        });
+      });
+    });
+  window.addEventListener('SW_UPDATED', function() { window.location.reload(); });
+}
+</script>
+</body>
+</html>

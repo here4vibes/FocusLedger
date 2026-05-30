@@ -1,0 +1,1456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#011e5c">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="FocusLedger">
+  <link rel="icon" type="image/png" sizes="32x32" href="/icons/fl-icon.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/icons/fl-icon.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/icons/fl-icon.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Document Vault — FocusLedger</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+  .fab{position:fixed;bottom:78px;right:20px;width:58px;height:58px;border-radius:16px;background:var(--orange);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(201,168,76,0.35);z-index:300;transition:transform .2s,box-shadow .2s;font-size:1.8rem;color:white;line-height:1}
+  .fab:hover{transform:scale(1.08);box-shadow:0 6px 20px rgba(201,168,76,0.45)}
+  .fab:active{transform:scale(0.95)}
+  @media(min-width:900px){.fab{bottom:28px;right:28px}}
+  .qa-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.35);z-index:500;align-items:flex-end;justify-content:center;padding:0 1rem 2rem}
+  @media(min-width:500px){.qa-overlay{align-items:center}}
+  .qa-overlay.open{display:flex}
+  .qa-sheet{background:white;border-radius:20px 20px 0 0;width:100%;max-width:480px;padding:1.5rem 1.25rem 1.75rem;box-shadow:0 -8px 40px rgba(0,0,0,0.15);animation:sheetUp .22s ease-out}
+  @media(min-width:500px){.qa-sheet{border-radius:20px;margin-bottom:0}}
+  @keyframes sheetUp{from{transform:translateY(60px);opacity:0}to{transform:translateY(0);opacity:1}}
+  .qa-title-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem}
+  .qa-title-row h3{font-family:'Space Grotesk',sans-serif;font-size:0.95rem;font-weight:700;color:var(--navy)}
+  .qa-close{width:28px;height:28px;border-radius:8px;border:none;background:var(--cream);cursor:pointer;font-size:1.1rem;color:var(--text-muted);display:flex;align-items:center;justify-content:center}
+  .qa-input-row{display:flex;gap:0.5rem;align-items:flex-end;margin-bottom:0.75rem}
+  .qa-input{flex:1;padding:0.85rem 1rem;border:2px solid var(--border);border-radius:12px;font-family:'DM Sans',sans-serif;font-size:1rem;color:var(--text-dark);background:white;outline:none;transition:border-color .2s}
+  .qa-input:focus{border-color:var(--orange)}
+  .qa-save{padding:0.85rem 1.25rem;background:var(--orange);border:none;border-radius:12px;font-family:'DM Sans',sans-serif;font-size:0.9rem;font-weight:600;color:white;cursor:pointer;white-space:nowrap;transition:background .15s}
+  .qa-save:hover{background:var(--orange-light)}
+  .qa-save:disabled{opacity:0.45;cursor:not-allowed}
+  .qa-chips{display:flex;flex-wrap:wrap;gap:0.4rem;min-height:32px;align-items:center}
+  .qa-chip{display:inline-flex;align-items:center;gap:0.3rem;padding:0.3rem 0.75rem;background:var(--cream);border:1.5px solid var(--border);border-radius:20px;font-size:0.78rem;font-weight:500;color:var(--navy);cursor:pointer;transition:border-color .15s,background .15s;user-select:none}
+  .qa-chip:hover{border-color:var(--orange);background:rgba(201,168,76,0.08)}
+  .qa-chip .chip-dot{width:7px;height:7px;border-radius:50%;background:#5BA4A4}
+  </style>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --orange: #c9a84c;
+      --navy: #011e5c;
+      --cream: #faf9f7;
+      --cream-dark: #f5f3ef;
+      --text-dark: #1a1a1a;
+      --text-muted: #6b6b6b;
+      --border: #e8e5e0;
+      --surface: #fff;
+      --sage: #DCFCE7;
+      --sage-border: #A7F3D0;
+      --teal: #0891B2;
+      --teal-dark: #0E7490;
+    }
+    body {
+      font-family: 'DM Sans', sans-serif;
+      color: var(--text-dark);
+      background: var(--cream);
+      min-height: 100vh;
+      padding-bottom: calc(80px + env(safe-area-inset-bottom));
+      overflow-x: hidden;
+    }
+    h1, h2, h3 { font-family: 'Space Grotesk', sans-serif; }
+
+    /* NAV */
+    .portal-nav {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 1.25rem; height: 56px; background: var(--navy);
+      position: sticky; top: 0; z-index: 200; width: 100%;
+    }
+    .portal-logo {
+      font-family: system-ui, sans-serif; font-size: 1.25rem; font-weight: 700;
+      color: white; display: flex; align-items: center; gap: 0.5rem; text-decoration: none;
+    }
+    .logo-dot { width: 10px; height: 10px; background: var(--orange); border-radius: 2px; transform: rotate(45deg); }
+    .nav-links { display: flex; gap: 0.15rem; flex-wrap: wrap; }
+    .nav-link {
+      padding: 0.4rem 0.75rem; font-size: 0.875rem; font-weight: 500;
+      color: rgba(255,255,255,0.75); transition: all 0.15s; white-space: nowrap; text-decoration: none;
+    }
+    .nav-link:hover { background: rgba(255,255,255,0.1); color: white; }
+    .nav-link.active { color: white; border-bottom: 2px solid var(--orange); }
+    .nav-right { display: flex; align-items: center; gap: 0.5rem; }
+    .logout-btn {
+      font-size: 0.8rem; color: rgba(255,255,255,0.65); background: none;
+      border: none; cursor: pointer; padding: 0.35rem 0.6rem; border-radius: 4px;
+      transition: all 0.15s; font-family: system-ui, sans-serif;
+    }
+    .logout-btn:hover { color: var(--orange); background: rgba(255,255,255,0.08); }
+    @media (max-width: 900px) { .nav-links { display: none; } }
+    /* On mobile the hamburger drawer has Sign Out — hide the top nav logout (duplicate) */
+    @media (max-width: 900px) { .nav-right { display: none; } }
+
+    /* PAGE */
+    .page-wrap { max-width: 1100px; margin: 0 auto; padding: 1.75rem 1.25rem; }
+
+    /* TOOLBAR */
+    .vault-toolbar {
+      display: flex; align-items: center; gap: 0.75rem;
+      margin-bottom: 1.25rem; flex-wrap: wrap;
+    }
+    .vault-title-group { flex: 1; min-width: 160px; }
+    .vault-title-group h1 { font-size: 1.5rem; color: var(--navy); }
+    .vault-title-group .back-link {
+      font-size: 0.8rem; color: var(--teal); text-decoration: none;
+      display: inline-flex; align-items: center; gap: 0.25rem;
+      margin-bottom: 0.2rem;
+    }
+    .vault-title-group .back-link:hover { text-decoration: underline; }
+
+    .search-input {
+      padding: 0.55rem 0.9rem; border: 1px solid var(--border); border-radius: 8px;
+      font-size: 0.875rem; font-family: 'DM Sans', sans-serif;
+      background: var(--surface); color: var(--text-dark);
+      outline: none; min-width: 180px; flex: 1; max-width: 280px;
+      transition: border-color 0.15s; min-height: 44px;
+    }
+    .search-input:focus { border-color: var(--teal); }
+
+    .upload-btn {
+      display: inline-flex; align-items: center; gap: 0.5rem;
+      padding: 0.6rem 1.25rem; background: var(--teal); color: white;
+      border: none; border-radius: 8px; font-size: 0.875rem; font-weight: 600;
+      cursor: pointer; font-family: 'DM Sans', sans-serif;
+      transition: background 0.15s; white-space: nowrap; min-height: 44px;
+      text-decoration: none;
+    }
+    .upload-btn:hover { background: var(--teal-dark); }
+
+    /* AI USAGE PILL */
+    .ai-usage-pill {
+      display: flex; align-items: center; gap: 0.4rem;
+      font-size: 0.75rem; color: var(--text-muted);
+      background: var(--cream-dark); border: 1px solid var(--border);
+      padding: 0.3rem 0.75rem; border-radius: 50px; white-space: nowrap;
+    }
+    .ai-usage-pill strong { color: var(--text-dark); }
+
+    /* CATEGORY TABS */
+    .cat-tabs {
+      display: flex; gap: 0.4rem; flex-wrap: wrap; margin-bottom: 1.5rem;
+    }
+    .cat-tab {
+      padding: 0.35rem 0.85rem; border-radius: 50px; border: 1px solid var(--border);
+      background: var(--surface); font-size: 0.82rem; font-weight: 500;
+      cursor: pointer; color: var(--text-muted); transition: all 0.15s;
+      font-family: 'DM Sans', sans-serif; min-height: 36px;
+    }
+    .cat-tab:hover { border-color: var(--teal); color: var(--teal); }
+    .cat-tab.active {
+      background: var(--teal); color: white; border-color: var(--teal);
+    }
+
+    /* DOCUMENT GRID */
+    .doc-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 1rem;
+    }
+    .doc-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 14px; overflow: hidden;
+      transition: border-color 0.15s, box-shadow 0.15s;
+      cursor: pointer;
+    }
+    .doc-card:hover {
+      border-color: var(--teal); box-shadow: 0 4px 16px rgba(8,145,178,0.1);
+    }
+    .doc-card-preview {
+      height: 100px; background: var(--sage);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 2.5rem;
+    }
+    .doc-card-preview.pdf { background: #FEF2F2; }
+    .doc-card-preview.img { background: #EFF6FF; }
+    .doc-card-body { padding: 0.9rem 1rem 0.75rem; }
+    .doc-cat-badge {
+      display: inline-block; font-size: 0.68rem; font-weight: 700;
+      padding: 0.15rem 0.55rem; border-radius: 50px; margin-bottom: 0.4rem;
+      background: var(--sage); color: #065F46;
+      text-transform: uppercase; letter-spacing: 0.04em;
+    }
+    .doc-name {
+      font-size: 0.92rem; font-weight: 600; color: var(--navy);
+      margin-bottom: 0.3rem; line-height: 1.3;
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .doc-meta {
+      font-size: 0.75rem; color: var(--text-muted);
+      display: flex; flex-direction: column; gap: 0.15rem;
+    }
+    .doc-expiry { color: #B45309; font-weight: 500; }
+    .doc-expiry.expired { color: #DC2626; }
+    .doc-actions {
+      display: flex; gap: 0.5rem; padding: 0.5rem 1rem 0.85rem; border-top: 1px solid var(--border);
+      margin-top: 0.5rem;
+    }
+    .doc-action-btn {
+      flex: 1; padding: 0.45rem 0; border: 1px solid var(--border);
+      border-radius: 7px; background: none; font-size: 0.78rem; font-weight: 500;
+      cursor: pointer; color: var(--text-muted); font-family: 'DM Sans', sans-serif;
+      transition: all 0.15s; min-height: 36px;
+    }
+    .doc-action-btn:hover { border-color: var(--teal); color: var(--teal); }
+    .doc-action-btn.danger:hover { border-color: #DC2626; color: #DC2626; }
+
+    /* EMPTY STATE */
+    .empty-state {
+      text-align: center; padding: 4rem 2rem; color: var(--text-muted);
+    }
+    .empty-icon { font-size: 3.5rem; margin-bottom: 1rem; opacity: 0.5; }
+    .empty-title { font-family: 'Space Grotesk', sans-serif; font-size: 1.2rem; color: var(--navy); margin-bottom: 0.5rem; }
+    .empty-desc { font-size: 0.9rem; line-height: 1.5; max-width: 340px; margin: 0 auto 1.5rem; }
+
+    /* UPLOAD MODAL */
+    .modal-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.4); z-index: 800;
+      align-items: flex-end; justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    @media (min-width: 600px) {
+      .modal-overlay { align-items: center; }
+      .upload-sheet { border-radius: 16px !important; max-width: 520px !important; }
+    }
+    .upload-sheet {
+      background: white; border-radius: 24px 24px 0 0;
+      padding: 1.75rem 1.5rem 2rem; width: 100%; max-width: 100%;
+      box-shadow: 0 -8px 40px rgba(0,0,0,0.18);
+      animation: sheetUp 0.25s ease-out;
+      max-height: 90vh; overflow-y: auto;
+    }
+    @keyframes sheetUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    .sheet-title { font-family: 'Space Grotesk', sans-serif; font-size: 1.2rem; font-weight: 700; color: var(--navy); margin-bottom: 1.25rem; }
+    .form-group { margin-bottom: 1rem; }
+    .form-label { display: block; font-size: 0.82rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.35rem; text-transform: uppercase; letter-spacing: 0.04em; }
+    .form-input {
+      width: 100%; padding: 0.65rem 0.85rem; border: 1px solid var(--border);
+      border-radius: 8px; font-size: 0.9rem; font-family: 'DM Sans', sans-serif;
+      color: var(--text-dark); background: var(--cream); outline: none;
+      transition: border-color 0.15s; min-height: 44px;
+    }
+    .form-input:focus { border-color: var(--teal); background: white; }
+    .form-select {
+      width: 100%; padding: 0.65rem 0.85rem; border: 1px solid var(--border);
+      border-radius: 8px; font-size: 0.9rem; font-family: 'DM Sans', sans-serif;
+      color: var(--text-dark); background: var(--cream); outline: none;
+      transition: border-color 0.15s; min-height: 44px; cursor: pointer;
+    }
+    .form-select:focus { border-color: var(--teal); }
+
+    /* File drop zone */
+    .drop-zone {
+      border: 2px dashed var(--sage-border); border-radius: 12px;
+      padding: 2rem 1rem; text-align: center; cursor: pointer;
+      transition: all 0.15s; background: var(--sage); margin-bottom: 1rem;
+    }
+    .drop-zone:hover, .drop-zone.dragover { border-color: var(--teal); background: #D1FAE5; }
+    .drop-zone-icon { font-size: 2rem; margin-bottom: 0.5rem; }
+    .drop-zone-text { font-size: 0.875rem; color: #065F46; font-weight: 500; }
+    .drop-zone-sub { font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem; }
+    .drop-zone-file { display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; color: var(--navy); font-weight: 600; }
+
+    .ai-info {
+      background: var(--sage); border: 1px solid var(--sage-border);
+      border-radius: 8px; padding: 0.65rem 0.85rem;
+      font-size: 0.8rem; color: #065F46; margin-bottom: 1rem;
+      display: flex; align-items: flex-start; gap: 0.5rem;
+    }
+
+    .sheet-actions { display: flex; gap: 0.75rem; margin-top: 1.25rem; }
+    .btn-cancel {
+      flex: 1; padding: 0.7rem; border: 1px solid var(--border);
+      border-radius: 8px; background: none; font-size: 0.9rem;
+      font-family: 'DM Sans', sans-serif; cursor: pointer;
+      color: var(--text-muted); min-height: 44px; transition: all 0.15s;
+    }
+    .btn-cancel:hover { background: var(--cream-dark); }
+    .btn-submit {
+      flex: 2; padding: 0.7rem; background: var(--teal); color: white;
+      border: none; border-radius: 8px; font-size: 0.9rem; font-weight: 600;
+      font-family: 'DM Sans', sans-serif; cursor: pointer; min-height: 44px;
+      transition: background 0.15s;
+    }
+    .btn-submit:hover { background: var(--teal-dark); }
+    .btn-submit:disabled { background: #9CA3AF; cursor: not-allowed; }
+
+    /* DETAIL MODAL */
+    .detail-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.4); z-index: 900;
+      align-items: center; justify-content: center;
+      padding: 1rem;
+    }
+    .detail-overlay.open { display: flex; }
+    .detail-sheet {
+      background: white; border-radius: 16px;
+      width: 100%; max-width: 540px; max-height: 85vh;
+      overflow-y: auto; box-shadow: 0 8px 40px rgba(0,0,0,0.2);
+      animation: sheetUp 0.2s ease-out;
+    }
+    .detail-header {
+      padding: 1.25rem 1.5rem 0.75rem;
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: flex-start; gap: 1rem; justify-content: space-between;
+    }
+    .detail-header h2 { font-size: 1.1rem; color: var(--navy); }
+    .detail-close {
+      background: none; border: none; font-size: 1.25rem; cursor: pointer;
+      color: var(--text-muted); padding: 0.25rem; min-height: 44px; min-width: 44px;
+      display: flex; align-items: center; justify-content: center; border-radius: 8px;
+      flex-shrink: 0;
+    }
+    .detail-close:hover { background: var(--cream-dark); }
+    .detail-body { padding: 1.25rem 1.5rem 1.5rem; }
+    .detail-field { margin-bottom: 0.9rem; }
+    .detail-field-label { font-size: 0.72rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.2rem; }
+    .detail-field-value { font-size: 0.9rem; color: var(--navy); line-height: 1.4; }
+    .detail-meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 1rem; }
+    .detail-actions { display: flex; gap: 0.75rem; margin-top: 1.25rem; border-top: 1px solid var(--border); padding-top: 1.25rem; }
+    .btn-view { flex: 1; padding: 0.65rem; background: var(--teal); color: white; border: none; border-radius: 8px; font-size: 0.875rem; font-weight: 600; cursor: pointer; font-family: 'DM Sans', sans-serif; min-height: 44px; }
+    .btn-delete { flex: 1; padding: 0.65rem; background: none; border: 1px solid #FCA5A5; color: #DC2626; border-radius: 8px; font-size: 0.875rem; font-weight: 600; cursor: pointer; font-family: 'DM Sans', sans-serif; min-height: 44px; }
+    .btn-delete:hover { background: #FEF2F2; }
+
+    /* TOAST */
+    .toast {
+      position: fixed; bottom: calc(60px + env(safe-area-inset-bottom) + 12px); left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: var(--navy); color: white; padding: 0.65rem 1.25rem;
+      border-radius: 50px; font-size: 0.875rem; font-weight: 500;
+      opacity: 0; transition: all 0.25s; z-index: 1000; white-space: nowrap;
+      pointer-events: none;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .toast.success { background: #059669; }
+    .toast.error { background: #DC2626; }
+
+    /* LOADING */
+    .spinner {
+      width: 28px; height: 28px; border: 3px solid var(--border);
+      border-top-color: var(--teal); border-radius: 50%;
+      animation: spin 0.7s linear infinite; margin: 3rem auto;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* EXTRACTION INDICATOR */
+    .extraction-indicator {
+      position: absolute; top: 0.75rem; right: 0.75rem;
+      display: flex; align-items: center; gap: 0.4rem;
+      padding: 0.35rem 0.65rem; border-radius: 50px;
+      font-size: 0.72rem; font-weight: 600; background: var(--sage);
+      color: #065F46; z-index: 10;
+    }
+    .extraction-spinner {
+      width: 12px; height: 12px; border: 2px solid #065F46;
+      border-top-color: var(--teal); border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    .extraction-indicator.success {
+      background: #DBEAFE; color: #0369A1;
+    }
+    .extraction-indicator.success .extraction-spinner { display: none; }
+
+    /* CONFIDENCE BADGES */
+    .conf-badge {
+      display: inline-flex; align-items: center; gap: 0.2rem;
+      font-size: 0.68rem; font-weight: 600; padding: 0.1rem 0.45rem;
+      border-radius: 50px; margin-left: 0.35rem; vertical-align: middle;
+    }
+    .conf-badge.high { background: #D1FAE5; color: #065F46; }
+    .conf-badge.med  { background: #FEF3C7; color: #92400E; }
+    .conf-badge.low  { background: #FEE2E2; color: #991B1B; }
+
+    /* REVIEW BANNER */
+    .review-banner {
+      background: #EFF6FF; border: 1px solid #BFDBFE;
+      border-radius: 10px; padding: 0.8rem 1rem;
+      font-size: 0.82rem; color: #1E40AF;
+      display: flex; align-items: flex-start; gap: 0.6rem;
+      margin-bottom: 1rem;
+    }
+    .review-banner strong { display: block; margin-bottom: 0.2rem; font-size: 0.85rem; }
+
+    /* EDITABLE METADATA FIELDS */
+    .meta-field-row {
+      display: flex; align-items: flex-start; gap: 0.5rem;
+      margin-bottom: 0.65rem;
+    }
+    .meta-field-row .meta-label {
+      font-size: 0.72rem; font-weight: 700; color: var(--text-muted);
+      text-transform: uppercase; letter-spacing: 0.04em;
+      min-width: 100px; padding-top: 0.55rem; flex-shrink: 0;
+    }
+    .meta-field-row input[type="text"],
+    .meta-field-row input[type="date"] {
+      flex: 1; padding: 0.45rem 0.65rem; border: 1px solid var(--border);
+      border-radius: 7px; font-size: 0.85rem; font-family: 'DM Sans', sans-serif;
+      color: var(--navy); background: white; outline: none; min-height: 38px;
+      transition: border-color 0.15s;
+    }
+    .meta-field-row input:focus { border-color: var(--teal); }
+    .conf-wrap { display: flex; align-items: center; gap: 0.35rem; flex: 1; }
+
+    /* REVIEW ACTIONS */
+    .review-actions { display: flex; gap: 0.65rem; margin-top: 1.25rem; }
+    .btn-confirm-meta {
+      flex: 2; padding: 0.65rem; background: var(--teal); color: white;
+      border: none; border-radius: 8px; font-size: 0.875rem; font-weight: 600;
+      cursor: pointer; font-family: 'DM Sans', sans-serif; min-height: 44px;
+      transition: background 0.15s;
+    }
+    .btn-confirm-meta:hover { background: var(--teal-dark); }
+    .btn-skip-meta {
+      flex: 1; padding: 0.65rem; background: none; border: 1px solid var(--border);
+      border-radius: 8px; font-size: 0.875rem; color: var(--text-muted);
+      cursor: pointer; font-family: 'DM Sans', sans-serif; min-height: 44px;
+      transition: all 0.15s;
+    }
+    .btn-skip-meta:hover { background: var(--cream-dark); }
+
+    
+    @media (max-width: 600px) {
+      .doc-grid { grid-template-columns: 1fr 1fr; }
+      .vault-toolbar { gap: 0.5rem; }
+    }
+    @media (max-width: 380px) {
+      .doc-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+  <link rel="stylesheet" href="/css/design-system.css">
+</head>
+<body>
+<noscript><p style="padding:2rem;text-align:center;font-family:'DM Sans',sans-serif;color:#374151">FocusLedger requires JavaScript.</p></noscript>
+
+<!-- NAV -->
+<nav class="portal-nav">
+  <a href="/home" class="portal-logo"><span class="logo-dot"></span>FocusLedger</a>
+  <div class="nav-links">
+    <a href="/home" class="nav-link">Home</a>
+    <a href="/app/tasks" class="nav-link">Tasks</a>
+    <a href="/app/money" class="nav-link">Money</a>
+    <a href="/app/life" class="nav-link">Life</a>
+    <a href="/news" class="nav-link">News</a>
+    <a href="/app/vault" class="nav-link active">Vault</a>
+    <a href="/ideas" class="nav-link">Ideas</a>
+    <a href="/journal" class="nav-link">Journal</a>
+    <a href="/settings" class="nav-link">Settings</a>
+  </div>
+  <div class="nav-right">
+    <button class="logout-btn" id="logoutBtn">Logout</button>
+  </div>
+</nav>
+
+<!-- PAGE -->
+<div class="page-wrap">
+
+  <!-- TOOLBAR -->
+  <div class="vault-toolbar">
+    <div class="vault-title-group">
+      <a href="/app/life" class="back-link">← Life</a>
+      <h1>🔒 Document Vault</h1>
+    </div>
+    <input type="text" class="search-input" id="searchInput" placeholder="🔍 Search documents…" autocomplete="off" autocorrect="off" inputmode="search">
+    <div class="ai-usage-pill" id="aiUsagePill" style="display:none">
+      ✨ <strong id="aiRemaining">—</strong> AI extractions left this month
+    </div>
+    <button class="upload-btn" id="uploadBtn">+ Upload Document</button>
+  </div>
+
+  <!-- CATEGORY TABS -->
+  <div class="cat-tabs" id="catTabs">
+    <button class="cat-tab active" data-cat="All">All</button>
+    <button class="cat-tab" data-cat="Insurance">Insurance</button>
+    <button class="cat-tab" data-cat="Contracts">Contracts</button>
+    <button class="cat-tab" data-cat="IDs">IDs</button>
+    <button class="cat-tab" data-cat="Titles">Titles</button>
+    <button class="cat-tab" data-cat="Receipts">Receipts</button>
+    <button class="cat-tab" data-cat="Other">Other</button>
+  </div>
+
+  <!-- DOCUMENT GRID -->
+  <div id="docGrid">
+    <div class="spinner"></div>
+  </div>
+
+</div>
+
+<!-- UPLOAD MODAL -->
+<div class="modal-overlay" id="uploadOverlay">
+  <div class="upload-sheet">
+    <div class="sheet-title">Upload Document</div>
+
+    <!-- File drop zone -->
+    <div class="drop-zone" id="dropZone">
+      <div class="drop-zone-icon">📎</div>
+      <div class="drop-zone-text">Tap to choose a file</div>
+      <div class="drop-zone-sub">PDF, PNG, JPG, HEIC · max 10MB</div>
+    </div>
+    <input type="file" id="fileInput" accept=".pdf,.png,.jpg,.jpeg,.heic,.heif" style="display:none">
+
+    <div class="ai-info" id="aiInfo">
+      ✨ <span>AI will automatically extract expiry dates, policy numbers, and key details from your document.</span>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="docName">Document Name</label>
+      <input type="text" id="docName" class="form-input" placeholder="e.g. State Farm Auto Policy 2026">
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="docCategory">Category</label>
+      <select id="docCategory" class="form-select">
+        <option value="Insurance">Insurance</option>
+        <option value="Contracts">Contracts</option>
+        <option value="IDs">IDs</option>
+        <option value="Titles">Titles</option>
+        <option value="Receipts">Receipts</option>
+        <option value="Other">Other</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="docExpiry">Expiry Date (optional)</label>
+      <input type="date" id="docExpiry" class="form-input">
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="docNotes">Notes (optional)</label>
+      <input type="text" id="docNotes" class="form-input" placeholder="Any quick notes about this document">
+    </div>
+
+    <div class="sheet-actions">
+      <button class="btn-cancel" id="uploadCancel">Cancel</button>
+      <button class="btn-submit" id="uploadSubmit" disabled>Upload</button>
+    </div>
+  </div>
+</div>
+
+<!-- DETAIL MODAL -->
+<div class="detail-overlay" id="detailOverlay">
+  <div class="detail-sheet">
+    <div class="detail-header">
+      <div>
+        <div id="detailCat" style="font-size:0.72rem;font-weight:700;color:var(--teal);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.25rem"></div>
+        <h2 id="detailName"></h2>
+      </div>
+      <button class="detail-close" id="detailClose">✕</button>
+    </div>
+    <div class="detail-body">
+      <div class="detail-meta-grid">
+        <div class="detail-field">
+          <div class="detail-field-label">Uploaded</div>
+          <div class="detail-field-value" id="detailUploaded"></div>
+        </div>
+        <div class="detail-field">
+          <div class="detail-field-label">Expires</div>
+          <div class="detail-field-value" id="detailExpiry"></div>
+        </div>
+        <div class="detail-field">
+          <div class="detail-field-label">File size</div>
+          <div class="detail-field-value" id="detailSize"></div>
+        </div>
+        <div class="detail-field">
+          <div class="detail-field-label">AI Extracted</div>
+          <div class="detail-field-value" id="detailAi"></div>
+        </div>
+      </div>
+
+      <!-- Extraction in progress notice -->
+      <div id="detailExtracting" style="display:none;background:var(--sage);border:1px solid var(--sage-border);border-radius:10px;padding:0.75rem 1rem;font-size:0.82rem;color:#065F46;margin-bottom:0.75rem;display:none">
+        <div style="display:flex;align-items:center;gap:0.5rem">
+          <div class="extraction-spinner"></div>
+          AI is reading your document — check back in a few seconds.
+        </div>
+      </div>
+
+      <!-- Review banner (shown when extraction done + unconfirmed) -->
+      <div id="detailReviewBanner" style="display:none">
+        <div class="review-banner">
+          ✨ <div>
+            <strong>AI extracted details — review and confirm</strong>
+            Edit any field, then tap "Confirm Details" to save.
+          </div>
+        </div>
+
+        <!-- Editable extracted fields -->
+        <div id="detailReviewFields"></div>
+
+        <div class="review-actions">
+          <button class="btn-confirm-meta" id="btnConfirmMeta">Confirm Details</button>
+          <button class="btn-skip-meta" id="btnSkipMeta">Skip</button>
+        </div>
+      </div>
+
+      <!-- Read-only confirmed metadata -->
+      <div id="detailMetadata" style="display:none">
+        <div style="font-size:0.72rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.6rem">
+          AI-Extracted Details
+          <span style="color:var(--teal);font-weight:500;text-transform:none;letter-spacing:0;font-size:0.75rem"> · Confirmed</span>
+        </div>
+        <div id="detailMetaContent" style="font-size:0.875rem;color:var(--navy);line-height:1.6;background:var(--sage);padding:0.85rem;border-radius:10px;border:1px solid var(--sage-border)"></div>
+      </div>
+
+      <div id="detailNotes" style="margin-top:0.75rem;display:none">
+        <div class="detail-field-label">Notes</div>
+        <div class="detail-field-value" id="detailNotesText" style="color:var(--text-muted)"></div>
+      </div>
+
+      <div class="detail-actions">
+        <button class="btn-view" id="detailView">View / Download</button>
+        <button class="btn-delete" id="detailDelete">Delete</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- Shared navigation (bottom bar mobile, left sidebar desktop) -->
+
+<script>
+(function() {
+  'use strict';
+
+  var token = localStorage.getItem('fl_token');
+  if (!token) { window.location.href = '/login'; return; }
+
+  var currentCat = 'All';
+  var currentQ = '';
+  var allDocs = [];
+  var activeDocId = null;
+  var selectedFile = null;
+  var pollTimers = {}; // docId → timer for extraction status polling
+
+  function getHeaders() {
+    return { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' };
+  }
+
+  // ── Toast ──────────────────────────────────────────────────────────────────
+  var toastEl = document.getElementById('toast');
+  var toastTimer;
+  function showToast(msg, type) {
+    clearTimeout(toastTimer);
+    toastEl.textContent = msg;
+    toastEl.className = 'toast show' + (type ? ' ' + type : '');
+    toastTimer = setTimeout(function() { toastEl.classList.remove('show'); }, 3000);
+  }
+
+  // ── Category icon helpers ──────────────────────────────────────────────────
+  var CAT_ICONS = {
+    'Insurance': '🛡️', 'Contracts': '📋', 'IDs': '🪪',
+    'Titles': '🏠', 'Receipts': '🧾', 'Other': '📄'
+  };
+  function getCatIcon(cat) { return CAT_ICONS[cat] || '📄'; }
+
+  // ── Format helpers ─────────────────────────────────────────────────────────
+  function fmtDate(d) {
+    if (!d) return '—';
+    var dt = new Date(d);
+    return dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+  function fmtSize(bytes) {
+    if (!bytes) return '—';
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(0) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  }
+  function isExpired(dateStr) {
+    if (!dateStr) return false;
+    return new Date(dateStr) < new Date();
+  }
+  function isSoonExpiring(dateStr) {
+    if (!dateStr) return false;
+    var diff = new Date(dateStr) - new Date();
+    return diff > 0 && diff < 30 * 24 * 60 * 60 * 1000;
+  }
+
+  // ── Load AI usage ──────────────────────────────────────────────────────────
+  function loadAiUsage() {
+    fetch('/api/documents/usage/ai', { headers: { 'Authorization': 'Bearer ' + token } })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.success) {
+          var pill = document.getElementById('aiUsagePill');
+          document.getElementById('aiRemaining').textContent = data.remaining + ' of 25';
+          pill.style.display = 'flex';
+          // Update AI info in upload modal
+          var info = document.getElementById('aiInfo');
+          if (data.remaining === 0) {
+            info.innerHTML = '⚠️ <span>You\'ve used all 25 AI extractions this month. You can still upload and categorize manually — extraction resets next month.</span>';
+            info.style.background = '#FEF3C7';
+            info.style.borderColor = '#FCD34D';
+            info.style.color = '#92400E';
+          }
+        }
+      })
+      .catch(function() {});
+  }
+
+  // ── Load documents ─────────────────────────────────────────────────────────
+  function loadDocs() {
+    var url = '/api/documents?';
+    if (currentCat !== 'All') url += 'category=' + encodeURIComponent(currentCat) + '&';
+    if (currentQ) url += 'q=' + encodeURIComponent(currentQ);
+
+    fetch(url, { headers: { 'Authorization': 'Bearer ' + token } })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        allDocs = data.documents || [];
+        renderGrid(allDocs);
+      })
+      .catch(function() {
+        document.getElementById('docGrid').innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-title">Failed to load</div><div class="empty-desc">Check your connection and try again.</div></div>';
+      });
+  }
+
+  // ── Extraction polling ─────────────────────────────────────────────────────
+  // Poll the extraction-status endpoint every 2.5s until done/failed (max 45s).
+  function startExtractionPoll(docId) {
+    if (pollTimers[docId]) return; // already polling
+    var attempts = 0;
+    var MAX = 18; // 18 × 2.5s = 45s max
+    setCardExtracting(docId, true);
+
+    function poll() {
+      attempts++;
+      fetch('/api/documents/' + docId + '/extraction-status', {
+        headers: { 'Authorization': 'Bearer ' + token }
+      })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          if (!data.success) { stopPoll(docId, false); return; }
+          if (data.extraction_status === 'done') {
+            stopPoll(docId, true);
+            // Update local doc cache
+            for (var i = 0; i < allDocs.length; i++) {
+              if (String(allDocs[i].id) === String(docId)) {
+                allDocs[i].extraction_status = 'done';
+                allDocs[i].ai_extracted = true;
+                allDocs[i].metadata_json = data.metadata_json;
+                allDocs[i].extraction_confidence = data.extraction_confidence;
+                allDocs[i].metadata_confirmed = false;
+                if (data.expiry_date) allDocs[i].expiry_date = data.expiry_date;
+                break;
+              }
+            }
+            // Refresh grid cell + if detail modal is open for this doc, refresh it
+            renderCardAiStatus(docId, true);
+            if (String(activeDocId) === String(docId)) {
+              openDetail(docId);
+            }
+          } else if (data.extraction_status === 'failed') {
+            stopPoll(docId, false);
+            renderCardAiStatus(docId, false);
+          } else if (attempts >= MAX) {
+            stopPoll(docId, false);
+          } else {
+            pollTimers[docId] = setTimeout(poll, 2500);
+          }
+        })
+        .catch(function() {
+          if (attempts < MAX) {
+            pollTimers[docId] = setTimeout(poll, 2500);
+          } else {
+            stopPoll(docId, false);
+          }
+        });
+    }
+    pollTimers[docId] = setTimeout(poll, 2500);
+  }
+
+  function stopPoll(docId, success) {
+    clearTimeout(pollTimers[docId]);
+    delete pollTimers[docId];
+    setCardExtracting(docId, false);
+    if (success) {
+      setCardExtractionBadge(docId, '✨ Review details');
+    }
+  }
+
+  function setCardExtracting(docId, on) {
+    var card = document.querySelector('[data-id="' + docId + '"]');
+    if (!card) return;
+    var existing = card.querySelector('.extraction-indicator');
+    if (existing) existing.remove();
+    if (on) {
+      var ind = document.createElement('div');
+      ind.className = 'extraction-indicator';
+      ind.innerHTML = '<div class="extraction-spinner"></div> Extracting…';
+      card.style.position = 'relative';
+      card.appendChild(ind);
+    }
+  }
+
+  function setCardExtractionBadge(docId, text) {
+    var card = document.querySelector('[data-id="' + docId + '"]');
+    if (!card) return;
+    var existing = card.querySelector('.extraction-indicator');
+    if (existing) existing.remove();
+    var ind = document.createElement('div');
+    ind.className = 'extraction-indicator success';
+    ind.textContent = text;
+    card.style.position = 'relative';
+    card.appendChild(ind);
+    setTimeout(function() { if (ind.parentElement) ind.remove(); }, 4000);
+  }
+
+  // ── Confidence badge rendering ─────────────────────────────────────────────
+  function confBadge(score) {
+    if (score === undefined || score === null) return '';
+    var level = score >= 0.85 ? 'high' : score >= 0.5 ? 'med' : 'low';
+    var label = score >= 0.85 ? '✓' : score >= 0.5 ? '~' : '?';
+    return '<span class="conf-badge ' + level + '">' + label + '</span>';
+  }
+
+  // Update the AI-status line on a card without a full re-render
+  function renderCardAiStatus(docId, success) {
+    var card = document.querySelector('[data-id="' + docId + '"]');
+    if (!card) return;
+    var metaEl = card.querySelector('.doc-meta');
+    if (!metaEl) return;
+    // Remove existing ai-status span and add updated one
+    var existing = metaEl.querySelector('.ai-status');
+    if (existing) existing.remove();
+    if (success) {
+      var span = document.createElement('span');
+      span.className = 'ai-status';
+      span.style.color = 'var(--teal)';
+      span.style.fontSize = '0.72rem';
+      span.textContent = '✨ Review details';
+      metaEl.appendChild(span);
+    }
+  }
+
+  // ── AI status line helper ──────────────────────────────────────────────────
+  function aiStatusHtml(doc) {
+    var status = doc.extraction_status || 'none';
+    if (status === 'pending' || status === 'processing') {
+      return '<span class="ai-status" style="color:#065F46;font-size:0.72rem"><span class="extraction-spinner" style="display:inline-block;vertical-align:middle;margin-right:0.2rem"></span>Extracting…</span>';
+    }
+    if (status === 'done' && !doc.metadata_confirmed) {
+      return '<span class="ai-status" style="color:var(--teal);font-size:0.72rem">✨ Review details</span>';
+    }
+    if (doc.ai_extracted) {
+      return '<span class="ai-status" style="color:var(--teal);font-size:0.72rem">✨ AI extracted</span>';
+    }
+    return '';
+  }
+
+  // ── Extract title + summary from metadata_json ─────────────────────────────
+  // Handles both fresh extraction (object) and double-encoded existing docs (string).
+  function getDocMeta(doc) {
+    var meta = doc.metadata_json;
+    if (!meta) return { title: null, summary: null, document_type: null };
+    if (typeof meta === 'string') {
+      try {
+        var inner = meta.replace(/^```json\n?/, '').replace(/\n?```$/, '').trim();
+        meta = JSON.parse(inner);
+      } catch (e) {
+        return { title: null, summary: null, document_type: null };
+      }
+    }
+    var title = meta._card_title || meta.document_type || null;
+    var summary = meta._plain_summary || meta.summary || null;
+    return { title: title, summary: summary, document_type: meta.document_type || null };
+  }
+  // ── Render grid ────────────────────────────────────────────────────────────
+  function renderGrid(docs) {
+    var grid = document.getElementById('docGrid');
+    if (!docs.length) {
+      grid.innerHTML = '<div class="empty-state"><div class="empty-icon">🔒</div><div class="empty-title">No documents yet</div><div class="empty-desc">Upload your first document — insurance policies, contracts, IDs. We\'ll extract the important details automatically.</div><button class="upload-btn" onclick="document.getElementById(\'uploadBtn\').click()" style="margin:0 auto">+ Upload Document</button></div>';
+      return;
+    }
+
+    var html = '<div class="doc-grid">';
+    docs.forEach(function(doc) {
+      var isImg = (doc.mime_type || '').startsWith('image/');
+      var isPdf = (doc.mime_type || '') === 'application/pdf';
+      var previewClass = isPdf ? 'pdf' : isImg ? 'img' : '';
+      var icon = getCatIcon(doc.category);
+      var expired = isExpired(doc.expiry_date);
+      var soonExpire = !expired && isSoonExpiring(doc.expiry_date);
+      var expiryHtml = '';
+      if (doc.expiry_date) {
+        var cls = expired ? 'doc-expiry expired' : (soonExpire ? 'doc-expiry' : '');
+        var prefix = expired ? '⚠ Expired' : (soonExpire ? '⏰ Expires' : 'Expires');
+        expiryHtml = '<span class="' + cls + '">' + prefix + ' ' + fmtDate(doc.expiry_date) + '</span>';
+      }
+      html += '<div class="doc-card" data-id="' + doc.id + '">' +
+        '<div class="doc-card-preview ' + previewClass + '">' + icon + '</div>' +
+        '<div class="doc-card-body">' +
+          '<span class="doc-cat-badge">' + doc.category + '</span>' +
+          '<div class="doc-name">' + escHtml((function() { var dm = getDocMeta(doc); return dm.title || doc.name; })()) + '</div>' +
+                    (function() { var dm2 = getDocMeta(doc); if (!dm2.summary || !doc.ai_extracted) return ''; var s = dm2.summary; if (s.length > 80) s = s.slice(0,79) + '\u2026'; return '<span class="doc-summary" style="font-size:0.72rem;color:var(--text-muted);display:block;margin-top:0.15rem">' + escHtml(s) + '</span>'; })() +
+          '<div class="doc-meta">' +
+            '<span>' + fmtDate(doc.uploaded_at) + ' · ' + fmtSize(doc.file_size) + '</span>' +
+            expiryHtml +
+            aiStatusHtml(doc) +
+          '</div>' +
+        '</div>' +
+        '<div class="doc-actions">' +
+          '<button class="doc-action-btn" data-action="view" data-id="' + doc.id + '">View</button>' +
+          '<button class="doc-action-btn danger" data-action="delete" data-id="' + doc.id + '">Delete</button>' +
+        '</div>' +
+      '</div>';
+    });
+    html += '</div>';
+    grid.innerHTML = html;
+
+    // Start polling for any cards that are still processing
+    docs.forEach(function(doc) {
+      var status = doc.extraction_status || 'none';
+      if ((status === 'pending' || status === 'processing') && !pollTimers[doc.id]) {
+        startExtractionPoll(doc.id);
+      }
+    });
+
+    // Bind card clicks
+    grid.querySelectorAll('.doc-card').forEach(function(card) {
+      card.addEventListener('click', function(e) {
+        if (e.target.closest('.doc-action-btn')) return;
+        openDetail(card.dataset.id);
+      });
+    });
+    grid.querySelectorAll('[data-action="view"]').forEach(function(btn) {
+      btn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        var doc = allDocs.find(function(d) { return String(d.id) === btn.dataset.id; });
+        if (doc) window.open(doc.s3_url, '_blank');
+      });
+    });
+    grid.querySelectorAll('[data-action="delete"]').forEach(function(btn) {
+      btn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        confirmDelete(btn.dataset.id);
+      });
+    });
+  }
+
+  function escHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // ── Detail modal ───────────────────────────────────────────────────────────
+  function openDetail(docId) {
+    var doc = allDocs.find(function(d) { return String(d.id) === String(docId); });
+    if (!doc) return;
+    activeDocId = doc.id;
+
+    document.getElementById('detailCat').textContent = doc.category;
+    var dm2 = getDocMeta(doc); document.getElementById('detailName').textContent = dm2.title || doc.name;
+    document.getElementById('detailUploaded').textContent = fmtDate(doc.uploaded_at);
+    document.getElementById('detailExpiry').textContent = doc.expiry_date ? fmtDate(doc.expiry_date) : '—';
+    document.getElementById('detailSize').textContent = fmtSize(doc.file_size);
+    document.getElementById('detailAi').textContent = doc.ai_extracted ? '✨ Yes' : 'No';
+
+    var rawMeta = doc.metadata_json;
+    var meta = rawMeta;
+    var hasMeta = false;
+    if (rawMeta) {
+      if (typeof rawMeta === 'string') {
+        try {
+          var inner3 = rawMeta.replace(/^```json\n?/, '').replace(/\n?```$/, '').trim();
+          meta = JSON.parse(inner3);
+          hasMeta = meta && typeof meta === 'object' && Object.keys(meta).length > 0;
+        } catch (e) { hasMeta = false; }
+      } else {
+        meta = rawMeta;
+        hasMeta = typeof meta === 'object' && Object.keys(meta).length > 0;
+      }
+    }
+    var conf = doc.extraction_confidence || {};
+    var status = doc.extraction_status || 'none';
+    var confirmed = doc.metadata_confirmed;
+
+    // Clear sections
+    document.getElementById('detailExtracting').style.display = 'none';
+    document.getElementById('detailReviewBanner').style.display = 'none';
+    document.getElementById('detailMetadata').style.display = 'none';
+    document.getElementById('detailReviewFields').innerHTML = '';
+
+    if (status === 'pending' || status === 'processing') {
+      // Still extracting — show in-progress notice
+      document.getElementById('detailExtracting').style.display = 'block';
+    } else if (status === 'done' && hasMeta && !confirmed) {
+      // Extraction complete, user hasn't reviewed yet — show review UI
+      document.getElementById('detailReviewBanner').style.display = 'block';
+      renderReviewFields(doc, meta, conf);
+    } else if (hasMeta && (confirmed || doc.ai_extracted)) {
+      // Already confirmed — show read-only
+      renderConfirmedMeta(meta);
+    }
+
+    // Notes
+    if (doc.notes) {
+      document.getElementById('detailNotesText').textContent = doc.notes;
+      document.getElementById('detailNotes').style.display = 'block';
+    } else {
+      document.getElementById('detailNotes').style.display = 'none';
+    }
+
+    document.getElementById('detailOverlay').classList.add('open');
+  }
+
+  // ── Render editable review fields with confidence badges ──────────────────
+  function renderReviewFields(doc, meta, conf) {
+    var container = document.getElementById('detailReviewFields');
+    // Summary goes first — most useful for user to review/edit.
+    // Uses textarea so long plain-text summaries don't get clipped.
+    var html = '';
+    if (meta.summary) {
+      // Guard: if summary somehow contains a JSON object literal, strip it.
+      var sumText = meta.summary;
+      if (typeof sumText === 'string' && (sumText.trim().startsWith('{') || sumText.trim().startsWith('```'))) {
+        sumText = '';
+      }
+      if (sumText) {
+        html += '<div class="meta-field-row" style="align-items:flex-start">' +
+          '<div class="meta-label" style="padding-top:0.35rem">SUMMARY</div>' +
+          '<textarea id="rf_summary" class="review-field-input" rows="3" style="flex:1;resize:vertical;padding:0.45rem 0.65rem;border:1px solid var(--border);border-radius:7px;font-size:0.82rem;font-family:\'DM Sans\',sans-serif;color:var(--navy);background:white;outline:none;line-height:1.4">' + escHtml(sumText) + '</textarea>' +
+        '</div>';
+      }
+    }
+
+    var fields = [];
+    if (meta.document_type) {
+      fields.push({ key: 'document_type', label: 'Type', value: meta.document_type });
+    }
+    if (meta.issuer) {
+      fields.push({ key: 'issuer', label: 'Issuer', value: meta.issuer, conf: conf.issuer });
+    }
+    if (meta.policy_number) {
+      fields.push({ key: 'policy_number', label: 'Policy #', value: meta.policy_number, conf: conf.policy_number });
+    }
+    if (meta.coverage_type) {
+      fields.push({ key: 'coverage_type', label: 'Coverage', value: meta.coverage_type, conf: conf.coverage_type });
+    }
+    if (meta.premium_amount) {
+      fields.push({ key: 'premium_amount', label: 'Amount', value: meta.premium_amount });
+    }
+    if (meta.total_amount) {
+      fields.push({ key: 'total_amount', label: 'Amount', value: meta.total_amount, conf: conf.total_amount });
+    }
+    if (meta.effective_date) {
+      fields.push({ key: 'effective_date', label: 'Effective', value: meta.effective_date, type: 'date', conf: conf.effective_date });
+    }
+    if (meta.expiry_date) {
+      // Special: also update the main expiry_date on the document
+      fields.push({ key: 'expiry_date', label: 'Expires', value: meta.expiry_date, type: 'date', conf: conf.expiry_date, isExpiry: true });
+    }
+    if (meta.named_parties && meta.named_parties.length) {
+      fields.push({ key: 'named_parties_str', label: 'Parties', value: meta.named_parties.join(', '), conf: conf.named_parties });
+    }
+
+    fields.forEach(function(f) {
+      var badge = f.conf !== undefined ? confBadge(f.conf) : '';
+      var inputType = f.type || 'text';
+      html += '<div class="meta-field-row">' +
+        '<div class="meta-label">' + escHtml(f.label) + '</div>' +
+        '<div class="conf-wrap">' +
+          '<input type="' + inputType + '" id="rf_' + f.key + '" class="review-field-input" value="' + escHtml(f.value) + '"' +
+            (f.isExpiry ? ' data-is-expiry="1"' : '') + '>' +
+          badge +
+        '</div>' +
+      '</div>';
+    });
+
+    container.innerHTML = html;
+  }
+
+  // ── Render confirmed (read-only) metadata ─────────────────────────────────
+  function renderConfirmedMeta(meta) {
+    var html = '';
+    // Guard: don't render summary if it's a raw JSON object or markdown fence (pre-fix artifacts).
+    var sumText = meta.summary;
+    if (typeof sumText === 'string' && !sumText.trim().startsWith('{') && !sumText.trim().startsWith('```')) {
+      html += '<div style="margin-bottom:0.5rem"><strong>Summary:</strong> ' + escHtml(sumText) + '</div>';
+    }
+    if (meta.document_type) html += '<div><strong>Type:</strong> ' + escHtml(meta.document_type) + '</div>';
+    if (meta.issuer) html += '<div><strong>Issuer:</strong> ' + escHtml(meta.issuer) + '</div>';
+    if (meta.policy_number) html += '<div><strong>Policy #:</strong> ' + escHtml(meta.policy_number) + '</div>';
+    if (meta.coverage_type) html += '<div><strong>Coverage:</strong> ' + escHtml(meta.coverage_type) + '</div>';
+    if (meta.premium_amount) html += '<div><strong>Premium:</strong> ' + escHtml(meta.premium_amount) + '</div>';
+    if (meta.total_amount) html += '<div><strong>Amount:</strong> ' + escHtml(meta.total_amount) + '</div>';
+    if (meta.named_parties && meta.named_parties.length) {
+      html += '<div><strong>Parties:</strong> ' + meta.named_parties.map(function(p) { return escHtml(p); }).join(', ') + '</div>';
+    }
+    if (meta.key_terms && meta.key_terms.length) {
+      html += '<div><strong>Key terms:</strong> ' + meta.key_terms.map(function(t) { return escHtml(t); }).join(', ') + '</div>';
+    }
+    if (meta.line_items && meta.line_items.length) {
+      html += '<div><strong>Line items:</strong> ' + meta.line_items.map(function(li) {
+        return escHtml(li.description + ' ' + (li.amount || ''));
+      }).join(' · ') + '</div>';
+    }
+    if (html) {
+      document.getElementById('detailMetaContent').innerHTML = html;
+      document.getElementById('detailMetadata').style.display = 'block';
+    }
+  }
+
+  // ── Confirm metadata handler ───────────────────────────────────────────────
+  document.getElementById('btnConfirmMeta').addEventListener('click', function() {
+    var doc = allDocs.find(function(d) { return d.id === activeDocId; });
+    if (!doc) return;
+
+    var btn = this;
+    btn.disabled = true;
+    btn.textContent = 'Saving…';
+
+    // Collect edited field values
+    var meta = Object.assign({}, doc.metadata_json || {});
+    var expiryDate = null;
+    var category = null;
+
+    document.getElementById('detailReviewFields').querySelectorAll('.review-field-input').forEach(function(input) {
+      var key = input.id.replace('rf_', '');
+      var val = input.value.trim();
+      if (key === 'named_parties_str') {
+        meta.named_parties = val ? val.split(',').map(function(s) { return s.trim(); }) : [];
+      } else {
+        if (val) meta[key] = val; else delete meta[key];
+      }
+      if (input.dataset.isExpiry && val) expiryDate = val;
+    });
+
+    // If AI detected document_type, suggest a category mapping
+    var typeMap = {
+      'Insurance Policy': 'Insurance',
+      'Medical/Pharmacy Insurance ID Card': 'Insurance',
+      'Health Insurance Card': 'Insurance',
+      'Contract': 'Contracts',
+      'Receipt': 'Receipts',
+      "Driver's License": 'IDs', 'Passport': 'IDs', 'ID Card': 'IDs',
+      'Medical/Pharmacy Insurance Card': 'Insurance'
+    };
+    if (meta.document_type && typeMap[meta.document_type] && doc.category === 'Other') {
+      category = typeMap[meta.document_type];
+    }
+
+    fetch('/api/documents/' + doc.id + '/confirm-metadata', {
+      method: 'PATCH',
+      headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        metadata_json: meta,
+        expiry_date: expiryDate || undefined,
+        category: category || undefined
+      })
+    })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.success) {
+          // Update local cache
+          for (var i = 0; i < allDocs.length; i++) {
+            if (allDocs[i].id === data.document.id) {
+              allDocs[i] = data.document;
+              break;
+            }
+          }
+          showToast('Details confirmed ✓', 'success');
+          document.getElementById('detailOverlay').classList.remove('open');
+          loadDocs();
+        } else {
+          showToast(data.message || 'Save failed', 'error');
+        }
+      })
+      .catch(function() {
+        showToast('Save failed', 'error');
+      })
+      .finally(function() {
+        btn.disabled = false;
+        btn.textContent = 'Confirm Details';
+      });
+  });
+
+  document.getElementById('btnSkipMeta').addEventListener('click', function() {
+    // Mark confirmed=true without updating fields (user chose to skip review)
+    var doc = allDocs.find(function(d) { return d.id === activeDocId; });
+    if (!doc) return;
+    fetch('/api/documents/' + doc.id + '/confirm-metadata', {
+      method: 'PATCH',
+      headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({})
+    })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.success) {
+          for (var i = 0; i < allDocs.length; i++) {
+            if (allDocs[i].id === data.document.id) { allDocs[i] = data.document; break; }
+          }
+        }
+      })
+      .catch(function() {});
+    document.getElementById('detailOverlay').classList.remove('open');
+  });
+
+  document.getElementById('detailClose').addEventListener('click', function() {
+    document.getElementById('detailOverlay').classList.remove('open');
+  });
+  document.getElementById('detailOverlay').addEventListener('click', function(e) {
+    if (e.target === this) this.classList.remove('open');
+  });
+  document.getElementById('detailView').addEventListener('click', function() {
+    var doc = allDocs.find(function(d) { return d.id === activeDocId; });
+    if (doc) window.open(doc.s3_url, '_blank');
+  });
+  document.getElementById('detailDelete').addEventListener('click', function() {
+    document.getElementById('detailOverlay').classList.remove('open');
+    confirmDelete(activeDocId);
+  });
+
+  // ── Delete ─────────────────────────────────────────────────────────────────
+  function confirmDelete(docId) {
+    if (!confirm('Delete this document? This cannot be undone.')) return;
+    fetch('/api/documents/' + docId, {
+      method: 'DELETE',
+      headers: { 'Authorization': 'Bearer ' + token }
+    })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.success) {
+          showToast('Document deleted', 'success');
+          loadDocs();
+        } else {
+          showToast(data.message || 'Delete failed', 'error');
+        }
+      })
+      .catch(function() { showToast('Delete failed', 'error'); });
+  }
+
+  // ── Upload modal ───────────────────────────────────────────────────────────
+  document.getElementById('uploadBtn').addEventListener('click', openUploadModal);
+  document.getElementById('uploadCancel').addEventListener('click', closeUploadModal);
+  document.getElementById('uploadOverlay').addEventListener('click', function(e) {
+    if (e.target === this) closeUploadModal();
+  });
+
+  function openUploadModal() {
+    selectedFile = null;
+    document.getElementById('fileInput').value = '';
+    document.getElementById('docName').value = '';
+    document.getElementById('docExpiry').value = '';
+    document.getElementById('docNotes').value = '';
+    document.getElementById('docCategory').value = 'Insurance';
+    resetDropZone();
+    document.getElementById('uploadSubmit').disabled = true;
+    document.getElementById('uploadOverlay').classList.add('open');
+  }
+  function closeUploadModal() {
+    document.getElementById('uploadOverlay').classList.remove('open');
+  }
+  function resetDropZone() {
+    var dz = document.getElementById('dropZone');
+    dz.innerHTML = '<div class="drop-zone-icon">📎</div><div class="drop-zone-text">Tap to choose a file</div><div class="drop-zone-sub">PDF, PNG, JPG, HEIC · max 10MB</div>';
+  }
+
+  // File selection
+  document.getElementById('dropZone').addEventListener('click', function() {
+    document.getElementById('fileInput').click();
+  });
+  document.getElementById('fileInput').addEventListener('change', function() {
+    if (this.files[0]) setSelectedFile(this.files[0]);
+  });
+
+  // Drag and drop
+  var dz = document.getElementById('dropZone');
+  dz.addEventListener('dragover', function(e) { e.preventDefault(); this.classList.add('dragover'); });
+  dz.addEventListener('dragleave', function() { this.classList.remove('dragover'); });
+  dz.addEventListener('drop', function(e) {
+    e.preventDefault(); this.classList.remove('dragover');
+    if (e.dataTransfer.files[0]) setSelectedFile(e.dataTransfer.files[0]);
+  });
+
+  function setSelectedFile(file) {
+    selectedFile = file;
+    var icon = file.type === 'application/pdf' ? '📄' : '🖼️';
+    dz.innerHTML = '<div class="drop-zone-file">' + icon + ' ' + escHtml(file.name) + '<span style="color:var(--text-muted);font-weight:400;font-size:0.8rem">  ' + fmtSize(file.size) + '</span></div>';
+    if (!document.getElementById('docName').value) {
+      document.getElementById('docName').value = file.name.replace(/\.[^.]+$/, '');
+    }
+    document.getElementById('uploadSubmit').disabled = false;
+  }
+
+  // Submit upload
+  document.getElementById('uploadSubmit').addEventListener('click', function() {
+    if (!selectedFile) return;
+    var btn = this;
+    btn.disabled = true;
+
+    var formData = new FormData();
+    formData.append('file', selectedFile);
+    formData.append('name', document.getElementById('docName').value || selectedFile.name);
+    formData.append('category', document.getElementById('docCategory').value);
+    formData.append('notes', document.getElementById('docNotes').value);
+    formData.append('expiry_date', document.getElementById('docExpiry').value);
+
+    // Change button text only after fetch starts (request in flight)
+    var fetchStarted = false;
+    var updateBtnOnRequestStart = setTimeout(function() {
+      if (!fetchStarted) {
+        fetchStarted = true;
+        btn.textContent = 'Uploading…';
+      }
+    }, 50);
+
+    fetch('/api/documents/upload', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + token },
+      body: formData
+    })
+      .then(function(r) {
+        fetchStarted = true;
+        clearTimeout(updateBtnOnRequestStart);
+        btn.textContent = 'Uploading…';
+        return r.json();
+      })
+      .then(function(data) {
+        if (data.success) {
+          closeUploadModal();
+
+          // Add new doc to local cache immediately for optimistic rendering
+          if (data.document) {
+            allDocs.unshift(data.document);
+          }
+
+          loadDocs();
+
+          if (data.ai_queued) {
+            showToast('Uploaded! AI is reading your document…', 'success');
+            // Start polling for extraction completion
+            if (data.document) {
+              setTimeout(function() {
+                startExtractionPoll(data.document.id);
+              }, 400);
+            }
+          } else {
+            showToast('Document uploaded successfully', 'success');
+          }
+
+          loadAiUsage();
+        } else {
+          showToast(data.message || 'Upload failed', 'error');
+          btn.disabled = false;
+          btn.textContent = 'Upload';
+        }
+      })
+      .catch(function() {
+        showToast('Upload failed — check your connection', 'error');
+        btn.disabled = false;
+        btn.textContent = 'Upload';
+      });
+  });
+
+  // ── Category tabs ──────────────────────────────────────────────────────────
+  document.getElementById('catTabs').addEventListener('click', function(e) {
+    var btn = e.target.closest('.cat-tab');
+    if (!btn) return;
+    document.querySelectorAll('.cat-tab').forEach(function(t) { t.classList.remove('active'); });
+    btn.classList.add('active');
+    currentCat = btn.dataset.cat;
+    loadDocs();
+  });
+
+  // ── Search ─────────────────────────────────────────────────────────────────
+  var searchTimer;
+  document.getElementById('searchInput').addEventListener('input', function() {
+    clearTimeout(searchTimer);
+    var q = this.value.trim();
+    searchTimer = setTimeout(function() {
+      currentQ = q;
+      loadDocs();
+    }, 300);
+  });
+
+  // ── Logout ─────────────────────────────────────────────────────────────────
+  document.getElementById('logoutBtn').addEventListener('click', function() {
+    localStorage.removeItem('fl_token');
+    window.location.href = '/login';
+  });
+
+  // ── Init ───────────────────────────────────────────────────────────────────
+  loadDocs();
+  loadAiUsage();
+
+})();
+</script>
+<link rel="stylesheet" href="/shared-nav.css">
+<script src="/shared-nav.js"></script>
+<script src="/buddy-widget.js"></script>
+<script src="/js/services/ai-service.js"></script>
+<script src="/js/analytics.js"></script>
+<script src="/js/date-parser.js"></script>
+<script>
+(function(){
+  var fab=null,qOverlay=null,token=localStorage.getItem('fl_token');
+  function openQA(){qOverlay=document.getElementById('qaOverlay')||createQASheet();qOverlay.classList.add('open');setTimeout(function(){var i=document.getElementById('qaInput');if(i)i.focus();},50)}
+  function closeQA(){if(qOverlay)qOverlay.classList.remove('open');var i=document.getElementById('qaInput');if(i){i.value='';document.getElementById('qaChips').innerHTML='';document.getElementById('qaSave').disabled=true}}
+  function createQASheet(){
+    var div=document.createElement('div');div.id='qaOverlay';div.className='qa-overlay';
+    div.innerHTML='<div class="qa-sheet"><div class="qa-title-row"><h3>Quick Add</h3><button class="qa-close" id="qaClose">×</button></div><div class="qa-input-row"><input type="text" class="qa-input" id="qaInput" placeholder="What needs to get done?" maxlength="150" autocomplete="off"><button class="qa-save" id="qaSave" disabled>Add</button></div><div class="qa-chips" id="qaChips"></div></div>';
+    document.body.appendChild(div);
+    div.addEventListener('click',function(e){if(e.target===div)closeQA()});
+    document.getElementById('qaClose').addEventListener('click',closeQA);
+    document.getElementById('qaInput').addEventListener('input',function(){
+      var v=this.value.trim();document.getElementById('qaSave').disabled=!v;
+      if(!v){document.getElementById('qaChips').innerHTML='';return}
+      var res=window._qaParse?window._qaParse(this.value):{parsed:{date:null,time:null},remaining:this.value};
+      var lbl=window._qaChipLabel?window._qaChipLabel(res.parsed):null;
+      document.getElementById('qaChips').innerHTML=lbl?'<span class="qa-chip"><span class="chip-dot"></span>'+lbl+'</span>':'';
+    });
+    document.getElementById('qaInput').addEventListener('keydown',function(e){
+      if(e.key==='Enter'&&!e.target.disabled)qaSave();
+      if(e.key==='Escape')closeQA();
+    });
+    document.getElementById('qaSave').addEventListener('click',qaSave);
+    return div;
+  }
+  function qaSave(){
+    var v=document.getElementById('qaInput').value.trim();if(!v)return;
+    var res=window._qaParse?window._qaParse(v):{parsed:{date:null,time:null},remaining:v};
+    var body={title:res.remaining};if(res.parsed.date)body.due_date=res.parsed.date;if(res.parsed.time)body.due_time=res.parsed.time;
+    fetch('/api/tasks',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify(body)}).then(function(r){return r.json()}).then(function(d){
+      if(d.success){closeQA();}else{var t=document.createElement('div');t.textContent=d.message||'Failed to add task';t.style.cssText='position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:var(--navy);color:white;padding:0.65rem 1.25rem;border-radius:10px;font-size:0.85rem;font-weight:500;z-index:9999';document.body.appendChild(t);setTimeout(function(){t.remove()},2500);}
+    });
+  }
+  window._qaParse=parseNaturalLanguage;window._qaChipLabel=chipLabel;
+  fab=document.createElement('button');fab.className='fab';fab.title='Quick add task';fab.textContent='+';fab.addEventListener('click',openQA);document.body.appendChild(fab);
+})();
+</script>
+<script>(function(){try{var u=JSON.parse(localStorage.getItem('fl_user')||'{}');if(u.id)FLA.setUser(u.id);}catch(e){}FLA.trackPage('vault');})()</script>
+
+<!-- Service worker registration -->
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' })
+    .then(function(reg) {
+      reg.addEventListener('updatefound', function() {
+        var newWorker = reg.installing;
+        newWorker.addEventListener('statechange', function() {
+          if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+            window.dispatchEvent(new Event('SW_UPDATED'));
+          }
+        });
+      });
+    });
+  window.addEventListener('SW_UPDATED', function() { window.location.reload(); });
+}
+</script>
+</body>
+</html>

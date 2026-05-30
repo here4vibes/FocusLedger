@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Add FocusLedger to Your Home Screen</title>
+  <link rel="icon" href="/icons/fl-icon.png" type="image/png">
+  <link rel="manifest" href="/manifest.json">
+  <style>
+    :root {
+      --navy:   #011e5c;
+      --gold:   #c9a84c;
+      --cream:  #faf9f7;
+      --border: #e8e5e0;
+      --text:   #1a1a1a;
+      --muted:  #6b6b6b;
+      --green:  #5BA4A4;
+      --error:  #E07A5F;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: Inter, system-ui, -apple-system, sans-serif;
+      background: var(--cream);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* ── Header bar ── */
+    .install-header {
+      width: 100%;
+      background: var(--navy);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 20px;
+    }
+    .install-header img {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+    }
+    .install-header span {
+      color: #fff;
+      font-weight: 700;
+      font-size: 1rem;
+      letter-spacing: -0.01em;
+    }
+
+    /* ── Main content ── */
+    .install-body {
+      width: 100%;
+      max-width: 460px;
+      padding: 32px 20px 48px;
+      display: flex;
+      flex-direction: column;
+      gap: 28px;
+    }
+
+    .hero {
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+    .hero-icon {
+      width: 72px;
+      height: 72px;
+      border-radius: 18px;
+      box-shadow: 0 4px 16px rgba(1,30,92,0.18);
+    }
+    .hero h1 {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: var(--navy);
+      line-height: 1.2;
+    }
+    .hero p {
+      font-size: 0.95rem;
+      color: var(--muted);
+      line-height: 1.5;
+      max-width: 300px;
+    }
+
+    /* ── Step card ── */
+    .step-card {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .step-card h2 {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--navy);
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .step-badge {
+      background: var(--navy);
+      color: #fff;
+      border-radius: 50%;
+      width: 22px;
+      height: 22px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.7rem;
+      font-weight: 800;
+      flex-shrink: 0;
+    }
+
+    /* ── Instruction list ── */
+    .steps-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .steps-list li {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      font-size: 0.93rem;
+      line-height: 1.45;
+    }
+    .step-num {
+      background: var(--cream);
+      border: 1.5px solid var(--border);
+      border-radius: 50%;
+      width: 22px;
+      height: 22px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: var(--navy);
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+    .steps-list .icon-inline {
+      display: inline-block;
+      font-style: normal;
+      background: var(--cream);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 1px 5px;
+      font-size: 0.85em;
+      vertical-align: middle;
+    }
+
+    /* ── Primary button ── */
+    .btn-primary {
+      display: block;
+      width: 100%;
+      padding: 14px;
+      background: var(--navy);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      text-align: center;
+      text-decoration: none;
+      transition: background 0.15s;
+    }
+    .btn-primary:hover { background: #02287a; }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* ── Status states ── */
+    .status-msg {
+      display: none;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 14px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: 500;
+    }
+    .status-msg.success {
+      background: #e8f5f5;
+      color: #2e6b6b;
+      border: 1px solid #b2d8d8;
+    }
+    .status-msg.denied {
+      background: #fef2ee;
+      color: #a84b2f;
+      border: 1px solid #f0c4b4;
+    }
+    .status-msg.show { display: flex; }
+
+    /* ── Already installed banner ── */
+    .already-installed {
+      display: none;
+      background: #e8f5f5;
+      border: 1px solid #b2d8d8;
+      border-radius: 8px;
+      padding: 14px;
+      text-align: center;
+      font-size: 0.93rem;
+      color: #2e6b6b;
+      font-weight: 500;
+    }
+    .already-installed.show { display: block; }
+
+    /* ── Auth note ── */
+    .auth-note {
+      display: none;
+      font-size: 0.88rem;
+      color: var(--muted);
+      text-align: center;
+      line-height: 1.5;
+    }
+    .auth-note a { color: var(--navy); font-weight: 600; }
+    .auth-note.show { display: block; }
+
+    /* ── Divider ── */
+    .divider {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--muted);
+      font-size: 0.8rem;
+      font-weight: 500;
+    }
+    .divider::before, .divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    /* ── Desktop notice ── */
+    .desktop-note {
+      font-size: 0.88rem;
+      color: var(--muted);
+      text-align: center;
+      line-height: 1.5;
+    }
+
+    /* ── Open app link ── */
+    .open-app {
+      text-align: center;
+      font-size: 0.88rem;
+      color: var(--muted);
+    }
+    .open-app a {
+      color: var(--navy);
+      font-weight: 600;
+      text-decoration: none;
+    }
+    .open-app a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <div class="install-header">
+    <img src="/icons/fl-icon.png" alt="FocusLedger icon">
+    <span>FocusLedger</span>
+  </div>
+
+  <div class="install-body">
+    <!-- Hero -->
+    <div class="hero">
+      <img class="hero-icon" src="/icons/fl-icon.png" alt="FocusLedger">
+      <h1>Two steps to the home screen</h1>
+      <p>Get morning nudges, check-ins, and instant access — no app store needed.</p>
+    </div>
+
+    <!-- ── Step 1: Install ── -->
+    <div class="step-card" id="installCard">
+      <h2><span class="step-badge">1</span> Add to Home Screen</h2>
+
+      <!-- Already installed as PWA -->
+      <div class="already-installed" id="alreadyInstalled">
+        ✓ Already installed — FocusLedger is on your home screen.
+      </div>
+
+      <!-- iOS Safari instructions -->
+      <ul class="steps-list" id="iosSteps" style="display:none">
+        <li>
+          <span class="step-num">1</span>
+          <span>Tap the <em class="icon-inline">Share ⬆</em> button in Safari's bottom toolbar</span>
+        </li>
+        <li>
+          <span class="step-num">2</span>
+          <span>Scroll down and tap <em class="icon-inline">Add to Home Screen</em></span>
+        </li>
+        <li>
+          <span class="step-num">3</span>
+          <span>Tap <em class="icon-inline">Add</em> — done!</span>
+        </li>
+      </ul>
+
+      <!-- Android Chrome — native prompt button -->
+      <button class="btn-primary" id="androidInstallBtn" style="display:none">
+        Add to Home Screen
+      </button>
+
+      <!-- Android fallback instructions -->
+      <ul class="steps-list" id="androidFallbackSteps" style="display:none">
+        <li>
+          <span class="step-num">1</span>
+          <span>Tap the <em class="icon-inline">⋮</em> menu in Chrome's top-right corner</span>
+        </li>
+        <li>
+          <span class="step-num">2</span>
+          <span>Tap <em class="icon-inline">Add to Home screen</em></span>
+        </li>
+        <li>
+          <span class="step-num">3</span>
+          <span>Tap <em class="icon-inline">Add</em> — done!</span>
+        </li>
+      </ul>
+
+      <!-- Desktop Chrome/Edge -->
+      <div id="desktopInstall" style="display:none">
+        <button class="btn-primary" id="desktopInstallBtn">
+          Install FocusLedger
+        </button>
+        <p class="desktop-note" style="margin-top:10px" id="desktopInstallFallback" style="display:none">
+          Click the install icon <em class="icon-inline">⊕</em> in your browser's address bar.
+        </p>
+      </div>
+
+      <!-- Generic fallback -->
+      <p id="genericFallback" style="display:none;font-size:0.9rem;color:var(--muted);line-height:1.5">
+        Open this page in Chrome (Android) or Safari (iOS) to install FocusLedger on your home screen.
+      </p>
+    </div>
+
+    <!-- ── Step 2: Push notifications ── -->
+    <div class="step-card" id="pushCard">
+      <h2><span class="step-badge">2</span> Enable Notifications</h2>
+
+      <!-- Not logged in -->
+      <div class="auth-note" id="authNote">
+        <a href="/login">Log in</a> or <a href="/signup">sign up</a> to enable morning check-ins and deadline nudges.
+      </div>
+
+      <!-- Logged in — permission UI -->
+      <div id="pushUI" style="display:none">
+        <p style="font-size:0.9rem;color:var(--muted);margin-bottom:14px;line-height:1.5">
+          Get a morning nudge at 8am and an evening check-in at 8pm. Change times anytime in Settings.
+        </p>
+        <button class="btn-primary" id="enablePushBtn">Enable Notifications</button>
+
+        <div class="status-msg success" id="pushGranted">
+          ✓ Notifications on — you'll hear from us in the morning.
+        </div>
+        <div class="status-msg denied" id="pushDenied">
+          No worries — you can enable notifications later in Settings.
+        </div>
+        <div class="status-msg success" id="pushAlready">
+          ✓ Notifications already enabled.
+        </div>
+      </div>
+    </div>
+
+    <!-- Open the app -->
+    <p class="open-app">
+      <a href="/app">Open FocusLedger →</a>
+    </p>
+  </div>
+
+  <script>
+    // ── Utilities ─────────────────────────────────────────────────────────────
+    const TOKEN_KEY = 'fl_jwt';
+
+    function getToken() {
+      try { return localStorage.getItem(TOKEN_KEY); } catch { return null; }
+    }
+
+    function isLoggedIn() {
+      const t = getToken();
+      if (!t) return false;
+      try {
+        const payload = JSON.parse(atob(t.split('.')[1]));
+        return payload.exp * 1000 > Date.now();
+      } catch { return false; }
+    }
+
+    function show(id) {
+      const el = document.getElementById(id);
+      if (el) el.style.display = '';
+    }
+    function hide(id) {
+      const el = document.getElementById(id);
+      if (el) el.style.display = 'none';
+    }
+    function addClass(id, cls) {
+      const el = document.getElementById(id);
+      if (el) el.classList.add(cls);
+    }
+
+    // ── Device detection ──────────────────────────────────────────────────────
+    const ua = navigator.userAgent;
+    const isIOS = /iPad|iPhone|iPod/.test(ua) && !window.MSStream;
+    const isAndroid = /Android/.test(ua);
+    const isChrome = /Chrome/.test(ua) && !/Edg/.test(ua);
+    const isEdge = /Edg/.test(ua);
+    const isFirefox = /Firefox/.test(ua);
+    const isMobile = isIOS || isAndroid;
+
+    // Detect if already running as installed PWA
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches
+      || window.navigator.standalone === true;
+
+    // ── Step 1: Install card ──────────────────────────────────────────────────
+    let deferredInstallPrompt = null;
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredInstallPrompt = e;
+
+      // Show native install button for Android/Desktop Chrome
+      if (isAndroid) {
+        show('androidInstallBtn');
+        hide('androidFallbackSteps');
+      } else {
+        show('desktopInstallBtn');
+        hide('desktopInstallFallback');
+      }
+    });
+
+    function showInstallInstructions() {
+      if (isStandalone) {
+        // Already installed
+        addClass('alreadyInstalled', 'show');
+        hide('iosSteps');
+        hide('androidInstallBtn');
+        hide('androidFallbackSteps');
+        hide('desktopInstall');
+        hide('genericFallback');
+        return;
+      }
+
+      if (isIOS) {
+        show('iosSteps');
+      } else if (isAndroid) {
+        // If we got beforeinstallprompt, button is already shown.
+        // If not (already installed, or not Chrome), show fallback steps.
+        if (!deferredInstallPrompt) {
+          show('androidFallbackSteps');
+        }
+      } else {
+        // Desktop
+        show('desktopInstall');
+        if (!deferredInstallPrompt) {
+          hide('desktopInstallBtn');
+          show('desktopInstallFallback');
+        }
+      }
+    }
+
+    // Android native install button
+    document.getElementById('androidInstallBtn')?.addEventListener('click', async () => {
+      if (!deferredInstallPrompt) return;
+      deferredInstallPrompt.prompt();
+      const { outcome } = await deferredInstallPrompt.userChoice;
+      deferredInstallPrompt = null;
+      if (outcome === 'accepted') {
+        document.getElementById('androidInstallBtn').textContent = '✓ Added to Home Screen';
+        document.getElementById('androidInstallBtn').disabled = true;
+      }
+    });
+
+    // Desktop install button
+    document.getElementById('desktopInstallBtn')?.addEventListener('click', async () => {
+      if (!deferredInstallPrompt) return;
+      deferredInstallPrompt.prompt();
+      const { outcome } = await deferredInstallPrompt.userChoice;
+      deferredInstallPrompt = null;
+      if (outcome === 'accepted') {
+        document.getElementById('desktopInstallBtn').textContent = '✓ Installed';
+        document.getElementById('desktopInstallBtn').disabled = true;
+      }
+    });
+
+    // ── Step 2: Push notifications ────────────────────────────────────────────
+    async function initPushUI() {
+      if (!isLoggedIn()) {
+        addClass('authNote', 'show');
+        return;
+      }
+      show('pushUI');
+
+      // Check current permission
+      if (!('Notification' in window) || !('serviceWorker' in navigator)) {
+        document.getElementById('enablePushBtn').textContent = 'Not supported in this browser';
+        document.getElementById('enablePushBtn').disabled = true;
+        return;
+      }
+
+      if (Notification.permission === 'granted') {
+        // Check if actually subscribed
+        await checkExistingSubscription();
+      } else if (Notification.permission === 'denied') {
+        show('pushDenied');
+        addClass('pushDenied', 'show');
+        hide('enablePushBtn');
+      }
+    }
+
+    async function checkExistingSubscription() {
+      try {
+        const reg = await navigator.serviceWorker.ready;
+        const sub = await reg.pushManager.getSubscription();
+        if (sub) {
+          hide('enablePushBtn');
+          addClass('pushAlready', 'show');
+        }
+      } catch { /* ignore */ }
+    }
+
+    document.getElementById('enablePushBtn')?.addEventListener('click', async () => {
+      await requestPushPermission();
+    });
+
+    async function requestPushPermission() {
+      const btn = document.getElementById('enablePushBtn');
+      btn.textContent = 'Enabling…';
+      btn.disabled = true;
+
+      try {
+        // 1. Get permission
+        const permission = await Notification.requestPermission();
+        if (permission !== 'granted') {
+          btn.style.display = 'none';
+          addClass('pushDenied', 'show');
+          return;
+        }
+
+        // 2. Fetch VAPID public key
+        const keyRes = await fetch('/api/notifications/vapid-public-key');
+        const keyData = await keyRes.json();
+        if (!keyData.enabled || !keyData.key) {
+          btn.textContent = 'Enable Notifications';
+          btn.disabled = false;
+          return;
+        }
+
+        // 3. Subscribe via service worker
+        const reg = await navigator.serviceWorker.ready;
+        const sub = await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(keyData.key)
+        });
+
+        // 4. Save to server
+        const token = getToken();
+        await fetch('/api/notifications/subscribe', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + token
+          },
+          body: JSON.stringify({
+            subscription: sub.toJSON(),
+            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+          })
+        });
+
+        btn.style.display = 'none';
+        addClass('pushGranted', 'show');
+      } catch (err) {
+        console.error('[Install] Push error:', err);
+        btn.textContent = 'Try again';
+        btn.disabled = false;
+      }
+    }
+
+    // VAPID key helper — converts base64url to Uint8Array
+    function urlBase64ToUint8Array(base64String) {
+      const padding = '='.repeat((4 - base64String.length % 4) % 4);
+      const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+      const raw = window.atob(base64);
+      return Uint8Array.from([...raw].map(c => c.charCodeAt(0)));
+    }
+
+    // ── Boot ──────────────────────────────────────────────────────────────────
+    showInstallInstructions();
+    initPushUI();
+  </script>
+</body>
+</html>

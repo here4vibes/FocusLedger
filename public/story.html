@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>About the Founder — FocusLedger</title>
+    <meta name="description" content="I'm Sean — CPA, ADHD brain, and the person who built FocusLedger. After a decade of watching good people lose jobs, relationships, and money because executive function isn't a choice, I built the tool I couldn't find anywhere else.">
+    <!-- Open Graph -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://focusledger.net/story">
+    <meta property="og:title" content="About the Founder — FocusLedger">
+    <meta property="og:description" content="I'm Sean — CPA with ADHD. I built FocusLedger because nothing on the market actually understood how executive function works.">
+    <meta property="og:image" content="https://focusledger.net/icons/og-home.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:site_name" content="FocusLedger">
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="About the Founder — FocusLedger">
+    <meta name="twitter:description" content="I'm Sean — CPA with ADHD. I built FocusLedger because nothing on the market actually understood how executive function works.">
+    <meta name="twitter:image" content="https://focusledger.net/icons/og-home.png">
+    <!-- Canonical -->
+    <link rel="canonical" href="https://focusledger.net/story">
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" sizes="32x32" href="/icons/fl-icon.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/icons/fl-icon.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/fl-icon.png">
+    <!-- Shared pages stylesheet -->
+    <link rel="stylesheet" href="/css/pages.css">
+    <!-- JSON-LD -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "AboutPage",
+      "mainEntity": {
+        "@type": "Person",
+        "name": "Sean Hendler",
+        "jobTitle": "Founder & CPA",
+        "description": "CPA with ADHD who built FocusLedger after years of watching good people lose jobs, relationships, and money because executive function isn't a choice.",
+        "url": "https://focusledger.net/story"
+      }
+    }
+    </script>
+    <!-- Meta Pixel PageView -->
+    <script>
+    !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+    n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
+    n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
+    t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,
+    document,'script','https://connect.facebook.net/en_US/fbevents.js');
+    fbq('init','1597499061553078');
+    fbq('track','PageView');
+    </script>
+    <noscript><img height="1" width="1" style="display:none"
+    src="https://www.facebook.com/tr?id=1597499061553078&ev=PageView&noscript=1"/></noscript>
+    <style>
+        /* ── Design Tokens ────────────────────────────────────────── */
+        :root {
+            --trust-blue: #011e5c;
+            --trust-blue-mid: #02287a;
+            --gold: #c9a84c;
+            --gold-dark: #b8962f;
+            --warm-white: #faf9f7;
+            --alt-bg: #f5f3ef;
+            --surface: #ffffff;
+            --text-primary: #1a1a1a;
+            --text-muted: #6b6b6b;
+            --border: #e8e5e0;
+            --font-serif: Georgia, "Times New Roman", serif;
+            --font-sans: Inter, system-ui, -apple-system, sans-serif;
+            --card-radius: 4px;
+            --btn-radius: 4px;
+        }
+
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: var(--font-sans);
+            background: var(--warm-white);
+            color: var(--text-primary);
+            line-height: 1.7;
+            overflow-x: hidden;
+        }
+
+        /* ── Navigation ──────────────────────────────────────────── */
+        nav {
+            background: var(--trust-blue);
+            position: sticky;
+            top: 0;
+            z-index: 200;
+            height: 64px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 2rem;
+        }
+        .nav-logo {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            text-decoration: none;
+            color: white;
+            font-size: 1.05rem;
+            font-weight: 600;
+            letter-spacing: -0.01em;
+        }
+        .nav-logo .logo-dot {
+            width: 8px; height: 8px;
+            background: var(--gold);
+            border-radius: 50%;
+            display: inline-block;
+        }
+        .logo-icon {
+            height: 26px;
+            width: auto;
+            display: block;
+            flex-shrink: 0;
+        }
+        .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+        .nav-links a {
+            color: rgba(255,255,255,0.82);
+            text-decoration: none;
+            font-size: 0.88rem;
+            transition: color 0.2s;
+        }
+        .nav-links a:hover { color: white; }
+        .nav-cta {
+            background: var(--gold);
+            color: #1a1a1a !important;
+            font-weight: 600;
+            padding: 0.5rem 1.25rem;
+            border-radius: var(--btn-radius);
+            text-decoration: none;
+            font-size: 0.88rem;
+            transition: opacity 0.2s;
+        }
+        .nav-cta:hover { opacity: 0.88; color: #1a1a1a; }
+
+        /* ── Page Wrapper ────────────────────────────────────────── */
+        .page-wrapper {
+            max-width: 760px;
+            margin: 0 auto;
+            padding: 3rem 2rem 6rem;
+        }
+
+        /* ── Hero Section ────────────────────────────────────────── */
+        .hero-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            background: rgba(1,30,92,0.07);
+            color: var(--trust-blue);
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            padding: 0.3rem 0.75rem;
+            border-radius: 3px;
+            margin-bottom: 1.5rem;
+        }
+        .hero-tag svg { width: 12px; height: 12px; }
+
+        .hero-title {
+            font-family: var(--font-serif);
+            font-size: clamp(2.4rem, 5vw, 3.4rem);
+            color: var(--trust-blue);
+            line-height: 1.12;
+            margin-bottom: 1.5rem;
+            letter-spacing: -0.02em;
+        }
+
+        .hero-sub {
+            font-size: 1.1rem;
+            color: var(--text-muted);
+            line-height: 1.7;
+            margin-bottom: 3rem;
+            max-width: 600px;
+        }
+
+        /* ── Founder Photo ───────────────────────────────────────── */
+        .founder-photo-wrap {
+            margin-bottom: 3rem;
+            position: relative;
+        }
+        .founder-photo {
+            width: 160px;
+            height: 160px;
+            border-radius: 50%;
+            object-fit: cover;
+            object-position: center top;
+            border: 3px solid var(--gold);
+            box-shadow: 0 4px 20px rgba(1,30,92,0.18);
+            display: block;
+        }
+        @media (max-width: 480px) {
+            .founder-photo { width: 128px; height: 128px; }
+        }
+        .photo-caption {
+            margin-top: 0.75rem;
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            font-style: italic;
+        }
+
+        /* ── Story Sections ──────────────────────────────────────── */
+        .story-section {
+            margin-bottom: 3.5rem;
+        }
+        .story-section h2 {
+            font-family: var(--font-serif);
+            font-size: 1.55rem;
+            color: var(--trust-blue);
+            margin-bottom: 1rem;
+            letter-spacing: -0.01em;
+        }
+        .story-section p {
+            font-size: 1.02rem;
+            color: var(--text-primary);
+            margin-bottom: 1.2rem;
+            max-width: 620px;
+        }
+        .story-section p:last-child { margin-bottom: 0; }
+
+        /* Pull quote */
+        .pull-quote {
+            background: var(--trust-blue);
+            color: white;
+            padding: 1.5rem 2rem;
+            border-radius: var(--card-radius);
+            margin: 2.5rem 0;
+            position: relative;
+        }
+        .pull-quote::before {
+            content: '\u201C';
+            font-family: var(--font-serif);
+            font-size: 4rem;
+            color: var(--gold);
+            position: absolute;
+            top: 0.5rem;
+            left: 1.25rem;
+            line-height: 1;
+        }
+        .pull-quote p {
+            font-family: var(--font-serif);
+            font-size: 1.15rem;
+            line-height: 1.6;
+            color: white;
+            position: relative;
+            z-index: 1;
+            padding-left: 0.5rem;
+        }
+        .pull-quote cite {
+            display: block;
+            margin-top: 0.75rem;
+            font-size: 0.82rem;
+            color: var(--gold);
+            font-style: normal;
+            font-weight: 600;
+        }
+
+        /* ── ADHD context card ──────────────────────────────────── */
+        .context-card {
+            background: var(--alt-bg);
+            border: 1.5px solid var(--border);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 2rem 0;
+        }
+        .context-card-title {
+            font-size: 0.78rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.07em;
+            color: var(--text-muted);
+            margin-bottom: 0.75rem;
+        }
+        .context-card p {
+            font-size: 0.92rem !important;
+            color: var(--text-muted) !important;
+            margin-bottom: 0.6rem !important;
+        }
+        .context-card p:last-child { margin-bottom: 0 !important; }
+
+        /* ── Divider ─────────────────────────────────────────────── */
+        .section-divider {
+            width: 60px;
+            height: 3px;
+            background: var(--gold);
+            border-radius: 2px;
+            margin: 3rem 0;
+        }
+
+        /* ── Product Origin ──────────────────────────────────────── */
+        .product-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin: 2rem 0;
+        }
+        .product-feature {
+            background: white;
+            border: 1.5px solid var(--border);
+            border-radius: 8px;
+            padding: 1.1rem;
+        }
+        .product-feature-icon {
+            width: 36px; height: 36px;
+            background: rgba(1,30,92,0.08);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 0.6rem;
+        }
+        .product-feature-icon svg { width: 18px; height: 18px; color: var(--trust-blue); }
+        .product-feature h4 {
+            font-size: 0.88rem;
+            font-weight: 700;
+            color: var(--trust-blue);
+            margin-bottom: 0.3rem;
+        }
+        .product-feature p {
+            font-size: 0.82rem !important;
+            color: var(--text-muted) !important;
+            margin: 0 !important;
+            line-height: 1.5;
+        }
+
+        /* ── CTA Section ─────────────────────────────────────────── */
+        .cta-section {
+            background: var(--trust-blue);
+            border-radius: 10px;
+            padding: 3rem 2.5rem;
+            text-align: center;
+            margin-top: 4rem;
+        }
+        .cta-section h2 {
+            font-family: var(--font-serif);
+            font-size: 2rem;
+            color: white;
+            margin-bottom: 0.75rem;
+            letter-spacing: -0.02em;
+        }
+        .cta-section p {
+            color: rgba(255,255,255,0.78);
+            font-size: 1rem;
+            margin-bottom: 1.75rem;
+        }
+        .cta-btn {
+            display: inline-block;
+            background: var(--gold);
+            color: #1a1a1a;
+            font-weight: 700;
+            font-size: 0.95rem;
+            padding: 0.85rem 2.25rem;
+            border-radius: var(--btn-radius);
+            text-decoration: none;
+            transition: opacity 0.2s;
+            letter-spacing: 0.01em;
+        }
+        .cta-btn:hover { opacity: 0.88; color: #1a1a1a; }
+        .cta-note {
+            margin-top: 0.75rem;
+            font-size: 0.78rem;
+            color: rgba(255,255,255,0.5);
+        }
+
+        /* ── Footer ──────────────────────────────────────────────── */
+        .page-footer {
+            background: var(--trust-blue);
+            padding: 2rem;
+            text-align: center;
+            margin-top: 5rem;
+        }
+        .page-footer p {
+            color: rgba(255,255,255,0.6);
+            font-size: 0.82rem;
+        }
+        .page-footer a {
+            color: rgba(255,255,255,0.7);
+            text-decoration: none;
+        }
+        .page-footer a:hover { color: white; }
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-bottom: 0.75rem;
+        }
+
+        /* ── Responsive ──────────────────────────────────────────── */
+        @media (max-width: 600px) {
+            nav { padding: 0 1rem; }
+            .nav-links a:not(.nav-cta) { display: none; }
+            .page-wrapper { padding: 2rem 1.25rem 5rem; }
+            .product-grid { grid-template-columns: 1fr; }
+            .cta-section { padding: 2rem 1.5rem; }
+        }
+        @media (max-width: 480px) {
+            .hero-title { font-size: 2rem; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- Navigation -->
+<nav>
+    <a href="/" class="nav-logo">
+        <img src="/icons/fl-icon.png" class="logo-icon" alt="">FocusLedger
+    </a>
+    <div class="nav-links">
+        <a href="/story">About</a>
+        <a href="/changelog">Changelog</a>
+        <a href="/pricing">Pricing</a>
+        <a href="/app">App</a>
+        <a href="/signup" class="nav-cta">Try free</a>
+    </div>
+    
+<!-- Page Content -->
+<main class="page-wrapper">
+
+    <!-- Hero tag -->
+    <div class="hero-tag">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+        The story
+    </div>
+
+    <h1 class="hero-title">Built by someone who needed it badly</h1>
+    <p class="hero-sub">I'm Sean — CPA, ADHD brain, and the person who built FocusLedger. After a decade of watching good people lose jobs, relationships, and money because executive function isn't a choice, I built the tool I couldn't find anywhere else.</p>
+
+    <!-- Founder photo -->
+    <div class="founder-photo-wrap">
+        <img
+            src="https://pub-629428d185ca4960a0a73c850d32294b.r2.dev/company_74724/images/f327929d-c67c-4775-a034-79924db82e23.jpg"
+            alt="Sean Hendler — CPA, founder of FocusLedger"
+            class="founder-photo"
+            width="160"
+            height="160"
+            loading="eager"
+        >
+        <p class="photo-caption">Sean Hendler — CPA, founder of FocusLedger</p>
+    </div>
+
+    <!-- Section 1: Values gap -->
+    <div class="story-section">
+        <h2>I knew what mattered. I just couldn't do it.</h2>
+        <p>Here's what I couldn't admit for a long time: I had clear values. I wanted to be fully present for the people in my life. I wanted to follow through on commitments. I wanted to live intentionally, not just react to whatever showed up next.</p>
+        <p>And I'd fail at the same things, week after week, without ever really understanding why. Not because I didn't care. Not because I was lazy. Because something in my brain just didn't hold onto the important things — no matter how much I wanted it to.</p>
+        <p>The gap between what I valued and what I actually did was the most consistent thing in my life. And it was embarrassing.</p>
+    </div>
+
+    <div class="pull-quote">
+        <p>Physically present but mentally elsewhere. Always thinking about what I forgot, or what's coming next, or what I said I'd do and haven't done yet. That's not being there. And you know when you're not being there.</p>
+        <cite>— Sean Hendler, CPA</cite>
+    </div>
+
+    <!-- Section 2: The tools didn't work -->
+    <div class="story-section">
+        <h2>The apps didn't help. They made it worse.</h2>
+        <p>I tried everything. Todoist, Notion, TickTick, Things, a physical planner I never opened. A whiteboard that looked impressive on Zoom calls and collected dust otherwise.</p>
+        <p>Every single one of them made the same assumption: that you just needed a better place to write things down, and the rest would follow. But writing things down wasn't the problem. The problem was that adding another app, another system, another place to check — added cognitive load, not reduced it.</p>
+        <p>I was managing my task manager while trying to do the work. That was the actual problem no one was building for.</p>
+    </div>
+
+    <!-- ADHD context card -->
+    <div class="context-card">
+        <div class="context-card-title">For the ADHD community</div>
+        <p>The things that seem obvious to non-ADHD brains — write it down, set a reminder, follow through — are genuinely hard. Not because of laziness or caring less, but because working memory is a limited resource, and executive function is the skill that allocates it.</p>
+        <p>FocusLedger is built around the hypothesis that external structure is the answer. Not willpower. Not trying harder. Just better scaffolding that holds things still long enough for action to happen.</p>
+    </div>
+
+    <div class="section-divider"></div>
+
+    <!-- Section 3: What FocusLedger is -->
+    <div class="story-section">
+        <h2>What FocusLedger actually does</h2>
+        <p>Three things, held together in one place:</p>
+    </div>
+
+    <div class="product-grid">
+        <div class="product-feature">
+            <div class="product-feature-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+            </div>
+            <h4>Tasks — actually get done</h4>
+            <p>Due dates, recurring tasks, AI task breakdown, voice input. Things you can actually complete, not aspirational lists that shame you.</p>
+        </div>
+        <div class="product-feature">
+            <div class="product-feature-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+            </div>
+            <h4>Money — actually tracked</h4>
+            <p>Expense logging, category tracking, impulse spending flagged. No more wondering where the money went or getting surprised by balances.</p>
+        </div>
+        <div class="product-feature">
+            <div class="product-feature-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+            </div>
+            <h4>Time — actually blocked</h4>
+            <p>Focus blocks and a calm news feed. Realize when you've been falling behind on tasks. Know when to step back from the screen.</p>
+        </div>
+        <div class="product-feature">
+            <div class="product-feature-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+            </div>
+            <h4>Journal — actually built</h4>
+            <p>Evening reflection with AI-powered task auto-completion. Learn from what happened, capture what's next.</p>
+        </div>
+    </div>
+
+    <div class="section-divider"></div>
+
+    <!-- Section 4: Follow-through + why build it -->
+    <div class="story-section">
+        <h2>The frustration isn't laziness. It's unmanaged executive function.</h2>
+        <p>Here's what I want every person who's been told to just try harder to hear: the problem was never that you didn't care. The problem was that your intentions never had anywhere to live long enough to become actions.</p>
+        <p>You'd decide to follow through. You'd mean it. And then life would keep happening, and the thing you meant to do would slip, and you'd feel like you'd failed — again — for reasons you couldn't quite explain.</p>
+        <p>That's not a character flaw. That's a systems problem. And systems problems have engineering solutions.</p>
+        <p>FocusLedger exists because I needed it first. Not as a business. As a human who wanted to be the person I kept meaning to be. The apps didn't solve it — so I'm building the thing that should have existed already.</p>
+    </div>
+
+    <!-- CTA -->
+    <div class="cta-section">
+        <h2>Try it free</h2>
+        <p>Full access to FocusLedger for 14 days — no credit card, no catch.</p>
+        <a href="/signup" class="cta-btn">Create your account</a>
+        <p class="cta-note">Tasks &middot; Money &middot; Time blocks &middot; Journal &middot; AI suggestions</p>
+    </div>
+
+</main>
+
+<!-- Footer -->
+<footer class="page-footer">
+    <div class="footer-links">
+        <a href="/">Home</a>
+        <a href="/story">About</a>
+        <a href="/changelog">Changelog</a>
+        <a href="/pricing">Pricing</a>
+        <a href="/contact">Contact</a>
+        <a href="/terms">Terms</a>
+        <a href="/privacy">Privacy</a>
+    </div>
+    <p>FocusLedger &copy; 2026 &middot; Built by a CPA with ADHD, for people who need executive functioning help</p>
+</footer>
+
+<!-- Analytics: PostHog PageView -->
+<script>
+(function() {
+    var slug = '__POLSIA_SLUG__' || '';
+    if (slug && window.posthog) {
+        posthog.capture('$pageview', { page: '/story', source: 'organic' });
+    }
+})();
+</script>
+
+<!-- Polsia Analytics Beacon -->
+<script src="https://analytics.polsia.com/beacon?slug=__POLSIA_SLUG__&path=/story" async defer></script>
+
+</body>
+</html>

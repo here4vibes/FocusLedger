@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ADHD Science Cheat Sheet — FocusLedger</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,400&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --navy: #011e5c;
+            --navy-mid: #02287a;
+            --gold: #c9a84c;
+            --gold-light: #e8c96a;
+            --cream: #faf8f4;
+            --cream-warm: #f3ede3;
+            --teal: #3a8585;
+            --teal-light: #4a9898;
+            --border: #ddd8ce;
+            --text-main: #18181b;
+            --text-body: #3d3d44;
+            --text-muted: #7a7a85;
+            --font-display: 'Fraunces', Georgia, serif;
+            --font-body: 'DM Sans', system-ui, sans-serif;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html {
+            font-size: 14px;
+        }
+
+        body {
+            font-family: var(--font-body);
+            color: var(--text-main);
+            background: white;
+            -webkit-font-smoothing: antialiased;
+            line-height: 1.6;
+        }
+
+        /* ── PRINT WRAPPER ── */
+        .page {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+        }
+
+        /* ── HEADER ── */
+        .header {
+            background: var(--navy);
+            padding: 2.5rem 2.5rem 2rem;
+            position: relative;
+            overflow: hidden;
+        }
+        .header::after {
+            content: '';
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--gold) 0%, var(--teal) 60%, transparent 100%);
+        }
+        .header-tag {
+            display: inline-block;
+            font-size: 0.64rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            color: var(--gold);
+            background: rgba(201,168,76,0.12);
+            border: 1px solid rgba(201,168,76,0.25);
+            padding: 0.3rem 0.7rem;
+            border-radius: 2px;
+            margin-bottom: 1rem;
+        }
+        .header h1 {
+            font-family: var(--font-display);
+            font-size: 2rem;
+            font-weight: 600;
+            line-height: 1.1;
+            letter-spacing: -0.02em;
+            color: white;
+            margin-bottom: 0.6rem;
+        }
+        .header h1 em {
+            font-style: italic;
+            color: var(--gold);
+            font-weight: 400;
+        }
+        .header-sub {
+            font-size: 0.875rem;
+            color: rgba(255,255,255,0.6);
+            max-width: 560px;
+            line-height: 1.55;
+        }
+        .header-meta {
+            margin-top: 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+        .header-stat {
+            text-align: left;
+        }
+        .header-stat-num {
+            font-family: var(--font-display);
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--gold);
+            line-height: 1;
+        }
+        .header-stat-label {
+            font-size: 0.7rem;
+            color: rgba(255,255,255,0.45);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+        .header-divider {
+            width: 1px;
+            height: 32px;
+            background: rgba(255,255,255,0.12);
+        }
+
+        /* ── BODY CONTENT ── */
+        .content {
+            padding: 0 2.5rem 2.5rem;
+            background: var(--cream);
+        }
+
+        /* ── MECHANISM BLOCKS ── */
+        .mechanism {
+            border-left: 3px solid var(--border);
+            padding: 1.5rem 0 1.5rem 1.5rem;
+            margin-top: 1.5rem;
+            position: relative;
+        }
+        .mechanism:first-child { margin-top: 1.75rem; }
+        .mechanism::before {
+            content: '';
+            position: absolute;
+            left: -3px; top: 0;
+            width: 3px; height: 28px;
+            background: var(--gold);
+        }
+        .mechanism-header {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            margin-bottom: 0.75rem;
+        }
+        .mechanism-num {
+            font-family: var(--font-display);
+            font-size: 0.7rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            padding-top: 2px;
+            flex-shrink: 0;
+        }
+        .mechanism h2 {
+            font-family: var(--font-display);
+            font-size: 1.05rem;
+            font-weight: 600;
+            color: var(--navy);
+            line-height: 1.2;
+            letter-spacing: -0.01em;
+        }
+        .mechanism-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem;
+            margin-top: 0.6rem;
+        }
+        .callout {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 3px;
+            padding: 0.85rem 1rem;
+        }
+        .callout-label {
+            font-size: 0.62rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 0.4rem;
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+        }
+        .callout-label-dot {
+            width: 5px; height: 5px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+        .label-science { color: var(--navy); }
+        .label-science .callout-label-dot { background: var(--navy); }
+        .label-app { color: var(--teal); }
+        .label-app .callout-label-dot { background: var(--teal); }
+        .callout p {
+            font-size: 0.8rem;
+            color: var(--text-body);
+            line-height: 1.55;
+        }
+        .citation-chip {
+            display: inline-block;
+            font-size: 0.6rem;
+            color: var(--text-muted);
+            background: var(--cream-warm);
+            border: 1px solid var(--border);
+            padding: 0.15rem 0.5rem;
+            border-radius: 2px;
+            margin-top: 0.5rem;
+            font-style: italic;
+        }
+
+        /* ── KEY FINDINGS STRIP ── */
+        .findings-strip {
+            background: var(--navy);
+            padding: 1.25rem 2.5rem;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+        }
+        .finding {
+            text-align: center;
+        }
+        .finding-num {
+            font-family: var(--font-display);
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: var(--gold);
+            line-height: 1;
+        }
+        .finding-label {
+            font-size: 0.7rem;
+            color: rgba(255,255,255,0.5);
+            margin-top: 0.3rem;
+            line-height: 1.4;
+        }
+
+        /* ── DIVIDER ── */
+        .section-divider {
+            height: 1px;
+            background: var(--border);
+            margin: 0 2.5rem;
+        }
+
+        /* ── TAKEAWAY BOX ── */
+        .takeaway-box {
+            background: white;
+            border: 1px solid var(--border);
+            border-left: 3px solid var(--teal);
+            padding: 1.25rem 1.5rem;
+            margin: 1.5rem 2.5rem 0;
+        }
+        .takeaway-label {
+            font-size: 0.62rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            color: var(--teal);
+            margin-bottom: 0.5rem;
+        }
+        .takeaway-box p {
+            font-size: 0.825rem;
+            color: var(--text-body);
+            line-height: 1.6;
+        }
+        .takeaway-box strong {
+            color: var(--text-main);
+        }
+
+        /* ── CTA BLOCK ── */
+        .cta-block {
+            margin: 1.5rem 2.5rem 2.5rem;
+            background: linear-gradient(135deg, var(--navy) 0%, var(--navy-mid) 100%);
+            border-radius: 4px;
+            padding: 1.5rem 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1.5rem;
+        }
+        .cta-text h3 {
+            font-family: var(--font-display);
+            font-size: 1rem;
+            font-weight: 600;
+            color: white;
+            margin-bottom: 0.3rem;
+            line-height: 1.3;
+        }
+        .cta-text h3 em {
+            color: var(--gold);
+            font-style: italic;
+        }
+        .cta-text p {
+            font-size: 0.75rem;
+            color: rgba(255,255,255,0.55);
+            line-height: 1.5;
+        }
+        .cta-btn {
+            display: inline-block;
+            background: var(--gold);
+            color: #1a1a1a;
+            padding: 0.65rem 1.4rem;
+            border-radius: 3px;
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 0.8rem;
+            white-space: nowrap;
+            letter-spacing: 0.01em;
+        }
+
+        /* ── FOOTER ── */
+        .footer {
+            background: white;
+            border-top: 1px solid var(--border);
+            padding: 0.75rem 2.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .footer-brand {
+            font-size: 0.7rem;
+            font-weight: 700;
+            color: var(--navy);
+            letter-spacing: -0.01em;
+        }
+        .footer-url {
+            font-size: 0.68rem;
+            color: var(--text-muted);
+        }
+        .footer-note {
+            font-size: 0.62rem;
+            color: var(--text-muted);
+            font-style: italic;
+        }
+
+        /* ── PRINT STYLES ── */
+        @media print {
+            html { font-size: 11px; }
+            body { background: white; }
+            .page { max-width: 100%; box-shadow: none; }
+            a { color: inherit; text-decoration: none; }
+            .cta-btn { background: var(--gold) !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .header { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .findings-strip { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .cta-block { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        }
+
+        @media screen {
+            body { background: #e8e4de; }
+            .page {
+                margin: 2rem auto;
+                box-shadow: 0 4px 40px rgba(0,0,0,0.15), 0 1px 4px rgba(0,0,0,0.1);
+            }
+        }
+
+        /* ── EMAIL GATE OVERLAY ── */
+        .gate-overlay {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: var(--cream);
+            padding: 1.5rem;
+        }
+        .gate-card {
+            background: var(--navy);
+            border-radius: 6px;
+            padding: 2.5rem 2rem;
+            max-width: 420px;
+            width: 100%;
+            text-align: center;
+            box-shadow: 0 8px 40px rgba(1,30,92,0.3);
+        }
+        .gate-icon {
+            font-size: 2.5rem;
+            margin-bottom: 0.75rem;
+        }
+        .gate-card h2 {
+            font-family: var(--font-display);
+            font-size: 1.4rem;
+            font-weight: 600;
+            color: white;
+            line-height: 1.25;
+            margin-bottom: 0.6rem;
+        }
+        .gate-card h2 em {
+            color: var(--gold);
+            font-style: italic;
+        }
+        .gate-card p {
+            font-size: 0.82rem;
+            color: rgba(255,255,255,0.6);
+            line-height: 1.55;
+            margin-bottom: 1.5rem;
+        }
+        .gate-form { width: 100%; }
+        .gate-input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            font-size: 0.9rem;
+            border: 2px solid rgba(201,168,76,0.3);
+            border-radius: 4px;
+            background: rgba(255,255,255,0.08);
+            color: white;
+            outline: none;
+            box-sizing: border-box;
+            margin-bottom: 0.75rem;
+            transition: border-color 0.15s;
+        }
+        .gate-input::placeholder { color: rgba(255,255,255,0.4); }
+        .gate-input:focus { border-color: var(--gold); }
+        .gate-input.error { border-color: #e07070; }
+        .gate-submit {
+            width: 100%;
+            padding: 0.8rem;
+            background: var(--gold);
+            color: #1a1a1a;
+            font-size: 0.9rem;
+            font-weight: 700;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            letter-spacing: 0.01em;
+            transition: background 0.15s;
+        }
+        .gate-submit:hover { background: var(--gold-light); }
+        .gate-submit:disabled { opacity: 0.5; cursor: not-allowed; }
+        .gate-error {
+            color: #f0a0a0;
+            font-size: 0.78rem;
+            margin-top: 0.5rem;
+            display: none;
+        }
+        .gate-error.visible { display: block; }
+        .gate-success {
+            display: none;
+            text-align: center;
+        }
+        .gate-success.visible { display: block; }
+        .gate-success h3 {
+            font-family: var(--font-display);
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--gold);
+            margin-bottom: 0.5rem;
+        }
+        .gate-success p {
+            font-size: 0.8rem;
+            color: rgba(255,255,255,0.6);
+            margin-bottom: 1.25rem;
+        }
+        .gate-success .gate-download-btn {
+            display: inline-block;
+            padding: 0.75rem 1.5rem;
+            background: var(--gold);
+            color: #1a1a1a;
+            font-weight: 700;
+            font-size: 0.85rem;
+            border-radius: 4px;
+            text-decoration: none;
+            cursor: pointer;
+        }
+        .gate-success .gate-download-btn:hover { background: var(--gold-light); }
+        .gate-success .gate-signup-nudge {
+            margin-top: 1rem;
+            font-size: 0.75rem;
+            color: rgba(255,255,255,0.4);
+        }
+        .gate-success .gate-signup-nudge a {
+            color: var(--teal-light);
+            text-decoration: none;
+        }
+        .gate-success .gate-signup-nudge a:hover { text-decoration: underline; }
+        .page-gated { display: none; }
+
+        @media print {
+            .gate-overlay { display: none; }
+            .page-gated { display: block; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- EMAIL GATE OVERLAY -->
+<div class="gate-overlay" id="gateOverlay">
+    <div class="gate-card">
+        <div class="gate-icon">📋</div>
+        <h2>Get your free <em>ADHD Science Cheat Sheet</em></h2>
+        <p>Enter your email to download the printable — no signup required.</p>
+
+        <div class="gate-form" id="gateForm">
+            <input type="email" class="gate-input" id="gateEmail" placeholder="your@email.com" autocomplete="email" />
+            <button type="button" class="gate-submit" id="gateSubmit">Download Free →</button>
+            <div class="gate-error" id="gateError"></div>
+        </div>
+
+        <div class="gate-success" id="gateSuccess">
+            <h3>You're in! ✓</h3>
+            <p>Your download is ready.</p>
+            <a href="javascript:window.print()" class="gate-download-btn">🖨️ Print / Save PDF</a>
+            <p class="gate-signup-nudge">Want the full experience? <a href="https://focusledger.net/signup">Try FocusLedger free →</a></p>
+        </div>
+    </div>
+</div>
+
+<!-- PRINTABLE CONTENT (hidden until email submitted) -->
+<div class="page page-gated" id="pageContent">
+
+    <!-- HEADER -->
+    <div class="header">
+        <div class="header-tag">ADHD Science Cheat Sheet</div>
+        <h1>Why Your Brain Works<br>the Way It <em>Does</em></h1>
+        <p class="header-sub">The peer-reviewed research behind ADHD executive function — and how it explains procrastination, impulse spending, and why most productivity tools fail you.</p>
+        <div class="header-meta">
+            <div class="header-stat">
+                <div class="header-stat-num">10+</div>
+                <div class="header-stat-label">Studies cited</div>
+            </div>
+            <div class="header-divider"></div>
+            <div class="header-stat">
+                <div class="header-stat-num">3</div>
+                <div class="header-stat-label">Core mechanisms</div>
+            </div>
+            <div class="header-divider"></div>
+            <div class="header-stat">
+                <div class="header-stat-num">0</div>
+                <div class="header-stat-label">Wellness fluff</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- KEY FINDINGS STRIP -->
+    <div class="findings-strip">
+        <div class="finding">
+            <div class="finding-num">d=0.65</div>
+            <div class="finding-label">Effect size: if-then planning on task completion (Gollwitzer, 94 studies)</div>
+        </div>
+        <div class="finding">
+            <div class="finding-num">3–5 yrs</div>
+            <div class="finding-label">Delay in prefrontal cortex maturation in ADHD (Shaw et al., 2007)</div>
+        </div>
+        <div class="finding">
+            <div class="finding-num">83 studies</div>
+            <div class="finding-label">Confirming working memory as top executive function deficit (Willcutt, 2005)</div>
+        </div>
+    </div>
+
+    <!-- BODY -->
+    <div class="content">
+
+        <!-- MECHANISM 1 -->
+        <div class="mechanism">
+            <div class="mechanism-header">
+                <div class="mechanism-num">01</div>
+                <h2>Behavioral Inhibition &amp; Task Avoidance</h2>
+            </div>
+            <div class="mechanism-grid">
+                <div class="callout">
+                    <div class="callout-label label-science">
+                        <div class="callout-label-dot"></div>
+                        The Research
+                    </div>
+                    <p>ADHD is a <strong>behavioral inhibition deficit</strong> — not a willpower problem. Barkley's foundational model identifies the core issue as the brain's failure to bridge intention and action. The prefrontal cortex governing "start now" matures 3–5 years later in people with ADHD (Shaw et al., PNAS 2007).</p>
+                    <span class="citation-chip">Barkley (2010) · Shaw et al. PNAS (2007)</span>
+                </div>
+                <div class="callout">
+                    <div class="callout-label label-app">
+                        <div class="callout-label-dot"></div>
+                        What Helps
+                    </div>
+                    <p>Breaking tasks into smallest-possible atomic steps short-circuits avoidance at the point of initiation. "Do taxes" triggers avoidance. "Find last year's W-2" is tractable. Limiting daily focus to <strong>3 tasks</strong> removes decision fatigue that compounds paralysis.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- MECHANISM 2 -->
+        <div class="mechanism">
+            <div class="mechanism-header">
+                <div class="mechanism-num">02</div>
+                <h2>Implementation Intentions &amp; Commitment</h2>
+            </div>
+            <div class="mechanism-grid">
+                <div class="callout">
+                    <div class="callout-label label-science">
+                        <div class="callout-label-dot"></div>
+                        The Research
+                    </div>
+                    <p>If-then plans that specify <em>when, where, and how</em> you'll act on a goal <strong>roughly double follow-through</strong> (Gollwitzer 1999, d=0.65 across 94 studies). Self-imposed deadlines further improve completion — the act of choosing the deadline is itself part of the commitment mechanism (Ariely &amp; Wertenbroch, 2002).</p>
+                    <span class="citation-chip">Gollwitzer, Am. Psychologist (1999) · Ariely &amp; Wertenbroch, Psych. Science (2002)</span>
+                </div>
+                <div class="callout">
+                    <div class="callout-label label-app">
+                        <div class="callout-label-dot"></div>
+                        What Helps
+                    </div>
+                    <p>Name your <strong>3 tasks each morning</strong> with a rough time slot. Writing it down creates an implementation intention. Evening review closes the feedback loop — which research shows is required for the commitment mechanism to strengthen over repeated days.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- MECHANISM 3 -->
+        <div class="mechanism">
+            <div class="mechanism-header">
+                <div class="mechanism-num">03</div>
+                <h2>Working Memory &amp; Cognitive Offloading</h2>
+            </div>
+            <div class="mechanism-grid">
+                <div class="callout">
+                    <div class="callout-label label-science">
+                        <div class="callout-label-dot"></div>
+                        The Research
+                    </div>
+                    <p>Working memory — the mental workspace that holds "don't forget X" — is one of the <strong>three most impaired executive functions</strong> in ADHD (Willcutt et al., Biological Psychiatry 2005, 83 studies). Items "leak" from short-term attention faster, meaning every uncaptured task is cognitive noise eating into focus.</p>
+                    <span class="citation-chip">Willcutt et al., Biological Psychiatry (2005) · Baddeley (2000)</span>
+                </div>
+                <div class="callout">
+                    <div class="callout-label label-app">
+                        <div class="callout-label-dot"></div>
+                        What Helps
+                    </div>
+                    <p><strong>Capture immediately</strong> — get thoughts out of your head and into a trusted system the moment they appear. This isn't a life hack; it's Baddeley's working memory model applied literally. Reducing context-switching (one tab, one view) also directly reduces the cognitive cost of task-switching.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- MECHANISM 4 -->
+        <div class="mechanism">
+            <div class="mechanism-header">
+                <div class="mechanism-num">04</div>
+                <h2>ADHD &amp; Impulsive Spending</h2>
+            </div>
+            <div class="mechanism-grid">
+                <div class="callout">
+                    <div class="callout-label label-science">
+                        <div class="callout-label-dot"></div>
+                        The Research
+                    </div>
+                    <p>Financial impulsivity is a <strong>downstream consequence of impaired inhibitory control</strong> — not a character flaw. Barkley et al. (2008) found significantly elevated financial mismanagement in adults with ADHD independent of income. Emotional dysregulation drives spending as a mood-repair behavior: purchases generate brief dopamine spikes that close the gap between current and desired state (Nigg, 2017).</p>
+                    <span class="citation-chip">Barkley, Murphy &amp; Fischer (2008) · Nigg (2017)</span>
+                </div>
+                <div class="callout">
+                    <div class="callout-label label-app">
+                        <div class="callout-label-dot"></div>
+                        What Helps
+                    </div>
+                    <p>Inserting a <strong>pause between impulse and purchase</strong> mimics what the prefrontal cortex does when it's working. Recognizing emotional triggers — "I'm buying this because I'm frustrated" — activates rational override. Tracking patterns (spending spikes with task avoidance) makes the Nigg mechanism visible and therefore interruptible.</p>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- DIVIDER -->
+    <div class="section-divider"></div>
+
+    <!-- TAKEAWAY -->
+    <div class="takeaway-box">
+        <div class="takeaway-label">Bottom Line</div>
+        <p>The strategies that actually work for ADHD brains — <strong>atomic tasks, implementation intentions, cognitive offloading, behavioral nudges</strong> — all have published mechanistic evidence behind them. They're not productivity tricks. They're scaffolding for executive functions that are developmentally delayed, not absent. The goal isn't to fix your brain. It's to build systems that do what your brain struggles to do automatically.</p>
+    </div>
+
+    <!-- CTA -->
+    <div class="cta-block">
+        <div class="cta-text">
+            <h3>FocusLedger applies these principles <em>automatically</em></h3>
+            <p>Task breakdown · daily commitment check-in · impulse detection · working memory offload — all in one tab. Built by a CPA with ADHD.</p>
+        </div>
+        <a href="https://focusledger.net/signup" class="cta-btn">Try it free →</a>
+    </div>
+
+    <!-- FOOTER -->
+    <div class="footer">
+        <div class="footer-brand">FocusLedger</div>
+        <div class="footer-note">For informational purposes. Not medical advice.</div>
+        <div class="footer-url">focusledger.net</div>
+    </div>
+
+</div>
+</div>
+
+<script>
+(function () {
+    'use strict';
+    var STORAGE_KEY = 'fl_lm_science';
+    var pageContent = document.getElementById('pageContent');
+    var gateOverlay = document.getElementById('gateOverlay');
+    var gateForm = document.getElementById('gateForm');
+    var gateEmail = document.getElementById('gateEmail');
+    var gateSubmit = document.getElementById('gateSubmit');
+    var gateError = document.getElementById('gateError');
+    var gateSuccess = document.getElementById('gateSuccess');
+
+    // If already submitted, show printable content and skip overlay
+    if (localStorage.getItem(STORAGE_KEY)) {
+        gateOverlay.style.display = 'none';
+        pageContent.style.display = 'block';
+        return;
+    }
+
+    // Hide printable content until email captured
+    pageContent.style.display = 'none';
+
+    gateSubmit.addEventListener('click', function () {
+        var email = gateEmail.value.trim();
+        if (!email || !/^[^\n\r@]+@[^\n\r@]+\/[^\n\r@]+$/.test(email)) {
+            // Simple email check
+            if (!email || !/^[^\n\r@]+@[^\n\r@]+$/.test(email)) {
+                gateError.textContent = 'Please enter a valid email address.';
+                gateError.classList.add('visible');
+                gateEmail.classList.add('error');
+                return;
+            }
+        }
+
+        gateError.textContent = '';
+        gateError.classList.remove('visible');
+        gateEmail.classList.remove('error');
+        gateSubmit.disabled = true;
+        gateSubmit.textContent = 'Submitting...';
+
+        var formData = new FormData();
+        formData.append('email', email);
+        formData.append('lead_magnet_type', 'science_cheat_sheet');
+        formData.append('source_page', window.location.href);
+
+        fetch('/api/leads/capture', { method: 'POST', body: formData })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                if (data.success) {
+                    // Mark as captured
+                    localStorage.setItem(STORAGE_KEY, '1');
+                    // Reveal printable content
+                    pageContent.style.display = 'block';
+                    gateOverlay.style.display = 'none';
+                } else {
+                    gateError.textContent = data.message || 'Something went wrong. Please try again.';
+                    gateError.classList.add('visible');
+                    gateSubmit.disabled = false;
+                    gateSubmit.textContent = 'Download Free →';
+                }
+            })
+            .catch(function () {
+                // On network error, still reveal content (don't block the user)
+                localStorage.setItem(STORAGE_KEY, '1');
+                pageContent.style.display = 'block';
+                gateOverlay.style.display = 'none';
+            });
+    });
+
+    // Enter key submits
+    gateEmail.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') gateSubmit.click();
+    });
+})();
+</script>
+
+</body>
+</html>

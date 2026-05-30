@@ -1,0 +1,25 @@
+User-agent: *
+Allow: /
+
+# Block authenticated app pages — no value for indexing
+Disallow: /app
+Disallow: /dashboard
+Disallow: /settings
+Disallow: /vault
+Disallow: /calendar
+Disallow: /journal
+Disallow: /ideas
+Disallow: /values
+Disallow: /news
+Disallow: /portal
+Disallow: /email
+Disallow: /admin
+Disallow: /share
+
+# Block auth flow pages
+Disallow: /reset-password
+
+# Block API endpoints
+Disallow: /api/
+
+Sitemap: https://focusledger.net/sitemap.xml

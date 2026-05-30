@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Accountability Partner Invite — FocusLedger</title>
+  <link rel="stylesheet" href="/css/design-system.css" />
+  <style>
+    body {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: var(--cream);
+      padding: 24px 16px;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      box-shadow: var(--card-shadow);
+      padding: 44px 40px;
+      max-width: 440px;
+      width: 100%;
+      text-align: center;
+    }
+
+    .logo {
+      font-family: var(--font-serif);
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--trust-blue);
+      margin-bottom: 32px;
+      display: block;
+    }
+
+    .avatar {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 3px solid var(--border);
+      margin: 0 auto 16px;
+      display: block;
+    }
+    .avatar-placeholder {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      background: var(--trust-blue);
+      color: #fff;
+      font-family: var(--font-serif);
+      font-size: 28px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 16px;
+    }
+
+    .invite-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #eff6ff;
+      color: #1d4ed8;
+      border: 1px solid #bfdbfe;
+      border-radius: 20px;
+      padding: 4px 14px;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      margin-bottom: 20px;
+    }
+
+    h1 {
+      font-family: var(--font-serif);
+      font-size: 22px;
+      color: var(--text-dark);
+      margin: 0 0 10px;
+      line-height: 1.3;
+    }
+
+    .subtitle {
+      font-size: 15px;
+      color: var(--text-muted);
+      margin: 0 0 28px;
+      line-height: 1.6;
+    }
+
+    .btn {
+      display: block;
+      width: 100%;
+      padding: 14px 24px;
+      background: var(--trust-blue);
+      color: #fff;
+      border: none;
+      border-radius: var(--btn-radius);
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      box-sizing: border-box;
+      transition: background 0.15s;
+      margin-bottom: 10px;
+    }
+    .btn:hover { background: var(--trust-blue-mid); }
+    .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    .btn-secondary {
+      display: block;
+      width: 100%;
+      padding: 13px 24px;
+      background: transparent;
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+      border-radius: var(--btn-radius);
+      font-size: 15px;
+      font-weight: 500;
+      cursor: pointer;
+      text-decoration: none;
+      box-sizing: border-box;
+      transition: background 0.15s;
+    }
+    .btn-secondary:hover { background: var(--cream-dark); }
+
+    .alert {
+      border-radius: 8px;
+      padding: 14px 16px;
+      font-size: 14px;
+      margin-bottom: 20px;
+      text-align: left;
+    }
+    .alert-success { background: #edfcf0; border: 1px solid #7DB87D; color: #2a6a2a; }
+    .alert-error   { background: var(--error-light); border: 1px solid var(--error); color: #8a2a2a; }
+    .alert-warn    { background: #fffbeb; border: 1px solid #f59e0b; color: #78350f; }
+
+    .spinner {
+      width: 20px; height: 20px;
+      border: 2px solid rgba(255,255,255,0.4);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      display: inline-block;
+      vertical-align: middle;
+      margin-right: 8px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .expiry-note {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <span class="logo">FocusLedger</span>
+
+    <!-- Loading -->
+    <div id="state-loading">
+      <p style="color:var(--text-muted);font-size:15px;">Loading invite…</p>
+    </div>
+
+    <!-- Valid invite — ready to accept -->
+    <div id="state-invite" style="display:none;">
+      <div class="invite-badge">🤝 Tandem Invite</div>
+      <div id="inviter-avatar-wrap"></div>
+      <h1 id="invite-heading">wants to be your accountability partner</h1>
+      <p class="subtitle">
+        Tandem keeps you both on track — you'll be able to see each other's focus and check-ins once linked.
+      </p>
+      <div id="alert-box" style="display:none;" class="alert"></div>
+      <button class="btn" id="btn-accept">Accept &amp; Link Up</button>
+      <a href="/app" class="btn-secondary">Not now</a>
+      <p class="expiry-note" id="expiry-note"></p>
+    </div>
+
+    <!-- Not logged in — prompt login first -->
+    <div id="state-login" style="display:none;">
+      <div class="invite-badge">🤝 Tandem Invite</div>
+      <h1>Log in to accept this invite</h1>
+      <p class="subtitle">You'll need a FocusLedger account to become someone's accountability partner.</p>
+      <a class="btn" id="btn-login-google" href="#">Log in with Google</a>
+      <a class="btn-secondary" id="btn-login-email" href="#">Log in with email</a>
+    </div>
+
+    <!-- Success -->
+    <div id="state-success" style="display:none;">
+      <div style="font-size:56px;margin-bottom:16px;">🎉</div>
+      <h1>You're accountability partners!</h1>
+      <p class="subtitle" id="success-detail">You and your partner are now linked. Hold each other accountable.</p>
+      <a href="/settings" class="btn">View in Settings</a>
+      <a href="/app" class="btn-secondary" style="margin-top:8px;">Go to app</a>
+    </div>
+
+    <!-- Error / expired -->
+    <div id="state-error" style="display:none;">
+      <div style="font-size:48px;margin-bottom:16px;">⚠️</div>
+      <h1>Invite not available</h1>
+      <div id="alert-error" class="alert alert-error"></div>
+      <a href="/app" class="btn-secondary">Go to app</a>
+    </div>
+
+    <!-- Already has a partner -->
+    <div id="state-has-partner" style="display:none;">
+      <div style="font-size:48px;margin-bottom:16px;">🤝</div>
+      <h1>You already have a partner</h1>
+      <p class="subtitle">You can only have one accountability partner at a time. End your current partnership in Settings to accept a new one.</p>
+      <a href="/settings" class="btn">View Settings</a>
+      <a href="/app" class="btn-secondary" style="margin-top:8px;">Go to app</a>
+    </div>
+  </div>
+
+  <script>
+    const INVITE_TOKEN_KEY = '__partner_invite_token';
+
+    const states = ['state-loading','state-invite','state-login','state-success','state-error','state-has-partner'];
+
+    function showState(id) {
+      states.forEach(s => {
+        const el = document.getElementById(s);
+        if (el) el.style.display = s === id ? '' : 'none';
+      });
+    }
+
+    function getToken() {
+      return new URLSearchParams(window.location.search).get('token') || '';
+    }
+
+    function getJwt() {
+      try { return localStorage.getItem('token') || sessionStorage.getItem('token') || ''; }
+      catch { return ''; }
+    }
+
+    function authedFetch(url, opts) {
+      const jwt = getJwt();
+      return fetch(url, {
+        ...opts,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${jwt}`,
+          ...(opts?.headers || {}),
+        },
+      });
+    }
+
+    function renderInviterAvatar(name, avatarUrl) {
+      const wrap = document.getElementById('inviter-avatar-wrap');
+      if (avatarUrl) {
+        const img = document.createElement('img');
+        img.src = avatarUrl;
+        img.alt = name || 'Partner';
+        img.className = 'avatar';
+        img.onerror = () => renderInitials(name, wrap);
+        wrap.appendChild(img);
+      } else {
+        renderInitials(name, wrap);
+      }
+    }
+
+    function renderInitials(name, container) {
+      const div = document.createElement('div');
+      div.className = 'avatar-placeholder';
+      div.textContent = (name || '?').charAt(0).toUpperCase();
+      container.innerHTML = '';
+      container.appendChild(div);
+    }
+
+    function showAlert(message, type) {
+      const box = document.getElementById('alert-box');
+      box.className = 'alert alert-' + type;
+      box.textContent = message;
+      box.style.display = '';
+    }
+
+    async function loadInvite(token) {
+      try {
+        const res = await fetch(`/api/partnerships/invite/${encodeURIComponent(token)}`);
+        const data = await res.json();
+
+        if (!res.ok || !data.success) {
+          document.getElementById('alert-error').textContent =
+            data.message || 'This invite link has expired or is no longer valid.';
+          showState('state-error');
+          return;
+        }
+
+        const { inviter_name, inviter_avatar, invite_expires_at } = data.invite;
+        renderInviterAvatar(inviter_name, inviter_avatar);
+        document.getElementById('invite-heading').textContent =
+          `${inviter_name || 'Someone'} wants to be your accountability partner`;
+
+        if (invite_expires_at) {
+          const exp = new Date(invite_expires_at);
+          document.getElementById('expiry-note').textContent =
+            `Invite expires ${exp.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`;
+        }
+
+        const jwt = getJwt();
+        if (!jwt) {
+          // Save token so post-login we can auto-accept
+          try { sessionStorage.setItem(INVITE_TOKEN_KEY, token); } catch {}
+          const loginBase = '/login?redirect=' + encodeURIComponent(window.location.href);
+          document.getElementById('btn-login-google').href = loginBase;
+          document.getElementById('btn-login-email').href = loginBase;
+          showState('state-login');
+        } else {
+          showState('state-invite');
+        }
+      } catch {
+        document.getElementById('alert-error').textContent = 'Network error — please try again.';
+        showState('state-error');
+      }
+    }
+
+    async function acceptInvite(token) {
+      const btn = document.getElementById('btn-accept');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span>Linking up…';
+
+      try {
+        const res = await authedFetch('/api/partnerships/accept', {
+          method: 'POST',
+          body: JSON.stringify({ token }),
+        });
+        const data = await res.json();
+
+        if (res.ok && data.success) {
+          try { sessionStorage.removeItem(INVITE_TOKEN_KEY); } catch {}
+          showState('state-success');
+          return;
+        }
+
+        if (res.status === 409) {
+          showState('state-has-partner');
+          return;
+        }
+
+        showAlert(data.message || 'Failed to accept invite. Please try again.', 'error');
+        btn.disabled = false;
+        btn.textContent = 'Accept & Link Up';
+      } catch {
+        showAlert('Network error — please check your connection.', 'error');
+        btn.disabled = false;
+        btn.textContent = 'Accept & Link Up';
+      }
+    }
+
+    async function init() {
+      const token = getToken();
+
+      if (!token) {
+        document.getElementById('alert-error').textContent =
+          'No invite token found. Please click the link your partner sent you.';
+        showState('state-error');
+        return;
+      }
+
+      // Check if returning from login with a stored token
+      const storedToken = (() => { try { return sessionStorage.getItem(INVITE_TOKEN_KEY); } catch { return null; } })();
+      const jwt = getJwt();
+
+      if (jwt && storedToken && storedToken === token) {
+        // Came back from login — load invite then auto-attempt accept
+        await loadInvite(token);
+        if (document.getElementById('state-invite').style.display !== 'none') {
+          acceptInvite(token);
+        }
+        return;
+      }
+
+      await loadInvite(token);
+    }
+
+    document.getElementById('btn-accept')?.addEventListener('click', () => {
+      acceptInvite(getToken());
+    });
+
+    init();
+  </script>
+</body>
+</html>

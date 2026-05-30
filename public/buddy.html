@@ -1,0 +1,2323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#011e5c">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="FocusLedger">
+    <link rel="icon" type="image/png" sizes="32x32" href="/icons/fl-icon.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/fl-icon.png">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>FocusLedger — Buddy</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --orange: #c9a84c;
+            --orange-light: #d4b56a;
+            --navy: #011e5c;
+            --navy-mid: #02287a;
+            --cream: #faf9f7;
+            --cream-dark: #f5f3ef;
+            --text-dark: #1a1a1a;
+            --text-muted: #6b6b6b;
+            --green: #5BA4A4;
+            --border: #e8e5e0;
+            --surface: #FFFFFF;
+        }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            color: var(--text-dark);
+            background: var(--cream);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        h1, h2, h3, h4 { font-family: 'Space Grotesk', sans-serif; }
+
+        /* ── NAV ── */
+        .app-nav {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: rgba(250, 249, 246, 0.95);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(0,0,0,0.04);
+        }
+        .app-nav-inner {
+            padding: 1rem 1.25rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 700px;
+            margin: 0 auto;
+        }
+        .logo {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--navy);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            text-decoration: none;
+        }
+        .logo-icon { height: 26px; width: auto; display: block; }
+        .nav-right {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        .back-link {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+        .back-link:hover { color: var(--orange); }
+
+        /* ── PAGE WRAPPER ── */
+        .page {
+            max-width: 700px;
+            margin: 0 auto;
+            padding: 1.5rem 1.25rem;
+            padding-bottom: calc(90px + env(safe-area-inset-bottom));
+        }
+
+        /* ── DATE HEADER ── */
+        .date-header {
+            text-align: center;
+            margin-bottom: 1.5rem;
+        }
+        .date-header .day-label {
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: var(--orange);
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+        .date-header h1 {
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: var(--navy);
+            margin-top: 0.15rem;
+        }
+
+        /* ── CARD ── */
+        .card {
+            background: var(--surface);
+            border-radius: 18px;
+            padding: 1.5rem;
+            border: 1px solid var(--border);
+            box-shadow: 0 4px 24px rgba(1, 30, 92, 0.05);
+            margin-bottom: 1rem;
+        }
+        .card-label {
+            font-size: 0.72rem;
+            font-weight: 600;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: var(--orange);
+            margin-bottom: 0.6rem;
+        }
+        .card-heading {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--navy);
+            margin-bottom: 0.5rem;
+            line-height: 1.3;
+        }
+        .card-sub {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            margin-bottom: 1.25rem;
+            line-height: 1.5;
+        }
+
+        /* ── MOOD SELECTOR ── */
+        .mood-selector {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-bottom: 1.25rem;
+        }
+        .mood-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.2rem;
+            padding: 0.55rem 0.65rem;
+            border-radius: 12px;
+            border: 2px solid var(--border);
+            background: var(--cream);
+            cursor: pointer;
+            transition: border-color 0.15s, background 0.15s;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            min-width: 56px;
+            flex: 1;
+        }
+        .mood-btn .mood-emoji { font-size: 1.3rem; line-height: 1; }
+        .mood-btn:hover { border-color: var(--orange-light); background: #fffcf4; }
+        .mood-btn.selected { border-color: var(--orange); background: #fffcf4; color: var(--navy); font-weight: 600; }
+        .mood-btn:active { transform: scale(0.96); }
+
+        /* ── AI PLAN CARDS ── */
+        .plan-intro {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            margin-bottom: 1rem;
+            line-height: 1.5;
+        }
+        .plan-slots {
+            display: flex;
+            flex-direction: column;
+            gap: 0.65rem;
+            margin-bottom: 1.25rem;
+        }
+        .plan-slot {
+            background: var(--cream-dark);
+            border: 2px solid var(--border);
+            border-radius: 14px;
+            padding: 0.95rem 1rem;
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            transition: border-color 0.15s;
+        }
+        .plan-slot.completed {
+            background: #f0f9f0;
+            border-color: #78C878;
+        }
+        .plan-slot-num {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: white;
+            background: var(--navy);
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            margin-top: 1px;
+        }
+        .plan-slot.completed .plan-slot-num {
+            background: #4CAF50;
+        }
+        .plan-slot-body { flex: 1; min-width: 0; }
+        .plan-slot-title {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--navy);
+            line-height: 1.35;
+            margin-bottom: 0.25rem;
+        }
+        .plan-slot.completed .plan-slot-title {
+            text-decoration: line-through;
+            color: var(--text-muted);
+        }
+        .plan-slot-meta {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+        .plan-slot-reason {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            line-height: 1.3;
+        }
+        .activation-badge {
+            font-size: 0.65rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            padding: 2px 7px;
+            border-radius: 4px;
+            flex-shrink: 0;
+        }
+        .activation-low  { background: #e8f5e9; color: #2e7d32; }
+        .activation-med  { background: #fff3e0; color: #e65100; }
+        .activation-high { background: #fce4ec; color: #c62828; }
+        .plan-slot-swap-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            padding: 0.2rem 0.35rem;
+            border-radius: 6px;
+            transition: color 0.15s, background 0.15s;
+            flex-shrink: 0;
+            margin-top: 1px;
+            display: flex;
+            align-items: center;
+            gap: 0.2rem;
+        }
+        .plan-slot-swap-btn:hover { color: var(--orange); background: rgba(201,168,76,0.08); }
+
+        /* ── PLAN ACTIONS ── */
+        .plan-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+        .plan-btn {
+            flex: 1;
+            min-height: 46px;
+            padding: 0.65rem 1rem;
+            border-radius: 12px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.88rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.15s, transform 0.1s;
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.35rem;
+        }
+        .plan-btn.accept {
+            background: var(--navy);
+            color: white;
+        }
+        .plan-btn.accept:hover { background: #01164a; }
+        .plan-btn.accept:active { transform: scale(0.98); }
+        .plan-btn.accept:disabled { opacity: 0.6; cursor: not-allowed; }
+        .plan-btn.regen {
+            background: transparent;
+            color: var(--text-muted);
+            border: 1.5px solid var(--border);
+        }
+        .plan-btn.regen:hover { border-color: var(--orange-light); color: var(--navy); }
+        .plan-btn.regen:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* ── ACCEPTED PLAN (locked in) ── */
+        .plan-accepted-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            background: linear-gradient(135deg, #011e5c 0%, #02287a 100%);
+            color: white;
+            padding: 0.45rem 0.85rem;
+            border-radius: 8px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+
+        /* ── SWAP MODAL ── */
+        .swap-modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(1,30,92,0.45);
+            z-index: 400;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+        }
+        .swap-modal {
+            background: var(--surface);
+            border-radius: 20px 20px 0 0;
+            padding: 1.5rem;
+            width: 100%;
+            max-width: 700px;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 -8px 40px rgba(1,30,92,0.15);
+        }
+        .swap-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        .swap-modal-title {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--navy);
+        }
+        .swap-modal-close {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1.2rem;
+            color: var(--text-muted);
+            padding: 0.2rem 0.4rem;
+            border-radius: 6px;
+            min-width: 36px;
+            min-height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .swap-modal-close:hover { background: var(--cream-dark); }
+        .swap-task-list { display: flex; flex-direction: column; gap: 0.4rem; }
+        .swap-task-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.8rem 0.9rem;
+            border-radius: 10px;
+            border: 1.5px solid var(--border);
+            background: var(--cream);
+            cursor: pointer;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.9rem;
+            color: var(--text-dark);
+            transition: border-color 0.15s, background 0.15s;
+        }
+        .swap-task-item:hover { border-color: var(--orange-light); background: #fffcf4; }
+        .swap-task-bullet {
+            width: 8px; height: 8px; border-radius: 50%;
+            background: var(--border); flex-shrink: 0;
+        }
+
+        /* ── EMPTY STATE ── */
+        .empty-state {
+            text-align: center;
+            padding: 1.5rem 0.5rem;
+        }
+        .empty-state .empty-icon { font-size: 2rem; margin-bottom: 0.5rem; }
+        .empty-state p { color: var(--text-muted); font-size: 0.9rem; line-height: 1.5; }
+        .empty-state a { color: var(--orange); font-weight: 600; text-decoration: none; }
+        .empty-state a:hover { text-decoration: underline; }
+
+        /* ── EVENING RECAP ── */
+        .recap-3tasks {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            margin-bottom: 1.25rem;
+        }
+        .recap-task-row {
+            display: flex;
+            align-items: center;
+            gap: 0.65rem;
+            padding: 0.7rem 0.85rem;
+            border-radius: 10px;
+            background: var(--cream-dark);
+        }
+        .recap-check {
+            width: 22px; height: 22px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.9rem; flex-shrink: 0;
+        }
+        .recap-check.done { background: #e8f5e9; }
+        .recap-check.open { background: var(--border); }
+        .recap-task-title {
+            font-size: 0.9rem;
+            color: var(--text-dark);
+            line-height: 1.3;
+            flex: 1;
+        }
+        .recap-task-title.done { color: var(--text-muted); text-decoration: line-through; }
+        .recap-message {
+            background: #f0f7f7;
+            border-left: 3px solid var(--green);
+            border-radius: 0 10px 10px 0;
+            padding: 0.9rem 1rem;
+            font-size: 0.92rem;
+            color: #2a5c5c;
+            line-height: 1.5;
+        }
+        .recap-stats-row {
+            display: flex;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+        }
+        .recap-stat {
+            flex: 1;
+            background: var(--cream-dark);
+            border-radius: 12px;
+            padding: 0.9rem;
+            text-align: center;
+        }
+        .recap-stat .stat-num {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--navy);
+            line-height: 1;
+        }
+        .recap-stat .stat-label {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            margin-top: 0.25rem;
+        }
+        .confetti-row {
+            text-align: center;
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+            animation: pop 0.4s ease;
+        }
+        @keyframes pop { 0% { transform: scale(0.5); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+
+        /* ── TIME GATE ── */
+        .time-gate {
+            text-align: center;
+            padding: 0.75rem 0;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+
+        /* ── LOADING / ERROR ── */
+        .loading-state {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: var(--text-muted);
+        }
+        .spinner {
+            display: inline-block;
+            width: 28px; height: 28px;
+            border: 3px solid var(--border);
+            border-top-color: var(--orange);
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+            margin-bottom: 0.75rem;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .error-state { text-align: center; padding: 2rem 1rem; color: #b34; font-size: 0.9rem; }
+
+        /* ── TOAST ── */
+        .buddy-toast {
+            position: fixed;
+            bottom: calc(60px + env(safe-area-inset-bottom));
+            left: 50%; transform: translateX(-50%) translateY(20px);
+            background: var(--navy); color: white;
+            padding: 0.65rem 1.25rem; border-radius: 10px;
+            font-size: 0.85rem; font-weight: 500;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+            opacity: 0; transition: opacity 0.25s, transform 0.25s;
+            z-index: 500; pointer-events: none;
+        }
+        .buddy-toast.visible { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+        /* ── MID-DAY CHECK-IN BANNER ── */
+        .midday-banner {
+            background: linear-gradient(135deg, #011e5c 0%, #02287a 100%);
+            border-radius: 16px;
+            padding: 1.1rem 1.25rem;
+            margin-bottom: 1rem;
+            color: white;
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+        }
+        .midday-banner-icon { font-size: 1.4rem; flex-shrink: 0; }
+        .midday-banner-body { flex: 1; }
+        .midday-banner-title {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 0.98rem;
+            font-weight: 700;
+            color: white;
+            margin-bottom: 0.3rem;
+        }
+        .midday-banner-sub {
+            font-size: 0.82rem;
+            color: rgba(255,255,255,0.75);
+            margin-bottom: 0.7rem;
+            line-height: 1.4;
+        }
+        .midday-response-btns {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+        .midday-resp-btn {
+            background: rgba(255,255,255,0.15);
+            border: 1.5px solid rgba(255,255,255,0.3);
+            color: white;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.82rem;
+            font-weight: 600;
+            padding: 0.45rem 0.85rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.15s, border-color 0.15s;
+            min-height: 36px;
+            touch-action: manipulation;
+        }
+        .midday-resp-btn:hover { background: rgba(255,255,255,0.25); border-color: var(--orange-light); }
+        .midday-resp-btn.picked { background: var(--orange); border-color: var(--orange); color: var(--navy); }
+
+        /* ── PATTERN DASHBOARD ── */
+        .patterns-section { margin-top: 0.5rem; }
+        .patterns-toggle {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            padding: 0.5rem 0;
+            width: 100%;
+            text-align: left;
+        }
+        .patterns-toggle:hover { color: var(--navy); }
+        .patterns-toggle-chevron { transition: transform 0.2s; font-size: 0.75rem; }
+        .patterns-toggle.open .patterns-toggle-chevron { transform: rotate(180deg); }
+        .patterns-body { display: none; }
+        .patterns-body.open { display: block; }
+
+        .stat-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.6rem;
+            margin-bottom: 0.75rem;
+        }
+        .stat-tile {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 0.9rem 1rem;
+            text-align: center;
+        }
+        .stat-tile .stile-num {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.9rem;
+            font-weight: 700;
+            color: var(--navy);
+            line-height: 1;
+        }
+        .stat-tile .stile-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 0.2rem;
+            line-height: 1.3;
+        }
+        .stat-tile .stile-sub {
+            font-size: 0.7rem;
+            color: var(--orange);
+            font-weight: 600;
+            margin-top: 0.2rem;
+        }
+
+        .avoided-list { margin-bottom: 0.75rem; }
+        .avoided-item {
+            display: flex;
+            align-items: center;
+            gap: 0.65rem;
+            padding: 0.75rem 0.9rem;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            margin-bottom: 0.4rem;
+        }
+        .avoided-trophy { font-size: 1rem; flex-shrink: 0; }
+        .avoided-title {
+            font-size: 0.88rem;
+            font-weight: 600;
+            color: var(--navy);
+            flex: 1;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .avoided-age {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            flex-shrink: 0;
+            white-space: nowrap;
+        }
+        .spending-correlation-item {
+            background: #fff8e6;
+            border: 1px solid #f5d080;
+            border-radius: 12px;
+            padding: 0.85rem 1rem;
+            margin-bottom: 0.5rem;
+            font-size: 0.88rem;
+            color: var(--text-dark);
+            line-height: 1.5;
+        }
+        .spending-correlation-item .sc-label {
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: #b8860b;
+            margin-bottom: 0.3rem;
+        }
+
+        .energy-peak-bar {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 0.85rem 1rem;
+            margin-bottom: 0.75rem;
+        }
+        .energy-peak-label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            margin-bottom: 0.6rem;
+        }
+        .energy-peak-text {
+            font-size: 0.9rem;
+            color: var(--navy);
+            font-weight: 500;
+        }
+        .energy-peak-text strong { color: var(--orange); }
+
+        /* ── LIFE NUDGES (Evening section) ── */
+        .buddy-nudges { margin-top: 1rem; }
+        .buddy-nudge-header {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 0.88rem; font-weight: 700;
+            color: var(--text-muted); text-transform: uppercase;
+            letter-spacing: 0.05em; margin-bottom: 0.6rem;
+        }
+        .buddy-nudge-item {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-left: 3px solid var(--orange);
+            border-radius: 10px; padding: 0.85rem 1rem;
+            margin-bottom: 0.5rem; display: flex;
+            align-items: flex-start; gap: 0.75rem;
+        }
+        .buddy-nudge-item.urgent { border-left-color: #E07A5F; }
+        .buddy-nudge-text { flex: 1; font-size: 0.9rem; line-height: 1.5; color: var(--text-dark); }
+        .buddy-nudge-dismiss {
+            background: none; border: none; cursor: pointer;
+            color: var(--text-muted); font-size: 1rem; padding: 0.1rem 0.2rem;
+            line-height: 1; touch-action: manipulation;
+            min-width: 28px; min-height: 28px; display: flex;
+            align-items: center; justify-content: center; border-radius: 4px; flex-shrink: 0;
+        }
+        .buddy-nudge-dismiss:hover { color: var(--text-dark); background: var(--cream-dark); }
+
+        @media (max-width: 480px) {
+            .plan-actions { flex-direction: column; }
+            .plan-btn { width: 100%; }
+            .mood-selector { gap: 0.35rem; }
+        }
+
+        /* ── FORM MODE CHECK-IN OVERLAY ── */
+        #formCheckinOverlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: var(--navy);
+            z-index: 400;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding: env(safe-area-inset-top, 0) 0 env(safe-area-inset-bottom, 0);
+            overflow-y: auto;
+        }
+        #formCheckinOverlay.visible { display: flex; }
+
+        .form-checkin-shell {
+            width: 100%;
+            max-width: 440px;
+            padding: 1.25rem 1.25rem calc(2rem + 70px);
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+        }
+        .form-checkin-topbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .form-checkin-logo {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: rgba(255,255,255,0.5);
+        }
+        .form-checkin-topright {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        .form-conv-link {
+            background: none;
+            border: none;
+            color: rgba(255,255,255,0.3);
+            font-size: 0.78rem;
+            font-family: 'DM Sans', sans-serif;
+            cursor: pointer;
+            text-decoration: underline;
+            transition: color 0.15s;
+        }
+        .form-conv-link:hover { color: rgba(255,255,255,0.65); }
+        .form-skip-link {
+            background: none;
+            border: none;
+            color: rgba(255,255,255,0.35);
+            font-size: 0.82rem;
+            font-family: 'DM Sans', sans-serif;
+            cursor: pointer;
+            transition: color 0.15s;
+        }
+        .form-skip-link:hover { color: rgba(255,255,255,0.65); }
+
+        .form-checkin-heading {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.45rem;
+            font-weight: 700;
+            color: white;
+            line-height: 1.2;
+        }
+
+        .form-section-label {
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.07em;
+            color: rgba(255,255,255,0.4);
+            margin-bottom: 0.6rem;
+        }
+
+        /* Mood picker */
+        .form-mood-row {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+        .form-mood-btn {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            background: rgba(255,255,255,0.07);
+            border: 1.5px solid rgba(255,255,255,0.12);
+            border-radius: 10px;
+            padding: 0.55rem 0.8rem;
+            cursor: pointer;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.85rem;
+            color: rgba(255,255,255,0.75);
+            transition: background 0.15s, border-color 0.15s;
+            touch-action: manipulation;
+        }
+        .form-mood-btn:hover { background: rgba(255,255,255,0.12); }
+        .form-mood-btn.selected {
+            border-color: var(--orange);
+            background: rgba(201,168,76,0.15);
+            color: white;
+        }
+
+        /* Energy slider */
+        .form-slider-wrap {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        .form-slider {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: rgba(255,255,255,0.15);
+            outline: none;
+        }
+        .form-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 22px; height: 22px;
+            border-radius: 50%;
+            background: var(--orange);
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        }
+        .form-slider::-moz-range-thumb {
+            width: 22px; height: 22px;
+            border-radius: 50%;
+            background: var(--orange);
+            cursor: pointer;
+            border: none;
+        }
+        .form-slider-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.75rem;
+            color: rgba(255,255,255,0.35);
+        }
+
+        /* Values checkboxes */
+        .form-values-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+            max-height: 180px;
+            overflow-y: auto;
+        }
+        .form-value-item {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            padding: 0.55rem 0.75rem;
+            background: rgba(255,255,255,0.05);
+            border: 1.5px solid rgba(255,255,255,0.08);
+            border-radius: 10px;
+            cursor: pointer;
+            transition: background 0.15s, border-color 0.15s;
+        }
+        .form-value-item.checked {
+            border-color: var(--orange);
+            background: rgba(201,168,76,0.12);
+        }
+        .form-value-check {
+            width: 20px; height: 20px;
+            border-radius: 5px;
+            border: 2px solid rgba(255,255,255,0.25);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.7rem;
+            flex-shrink: 0;
+            transition: background 0.15s, border-color 0.15s;
+        }
+        .form-value-item.checked .form-value-check {
+            background: var(--orange);
+            border-color: var(--orange);
+        }
+        .form-value-label {
+            font-size: 0.88rem;
+            color: rgba(255,255,255,0.8);
+        }
+        .form-values-empty {
+            font-size: 0.85rem;
+            color: rgba(255,255,255,0.35);
+            text-align: center;
+            padding: 0.75rem 0;
+        }
+
+        /* Intention field */
+        .form-intention-input {
+            width: 100%;
+            background: rgba(255,255,255,0.07);
+            border: 1.5px solid rgba(255,255,255,0.12);
+            border-radius: 12px;
+            padding: 0.75rem 1rem;
+            font-size: 0.92rem;
+            font-family: 'DM Sans', sans-serif;
+            color: white;
+            outline: none;
+            resize: none;
+            min-height: 60px;
+            max-height: 120px;
+            line-height: 1.4;
+            transition: border-color 0.15s;
+        }
+        .form-intention-input::placeholder { color: rgba(255,255,255,0.3); }
+        .form-intention-input:focus { border-color: rgba(201,168,76,0.5); }
+
+        /* Submit button */
+        .form-submit-btn {
+            width: 100%;
+            padding: 1rem 1.5rem;
+            background: var(--orange);
+            color: white;
+            border: none;
+            border-radius: 14px;
+            font-size: 1rem;
+            font-weight: 700;
+            font-family: 'DM Sans', sans-serif;
+            cursor: pointer;
+            transition: background 0.15s, opacity 0.15s;
+        }
+        .form-submit-btn:hover { background: #d4b56a; }
+        .form-submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    /* ── FAB ────────────────────────────────────────────────────────────── */
+    .fab{position:fixed;bottom:78px;right:20px;width:58px;height:58px;border-radius:16px;background:var(--orange);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(201,168,76,0.35);z-index:300;transition:transform .2s,box-shadow .2s;font-size:1.8rem;color:white;line-height:1}
+    .fab:hover{transform:scale(1.08);box-shadow:0 6px 20px rgba(201,168,76,0.45)}
+    .fab:active{transform:scale(0.95)}
+    @media(min-width:900px){.fab{bottom:28px;right:28px}}
+    .qa-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.35);z-index:500;align-items:flex-end;justify-content:center;padding:0 1rem 2rem}
+    @media(min-width:500px){.qa-overlay{align-items:center}}
+    .qa-overlay.open{display:flex}
+    .qa-sheet{background:white;border-radius:20px 20px 0 0;width:100%;max-width:480px;padding:1.5rem 1.25rem 1.75rem;box-shadow:0 -8px 40px rgba(0,0,0,0.15);animation:sheetUp .22s ease-out}
+    @media(min-width:500px){.qa-sheet{border-radius:20px;margin-bottom:0}}
+    @keyframes sheetUp{from{transform:translateY(60px);opacity:0}to{transform:translateY(0);opacity:1}}
+    .qa-title-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem}
+    .qa-title-row h3{font-family:'Space Grotesk',sans-serif;font-size:0.95rem;font-weight:700;color:var(--navy)}
+    .qa-close{width:28px;height:28px;border-radius:8px;border:none;background:var(--cream);cursor:pointer;font-size:1.1rem;color:var(--text-muted);display:flex;align-items:center;justify-content:center}
+    .qa-input-row{display:flex;gap:0.5rem;align-items:flex-end;margin-bottom:0.75rem}
+    .qa-input{flex:1;padding:0.85rem 1rem;border:2px solid var(--border);border-radius:12px;font-family:'DM Sans',sans-serif;font-size:1rem;color:var(--text-dark);background:white;outline:none;transition:border-color .2s}
+    .qa-input:focus{border-color:var(--orange)}
+    .qa-save{padding:0.85rem 1.25rem;background:var(--orange);border:none;border-radius:12px;font-family:'DM Sans',sans-serif;font-size:0.9rem;font-weight:600;color:white;cursor:pointer;white-space:nowrap;transition:background .15s}
+    .qa-save:hover{background:var(--orange-light)}
+    .qa-save:disabled{opacity:0.45;cursor:not-allowed}
+    .qa-chips{display:flex;flex-wrap:wrap;gap:0.4rem;min-height:32px;align-items:center}
+    .qa-chip{display:inline-flex;align-items:center;gap:0.3rem;padding:0.3rem 0.75rem;background:var(--cream);border:1.5px solid var(--border);border-radius:20px;font-size:0.78rem;font-weight:500;color:var(--navy);cursor:pointer;transition:border-color .15s,background .15s;user-select:none}
+    .qa-chip:hover{border-color:var(--orange);background:rgba(201,168,76,0.08)}
+    .qa-chip .chip-dot{width:7px;height:7px;border-radius:50%;background:#5BA4A4}
+    </style>
+    <link rel="stylesheet" href="/shared-nav.css">
+</head>
+<body>
+<noscript><p style="padding:2rem;text-align:center;font-family:'DM Sans',sans-serif;color:#374151">FocusLedger requires JavaScript.</p></noscript>
+    <!-- Form mode check-in overlay (shown when ?mode=form) -->
+    <div id="formCheckinOverlay">
+        <div class="form-checkin-shell">
+            <div class="form-checkin-topbar">
+                <span class="form-checkin-logo">FocusLedger</span>
+                <div class="form-checkin-topright">
+                    <button class="form-conv-link" id="formConvLink" type="button">Use conversation instead</button>
+                    <button class="form-skip-link" id="formSkipLink" type="button">Skip →</button>
+                </div>
+            </div>
+            <div class="form-checkin-heading">Morning check-in</div>
+
+            <!-- Mood -->
+            <div>
+                <div class="form-section-label">How are you feeling?</div>
+                <div class="form-mood-row" id="formMoodRow">
+                    <button class="form-mood-btn" data-mood="struggling" type="button">😮‍💨 Rough</button>
+                    <button class="form-mood-btn" data-mood="foggy" type="button">🌫️ Foggy</button>
+                    <button class="form-mood-btn" data-mood="okay" type="button">😐 Okay</button>
+                    <button class="form-mood-btn" data-mood="good" type="button">😊 Good</button>
+                    <button class="form-mood-btn" data-mood="energized" type="button">⚡ Let's go</button>
+                </div>
+            </div>
+
+            <!-- Energy -->
+            <div>
+                <div class="form-section-label">Energy level</div>
+                <div class="form-slider-wrap">
+                    <input type="range" class="form-slider" id="formEnergySlider" min="1" max="5" value="3">
+                    <div class="form-slider-labels"><span>Low</span><span>Medium</span><span>High</span></div>
+                </div>
+            </div>
+
+            <!-- Values alignment -->
+            <div>
+                <div class="form-section-label">Which values feel alive today?</div>
+                <div class="form-values-list" id="formValuesList">
+                    <div class="form-values-empty">Loading your values…</div>
+                </div>
+            </div>
+
+            <!-- Intention -->
+            <div>
+                <div class="form-section-label">One thing you want to protect today</div>
+                <textarea class="form-intention-input" id="formIntention" placeholder="Optional — e.g. deep work before noon" maxlength="200" rows="2"></textarea>
+            </div>
+
+            <button class="form-submit-btn" id="formSubmitBtn" type="button">Start my day →</button>
+        </div>
+    </div>
+    <nav class="app-nav">
+        <div class="app-nav-inner">
+            <a href="/app/tasks" class="logo">
+                <img src="/icons/fl-icon.png" alt="FocusLedger" class="logo-icon">
+                FocusLedger
+            </a>
+            <div class="nav-right">
+                <a href="/app/tasks" class="back-link">← Tasks</a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="page" id="mainPage">
+        <div class="loading-state" id="loadingState">
+            <div class="spinner"></div>
+            <div>Planning your day...</div>
+        </div>
+
+        <!-- Mid-day check-in banner (shown if conditions met) -->
+        <div id="middayBanner" style="display:none;"></div>
+
+        <!-- Content injected here by JS -->
+        <div id="buddyContent" style="display:none;"></div>
+
+        <!-- Life nudges — evening only when nudges are pending -->
+        <div class="buddy-nudges" id="buddyNudges" style="display:none;"></div>
+
+        <!-- Pattern dashboard (accordion) — loaded after main content -->
+        <div class="patterns-section" id="patternsSection" style="display:none;"></div>
+
+        <div class="error-state" id="errorState" style="display:none;">
+            Something went sideways. <a href="javascript:location.reload()" style="color:var(--orange);">Try again</a>
+        </div>
+    </main>
+
+    <!-- Toast for feedback -->
+    <div class="buddy-toast" id="buddyToast"></div>
+
+    <!-- Swap task modal (hidden by default) -->
+    <div class="swap-modal-overlay" id="swapModalOverlay" style="display:none;">
+        <div class="swap-modal" id="swapModal">
+            <div class="swap-modal-header">
+                <span class="swap-modal-title">Pick a replacement</span>
+                <button class="swap-modal-close" id="swapModalClose">✕</button>
+            </div>
+            <div class="swap-task-list" id="swapTaskList"></div>
+        </div>
+    </div>
+    <script src="/shared-nav.js"></script>
+
+    <script>
+    (function() {
+        'use strict';
+
+        var token = localStorage.getItem('fl_token');
+        if (!token) { window.location.href = '/login'; return; }
+
+        // ── Date helpers ──────────────────────────────────────────────────────
+        function todayDateString() {
+            var d = new Date();
+            return d.toLocaleDateString('en-CA', {
+                year: 'numeric', month: '2-digit', day: '2-digit',
+                timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
+            });
+        }
+        function todayDisplayString() {
+            var d = new Date();
+            return d.toLocaleDateString('en-US', {
+                weekday: 'long', month: 'long', day: 'numeric',
+                timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
+            });
+        }
+        function getLocalHour() { return new Date().getHours(); }
+        var isEvening = getLocalHour() >= 17;
+
+        // ── API helpers ───────────────────────────────────────────────────────
+        function apiFetch(url, opts) {
+            var headers = Object.assign({ 'Authorization': 'Bearer ' + token }, (opts && opts.headers) || {});
+            return fetch(url, Object.assign({}, opts, { headers: headers }));
+        }
+
+        // ── DOM helpers ───────────────────────────────────────────────────────
+        function el(id) { return document.getElementById(id); }
+        function show(id) { var e = el(id); if (e) e.style.display = ''; }
+        function hide(id) { var e = el(id); if (e) e.style.display = 'none'; }
+        function escHtml(s) {
+            return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        }
+        function showToast(msg) {
+            var t = el('buddyToast');
+            if (!t) return;
+            t.textContent = msg;
+            t.classList.add('visible');
+            setTimeout(function() { t.classList.remove('visible'); }, 3000);
+        }
+
+        // ── State ─────────────────────────────────────────────────────────────
+        var TODAY = todayDateString();
+        var selectedMood = null;
+        var currentSlots = [null, null, null]; // enriched task slots
+        var allTasks = [];       // all incomplete tasks (for swap picker)
+        var swappingSlot = null; // which slot is being swapped (1/2/3)
+        var planAccepted = false;
+
+
+        // ── Main load ─────────────────────────────────────────────────────────
+        // Buddy is the persistent post-login landing page.
+        // If check-in is due today, redirect to the conversational check-in.
+        // If already done, show the buddy page with a status view on top.
+        var sessionStatusData = null;
+        var sessionStatusPromise = apiFetch('/api/buddy/session-status')
+            .then(function(r) { return r.json(); })
+            .catch(function() { return { success: true, dueToday: false, planSummary: null }; });
+
+        // ── Form mode check-in ──────────────────────────────────────────────
+        var urlParams = new URLSearchParams(window.location.search);
+        var formMode = urlParams.get('mode') === 'form';
+        var formSelectedMood = null;
+        var formCheckedValues = new Set();
+
+        if (formMode) {
+            // Show the form overlay immediately
+            var formOverlay = document.getElementById('formCheckinOverlay');
+            if (formOverlay) formOverlay.classList.add('visible');
+
+            // Load user values into the form
+            apiFetch('/api/values')
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    var list = document.getElementById('formValuesList');
+                    if (!list) return;
+                    var values = (data.userValues || []).slice(0, 8);
+                    if (!values.length) {
+                        list.innerHTML = '<div class="form-values-empty">No values set yet — <a href="/values" style="color:var(--orange);">add them here</a></div>';
+                        return;
+                    }
+                    list.innerHTML = '';
+                    values.forEach(function(v) {
+                        var item = document.createElement('div');
+                        item.className = 'form-value-item';
+                        item.dataset.id = v.id;
+                        item.innerHTML = '<div class="form-value-check"></div><span class="form-value-label">' + escHtml(v.value_name) + '</span>';
+                        item.addEventListener('click', function() {
+                            var id = this.dataset.id;
+                            if (formCheckedValues.has(id)) {
+                                formCheckedValues.delete(id);
+                                this.classList.remove('checked');
+                                this.querySelector('.form-value-check').textContent = '';
+                            } else {
+                                formCheckedValues.add(id);
+                                this.classList.add('checked');
+                                this.querySelector('.form-value-check').textContent = '✓';
+                            }
+                        });
+                        list.appendChild(item);
+                    });
+                })
+                .catch(function() {
+                    var list = document.getElementById('formValuesList');
+                    if (list) list.innerHTML = '<div class="form-values-empty">Could not load values</div>';
+                });
+
+            // Mood selection
+            document.querySelectorAll('#formMoodRow .form-mood-btn').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    document.querySelectorAll('#formMoodRow .form-mood-btn').forEach(function(b) { b.classList.remove('selected'); });
+                    this.classList.add('selected');
+                    formSelectedMood = this.dataset.mood;
+                });
+            });
+
+            // Conv link — switch to conversation mode
+            var formConvLink = document.getElementById('formConvLink');
+            if (formConvLink) {
+                formConvLink.addEventListener('click', function() {
+                    apiFetch('/api/buddy/mode-preference', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ manual_override: 'conversation' })
+                    }).catch(function() {});
+                    window.location.href = '/app/checkin?force=conversation';
+                });
+            }
+
+            // Skip link
+            var formSkipLink = document.getElementById('formSkipLink');
+            if (formSkipLink) {
+                formSkipLink.addEventListener('click', function() {
+                    // Record skip
+                    apiFetch('/api/buddy/mode-preference', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ mode: 'form', completed: false, skipped: true })
+                    }).catch(function() {});
+                    apiFetch('/api/buddy/login-checkin-done', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ mood: null, intention: null })
+                    }).catch(function() {}).finally(function() {
+                        window.history.replaceState({}, '', '/app/buddy');
+                        if (formOverlay) formOverlay.classList.remove('visible');
+                        location.reload();
+                    });
+                });
+            }
+
+            // Submit form
+            var formSubmitBtn = document.getElementById('formSubmitBtn');
+            if (formSubmitBtn) {
+                formSubmitBtn.addEventListener('click', function() {
+                    this.disabled = true;
+                    this.textContent = 'Saving…';
+
+                    var mood = formSelectedMood || 'okay';
+                    var intention = (document.getElementById('formIntention') || {}).value || '';
+
+                    // Record completion for preference learning
+                    apiFetch('/api/buddy/mode-preference', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ mode: 'form', completed: true, skipped: false })
+                    }).catch(function() {});
+
+                    apiFetch('/api/buddy/login-checkin-done', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ mood: mood, intention: intention.trim() || null })
+                    })
+                    .then(function() {
+                        // Generate plan with selected mood then close overlay
+                        return apiFetch('/api/buddy/daily-plan?mood=' + encodeURIComponent(mood) + '&date=' + TODAY);
+                    })
+                    .then(function(r) { return r.json(); })
+                    .then(function() {
+                        return apiFetch('/api/buddy/daily-plan/accept', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ date: TODAY })
+                        });
+                    })
+                    .catch(function() {})
+                    .finally(function() {
+                        // Close overlay and reload page to show status view
+                        window.history.replaceState({}, '', '/app/buddy');
+                        if (formOverlay) formOverlay.classList.remove('visible');
+                        location.reload();
+                    });
+                });
+            }
+        }
+
+        sessionStatusPromise.then(function(ssData) {
+            sessionStatusData = ssData;
+            // Form mode: don't redirect — form overlay already handles the check-in
+            if (formMode) {
+                return apiFetch('/api/buddy/status?date=' + TODAY);
+            }
+            // If check-in is due AND this looks like the landing-page hit (no hash anchor),
+            // redirect to the conversational check-in.
+            if (ssData && ssData.dueToday && !window.location.hash) {
+                window.location.href = '/app/checkin';
+                return Promise.reject('redirecting');
+            }
+            return apiFetch('/api/buddy/status?date=' + TODAY);
+        })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (!data.success) throw new Error(data.message || 'API error');
+                allTasks = data.tasks || [];
+                // Populate currentSlots from enriched plan data BEFORE rendering
+                // so task titles are available immediately (no secondary fetch needed)
+                if (data.dailyPlanSlots) {
+                    currentSlots = data.dailyPlanSlots;
+                }
+                hide('loadingState');
+                renderPage(data, sessionStatusData);
+                show('buddyContent');
+            })
+            .catch(function(err) {
+                if (err === 'redirecting') return; // intentional redirect, not an error
+                console.error('[buddy]', err);
+                hide('loadingState');
+                show('errorState');
+            });
+
+        // ── Status view: same-day return banner ──────────────────────────────
+        function renderStatusView(sessionStatus) {
+            var ps = sessionStatus && sessionStatus.planSummary;
+            if (!ps) return '';
+
+            var completedCount = ps.completedCount || 0;
+            var totalCount = ps.totalCount || 0;
+            var allDone = ps.allDone;
+            var mood = sessionStatus.mood;
+            var insights = (sessionStatus && sessionStatus.greetingInsights) || [];
+
+            var moodEmojis = {
+                energized: '⚡', good: '😊', okay: '😐', foggy: '🌫️', struggling: '😮‍💨'
+            };
+            var moodEmoji = mood ? (moodEmojis[mood] || '') : '';
+
+            var html = '<div class="card" id="statusViewCard" style="background:linear-gradient(135deg,#011e5c 0%,#02287a 100%);border-color:transparent;">';
+            html += '<div class="card-label" style="color:rgba(255,255,255,0.6);">You\'re back</div>';
+
+            if (allDone) {
+                html += '<div class="card-heading" style="color:white;">🎉 All 3 tasks done. That\'s a real day.</div>';
+                html += '<div class="card-sub" style="color:rgba(255,255,255,0.65);">Check back tonight for your recap.</div>';
+                html += '<a href="/home" style="display:block;text-align:center;padding:0.75rem 1rem;background:rgba(255,255,255,0.15);border-radius:12px;color:white;text-decoration:none;font-weight:600;font-size:0.9rem;margin-top:0.75rem;">Go to home</a>';
+            } else {
+                var statusText = totalCount > 0 ? (completedCount + ' of ' + totalCount + ' done') : 'Your plan is set';
+                html += '<div class="card-heading" style="color:white;">' + escHtml(statusText) + (moodEmoji ? ' ' + moodEmoji : '') + '</div>';
+
+                // Show remaining tasks
+                if (ps.task1 || ps.task2 || ps.task3) {
+                    html += '<div style="display:flex;flex-direction:column;gap:0.5rem;margin:0.85rem 0;">';
+                    [ps.task1, ps.task2, ps.task3].forEach(function(task, i) {
+                        if (!task) return;
+                        var done = task.is_completed;
+                        html += '<div style="display:flex;align-items:center;gap:0.6rem;padding:0.6rem 0.75rem;background:rgba(255,255,255,' + (done ? '0.06' : '0.1') + ');border-radius:10px;">';
+                        html += '<span style="font-size:0.9rem;">' + (done ? '✓' : (i+1)) + '</span>';
+                        html += '<span style="font-size:0.88rem;color:' + (done ? 'rgba(255,255,255,0.45)' : 'rgba(255,255,255,0.9)') + ';' + (done ? 'text-decoration:line-through;' : '') + '">' + escHtml(task.title) + '</span>';
+                        html += '</div>';
+                    });
+                    html += '</div>';
+                }
+
+                // Show Buddy pattern insights (days 3-8 cross-domain intelligence)
+                if (insights.length > 0) {
+                    html += '<div style="margin:0.75rem 0 0.25rem;display:flex;flex-direction:column;gap:0.5rem;">';
+                    insights.forEach(function(insight) {
+                        html += '<div style="font-size:0.82rem;color:rgba(255,255,255,0.7);background:rgba(255,255,255,0.07);border-radius:10px;padding:0.6rem 0.75rem;line-height:1.45;">' + escHtml(insight) + '</div>';
+                    });
+                    html += '</div>';
+                }
+
+                html += '<div style="display:flex;gap:0.5rem;margin-top:0.5rem;">';
+                html += '<a href="/app/tasks" style="flex:1;text-align:center;padding:0.75rem 0.5rem;background:rgba(201,168,76,0.9);border-radius:12px;color:#fff;text-decoration:none;font-weight:700;font-size:0.9rem;">Pick up where you left off</a>';
+                html += '<a href="/home" style="padding:0.75rem 0.85rem;background:rgba(255,255,255,0.12);border-radius:12px;color:rgba(255,255,255,0.75);text-decoration:none;font-size:0.85rem;display:flex;align-items:center;">Home</a>';
+                html += '</div>';
+            }
+
+            html += '</div>';
+            return html;
+        }
+
+        // ── Page render ───────────────────────────────────────────────────────
+        function renderPage(data, sessionStatus) {
+            var content = el('buddyContent');
+            var parts = [];
+            var checkinDoneToday = sessionStatus && !sessionStatus.dueToday;
+
+            // Date header
+            parts.push(
+                '<div class="date-header">' +
+                  '<div class="day-label">Today</div>' +
+                  '<h1>' + escHtml(todayDisplayString()) + '</h1>' +
+                '</div>'
+            );
+
+            // Auto-routines suggestion card (surfaced at session start, max 1 per session)
+            var autoSuggestion = sessionStatus && sessionStatus.autoRoutineSuggestion;
+            if (autoSuggestion && autoSuggestion.id) {
+                parts.push(renderSuggestionCard(autoSuggestion));
+            }
+
+            // ── STATUS VIEW (same-day return, plan accepted) ───────────────────
+            if (checkinDoneToday && data.dailyPlan && data.dailyPlan.accepted) {
+                parts.push(renderStatusView(sessionStatus));
+            } else if (data.dailyPlan && data.dailyPlan.accepted) {
+                // Plan is locked in — show accepted state
+                parts.push(renderAcceptedMorning(data));
+            } else {
+                // Show check-in (mood selector → plan generation)
+                parts.push(renderMorningCheckin(data));
+            }
+
+            // ── EVENING SECTION ───────────────────────────────────────────────
+            if (isEvening) {
+                parts.push(renderEveningRecap(data));
+            } else {
+                parts.push(renderEveningTeaser());
+            }
+
+            content.innerHTML = parts.join('');
+            attachHandlers(data, sessionStatus);
+        }
+
+        // ── Morning: mood check-in + plan display ─────────────────────────────
+        function renderMorningCheckin(data) {
+            var html = '<div class="card" id="morningCard">';
+            html += '<div class="card-label">Morning check-in</div>';
+
+            // Mood selector (always shown before accepting plan)
+            var hourLabel = getLocalHour() < 12 ? 'morning' : getLocalHour() < 17 ? 'afternoon' : 'evening';
+            html += '<div class="card-heading">Good ' + hourLabel + '. How\'s your energy today?</div>';
+            html += '<div class="card-sub">This shapes which tasks get surfaced first.</div>';
+            html += '<div class="mood-selector" id="moodSelector">';
+            var moods = [
+                { id: 'energized', emoji: '⚡', label: 'Energized' },
+                { id: 'good',      emoji: '😊', label: 'Good' },
+                { id: 'okay',      emoji: '😐', label: 'Okay' },
+                { id: 'foggy',     emoji: '🌫️', label: 'Foggy' },
+                { id: 'struggling',emoji: '😮‍💨', label: 'Struggling' }
+            ];
+            moods.forEach(function(m) {
+                var preSelected = (data.dailyPlan && data.dailyPlan.mood === m.id) ? ' selected' : '';
+                html += '<button class="mood-btn' + preSelected + '" data-mood="' + m.id + '">';
+                html += '<span class="mood-emoji">' + m.emoji + '</span>';
+                html += m.label;
+                html += '</button>';
+            });
+            html += '</div>'; // end mood-selector
+
+            // Plan display area — use currentSlots (populated from status response)
+            if (data.dailyPlan) {
+                html += '<div id="planArea">' + renderPlanSlots(data.dailyPlan, currentSlots) + '</div>';
+            } else {
+                html += '<div id="planArea">' + renderPlanLoading() + '</div>';
+            }
+
+            html += '</div>'; // end card
+            return html;
+        }
+
+        function renderPlanLoading() {
+            return '<div class="plan-intro" style="text-align:center; padding: 1.5rem 0;">'+
+                '<div class="spinner"></div>' +
+                '<div style="margin-top:0.5rem;">Building your plan...</div>' +
+            '</div>';
+        }
+
+        function renderPlanSlots(plan, slots) {
+            // slots is enriched [{task, reason, activation}, ...] or null (use plan record only)
+            var html = '';
+            html += '<div class="plan-intro">Based on what\'s on your plate and how you\'re feeling, here\'s today\'s plan:</div>';
+            html += '<div class="plan-slots" id="planSlots">';
+
+            for (var i = 1; i <= 3; i++) {
+                var slot = slots ? slots[i-1] : null;
+                var taskId   = plan ? plan['task_' + i + '_id'] : null;
+                var reason   = plan ? plan['task_' + i + '_reason'] : null;
+                var taskTitle = slot && slot.task ? slot.task.title : null;
+                var activation = slot ? slot.activation : 'Medium';
+                var isCompleted = slot && slot.task ? slot.task.is_completed : false;
+
+                if (!taskTitle && !taskId) {
+                    // Empty slot (fewer than 3 tasks)
+                    html += '<div class="plan-slot" style="opacity:0.4">';
+                    html += '<div class="plan-slot-num">' + i + '</div>';
+                    html += '<div class="plan-slot-body"><div class="plan-slot-title" style="color:var(--text-muted)">No task available</div></div>';
+                    html += '</div>';
+                } else {
+                    html += '<div class="plan-slot' + (isCompleted ? ' completed' : '') + '" data-slot="' + i + '">';
+                    html += '<div class="plan-slot-num">' + (isCompleted ? '✓' : i) + '</div>';
+                    html += '<div class="plan-slot-body">';
+                    html += '<div class="plan-slot-title">' + escHtml(taskTitle || '(loading...)') + '</div>';
+                    html += '<div class="plan-slot-meta">';
+                    if (reason) html += '<span class="plan-slot-reason">' + escHtml(reason) + '</span>';
+                    var actClass = activation === 'Low' ? 'activation-low' : activation === 'High' ? 'activation-high' : 'activation-med';
+                    html += '<span class="activation-badge ' + actClass + '">' + escHtml(activation) + '</span>';
+                    html += '</div>'; // end meta
+                    html += '</div>'; // end body
+                    if (!plan || !plan.accepted) {
+                        html += '<button class="plan-slot-swap-btn" data-swap-slot="' + i + '" title="Swap task">⇄ Swap</button>';
+                    }
+                    html += '</div>'; // end slot
+                }
+            }
+
+            html += '</div>'; // end plan-slots
+
+            if (!plan || !plan.accepted) {
+                html += '<div class="plan-actions">';
+                html += '<button class="plan-btn accept" id="acceptPlanBtn">✅ Accept this plan</button>';
+                html += '<button class="plan-btn regen" id="regenPlanBtn">🎲 Regenerate</button>';
+                html += '</div>';
+            }
+
+            return html;
+        }
+
+        // ── Morning: accepted state ───────────────────────────────────────────
+        function renderAcceptedMorning(data) {
+            planAccepted = true;
+            var html = '<div class="card">';
+            html += '<div class="card-label">Morning check-in</div>';
+            html += '<div class="plan-accepted-badge">🎯 Plan locked in for today</div>';
+
+            if (data.dailyPlan) {
+                html += '<div class="plan-slots">';
+                for (var i = 1; i <= 3; i++) {
+                    var slot = currentSlots[i-1];
+                    var taskTitle = slot && slot.task ? slot.task.title : null;
+                    var reason = data.dailyPlan['task_' + i + '_reason'];
+                    var activation = slot ? slot.activation : 'Medium';
+                    var isCompleted = slot && slot.task ? slot.task.is_completed : false;
+
+                    if (!taskTitle && !data.dailyPlan['task_' + i + '_id']) {
+                        html += '<div class="plan-slot" style="opacity:0.4">';
+                        html += '<div class="plan-slot-num">' + i + '</div>';
+                        html += '<div class="plan-slot-body"><div class="plan-slot-title" style="color:var(--text-muted)">No task</div></div>';
+                        html += '</div>';
+                    } else {
+                        html += '<div class="plan-slot' + (isCompleted ? ' completed' : '') + '">';
+                        html += '<div class="plan-slot-num">' + (isCompleted ? '✓' : i) + '</div>';
+                        html += '<div class="plan-slot-body">';
+                        html += '<div class="plan-slot-title">' + escHtml(taskTitle || '(task)') + '</div>';
+                        if (reason) {
+                            var actClass = activation === 'Low' ? 'activation-low' : activation === 'High' ? 'activation-high' : 'activation-med';
+                            html += '<div class="plan-slot-meta"><span class="plan-slot-reason">' + escHtml(reason) + '</span>';
+                            html += '<span class="activation-badge ' + actClass + '">' + escHtml(activation) + '</span></div>';
+                        }
+                        html += '</div>';
+                        html += '</div>';
+                    }
+                }
+                html += '</div>'; // end plan-slots
+            }
+
+            html += '</div>'; // end card
+            return html;
+        }
+
+        // ── Evening recap ─────────────────────────────────────────────────────
+        function renderEveningRecap(data) {
+            var html = '<div class="card" id="eveningCard">';
+            html += '<div class="card-label">Evening recap</div>';
+
+            var plan = data.dailyPlan;
+            var allTasksMap = {};
+            (data.tasks || []).forEach(function(t) { allTasksMap[t.id] = t; });
+
+            if (plan) {
+                // 3-task completion view
+                var planTaskIds = [plan.task_1_id, plan.task_2_id, plan.task_3_id];
+                var planReasons = [plan.task_1_reason, plan.task_2_reason, plan.task_3_reason];
+                var completedCount = 0;
+                var totalTasks = 0;
+
+                // Check completed status from DB (tasks that ARE completed may not be in allTasksMap since it only has incomplete)
+                // We need to build a complete picture from currentSlots which includes is_completed
+                var slotDetails = currentSlots; // may be stale if page hasn't enriched yet
+
+                html += '<div class="card-heading">Here\'s how your day shaped up.</div>';
+                html += '<div class="recap-3tasks" id="recapTaskList">';
+
+                for (var i = 0; i < 3; i++) {
+                    var taskId = planTaskIds[i];
+                    if (!taskId) continue;
+                    totalTasks++;
+
+                    var slotInfo = slotDetails[i];
+                    var isDone = slotInfo && slotInfo.task && slotInfo.task.is_completed;
+                    if (isDone) completedCount++;
+
+                    var taskTitle = slotInfo && slotInfo.task ? slotInfo.task.title : '(task)';
+
+                    html += '<div class="recap-task-row">';
+                    html += '<div class="recap-check ' + (isDone ? 'done' : 'open') + '">' + (isDone ? '✓' : '○') + '</div>';
+                    html += '<div class="recap-task-title' + (isDone ? ' done' : '') + '">' + escHtml(taskTitle) + '</div>';
+                    html += '</div>';
+                }
+
+                html += '</div>'; // end recap-3tasks
+
+                // Reframe message — zero guilt
+                var msg = '';
+                if (totalTasks === 0) {
+                    msg = 'No plan for today. Tomorrow is a fresh start.';
+                } else if (completedCount === totalTasks) {
+                    html += '<div class="confetti-row">🎉🏆🎉</div>';
+                    msg = 'All ' + totalTasks + ' done. That\'s a real day\'s work.';
+                } else if (completedCount >= 2) {
+                    msg = completedCount + ' of ' + totalTasks + ' — solid day. The last one carries forward.';
+                } else if (completedCount === 1) {
+                    msg = '1 of ' + totalTasks + ' — one real thing done. That counts.';
+                } else {
+                    msg = 'Tough day? The plan resets tomorrow. Every day is a chance.';
+                }
+
+                html += '<div class="recap-message">' + escHtml(msg) + '</div>';
+            } else {
+                // No plan (V1 fallback or new user)
+                var completed = data.tasksCompletedToday || 0;
+                var open = (data.tasks && data.tasks.length) || 0;
+                html += '<div class="card-heading">End-of-day snapshot.</div>';
+                html += '<div class="recap-stats-row">';
+                html += '<div class="recap-stat"><div class="stat-num">' + completed + '</div><div class="stat-label">done today</div></div>';
+                html += '<div class="recap-stat"><div class="stat-num">' + open + '</div><div class="stat-label">still open</div></div>';
+                html += '</div>';
+                var fallbackMsg = completed > 0
+                    ? 'Good momentum. Keep it rolling tomorrow.'
+                    : 'Lighter day. Tomorrow is a reset.';
+                html += '<div class="recap-message">' + escHtml(fallbackMsg) + '</div>';
+            }
+
+            html += '</div>'; // end card
+            return html;
+        }
+
+        function renderEveningTeaser() {
+            return '<div class="card"><div class="card-label">Evening recap</div>' +
+                '<div class="time-gate">Check back after 5 PM for your end-of-day recap.</div>' +
+            '</div>';
+        }
+
+        // ── Auto-routines suggestion card ─────────────────────────────────────
+        function renderSuggestionCard(suggestion) {
+            if (!suggestion || !suggestion.message) return '';
+            var taskTitles = suggestion.taskTitles || [];
+            var displayTasks = taskTitles.slice(0, 3).join(', ');
+            var more = taskTitles.length > 3 ? ' and ' + (taskTitles.length - 3) + ' more' : '';
+            var confidenceLabel = suggestion.confidenceLevel === 'medium' ? ' (still learning)' : '';
+            var html = '<div class="card" id="autoRoutineCard" style="border-color:var(--orange);border-width:2px;">';
+            html += '<div class="card-label">Pattern detected ✨</div>';
+            html += '<div style="font-size:1rem;color:var(--navy);margin-bottom:0.75rem;line-height:1.45;">' + escHtml(suggestion.message) + confidenceLabel + '</div>';
+            if (taskTitles.length > 0) {
+                html += '<div style="font-size:0.82rem;color:var(--text-muted);margin-bottom:1rem;padding:0.5rem 0.75rem;background:var(--cream-dark);border-radius:8px;">' + escHtml(displayTasks) + escHtml(more) + '</div>';
+            }
+            html += '<div style="display:flex;flex-direction:column;gap:0.5rem;">';
+            html += '<button class="auto-routine-accept" data-suggestion-id="' + suggestion.id + '" style="background:var(--green);color:white;border:none;border-radius:12px;padding:0.75rem;font-size:0.9rem;font-weight:600;cursor:pointer;width:100%;">Yes, set it up</button>';
+            html += '<div style="display:flex;gap:0.5rem;">';
+            html += '<button class="auto-routine-dismiss" data-suggestion-id="' + suggestion.id + '" style="flex:1;background:var(--cream-dark);color:var(--text-dark);border:1px solid var(--border);border-radius:12px;padding:0.65rem;font-size:0.85rem;font-weight:500;cursor:pointer;">Not right now</button>';
+            html += '<button class="auto-routine-edit" data-suggestion-id="' + suggestion.id + '" style="flex:1;background:var(--orange-light);color:var(--navy);border:1px solid var(--border);border-radius:12px;padding:0.65rem;font-size:0.85rem;font-weight:500;cursor:pointer;">Edit first</button>';
+            html += '</div>';
+            html += '</div>';
+            html += '</div>';
+            return html;
+        }
+
+        // ── Attach handlers after render ──────────────────────────────────────
+        function attachHandlers(data, sessionStatus) {
+            // Mood buttons
+            document.querySelectorAll('.mood-btn[data-mood]').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    document.querySelectorAll('.mood-btn').forEach(function(b) { b.classList.remove('selected'); });
+                    btn.classList.add('selected');
+                    selectedMood = btn.dataset.mood;
+                    // Load or regenerate plan with new mood if no accepted plan yet
+                    if (!data.dailyPlan || !data.dailyPlan.accepted) {
+                        loadPlan(true);
+                    }
+                });
+            });
+
+            // Plan loading on initial open (if no existing plan)
+            if (!data.dailyPlan) {
+                loadPlan(false);
+            } else if (!currentSlots[0] && !currentSlots[1] && !currentSlots[2]) {
+                // Plan exists but slots weren't populated from status — enrich it
+                // (applies to both accepted and non-accepted plans)
+                enrichExistingPlan(data.dailyPlan);
+            }
+
+            // Accept plan button (may be added after plan loads)
+            wireAcceptBtn();
+            wireRegenBtn();
+            wireSwapBtns();
+
+            // Swap modal close
+            var closeBtn = el('swapModalClose');
+            if (closeBtn) {
+                closeBtn.addEventListener('click', closeSwapModal);
+            }
+            var overlay = el('swapModalOverlay');
+            if (overlay) {
+                overlay.addEventListener('click', function(e) {
+                    if (e.target === overlay) closeSwapModal();
+                });
+            }
+
+            // Auto-routines suggestion card handlers
+            var acceptBtn = document.querySelector('.auto-routine-accept');
+            if (acceptBtn) {
+                acceptBtn.addEventListener('click', function() {
+                    var suggestionId = acceptBtn.dataset.suggestionId;
+                    acceptBtn.disabled = true;
+                    acceptBtn.textContent = 'Setting up...';
+                    apiFetch('/api/auto-routines/suggestion/' + suggestionId + '/accept', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({})
+                    })
+                    .then(function(r) { return r.json(); })
+                    .then(function(result) {
+                        if (result.success) {
+                            var card = document.getElementById('autoRoutineCard');
+                            if (card) {
+                                card.innerHTML = '<div class="card-label">Routine created</div><div style="font-size:0.95rem;color:var(--text-muted);">' + escHtml(result.message || 'Done!') + '</div>';
+                                card.style.borderColor = 'var(--green)';
+                            }
+                            showToast('Routine set up! 🎉');
+                        } else {
+                            acceptBtn.disabled = false;
+                            acceptBtn.textContent = 'Yes, set it up';
+                            showToast('Couldn\u2019t create routine. Try again?');
+                        }
+                    })
+                    .catch(function() {
+                        acceptBtn.disabled = false;
+                        acceptBtn.textContent = 'Yes, set it up';
+                        showToast('Connection error. Try again?');
+                    });
+                });
+            }
+
+            var dismissBtn = document.querySelector('.auto-routine-dismiss');
+            if (dismissBtn) {
+                dismissBtn.addEventListener('click', function() {
+                    var suggestionId = dismissBtn.dataset.suggestionId;
+                    dismissBtn.disabled = true;
+                    dismissBtn.textContent = 'Removing...';
+                    apiFetch('/api/auto-routines/suggestion/' + suggestionId + '/dismiss', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ neverAskAgain: false })
+                    })
+                    .then(function() {
+                        var card = document.getElementById('autoRoutineCard');
+                        if (card) card.style.display = 'none';
+                    })
+                    .catch(function() {
+                        dismissBtn.disabled = false;
+                        dismissBtn.textContent = 'Not right now';
+                    });
+                });
+            }
+
+            var editBtn = document.querySelector('.auto-routine-edit');
+            if (editBtn) {
+                editBtn.addEventListener('click', function() {
+                    var suggestionId = editBtn.dataset.suggestionId;
+                    // For now, redirect to routines page — future: open edit modal
+                    window.location.href = '/app/routines?new=true&suggestionId=' + suggestionId;
+                });
+            }
+        }
+
+        // ── Load / generate plan ──────────────────────────────────────────────
+        function loadPlan(withMood) {
+            var planArea = el('planArea');
+            if (!planArea) return;
+            planArea.innerHTML = renderPlanLoading();
+
+            var url = '/api/buddy/daily-plan?date=' + TODAY;
+            if (withMood && selectedMood) {
+                // Regenerate with new mood
+                apiFetch('/api/buddy/daily-plan/regenerate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ mood: selectedMood, date: TODAY })
+                })
+                .then(function(r) { return r.json(); })
+                .then(function(result) {
+                    if (result.success) {
+                        currentSlots = result.slots || [null, null, null];
+                        planArea.innerHTML = renderPlanSlots(result.plan, currentSlots);
+                        wireAcceptBtn();
+                        wireRegenBtn();
+                        wireSwapBtns();
+                    }
+                })
+                .catch(function() { showToast('Couldn\'t build your plan. Try again?'); });
+            } else {
+                // First load — get or generate
+                apiFetch(url + (selectedMood ? '&mood=' + selectedMood : ''))
+                .then(function(r) { return r.json(); })
+                .then(function(result) {
+                    if (result.success) {
+                        currentSlots = result.slots || [null, null, null];
+                        planArea.innerHTML = renderPlanSlots(result.plan, currentSlots);
+                        wireAcceptBtn();
+                        wireRegenBtn();
+                        wireSwapBtns();
+                    }
+                })
+                .catch(function() { showToast('Couldn\'t build your plan. Try again?'); });
+            }
+        }
+
+        function enrichExistingPlan(plan) {
+            apiFetch('/api/buddy/daily-plan?date=' + TODAY)
+                .then(function(r) { return r.json(); })
+                .then(function(result) {
+                    if (result.success && result.slots) {
+                        currentSlots = result.slots;
+                        if (plan.accepted) {
+                            // Re-render entire page content with enriched slots
+                            // so accepted plan view shows task titles
+                            var content = el('buddyContent');
+                            if (content) {
+                                renderPage({
+                                    dailyPlan: plan,
+                                    tasks: allTasks,
+                                    tasksCompletedToday: 0,
+                                    morning: null,
+                                    evening: null
+                                });
+                            }
+                        } else {
+                            var planArea = el('planArea');
+                            if (planArea) {
+                                planArea.innerHTML = renderPlanSlots(plan, currentSlots);
+                                wireAcceptBtn();
+                                wireRegenBtn();
+                                wireSwapBtns();
+                            }
+                        }
+                    }
+                })
+                .catch(function() {});
+        }
+
+        // ── Accept plan ───────────────────────────────────────────────────────
+        function wireAcceptBtn() {
+            var btn = el('acceptPlanBtn');
+            if (!btn) return;
+            btn.addEventListener('click', function() {
+                btn.disabled = true;
+                btn.textContent = '⏳ Locking in...';
+                apiFetch('/api/buddy/daily-plan/accept', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ date: TODAY })
+                })
+                .then(function(r) { return r.json(); })
+                .then(function(result) {
+                    if (result.success) {
+                        planAccepted = true;
+                        showToast('🎯 Plan locked in — let\'s do this!');
+                        // Replace morning card with accepted view
+                        var morningCard = el('morningCard');
+                        if (morningCard) {
+                            morningCard.outerHTML = buildAcceptedCard(result.plan);
+                        }
+                        // Record buddy_checkins morning record
+                        var task1Id = result.plan && result.plan.task_1_id;
+                        apiFetch('/api/buddy/morning', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ selected_task_id: task1Id, date: TODAY })
+                        }).catch(function() {});
+                        if (isEvening) { recordEveningRecap(); }
+                    } else {
+                        btn.disabled = false;
+                        btn.textContent = '✅ Accept this plan';
+                        showToast('Couldn\'t save. Try again?');
+                    }
+                })
+                .catch(function() {
+                    btn.disabled = false;
+                    btn.textContent = '✅ Accept this plan';
+                    showToast('Couldn\'t save. Try again?');
+                });
+            });
+        }
+
+        function buildAcceptedCard(plan) {
+            var html = '<div class="card">';
+            html += '<div class="card-label">Morning check-in</div>';
+            html += '<div class="plan-accepted-badge">🎯 Plan locked in for today</div>';
+            html += '<div class="plan-slots">';
+            for (var i = 1; i <= 3; i++) {
+                var slot = currentSlots[i-1];
+                var taskTitle = slot && slot.task ? slot.task.title : null;
+                var reason = plan['task_' + i + '_reason'];
+                var activation = slot ? slot.activation : 'Medium';
+                if (!taskTitle && !plan['task_' + i + '_id']) continue;
+                html += '<div class="plan-slot">';
+                html += '<div class="plan-slot-num">' + i + '</div>';
+                html += '<div class="plan-slot-body">';
+                html += '<div class="plan-slot-title">' + escHtml(taskTitle || '(task)') + '</div>';
+                if (reason) {
+                    var actClass = activation === 'Low' ? 'activation-low' : activation === 'High' ? 'activation-high' : 'activation-med';
+                    html += '<div class="plan-slot-meta"><span class="plan-slot-reason">' + escHtml(reason) + '</span>';
+                    html += '<span class="activation-badge ' + actClass + '">' + escHtml(activation) + '</span></div>';
+                }
+                html += '</div></div>';
+            }
+            html += '</div></div>';
+            return html;
+        }
+
+        // ── Regenerate plan ───────────────────────────────────────────────────
+        function wireRegenBtn() {
+            var btn = el('regenPlanBtn');
+            if (!btn) return;
+            btn.addEventListener('click', function() {
+                btn.disabled = true;
+                btn.textContent = '⏳ Thinking...';
+                apiFetch('/api/buddy/daily-plan/regenerate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ mood: selectedMood, date: TODAY })
+                })
+                .then(function(r) { return r.json(); })
+                .then(function(result) {
+                    btn.disabled = false;
+                    btn.textContent = '🎲 Regenerate';
+                    if (result.success) {
+                        currentSlots = result.slots || [null, null, null];
+                        var planArea = el('planArea');
+                        if (planArea) {
+                            planArea.innerHTML = renderPlanSlots(result.plan, currentSlots);
+                            wireAcceptBtn();
+                            wireRegenBtn();
+                            wireSwapBtns();
+                        }
+                    }
+                })
+                .catch(function() {
+                    btn.disabled = false;
+                    btn.textContent = '🎲 Regenerate';
+                    showToast('Couldn\'t regenerate. Try again?');
+                });
+            });
+        }
+
+        // ── Swap task ─────────────────────────────────────────────────────────
+        function wireSwapBtns() {
+            document.querySelectorAll('[data-swap-slot]').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    swappingSlot = parseInt(btn.dataset.swapSlot, 10);
+                    openSwapModal();
+                });
+            });
+        }
+
+        function openSwapModal() {
+            var list = el('swapTaskList');
+            if (!list) return;
+
+            // Get IDs currently in the plan (to exclude from picker)
+            var inPlan = currentSlots.map(function(s) { return s && s.task ? s.task.id : null; });
+            var available = allTasks.filter(function(t) { return inPlan.indexOf(t.id) === -1; });
+
+            if (!available.length) {
+                showToast('No other tasks to swap in right now.');
+                return;
+            }
+
+            var html = '';
+            available.slice(0, 20).forEach(function(t) {
+                html += '<div class="swap-task-item" data-task-id="' + t.id + '" data-task-title="' + escHtml(t.title) + '">';
+                html += '<span class="swap-task-bullet"></span>';
+                html += escHtml(t.title);
+                html += '</div>';
+            });
+            list.innerHTML = html;
+
+            // Wire item clicks
+            list.querySelectorAll('.swap-task-item').forEach(function(item) {
+                item.addEventListener('click', function() {
+                    var taskId = parseInt(item.dataset.taskId, 10);
+                    var taskTitle = item.dataset.taskTitle;
+                    doSwap(taskId, taskTitle);
+                    closeSwapModal();
+                });
+            });
+
+            el('swapModalOverlay').style.display = 'flex';
+        }
+
+        function closeSwapModal() {
+            el('swapModalOverlay').style.display = 'none';
+            swappingSlot = null;
+        }
+
+        function doSwap(taskId, taskTitle) {
+            if (!swappingSlot) return;
+            var slotIndex = swappingSlot - 1;
+
+            apiFetch('/api/buddy/daily-plan/swap', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ slot: swappingSlot, new_task_id: taskId, date: TODAY })
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(result) {
+                if (result.success) {
+                    // Update local slot
+                    currentSlots[slotIndex] = {
+                        task: { id: taskId, title: taskTitle, is_completed: false },
+                        reason: 'Your pick',
+                        activation: 'Medium'
+                    };
+                    showToast('Swapped in: ' + taskTitle);
+                    // Re-render plan area
+                    var planArea = el('planArea');
+                    if (planArea) {
+                        planArea.innerHTML = renderPlanSlots(result.plan, currentSlots);
+                        wireAcceptBtn();
+                        wireRegenBtn();
+                        wireSwapBtns();
+                    }
+                } else {
+                    showToast('Swap failed. Try again?');
+                }
+            })
+            .catch(function() { showToast('Swap failed. Try again?'); });
+        }
+
+        // ── Evening recap recording ───────────────────────────────────────────
+        var eveningRecorded = false;
+        function recordEveningRecap() {
+            if (eveningRecorded) return;
+            eveningRecorded = true;
+            apiFetch('/api/buddy/evening', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ date: TODAY })
+            }).catch(function() {});
+        }
+        if (isEvening) { setTimeout(recordEveningRecap, 2000); }
+
+        // ── Mid-day check-in banner ────────────────────────────────────────────
+        var localHour = getLocalHour();
+        // Only show mid-day check-ins during daytime, not evening
+        if (!isEvening && localHour >= 8 && localHour < 17) {
+            setTimeout(loadMiddayCheckin, 1800);
+        }
+
+        function loadMiddayCheckin() {
+            apiFetch('/api/buddy/midday-checkin?hour=' + localHour)
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (!data.success || !data.checkinType || data.alreadyDone) return;
+                    renderMiddayBanner(data);
+                })
+                .catch(function() {});
+        }
+
+        function renderMiddayBanner(data) {
+            var banner = el('middayBanner');
+            if (!banner) return;
+
+            var type = data.checkinType;
+            var planId = data.planId;
+            var remaining = data.remainingSlots || [];
+            var icon, title, sub, responses;
+
+            if (type === 'post_plan') {
+                icon = '⚡';
+                title = 'How\'s task #1 going?';
+                sub = 'Quick check-in — no judgment.';
+                responses = [
+                    { key: 'done', label: '✅ Done' },
+                    { key: 'working', label: '🔄 On it' },
+                    { key: 'switching', label: '⏭️ Switching' }
+                ];
+            } else if (type === 'afternoon_energy') {
+                icon = '☀️';
+                title = 'Afternoon check-in';
+                sub = remaining.length > 0
+                    ? 'Energy dip? Which of your remaining tasks feels most doable right now?'
+                    : 'How\'s your afternoon going?';
+                if (remaining.length > 0) {
+                    responses = remaining.map(function(s, i) {
+                        return { key: 'pick_' + (s.task ? s.task.id : i), label: s.task ? s.task.title.slice(0, 28) + (s.task.title.length > 28 ? '…' : '') : 'Task ' + (i+1) };
+                    });
+                    responses.push({ key: 'neither', label: '😮‍💨 Neither right now' });
+                } else {
+                    responses = [
+                        { key: 'good', label: '💪 Good energy' },
+                        { key: 'low', label: '😪 Running low' },
+                        { key: 'done_for_day', label: '✅ All done!' }
+                    ];
+                }
+            } else if (type === 'pre_evening') {
+                icon = '🌅';
+                title = 'One more thing?';
+                sub = 'You have about an hour before evening recap. Want to knock one more task out?';
+                responses = [
+                    { key: 'yes', label: '💪 Let\'s go' },
+                    { key: 'wrap_up', label: '✅ I\'m wrapping up' },
+                    { key: 'skip', label: '😮‍💨 Done for today' }
+                ];
+            }
+
+            if (!responses) return;
+
+            var html = '<div class="midday-banner">';
+            html += '<div class="midday-banner-icon">' + icon + '</div>';
+            html += '<div class="midday-banner-body">';
+            html += '<div class="midday-banner-title">' + escHtml(title) + '</div>';
+            html += '<div class="midday-banner-sub">' + escHtml(sub) + '</div>';
+            html += '<div class="midday-response-btns" id="middayRespBtns">';
+            responses.forEach(function(r) {
+                html += '<button class="midday-resp-btn" data-resp-key="' + escHtml(r.key) + '">' + escHtml(r.label) + '</button>';
+            });
+            html += '</div></div></div>';
+
+            banner.innerHTML = html;
+            banner.style.display = '';
+
+            // Wire response buttons
+            var btns = banner.querySelectorAll('.midday-resp-btn');
+            btns.forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    var key = btn.dataset.respKey;
+                    btns.forEach(function(b) { b.classList.remove('picked'); });
+                    btn.classList.add('picked');
+
+                    apiFetch('/api/buddy/midday-checkin', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            checkin_type: type,
+                            plan_id: planId,
+                            response: { answer: key }
+                        })
+                    }).catch(function() {});
+
+                    setTimeout(function() { banner.style.display = 'none'; }, 1000);
+                    if (key === 'done') { showToast('Nice! One down.'); }
+                    else if (key === 'yes') { showToast('Let\'s finish strong!'); }
+                    else { showToast('Got it 👍'); }
+                }, { once: true });
+            });
+        }
+
+        // ── Pattern Dashboard ──────────────────────────────────────────────────
+        // Load after primary content so it doesn't block the main view.
+        setTimeout(loadPatterns, 2500);
+
+        function loadPatterns() {
+            apiFetch('/api/buddy/patterns')
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (!data.success || !data.patterns) return;
+                    renderPatternDashboard(data.patterns);
+                })
+                .catch(function() {});
+        }
+
+        function renderPatternDashboard(p) {
+            var section = el('patternsSection');
+            if (!section) return;
+
+            var html = '';
+            html += '<button class="patterns-toggle" id="patternsToggle">';
+            html += '<span>📊 Your Patterns</span>';
+            html += '<span class="patterns-toggle-chevron">▼</span>';
+            html += '</button>';
+            html += '<div class="patterns-body" id="patternsBody">';
+
+            // ── Streak + completion stats grid ────────────────────────────────
+            var streak = p.streak || { currentStreak: 0, longestStreak: 0 };
+            var stats = p.completionStats || { last7: { rate: 0, completed: 0 }, last30: { rate: 0, completed: 0 } };
+            html += '<div class="stat-grid">';
+            html += '<div class="stat-tile"><div class="stile-num">' + streak.currentStreak + '</div><div class="stile-label">day streak</div><div class="stile-sub">' + (streak.currentStreak > 0 ? '🔥 Active' : 'Start today') + '</div></div>';
+            html += '<div class="stat-tile"><div class="stile-num">' + stats.last7.rate + '%</div><div class="stile-label">completion rate<br>(7 days)</div></div>';
+            html += '<div class="stat-tile"><div class="stile-num">' + stats.last7.completed + '</div><div class="stile-label">tasks done<br>this week</div></div>';
+            html += '<div class="stat-tile"><div class="stile-num">' + stats.last30.completed + '</div><div class="stile-label">tasks done<br>this month</div></div>';
+            html += '</div>';
+
+            // ── Energy peak ────────────────────────────────────────────────────
+            if (p.energyPatterns && p.energyPatterns.peakLabel) {
+                html += '<div class="energy-peak-bar">';
+                html += '<div class="energy-peak-label">⏰ Energy pattern</div>';
+                html += '<div class="energy-peak-text">You get the most done in the <strong>' + escHtml(p.energyPatterns.peakLabel) + '</strong>. Schedule your hardest task for that window.</div>';
+                html += '</div>';
+            }
+
+            // ── Spending correlations (THE MOAT) ───────────────────────────────
+            if (p.spendingCorrelations && p.spendingCorrelations.length > 0) {
+                p.spendingCorrelations.forEach(function(sc) {
+                    html += '<div class="spending-correlation-item">';
+                    html += '<div class="sc-label">💸 Stress spending detected</div>';
+                    html += escHtml('You\'ve been avoiding "' + sc.task.title + '" for ' + sc.ageDays + ' days. Your spending went up ' + sc.spendingIncreasePct + '% in the same period.');
+                    html += '</div>';
+                });
+            }
+
+            // ── Avoidance hall of fame ─────────────────────────────────────────
+            var avoided = p.avoidedTasks || [];
+            if (avoided.length > 0) {
+                html += '<div class="avoided-list">';
+                avoided.forEach(function(item, idx) {
+                    var trophy = idx === 0 ? '🏆' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : '📌';
+                    html += '<div class="avoided-item">';
+                    html += '<span class="avoided-trophy">' + trophy + '</span>';
+                    html += '<span class="avoided-title">' + escHtml(item.task.title) + '</span>';
+                    html += '<span class="avoided-age">' + item.ageDays + 'd</span>';
+                    html += '</div>';
+                });
+                html += '</div>';
+                html += '<div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:0.75rem;">Hall of Fame: tasks sitting longest without completion.</div>';
+            }
+
+            if (!p.avoidedTasks.length && !p.energyPatterns) {
+                html += '<div style="text-align:center;padding:1rem 0;color:var(--text-muted);font-size:0.88rem;">Complete more tasks to unlock patterns. Check back after a few days!</div>';
+            }
+
+            html += '</div>'; // end patterns-body
+
+            section.innerHTML = html;
+            section.style.display = '';
+
+            // Accordion toggle
+            var toggleBtn = el('patternsToggle');
+            var body = el('patternsBody');
+            if (toggleBtn && body) {
+                toggleBtn.addEventListener('click', function() {
+                    var isOpen = body.classList.contains('open');
+                    body.classList.toggle('open', !isOpen);
+                    toggleBtn.classList.toggle('open', !isOpen);
+                });
+            }
+        }
+
+        // ── Life nudges (Evening only) ─────────────────────────────────────────
+        if (isEvening) { setTimeout(fetchBuddyNudges, 1500); }
+
+        function fetchBuddyNudges() {
+            apiFetch('/api/nudge-system/preferences')
+                .then(function(r) { return r.json(); })
+                .then(function(prefs) {
+                    var buddyEnabled = !prefs.preferences || prefs.preferences.buddy_enabled !== false;
+                    if (!buddyEnabled) return;
+                    return apiFetch('/api/nudge-system/pending')
+                        .then(function(r) { return r.json(); })
+                        .then(function(data) {
+                            if (data && data.nudges && data.nudges.length > 0) renderBuddyNudges(data.nudges);
+                        });
+                })
+                .catch(function() {});
+        }
+
+        function renderBuddyNudges(nudges) {
+            var container = el('buddyNudges');
+            if (!container) return;
+            var html = '<div class="buddy-nudge-header">By the way —</div>';
+            nudges.forEach(function(n) {
+                var cls = n.urgency === 'urgent' ? 'buddy-nudge-item urgent' : 'buddy-nudge-item';
+                html += '<div class="' + cls + '" data-nudge-id="' + n.id + '">';
+                html += '<div class="buddy-nudge-text">' + escHtml(n.message) + '</div>';
+                html += '<button class="buddy-nudge-dismiss" data-dismiss-nudge="' + n.id + '" title="Dismiss" aria-label="Dismiss nudge">✕</button>';
+                html += '</div>';
+            });
+            container.innerHTML = html;
+            container.style.display = '';
+            container.addEventListener('click', function(e) {
+                var btn = e.target.closest('[data-dismiss-nudge]');
+                if (!btn) return;
+                var nudgeId = btn.dataset.dismissNudge;
+                var item = container.querySelector('[data-nudge-id="' + nudgeId + '"]');
+                if (item) {
+                    item.style.opacity = '0.4'; item.style.pointerEvents = 'none';
+                    setTimeout(function() {
+                        item.remove();
+                        if (!container.querySelector('.buddy-nudge-item')) container.style.display = 'none';
+                    }, 200);
+                }
+                apiFetch('/api/nudge-system/dismiss/' + nudgeId, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' }
+                }).catch(function() {});
+            });
+        }
+
+    })();
+    </script>
+<script src="/js/date-parser.js"></script>
+<script>
+(function(){
+  var fab=null,qOverlay=null,token=localStorage.getItem('fl_token');
+  function openQA(){qOverlay=document.getElementById('qaOverlay')||createQASheet();qOverlay.classList.add('open');setTimeout(function(){var i=document.getElementById('qaInput');if(i)i.focus();},50)}
+  function closeQA(){if(qOverlay)qOverlay.classList.remove('open');var i=document.getElementById('qaInput');if(i){i.value='';document.getElementById('qaChips').innerHTML='';document.getElementById('qaSave').disabled=true}}
+  function createQASheet(){
+    var div=document.createElement('div');div.id='qaOverlay';div.className='qa-overlay';
+    div.innerHTML='<div class="qa-sheet"><div class="qa-title-row"><h3>Quick Add</h3><button class="qa-close" id="qaClose">×</button></div><div class="qa-input-row"><input type="text" class="qa-input" id="qaInput" placeholder="What needs to get done?" maxlength="150" autocomplete="off"><button class="qa-save" id="qaSave" disabled>Add</button></div><div class="qa-chips" id="qaChips"></div></div>';
+    document.body.appendChild(div);
+    div.addEventListener('click',function(e){if(e.target===div)closeQA()});
+    document.getElementById('qaClose').addEventListener('click',closeQA);
+    document.getElementById('qaInput').addEventListener('input',function(){
+      var v=this.value.trim();document.getElementById('qaSave').disabled=!v;
+      if(!v){document.getElementById('qaChips').innerHTML='';return}
+      var res=window._qaParse?window._qaParse(this.value):{parsed:{date:null,time:null},remaining:this.value};
+      var lbl=window._qaChipLabel?window._qaChipLabel(res.parsed):null;
+      document.getElementById('qaChips').innerHTML=lbl?'<span class="qa-chip"><span class="chip-dot"></span>'+lbl+'</span>':'';
+    });
+    document.getElementById('qaInput').addEventListener('keydown',function(e){
+      if(e.key==='Enter'&&!e.target.disabled)qaSave();
+      if(e.key==='Escape')closeQA();
+    });
+    document.getElementById('qaSave').addEventListener('click',qaSave);
+    return div;
+  }
+  function qaSave(){
+    var v=document.getElementById('qaInput').value.trim();if(!v)return;
+    var res=window._qaParse?window._qaParse(v):{parsed:{date:null,time:null},remaining:v};
+    var body={title:res.remaining};if(res.parsed.date)body.due_date=res.parsed.date;if(res.parsed.time)body.due_time=res.parsed.time;
+    fetch('/api/tasks',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify(body)}).then(function(r){return r.json()}).then(function(d){
+      if(d.success){closeQA();}else{var t=document.createElement('div');t.textContent=d.message||'Failed to add task';t.style.cssText='position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:var(--navy);color:white;padding:0.65rem 1.25rem;border-radius:10px;font-size:0.85rem;font-weight:500;z-index:9999';document.body.appendChild(t);setTimeout(function(){t.remove()},2500);}
+    });
+  }
+  window._qaParse=parseNaturalLanguage;window._qaChipLabel=chipLabel;
+  fab=document.createElement('button');fab.className='fab';fab.title='Quick add task';fab.textContent='+';fab.addEventListener('click',openQA);document.body.appendChild(fab);
+})();
+</script>
+</body>
+</html>

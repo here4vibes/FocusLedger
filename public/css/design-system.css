@@ -1,0 +1,845 @@
+/*
+ * FocusLedger — Design System
+ * Trust Blue + Gold · "Peace of mind" palette
+ * ADHD-native: clear hierarchy, 48px+ tap targets, 150ms max feedback latency
+ * Inspired by Tiimo (App of the Year) + Structured (Design Award) patterns
+ *
+ * Load order: design-system.css → app-layout.css → app-spacing.css → page CSS
+ * This file sets tokens first; nav/component overrides come after.
+ */
+
+/* ── 1. Design Tokens ─────────────────────────────────────────────────── */
+:root {
+  /* ── Brand Palette ──────────────────────────────── */
+  --brand-primary:     #011e5c;   /* Trust Blue — header, nav, CTA */
+  --brand-primary-mid: #02287a;   /* Trust Blue mid — hover states */
+  --brand-primary-lt:  #033099;   /* Trust Blue light — focus glow */
+  --brand-accent:      #c9a84c;   /* Gold — active tabs, badges, CTAs */
+  --brand-accent-dark: #b8962f;   /* Gold hover */
+  --brand-accent-lt:   #d4b56a;   /* Gold light — tints */
+
+  /* ── Legacy aliases (kept for backward compat) ──── */
+  --trust-blue:     var(--brand-primary);
+  --trust-blue-mid: var(--brand-primary-mid);
+  --trust-blue-lt:  var(--brand-primary-lt);
+  --gold:           var(--brand-accent);
+  --gold-dark:      var(--brand-accent-dark);
+  --navy:           var(--brand-primary);
+  --navy-mid:       var(--brand-primary-mid);
+  --navy-light:     var(--brand-primary-lt);
+  --orange:         var(--brand-accent);
+  --orange-light:   var(--brand-accent-lt);
+
+  /* ── Semantic Colors ────────────────────────────── */
+  --color-success:  #5BA4A4;   /* teal — completed, confirmed */
+  --color-warning:  #E07A5F;   /* warm red — alerts, impulse */
+  --color-danger:   #E07A5F;   /* same as warning for errors */
+  --color-info:     #02287a;   /* brand blue — informational */
+  --green:          #5BA4A4;   /* legacy alias */
+  --green-muted:    #4A9292;
+  --success:        #7DB87D;
+  --warning:        #E07A5F;
+  --error:          #E07A5F;
+  --error-light:    #FAEAE5;
+
+  /* ── Backgrounds ────────────────────────────────── */
+  --cream:       #F8F7F4;   /* app background */
+  --cream-dark:  #F2F1ED;   /* hovered cream surfaces */
+  --warm-white:  #fafaf8;   /* task card background */
+  --surface:     #ffffff;   /* cards, modals */
+  --border:      #e8e5e0;   /* dividers, input borders */
+
+  /* ── Text ───────────────────────────────────────── */
+  --text-heading:  #111111;   /* headings — max contrast */
+  --text-body:     #1a1a1a;   /* body text */
+  --text-secondary:#4b4b4b;   /* labels, metadata */
+  --text-muted:    #6b6b6b;   /* placeholder, caption */
+  --text-disabled: #a0a0a0;   /* disabled state */
+  /* Legacy */
+  --text-dark:     #1a1a1a;
+
+  /* ── Typography ─────────────────────────────────── */
+  /*
+   * Two-family system:
+   *   --font-display → Space Grotesk — headings, labels, amounts, logo
+   *   --font-ui      → DM Sans — body, captions, form controls
+   * Single-family fallback: system-ui covers both if Google Fonts fails.
+   */
+  --font-display: 'Space Grotesk', system-ui, -apple-system, sans-serif;
+  --font-ui:      'DM Sans',       system-ui, -apple-system, sans-serif;
+  --font-sans:    'DM Sans',       system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-serif:   Georgia, "Times New Roman", serif;
+
+  /* ── Font Sizes ─────────────────────────────────── */
+  --text-xs:   0.72rem;   /* 11.5px — micro labels */
+  --text-sm:   0.82rem;   /* 13px   — captions, tags */
+  --text-base: 0.95rem;   /* 15px   — body text */
+  --text-md:   1rem;      /* 16px   — default */
+  --text-lg:   1.1rem;    /* 17.6px — section titles */
+  --text-xl:   1.25rem;   /* 20px   — card headings */
+  --text-2xl:  1.5rem;    /* 24px   — page headings */
+  --text-3xl:  2rem;      /* 32px   — hero numbers */
+
+  /* ── Geometry ───────────────────────────────────── */
+  --radius-xs:   4px;
+  --radius-sm:   6px;
+  --radius-md:   10px;
+  --radius-lg:   12px;
+  --radius-xl:   16px;
+  --radius-full: 9999px;
+  /* Component shortcuts */
+  --card-radius:      12px;
+  --btn-radius:       10px;
+  --app-card-radius:  12px;
+  --app-btn-radius:   10px;
+
+  /* ── Shadows ────────────────────────────────────── */
+  --shadow-xs: 0 1px 3px rgba(0,0,0,0.04);
+  --shadow-sm: 0 2px 8px rgba(0,0,0,0.06);
+  --shadow-md: 0 4px 16px rgba(0,0,0,0.08);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,0.12);
+  --card-shadow: var(--shadow-sm);
+
+  /* ── Z-Index Scale ──────────────────────────────── */
+  /*
+   * Documented stacking order — never use raw numbers outside this list.
+   * --z-content:  in-flow cards, default stacking
+   * --z-sticky:   sticky headers, floating labels
+   * --z-dropdown: dropdowns, tooltips
+   * --z-overlay:  modal backdrops
+   * --z-modal:    dialogs, drawers
+   * --z-nav:      top nav bar and bottom tab bar
+   * --z-buddy:    floating Buddy bubble (was hardcoded 9000)
+   * --z-toast:    toast notifications
+   * --z-confetti: confetti overlay (was hardcoded 9999)
+   */
+  --z-content:  1;
+  --z-sticky:   10;
+  --z-dropdown: 50;
+  --z-overlay:  100;
+  --z-modal:    200;
+  --z-nav:      300;
+  --z-buddy:    400;
+  --z-toast:    450;
+  --z-confetti: 500;
+
+  /* ── Transitions ────────────────────────────────── */
+  --transition-fast:   150ms ease;
+  --transition-normal: 200ms ease;
+  --transition-slow:   300ms ease;
+  --transition-spring: 280ms cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* ── Focus Ring ─────────────────────────────────── */
+  /* 2px offset ring — visible against both light and dark backgrounds */
+  --focus-ring: 0 0 0 2px var(--surface), 0 0 0 4px var(--brand-primary-lt);
+  --focus-ring-accent: 0 0 0 2px var(--surface), 0 0 0 4px var(--brand-accent);
+}
+
+/* ── 2. Dark Mode Tokens ──────────────────────────────────────────────── */
+/*
+ * Surfaces and text invert; brand palette stays the same.
+ * Gold becomes slightly lighter for better contrast on dark.
+ */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --cream:       #141414;
+    --cream-dark:  #1e1e1e;
+    --warm-white:  #1a1a1a;
+    --surface:     #242424;
+    --border:      #333333;
+    --text-heading: #f0f0f0;
+    --text-body:    #e0e0e0;
+    --text-secondary: #b0b0b0;
+    --text-muted:   #888888;
+    --text-disabled: #555555;
+    --text-dark:    #e0e0e0;
+    --card-shadow:  0 2px 8px rgba(0,0,0,0.3);
+    --shadow-sm:    0 2px 8px rgba(0,0,0,0.3);
+    --shadow-md:    0 4px 16px rgba(0,0,0,0.4);
+    /* Slightly brighter gold for dark mode contrast */
+    --brand-accent:     #d4b56a;
+    --gold:             #d4b56a;
+    --orange:           #d4b56a;
+  }
+}
+
+/* ── 3. Base ──────────────────────────────────────────────────────────── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font-ui);
+  background: var(--cream);
+  color: var(--text-body);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Heading hierarchy: display font for h1-h2, UI font for h3+ */
+h1, h2 {
+  font-family: var(--font-display) !important;
+  color: var(--text-heading);
+}
+h3, h4, h5, h6 {
+  font-family: var(--font-display) !important;
+  color: var(--text-heading);
+}
+
+/* ── 4. Focus States ──────────────────────────────────────────────────── */
+/*
+ * :focus-visible only — not :focus — avoids showing rings on mouse click.
+ * ADHD users navigate by keyboard; visible focus is essential.
+ */
+:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+/* Buttons and interactive cards need offset rings */
+button:focus-visible,
+a:focus-visible,
+[role="button"]:focus-visible,
+.task-card:focus-visible,
+.filter-tab:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+  border-radius: var(--radius-md);
+}
+
+/* Inputs use an inset border approach */
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: none;
+  border-color: var(--brand-primary-lt) !important;
+  box-shadow: 0 0 0 3px rgba(3, 48, 153, 0.15);
+}
+
+/* ── 5. Utilities ─────────────────────────────────────────────────────── */
+/* Screen reader only — visually hidden but accessible to assistive tech */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Respect user motion preferences on all transitions */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ── 6. Scrollbar ─────────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: var(--radius-full);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+/* ── 7. Landing Nav ───────────────────────────────────────────────────── */
+body > nav {
+  background: var(--brand-primary) !important;
+  max-width: 100% !important;
+  padding: 0 2rem !important;
+  height: 64px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  position: sticky !important;
+  top: 0 !important;
+  z-index: var(--z-nav) !important;
+}
+body > nav .logo { color: white !important; }
+body > nav .logo-dot { background: var(--brand-accent) !important; }
+body > nav > div a { color: rgba(255,255,255,0.82) !important; }
+body > nav > div a:hover { color: white !important; }
+body > nav #navCtaLink,
+body > nav a[href="/signup"] {
+  background: var(--brand-accent) !important;
+  color: #1a1a1a !important;
+  border-radius: var(--btn-radius) !important;
+  box-shadow: none !important;
+  font-weight: 600 !important;
+  padding: 0.55rem 1.25rem !important;
+}
+body > nav #navCtaLink:hover,
+body > nav a[href="/signup"]:hover {
+  opacity: 0.9 !important;
+  color: #1a1a1a !important;
+}
+
+/* ── 8. Portal Nav ────────────────────────────────────────────────────── */
+.portal-nav {
+  background: var(--brand-primary) !important;
+  padding: 0 1.25rem !important;
+  height: 56px !important;
+  border-radius: 0 !important;
+  margin: 0 !important;
+  border-bottom: none !important;
+  width: 100% !important;
+}
+.portal-logo, .portal-logo * { color: white !important; }
+.portal-logo .logo-dot { background: var(--brand-accent) !important; }
+.nav-link {
+  color: rgba(255,255,255,0.75) !important;
+  border-radius: 0 !important;
+}
+.nav-link:hover {
+  background: rgba(255,255,255,0.1) !important;
+  color: white !important;
+}
+.nav-link.active {
+  background: transparent !important;
+  color: white !important;
+  border-bottom: 2px solid var(--brand-accent) !important;
+  border-radius: 0 !important;
+}
+.user-greeting { color: rgba(255,255,255,0.7) !important; }
+.logout-btn { color: rgba(255,255,255,0.7) !important; }
+.logout-btn:hover {
+  color: var(--brand-accent) !important;
+  background: rgba(255,255,255,0.08) !important;
+}
+
+/* ── 9. App Nav ───────────────────────────────────────────────────────── */
+.app-nav {
+  background: var(--brand-primary) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border-bottom: none !important;
+}
+.app-nav-inner .logo { color: white !important; }
+.app-nav-inner .logo .logo-dot { background: var(--brand-accent) !important; }
+.app-nav-inner .back-link { color: rgba(255,255,255,0.72) !important; }
+.app-nav-inner > div a,
+.app-nav-inner > div button {
+  color: rgba(255,255,255,0.8) !important;
+}
+.app-nav-inner > div a:hover,
+.app-nav-inner > div button:hover {
+  color: white !important;
+  background: rgba(255,255,255,0.08) !important;
+}
+.app-nav .user-name,
+.app-nav .logout-btn,
+.app-nav .back-link { color: rgba(255,255,255,0.75) !important; }
+.app-nav .logout-btn:hover,
+.app-nav .back-link:hover { color: white !important; }
+.app-nav .pro-badge {
+  background: var(--brand-accent) !important;
+  color: #1a1a1a !important;
+  border-radius: 2px !important;
+}
+.app-nav .settings-link { color: rgba(255,255,255,0.75) !important; }
+.app-nav .settings-link:hover {
+  color: white !important;
+  background: rgba(255,255,255,0.08) !important;
+}
+
+/* ── 10. Settings Nav ─────────────────────────────────────────────────── */
+.settings-nav {
+  background: var(--brand-primary) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border-bottom: none !important;
+}
+.settings-nav-inner .logo { color: white !important; }
+.settings-nav-inner .logo .logo-dot { background: var(--brand-accent) !important; }
+.settings-nav-inner .back-link,
+.settings-nav-inner a { color: rgba(255,255,255,0.75) !important; }
+
+/* ── 11. Bottom Tab Bar ───────────────────────────────────────────────── */
+.bottom-tabs {
+  background: var(--brand-primary) !important;
+  border-top: none !important;
+}
+.tab-btn { color: rgba(255,255,255,0.6) !important; }
+.tab-btn.active { color: var(--brand-accent) !important; }
+
+/* ── 12. Cards ────────────────────────────────────────────────────────── */
+.card,
+.diff-card,
+.hero-card,
+.pricing-pill,
+.news-card,
+.cal-event {
+  border-radius: var(--card-radius) !important;
+}
+.card { box-shadow: var(--card-shadow) !important; }
+/* Disable transform-based hover — too much motion for ADHD users */
+.news-card:hover,
+.diff-card:hover { transform: none !important; }
+
+/* ── 13. Buttons ──────────────────────────────────────────────────────── */
+/* Primary CTA → gold */
+.hero-cta-btn,
+.hero-cta-link,
+.final-cta-btn,
+.closing-cta-link,
+.auth-gate a {
+  background: var(--brand-accent) !important;
+  color: #1a1a1a !important;
+  border-radius: var(--btn-radius) !important;
+  box-shadow: none !important;
+}
+.hero-cta-btn:hover,
+.final-cta-btn:hover {
+  transform: none !important;
+  box-shadow: none !important;
+  background: var(--brand-accent-dark) !important;
+}
+
+.quick-add-btn {
+  background: var(--brand-primary) !important;
+  color: white !important;
+  border-radius: var(--btn-radius) !important;
+}
+.quick-add-btn:hover { opacity: 0.88 !important; }
+
+.qa-btn { border-radius: var(--btn-radius) !important; }
+.qa-btn:hover { border-color: var(--brand-primary) !important; }
+
+/* ── 14. Inputs ───────────────────────────────────────────────────────── */
+.quick-add-input,
+input[type="text"],
+input[type="email"],
+input[type="password"],
+textarea,
+select {
+  border-radius: var(--btn-radius) !important;
+  min-height: 44px !important;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+/* ── 15. Pricing ──────────────────────────────────────────────────────── */
+.pricing-pill.featured { border-color: var(--brand-primary) !important; }
+.pricing-pill.featured .plan-name { color: var(--brand-primary) !important; }
+
+/* ── 16. Landing Section Headers ──────────────────────────────────────── */
+.solution-header h2,
+.pricing-teaser h2,
+.final-cta h2,
+.problem-inner h2 {
+  font-family: var(--font-display) !important;
+}
+
+/* ── 17. Hero Card Accents ────────────────────────────────────────────── */
+.hero-card .hero-card-header h3 { font-family: var(--font-ui) !important; }
+.hero-card .pill {
+  background: rgba(1,30,92,0.08) !important;
+  color: var(--brand-primary) !important;
+  border-radius: 2px !important;
+}
+.money-card {
+  background: var(--brand-primary) !important;
+  border-radius: var(--card-radius) !important;
+}
+.money-card .subtext { color: var(--brand-accent) !important; }
+
+/* ── 18. Mobile Nav Hamburger ─────────────────────────────────────────── */
+.nav-hamburger {
+  display: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.5rem;
+  color: rgba(255,255,255,0.8);
+  min-width: 44px;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+.nav-hamburger:hover {
+  background: rgba(255,255,255,0.1);
+  color: white;
+}
+.nav-hamburger svg { width: 22px; height: 22px; }
+
+.nav-mobile-dropdown {
+  display: none;
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 280px;
+  background: white;
+  z-index: var(--z-modal);
+  box-shadow: -4px 0 24px rgba(45,42,38,0.15);
+  flex-direction: column;
+  padding: 1.5rem 1rem 2rem;
+  overflow-y: auto;
+}
+.nav-mobile-dropdown.open { display: flex; }
+
+.nav-mobile-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  z-index: var(--z-overlay);
+}
+.nav-mobile-overlay.open { display: block; }
+
+.nav-mobile-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border);
+}
+.nav-mobile-header .logo { color: var(--brand-primary) !important; }
+
+.nav-mobile-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.5rem;
+  min-width: 44px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  border-radius: var(--radius-sm);
+  font-size: 1.2rem;
+}
+.nav-mobile-close:hover { color: var(--navy); background: var(--cream-dark); }
+
+.nav-mobile-items { display: flex; flex-direction: column; gap: 0.25rem; }
+.nav-mobile-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-md);
+  text-decoration: none;
+  color: var(--text-body);
+  font-size: var(--text-base);
+  font-weight: 500;
+  transition: background var(--transition-fast), color var(--transition-fast);
+  min-height: 48px;
+}
+.nav-mobile-item:hover { background: var(--cream-dark); color: var(--navy); }
+.nav-mobile-item.pro-item { color: var(--navy); font-weight: 700; }
+.nav-mobile-divider { height: 1px; background: var(--border); margin: 0.75rem 0; }
+.nav-mobile-logout {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-md);
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: var(--text-base);
+  font-family: var(--font-ui);
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  transition: background var(--transition-fast), color var(--transition-fast);
+  min-height: 48px;
+}
+.nav-mobile-logout:hover { background: #FEF2F2; color: var(--color-danger); }
+
+@media (max-width: 768px) {
+  .nav-hamburger { display: flex; }
+  .app-nav .nav-right > *:not(.nav-hamburger) { display: none; }
+  .app-nav-inner { justify-content: space-between !important; }
+}
+@media (max-width: 600px) {
+  body > nav { padding: 0 !important; }
+}
+
+/* ── 19. AI Suggestions ───────────────────────────────────────────────── */
+.ai-suggestions-section {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 2rem 1.5rem;
+}
+.ai-suggestions-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+.ai-suggestions-title {
+  font-family: var(--font-display);
+  font-size: var(--text-md);
+  font-weight: 700;
+  color: var(--navy);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.ai-badge {
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  background: linear-gradient(135deg, var(--brand-accent), var(--brand-accent-lt));
+  color: white;
+  padding: 2px 6px;
+  border-radius: 5px;
+}
+.ai-suggestions-refresh-btn {
+  background: none;
+  border: 1.5px solid var(--border);
+  color: var(--text-muted);
+  padding: 0.4rem 0.75rem;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+  cursor: pointer;
+  min-height: 36px;
+  transition: border-color var(--transition-fast), color var(--transition-fast);
+}
+.ai-suggestions-refresh-btn:hover { border-color: var(--brand-accent); color: var(--brand-accent); }
+
+.ai-suggestion-card {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1.1rem 1.25rem;
+  margin-bottom: 0.75rem;
+  box-shadow: var(--shadow-xs);
+  transition: box-shadow var(--transition-normal), border-color var(--transition-normal);
+}
+.ai-suggestion-card:hover {
+  border-color: rgba(201,168,76,0.3);
+  box-shadow: var(--shadow-md);
+}
+.ai-suggestion-value-tag {
+  font-size: var(--text-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 0.4rem;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+.ai-suggestion-title {
+  font-size: var(--text-base);
+  font-weight: 600;
+  color: var(--navy);
+  line-height: 1.4;
+  margin-bottom: 0.6rem;
+}
+.ai-suggestion-steps {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.ai-suggestion-steps li {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  padding: 0.35rem 0.75rem;
+  background: var(--cream-dark);
+  border-radius: var(--radius-xs);
+  border-left: 3px solid var(--brand-accent);
+  line-height: 1.4;
+}
+.ai-suggestion-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.ai-sugg-btn {
+  flex: 1;
+  min-height: 44px;
+  padding: 0.6rem 0.75rem;
+  border-radius: var(--radius-md);
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--transition-fast), opacity var(--transition-fast);
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+}
+.ai-sugg-btn.add { background: var(--brand-accent); color: white; }
+.ai-sugg-btn.add:hover { background: var(--brand-accent-dark); }
+.ai-sugg-btn.add:active { transform: scale(0.97); }
+.ai-sugg-btn.dismiss {
+  background: transparent;
+  color: var(--text-muted);
+  border: 1.5px solid var(--border);
+}
+.ai-sugg-btn.dismiss:hover { border-color: #B0ADA8; color: var(--navy); }
+
+.ai-show-more-btn {
+  display: block;
+  width: 100%;
+  padding: 0.65rem;
+  background: var(--cream-dark);
+  border: 1.5px dashed var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text-muted);
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  cursor: pointer;
+  min-height: 44px;
+  transition: background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
+  text-align: center;
+}
+.ai-show-more-btn:hover { background: #F0ECE5; border-color: var(--brand-accent); color: var(--brand-accent); }
+
+.ai-suggestions-loading { padding: 2rem; text-align: center; color: var(--text-muted); }
+.ai-suggestions-empty { text-align: center; padding: 1.5rem; color: var(--text-muted); font-size: var(--text-sm); }
+.ai-suggestions-empty a { color: var(--brand-accent); font-weight: 600; text-decoration: none; }
+.ai-suggestions-cap-banner {
+  background: linear-gradient(135deg, var(--navy) 0%, var(--navy-mid) 100%);
+  color: white;
+  border-radius: var(--card-radius);
+  padding: 1rem 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+.ai-cap-text { flex: 1; font-size: var(--text-sm); line-height: 1.4; }
+.ai-cap-upgrade-btn {
+  background: var(--brand-accent);
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  min-height: 44px;
+  transition: background var(--transition-fast);
+}
+.ai-cap-upgrade-btn:hover { background: var(--brand-accent-dark); }
+.ai-daily-count {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  margin-bottom: 0.75rem;
+  font-weight: 500;
+}
+.ai-suggestion-card.collapsed { display: none; }
+
+/* ── 20. Recurring Bills ──────────────────────────────────────────────── */
+.recurring-bills-section {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 2rem;
+}
+.recurring-bills-title {
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  color: var(--navy);
+  margin-bottom: 0.75rem;
+}
+.bill-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.7rem 0;
+  border-bottom: 1px solid var(--border);
+  gap: 0.75rem;
+}
+.bill-row:last-child { border-bottom: none; }
+.bill-row-info {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex: 1;
+  min-width: 0;
+}
+.bill-type-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.bill-name {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--navy);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+}
+.bill-raw-name {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 160px;
+  display: block;
+}
+.bill-toggle-btn {
+  padding: 0.3rem 0.75rem;
+  border-radius: var(--radius-full);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  font-family: var(--font-ui);
+  min-height: 32px;
+  transition: background var(--transition-fast), color var(--transition-fast);
+  flex-shrink: 0;
+}
+.bill-toggle-btn.active { background: #D4EDEC; color: var(--green-muted); }
+.bill-toggle-btn.disabled-state { background: var(--cream-dark); color: var(--text-muted); }
+
+/* ── 21. Dashboard Visual Hierarchy ───────────────────────────────────── */
+.ai-suggestions-section::before {
+  content: '';
+  display: block;
+  height: 1px;
+  background: var(--border);
+  margin-bottom: 1.5rem;
+}
+.spoke-section-title {
+  font-family: var(--font-display) !important;
+  font-size: var(--text-xs) !important;
+  font-weight: 700 !important;
+  color: var(--text-muted) !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.1em !important;
+  margin-bottom: 0.85rem !important;
+  margin-top: 2rem !important;
+}
+
+/* ── 22. Responsive ───────────────────────────────────────────────────── */
+@media (max-width: 480px) {
+  .ai-suggestions-section { padding: 0 0.75rem 1.25rem; }
+  .ai-suggestion-card { padding: 0.9rem 1rem; }
+  .ai-suggestion-actions { flex-direction: column; }
+  .ai-sugg-btn { width: 100%; }
+  .recurring-bills-section { padding: 0 0.75rem; }
+  .bill-raw-name { display: none; }
+}
+@media (max-width: 375px) {
+  .ai-suggestion-title { font-size: var(--text-sm); }
+  .spoke-section { padding: 0 0.5rem 1rem !important; }
+  .app-nav-inner { padding: 0.65rem 0.75rem !important; }
+}

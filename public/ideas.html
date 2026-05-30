@@ -1,0 +1,1059 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link rel="icon" type="image/png" sizes="32x32" href="/icons/fl-icon.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/icons/fl-icon.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/fl-icon.png">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Great Ideas — FocusLedger</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+    <!-- Meta Pixel base + PageView -->
+    <script>
+    !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+    n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
+    n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
+    t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,
+    document,'script','https://connect.facebook.net/en_US/fbevents.js');
+    fbq('init','1597499061553078');
+    fbq('track','PageView');
+    </script>
+    <noscript><img height="1" width="1" style="display:none"
+    src="https://www.facebook.com/tr?id=1597499061553078&ev=PageView&noscript=1"/></noscript>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --orange: #c9a84c;
+            --orange-light: #d4b56a;
+            --navy: #011e5c;
+            --navy-mid: #02287a;
+            --navy-light: #033099;
+            --cream: #faf9f7;
+            --cream-dark: #f5f3ef;
+            --text-dark: #1a1a1a;
+            --text-muted: #6b6b6b;
+            --green: #5BA4A4;
+            --green-muted: #4A9292;
+            --purple: #7C3AED;
+            --purple-light: #A78BFA;
+        
+            --success: #7DB87D;
+            --warning: #E07A5F;
+            --error: #E07A5F;
+            --error-light: #FAEAE5;
+            --border: #e8e5e0;
+            --surface: #FFFFFF;
+        }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            color: var(--text-dark);
+            background: var(--cream);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        h1, h2, h3, h4 { font-family: 'Space Grotesk', sans-serif; }
+
+        /* NAV — portal-nav pattern (consistent across all in-app pages) */
+        .portal-nav {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 1.25rem; height: 56px; background: var(--navy);
+            position: sticky; top: 0; z-index: 200; width: 100%;
+        }
+        .portal-logo {
+            font-family: system-ui, sans-serif; font-size: 1.25rem; font-weight: 700;
+            color: white; display: flex; align-items: center; gap: 0.5rem; text-decoration: none;
+        }
+        .logo-dot {
+            width: 10px; height: 10px; background: var(--orange);
+            border-radius: 2px; transform: rotate(45deg);
+        }
+        .portal-nav .nav-links { display: flex; gap: 0.15rem; flex-wrap: wrap; }
+        .portal-nav .nav-link {
+            padding: 0.4rem 0.75rem; font-size: 0.875rem; font-weight: 500;
+            color: rgba(255,255,255,0.75); transition: all 0.15s; white-space: nowrap; text-decoration: none;
+        }
+        .portal-nav .nav-link:hover { background: rgba(255,255,255,0.1); color: white; }
+        .portal-nav .nav-link.active { color: white; border-bottom: 2px solid var(--orange); }
+        @media (max-width: 900px) { .portal-nav .nav-links { display: none; } }
+        .nav-right {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        .back-link {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            transition: color 0.2s;
+        }
+        .back-link:hover { color: var(--orange); }
+        .user-name {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+        .logout-btn {
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-family: 'DM Sans', sans-serif;
+            padding: 0.35rem 0.5rem;
+            border-radius: 6px;
+            transition: color 0.2s, background 0.2s;
+        }
+        .logout-btn:hover { color: var(--orange); background: rgba(201,168,76,0.06); }
+
+        /* PAGE CONTENT */
+        .page-wrapper {
+            max-width: 860px;
+            margin: 0 auto;
+            padding: 2.5rem 2rem 4rem;
+        }
+
+        .page-header {
+            text-align: center;
+            margin-bottom: 2.5rem;
+        }
+        .page-header .header-emoji {
+            font-size: 3rem;
+            display: block;
+            margin-bottom: 0.75rem;
+        }
+        .page-header h1 {
+            font-size: 2rem;
+            color: var(--navy);
+            margin-bottom: 0.6rem;
+        }
+        .page-header p {
+            color: var(--text-muted);
+            font-size: 1rem;
+            max-width: 500px;
+            margin: 0 auto;
+            line-height: 1.5;
+        }
+        .reward-note {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            margin-top: 0.75rem;
+            background: linear-gradient(135deg, rgba(124,58,237,0.08), rgba(167,139,250,0.12));
+            border: 1px solid rgba(124,58,237,0.2);
+            border-radius: 50px;
+            padding: 0.4rem 1rem;
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: var(--purple);
+        }
+
+        /* REWARD NOTIFICATION BANNER */
+        .reward-banner {
+            display: none;
+            background: linear-gradient(135deg, #7C3AED, #A78BFA);
+            color: white;
+            border-radius: 16px;
+            padding: 1.5rem 1.75rem;
+            margin-bottom: 2rem;
+            position: relative;
+            overflow: hidden;
+        }
+        .reward-banner.visible { display: block; }
+        .reward-banner::before {
+            content: '';
+            position: absolute;
+            top: -30%;
+            right: -10%;
+            width: 200px;
+            height: 200px;
+            background: rgba(255,255,255,0.06);
+            border-radius: 50%;
+        }
+        .reward-banner-title {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-bottom: 0.4rem;
+        }
+        .reward-banner-body { font-size: 0.9rem; opacity: 0.92; line-height: 1.5; }
+        .reward-banner-close {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .reward-banner-close:hover { background: rgba(255,255,255,0.35); }
+
+        /* SUBMIT CARD */
+        .submit-card {
+            background: white;
+            border: 2px solid #E8E5E0;
+            border-radius: 20px;
+            padding: 1.75rem 2rem;
+            margin-bottom: 2.5rem;
+            box-shadow: 0 2px 12px rgba(45,42,38,0.04);
+        }
+        .submit-card h2 {
+            font-size: 1.1rem;
+            color: var(--navy);
+            margin-bottom: 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        .form-group label {
+            display: block;
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            letter-spacing: 0.03em;
+            text-transform: uppercase;
+            margin-bottom: 0.4rem;
+        }
+        .form-group input, .form-group textarea {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 1.5px solid #E8E4DF;
+            border-radius: 12px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.95rem;
+            color: var(--text-dark);
+            background: #FAFAF8;
+            outline: none;
+            transition: border-color 0.2s, background 0.2s;
+            resize: none;
+        }
+        .form-group input:focus, .form-group textarea:focus {
+            border-color: var(--orange-light);
+            background: white;
+        }
+        .form-group textarea { min-height: 90px; line-height: 1.5; }
+        .char-count {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-align: right;
+            margin-top: 0.25rem;
+        }
+        .char-count.warn { color: #E07A5F; }
+        .submit-row {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            gap: 0.75rem;
+            margin-top: 1.25rem;
+        }
+        .submit-hint {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            flex: 1;
+        }
+        .btn-submit {
+            background: var(--orange);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            padding: 0.7rem 1.5rem;
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.1s;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+        .btn-submit:hover { background: var(--orange-light); transform: translateY(-1px); }
+        .btn-submit:active { transform: translateY(0); }
+        .btn-submit:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+        /* IDEAS LIST */
+        .ideas-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        .ideas-header h2 { font-size: 1.2rem; color: var(--navy); }
+        .idea-count {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .ideas-list { display: flex; flex-direction: column; gap: 1rem; }
+        .idea-card {
+            background: white;
+            border: 1.5px solid #E8E5E0;
+            border-radius: 16px;
+            padding: 1.25rem 1.5rem;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            position: relative;
+        }
+        .idea-card:hover {
+            border-color: #D8D5D0;
+            box-shadow: 0 2px 16px rgba(45,42,38,0.05);
+        }
+        .idea-card.status-selected {
+            border-color: rgba(124,58,237,0.3);
+            background: linear-gradient(135deg, #FDFCFF, #F9F6FF);
+        }
+        .idea-card.status-shipped {
+            border-color: rgba(91,164,164,0.4);
+            background: linear-gradient(135deg, #FAFFFD, #F4FEFC);
+        }
+        .idea-card-top {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 1rem;
+            margin-bottom: 0.5rem;
+        }
+        .idea-title {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--navy);
+            flex: 1;
+        }
+        .idea-status-badge {
+            flex-shrink: 0;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            padding: 0.25rem 0.75rem;
+            border-radius: 50px;
+            letter-spacing: 0.02em;
+        }
+        .badge-submitted {
+            background: #F0F0F8;
+            color: #6B6560;
+        }
+        .badge-under_review {
+            background: #FFF8E1;
+            color: #D97706;
+        }
+        .badge-selected {
+            background: linear-gradient(135deg, rgba(124,58,237,0.12), rgba(167,139,250,0.15));
+            color: var(--purple);
+        }
+        .badge-shipped {
+            background: #D4EDEC;
+            color: var(--green-muted);
+        }
+        .idea-description {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            line-height: 1.5;
+            margin-bottom: 0.75rem;
+        }
+        .idea-meta {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 0.78rem;
+            color: var(--text-muted);
+        }
+        .idea-meta-dot {
+            width: 3px;
+            height: 3px;
+            border-radius: 50%;
+            background: var(--text-muted);
+            opacity: 0.5;
+        }
+        .idea-mine-tag {
+            background: rgba(201,168,76,0.1);
+            color: var(--orange);
+            font-size: 0.72rem;
+            font-weight: 600;
+            padding: 0.15rem 0.5rem;
+            border-radius: 4px;
+        }
+        .idea-actions {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 0.75rem;
+            flex-wrap: wrap;
+        }
+        .btn-idea-action {
+            font-size: 0.78rem;
+            font-weight: 600;
+            padding: 0.3rem 0.8rem;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-family: 'DM Sans', sans-serif;
+            transition: background 0.15s, color 0.15s;
+        }
+        .btn-delete {
+            background: #FEF2F2;
+            color: #DC2626;
+        }
+        .btn-delete:hover { background: #FEE2E2; }
+        .btn-status {
+            background: #F0F4FF;
+            color: #3B5BDB;
+        }
+        .btn-status:hover { background: #E0E9FF; }
+        .btn-status.active-status {
+            background: linear-gradient(135deg, rgba(124,58,237,0.1), rgba(167,139,250,0.15));
+            color: var(--purple);
+        }
+
+        /* ADMIN STATUS SELECT */
+        .admin-status-wrap {
+            margin-top: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .admin-label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            letter-spacing: 0.03em;
+        }
+        .admin-status-select {
+            font-size: 0.82rem;
+            font-family: 'DM Sans', sans-serif;
+            border: 1.5px solid #E8E4DF;
+            border-radius: 8px;
+            padding: 0.3rem 0.6rem;
+            background: white;
+            color: var(--text-dark);
+            cursor: pointer;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .admin-status-select:focus { border-color: var(--orange-light); }
+        .btn-apply-status {
+            font-size: 0.78rem;
+            font-weight: 600;
+            padding: 0.3rem 0.8rem;
+            border-radius: 8px;
+            border: none;
+            background: var(--navy);
+            color: white;
+            cursor: pointer;
+            font-family: 'DM Sans', sans-serif;
+            transition: background 0.15s;
+        }
+        .btn-apply-status:hover { background: var(--navy-mid); }
+
+        /* EMPTY STATE */
+        .empty-state {
+            text-align: center;
+            padding: 3rem 1.5rem;
+            color: var(--text-muted);
+        }
+        .empty-state-emoji { font-size: 2.5rem; display: block; margin-bottom: 0.75rem; }
+        .empty-state p { font-size: 0.95rem; }
+
+        /* LOADING */
+        .loading-state {
+            text-align: center;
+            padding: 2.5rem;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        /* TOAST */
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%) translateY(8px);
+            background: var(--navy);
+            color: white;
+            font-size: 0.9rem;
+            font-weight: 500;
+            padding: 0.75rem 1.5rem;
+            border-radius: 12px;
+            opacity: 0;
+            transition: opacity 0.25s, transform 0.25s;
+            pointer-events: none;
+            z-index: 9999;
+            white-space: nowrap;
+        }
+        .toast.visible {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        /* CONFETTI CANVAS */
+        #confettiCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 9998;
+        }
+
+        /* SETTINGS LINK */
+        .settings-link {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            text-decoration: none;
+            transition: color 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+        .settings-link:hover {
+            color: var(--orange);
+        }
+
+        /* ADMIN BADGE */
+        .admin-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            background: rgba(124,58,237,0.1);
+            color: var(--purple);
+            font-size: 0.72rem;
+            font-weight: 700;
+            padding: 0.2rem 0.6rem;
+            border-radius: 6px;
+            letter-spacing: 0.04em;
+        }
+
+        /* Responsive */
+        @media (max-width: 600px) {
+            .page-wrapper { padding: 1.5rem 1rem 3rem; }
+            .submit-card { padding: 1.25rem; }
+            .idea-card { padding: 1rem 1.1rem; }
+            .submit-row { flex-direction: column; align-items: stretch; }
+            .btn-submit { justify-content: center; }
+        }
+
+        /* ── Bottom Tabs (mobile fixed bar) ── */
+        .bottom-tabs {
+            display: none; position: fixed; bottom: 0; left: 0; right: 0;
+            background: var(--navy); z-index: 200;
+            padding: 0.5rem 0; padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+        }
+        .bottom-tabs-inner {
+            display: flex; justify-content: space-around;
+            max-width: 600px; margin: 0 auto;
+        }
+        .tab-btn {
+            display: flex; flex-direction: column; align-items: center; gap: 0.2rem;
+            padding: 0.4rem 0.75rem; border: none; background: none; cursor: pointer;
+            font-size: 0.7rem; color: rgba(255,255,255,0.6); font-family: 'DM Sans', sans-serif;
+            transition: color 0.15s;
+        }
+        .tab-btn.active { color: var(--orange); }
+        .tab-btn-icon { font-size: 1.2rem; }
+        @media (max-width: 900px) {
+            .bottom-tabs { display: block; }
+            body { padding-bottom: calc(70px + env(safe-area-inset-bottom)); }
+        }
+        @media (min-width: 901px) { .bottom-tabs { display: none !important; } }
+    </style>
+<link rel="stylesheet" href="/css/design-system.css">
+</head>
+<body>
+
+    <!-- NAV -->
+    <nav class="portal-nav">
+        <a href="/home" class="portal-logo"><span class="logo-dot"></span>FocusLedger</a>
+        <div class="nav-links">
+            <a href="/home" class="nav-link">Home</a>
+            <a href="/app/tasks" class="nav-link">Tasks</a>
+            <a href="/app/money" class="nav-link">Money</a>
+            <a href="/app/life" class="nav-link">Life</a>
+            <a href="/news" class="nav-link">News</a>
+            <a href="/app/vault" class="nav-link">Vault</a>
+            <a href="/ideas" class="nav-link active">Ideas</a>
+            <a href="/journal" class="nav-link">Journal</a>
+            <a href="/settings" class="nav-link">Settings</a>
+        </div>
+        <div class="nav-right">
+            <a href="/admin/stats" class="settings-link" id="adminStatsLink" style="display:none;color:rgba(255,255,255,0.75);text-decoration:none;font-size:0.82rem;" title="Admin Dashboard">📊 Admin Stats</a>
+            <span class="admin-badge" id="adminBadge" style="display:none;cursor:default;">⚡ Admin</span>
+            <button class="logout-btn" id="logoutBtn" style="font-size:0.8rem;color:rgba(255,255,255,0.65);background:none;border:none;cursor:pointer;padding:0.35rem 0.6rem;border-radius:4px;">Logout</button>
+        </div>
+    </nav>
+
+    <canvas id="confettiCanvas"></canvas>
+
+    <div class="page-wrapper">
+
+        <!-- HEADER -->
+        <div class="page-header">
+            <span class="header-emoji">💡</span>
+            <h1>Great Ideas</h1>
+            <p>Got a feature in mind? Submit it here. If we pick it, you get 3 days free — on us.</p>
+            <span class="reward-note">🎁 Selected ideas earn a 3-day subscription credit</span>
+        </div>
+
+        <!-- REWARD NOTIFICATION BANNER -->
+        <div class="reward-banner" id="rewardBanner">
+            <button class="reward-banner-close" id="rewardBannerClose">×</button>
+            <div class="reward-banner-title" id="rewardBannerTitle">🎉 Your idea was selected!</div>
+            <div class="reward-banner-body" id="rewardBannerBody"></div>
+        </div>
+
+        <!-- SUBMIT FORM -->
+        <div class="submit-card">
+            <h2>✍️ Share your idea</h2>
+            <div class="form-group">
+                <label>Title</label>
+                <input type="text" id="ideaTitle" placeholder="What would make FocusLedger better?" maxlength="280" autocomplete="off">
+                <div class="char-count" id="titleCount">0 / 280</div>
+            </div>
+            <div class="form-group">
+                <label>Description <span style="font-weight:400;text-transform:none;letter-spacing:0">(optional)</span></label>
+                <textarea id="ideaDesc" placeholder="A bit more detail helps us understand the value..."></textarea>
+            </div>
+            <div class="submit-row">
+                <span class="submit-hint">Ideas are public — everyone can see and upvote them.</span>
+                <button class="btn-submit" id="submitBtn">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                    Submit idea
+                </button>
+            </div>
+        </div>
+
+        <!-- IDEAS LIST -->
+        <div class="ideas-header">
+            <h2>All Ideas</h2>
+            <span class="idea-count" id="ideaCount"></span>
+        </div>
+
+        <div id="ideasList" class="ideas-list">
+            <div class="loading-state">Loading ideas...</div>
+        </div>
+
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+    (function() {
+        var token = localStorage.getItem('fl_token');
+        if (!token) {
+            window.location.href = '/login';
+            return;
+        }
+
+        var currentUserId = null;
+        var isAdmin = false;
+
+        // ===========================
+        // API helper
+        // ===========================
+        function api(method, path, body) {
+            var opts = {
+                method: method,
+                headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' }
+            };
+            if (body) opts.body = JSON.stringify(body);
+            return fetch('/api/ideas' + path, opts)
+                .then(function(r) { return r.json(); });
+        }
+
+        // ===========================
+        // Auth / user name
+        // ===========================
+        fetch('/api/auth/me', { headers: { 'Authorization': 'Bearer ' + token } })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (!data.success) { localStorage.removeItem('fl_token'); window.location.href = '/login'; return; }
+                document.getElementById('userName').textContent = data.user.name || data.user.email;
+            })
+            .catch(function() {});
+
+        document.getElementById('logoutBtn').addEventListener('click', function() {
+            localStorage.removeItem('fl_token');
+            window.location.href = '/login';
+        });
+
+        // ===========================
+        // Char count
+        // ===========================
+        var titleInput = document.getElementById('ideaTitle');
+        var titleCount = document.getElementById('titleCount');
+        titleInput.addEventListener('input', function() {
+            var len = titleInput.value.length;
+            titleCount.textContent = len + ' / 280';
+            titleCount.className = 'char-count' + (len > 250 ? ' warn' : '');
+        });
+
+        // ===========================
+        // Status helpers
+        // ===========================
+        var STATUS_LABELS = {
+            submitted: '● Submitted',
+            under_review: '◉ Under review',
+            selected: '★ Selected',
+            shipped: '✓ Shipped'
+        };
+        var STATUS_CLASSES = {
+            submitted: 'badge-submitted',
+            under_review: 'badge-under_review',
+            selected: 'badge-selected',
+            shipped: 'badge-shipped'
+        };
+        function statusBadge(status) {
+            return '<span class="idea-status-badge ' + (STATUS_CLASSES[status] || 'badge-submitted') + '">' + (STATUS_LABELS[status] || status) + '</span>';
+        }
+        function timeAgo(dateStr) {
+            var diff = Date.now() - new Date(dateStr).getTime();
+            var mins = Math.floor(diff / 60000);
+            if (mins < 2) return 'just now';
+            if (mins < 60) return mins + 'm ago';
+            var h = Math.floor(mins / 60);
+            if (h < 24) return h + 'h ago';
+            var d = Math.floor(h / 24);
+            if (d < 30) return d + 'd ago';
+            var mo = Math.floor(d / 30);
+            return mo + 'mo ago';
+        }
+        function formatCents(cents) {
+            return '$' + (cents / 100).toFixed(2);
+        }
+
+        // ===========================
+        // Render ideas list
+        // ===========================
+        function renderIdeas(ideas) {
+            var container = document.getElementById('ideasList');
+            var ideaCount = document.getElementById('ideaCount');
+
+            ideaCount.textContent = ideas.length + ' idea' + (ideas.length !== 1 ? 's' : '');
+
+            if (!ideas.length) {
+                container.innerHTML = '<div class="empty-state"><span class="empty-state-emoji">🌱</span><p>No ideas yet — be the first to share one!</p></div>';
+                return;
+            }
+
+            container.innerHTML = ideas.map(function(idea) {
+                var isMine = idea.user_id === currentUserId;
+                var html = '<div class="idea-card status-' + idea.status + '" id="idea-' + idea.id + '">';
+                html += '<div class="idea-card-top">';
+                html += '<div class="idea-title">' + escHtml(idea.title) + '</div>';
+                html += statusBadge(idea.status);
+                html += '</div>';
+                if (idea.description) {
+                    html += '<div class="idea-description">' + escHtml(idea.description) + '</div>';
+                }
+                html += '<div class="idea-meta">';
+                html += '<span>' + escHtml(idea.submitter_name || 'Anonymous') + '</span>';
+                html += '<span class="idea-meta-dot"></span>';
+                html += '<span>' + timeAgo(idea.created_at) + '</span>';
+                if (isMine) {
+                    html += '<span class="idea-meta-dot"></span>';
+                    html += '<span class="idea-mine-tag">Your idea</span>';
+                }
+                if (idea.reward_applied && idea.reward_amount_cents > 0) {
+                    html += '<span class="idea-meta-dot"></span>';
+                    html += '<span style="color:var(--purple);font-weight:600;">🎁 ' + formatCents(idea.reward_amount_cents) + ' credit applied</span>';
+                }
+                html += '</div>';
+
+                // Actions
+                var hasActions = (isMine && idea.status === 'submitted') || isAdmin;
+                if (hasActions) {
+                    html += '<div class="idea-actions">';
+                    if (isMine && idea.status === 'submitted') {
+                        html += '<button class="btn-idea-action btn-delete" onclick="deleteIdea(' + idea.id + ')">Delete</button>';
+                    }
+                    if (isAdmin) {
+                        html += '<div class="admin-status-wrap">';
+                        html += '<span class="admin-label">⚡ Status:</span>';
+                        html += '<select class="admin-status-select" id="status-select-' + idea.id + '">';
+                        ['submitted', 'under_review', 'selected', 'shipped'].forEach(function(s) {
+                            html += '<option value="' + s + '"' + (idea.status === s ? ' selected' : '') + '>' + s.replace('_', ' ') + '</option>';
+                        });
+                        html += '</select>';
+                        html += '<button class="btn-apply-status" onclick="applyStatus(' + idea.id + ')">Apply</button>';
+                        html += '</div>';
+                    }
+                    html += '</div>';
+                }
+
+                html += '</div>';
+                return html;
+            }).join('');
+        }
+
+        window.deleteIdea = function(id) {
+            if (!confirm('Delete this idea?')) return;
+            api('DELETE', '/' + id)
+                .then(function(data) {
+                    if (data.success) { showToast('Idea deleted.'); loadIdeas(); }
+                    else showToast(data.message || 'Failed to delete');
+                })
+                .catch(function() {
+                    showToast('Network error — could not delete idea');
+                });
+        };
+
+        window.applyStatus = function(id) {
+            var sel = document.getElementById('status-select-' + id);
+            if (!sel) return;
+            var newStatus = sel.value;
+            api('PATCH', '/' + id + '/status', { status: newStatus })
+                .then(function(data) {
+                    if (data.success) {
+                        showToast('Status updated to "' + newStatus.replace('_', ' ') + '"');
+                        loadIdeas();
+                    } else {
+                        showToast(data.message || 'Failed to update status');
+                    }
+                })
+                .catch(function() {
+                    showToast('Network error — could not update status. Please try again.');
+                });
+        };
+
+        // ===========================
+        // Load ideas
+        // ===========================
+        function loadIdeas() {
+            api('GET', '/')
+                .then(function(data) {
+                    if (!data.success) return;
+                    currentUserId = data.current_user_id;
+                    isAdmin = !!data.is_admin;
+                    if (isAdmin) {
+                        document.getElementById('adminBadge').style.display = 'inline-flex';
+                        var statsLink = document.getElementById('adminStatsLink');
+                        if (statsLink) statsLink.style.display = '';
+                    }
+                    renderIdeas(data.ideas);
+                })
+                .catch(function() {
+                    document.getElementById('ideasList').innerHTML = '<div class="loading-state">Failed to load ideas.</div>';
+                });
+        }
+
+        // ===========================
+        // Check reward notifications
+        // ===========================
+        function checkRewardNotifications() {
+            api('GET', '/my-notifications')
+                .then(function(data) {
+                    if (!data.success || !data.notifications.length) return;
+                    var notif = data.notifications[0]; // Show first unread
+                    var title = notif.status === 'shipped' ? '🚀 Your idea shipped!' : '🎉 Your idea was selected!';
+                    var body = '"' + notif.title + '" ';
+                    if (notif.reward_applied && notif.reward_amount_cents > 0) {
+                        body += 'was ' + (notif.status === 'shipped' ? 'shipped' : 'selected') + '! We\'ve applied a <strong>' + formatCents(notif.reward_amount_cents) + ' credit</strong> to your account — it\'ll be deducted from your next billing cycle. Thank you for making FocusLedger better! 🙌';
+                    } else {
+                        body += 'was ' + (notif.status === 'shipped' ? 'shipped' : 'selected') + '! Thank you for making FocusLedger better! 🙌 (Credit applies to Autopilot subscribers.)';
+                    }
+                    document.getElementById('rewardBannerTitle').innerHTML = title;
+                    document.getElementById('rewardBannerBody').innerHTML = body;
+                    document.getElementById('rewardBanner').classList.add('visible');
+                    // Ack the notification
+                    api('POST', '/' + notif.id + '/ack-reward');
+                    // Celebrate!
+                    triggerCelebration();
+                })
+                .catch(function() {});
+        }
+
+        document.getElementById('rewardBannerClose').addEventListener('click', function() {
+            document.getElementById('rewardBanner').classList.remove('visible');
+        });
+
+        // ===========================
+        // Submit idea
+        // ===========================
+        document.getElementById('submitBtn').addEventListener('click', function() {
+            var title = document.getElementById('ideaTitle').value.trim();
+            var desc = document.getElementById('ideaDesc').value.trim();
+
+            if (!title) {
+                document.getElementById('ideaTitle').focus();
+                showToast('Please add a title for your idea.');
+                return;
+            }
+
+            var btn = this;
+            btn.disabled = true;
+            btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="2" x2="12" y2="6"></line><line x1="12" y1="18" x2="12" y2="22"></line><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"></line><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"></line><line x1="2" y1="12" x2="6" y2="12"></line><line x1="18" y1="12" x2="22" y2="12"></line><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"></line><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"></line></svg> Submitting...';
+
+            api('POST', '/', { title: title, description: desc })
+                .then(function(data) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg> Submit idea';
+                    if (data.success) {
+                        document.getElementById('ideaTitle').value = '';
+                        document.getElementById('ideaDesc').value = '';
+                        document.getElementById('titleCount').textContent = '0 / 200';
+                        showToast('✅ Idea submitted! Thanks for helping shape FocusLedger.');
+                        triggerSubmitConfetti();
+                        loadIdeas();
+                    } else {
+                        showToast(data.message || 'Failed to submit idea');
+                    }
+                })
+                .catch(function() {
+                    btn.disabled = false;
+                    btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg> Submit idea';
+                    showToast('Network error. Try again.');
+                });
+        });
+
+        // ===========================
+        // Toast
+        // ===========================
+        function showToast(msg) {
+            var t = document.getElementById('toast');
+            t.textContent = msg;
+            t.classList.add('visible');
+            setTimeout(function() { t.classList.remove('visible'); }, 3000);
+        }
+
+        // ===========================
+        // HTML escape
+        // ===========================
+        function escHtml(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+        }
+
+        // ===========================
+        // Confetti
+        // ===========================
+        var confettiParticles = [];
+        var confettiAnimId = null;
+        var canvas = document.getElementById('confettiCanvas');
+        var ctx = canvas.getContext('2d');
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        function randomBetween(a, b) { return a + Math.random() * (b - a); }
+
+        var CONFETTI_COLORS = ['#c9a84c', '#7C3AED', '#5BA4A4', '#FFD700', '#FF6B9D', '#1a1a1a'];
+
+        function createParticle(x, y) {
+            return {
+                x: x, y: y,
+                vx: randomBetween(-4, 4),
+                vy: randomBetween(-9, -3),
+                size: randomBetween(5, 11),
+                color: CONFETTI_COLORS[Math.floor(Math.random() * CONFETTI_COLORS.length)],
+                rotation: randomBetween(0, 360),
+                rotationSpeed: randomBetween(-5, 5),
+                opacity: 1,
+                shape: Math.random() > 0.5 ? 'rect' : 'circle'
+            };
+        }
+
+        function triggerSubmitConfetti() {
+            confettiParticles = [];
+            for (var i = 0; i < 55; i++) {
+                confettiParticles.push(createParticle(
+                    randomBetween(canvas.width * 0.2, canvas.width * 0.8),
+                    canvas.height * 0.4
+                ));
+            }
+            animateConfetti();
+        }
+
+        function triggerCelebration() {
+            confettiParticles = [];
+            for (var i = 0; i < 120; i++) {
+                confettiParticles.push(createParticle(
+                    randomBetween(0, canvas.width),
+                    randomBetween(-50, canvas.height * 0.3)
+                ));
+            }
+            animateConfetti();
+        }
+
+        function animateConfetti() {
+            if (confettiAnimId) cancelAnimationFrame(confettiAnimId);
+            function frame() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                var alive = false;
+                confettiParticles.forEach(function(p) {
+                    p.vy += 0.25;
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    p.rotation += p.rotationSpeed;
+                    if (p.y < canvas.height + 30) {
+                        alive = true;
+                        p.opacity = Math.max(0, 1 - (p.y / canvas.height) * 0.8);
+                        ctx.save();
+                        ctx.globalAlpha = p.opacity;
+                        ctx.translate(p.x, p.y);
+                        ctx.rotate(p.rotation * Math.PI / 180);
+                        ctx.fillStyle = p.color;
+                        if (p.shape === 'rect') {
+                            ctx.fillRect(-p.size / 2, -p.size / 4, p.size, p.size / 2);
+                        } else {
+                            ctx.beginPath();
+                            ctx.arc(0, 0, p.size / 2, 0, Math.PI * 2);
+                            ctx.fill();
+                        }
+                        ctx.restore();
+                    }
+                });
+                if (alive) {
+                    confettiAnimId = requestAnimationFrame(frame);
+                } else {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    confettiAnimId = null;
+                }
+            }
+            confettiAnimId = requestAnimationFrame(frame);
+        }
+
+        // ===========================
+        // Init
+        // ===========================
+        loadIdeas();
+        checkRewardNotifications();
+
+    })();
+    </script>
+  <!-- Shared navigation (bottom bar mobile, left sidebar desktop) -->
+  <link rel="stylesheet" href="/shared-nav.css">
+  <script src="/shared-nav.js"></script>
+  <script src="/buddy-widget.js"></script>
+    <!-- Analytics -->
+    <script src="/js/analytics.js"></script>
+    <script>(function(){try{var u=JSON.parse(localStorage.getItem('fl_user')||'{}');if(u.id)FLA.setUser(u.id);}catch(e){}FLA.trackPage('ideas');FLA.trackEvent('feature_use_ideas');})()</script>
+</body>
+</html>

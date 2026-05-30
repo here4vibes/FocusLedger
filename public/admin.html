@@ -1,0 +1,3132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link rel="icon" type="image/png" sizes="32x32" href="/icons/fl-icon.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/icons/fl-icon.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/fl-icon.png">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin — FocusLedger</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --orange: #E8913A;
+            --orange-light: #F0A855;
+            --navy: #2D2A26;
+            --navy-mid: #3D3A36;
+            --navy-light: #4D4A46;
+            --cream: #FAF9F6;
+            --cream-dark: #F0EEE9;
+            --text-dark: #2D2A26;
+            --text-muted: #6B6560;
+            --green: #5BA4A4;
+            --green-light: #d4edec;
+            --red: #e07a5f;
+            --red-light: #faeae5;
+            --border: rgba(0,0,0,0.06);
+            --purple: #7C3AED;
+            --purple-light: #e8eaf6;
+        
+            --success: #7DB87D;
+            --warning: #E07A5F;
+            --error: #E07A5F;
+            --error-light: #FAEAE5;
+            --border: #E8E5E0;
+            --surface: #FFFFFF;
+        }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            color: var(--text-dark);
+            background: var(--cream);
+            min-height: 100vh;
+        }
+
+        h1, h2, h3, h4 { font-family: 'Space Grotesk', sans-serif; }
+
+        /* NAV */
+        .app-nav {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: rgba(250, 249, 246, 0.92);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border);
+        }
+        .app-nav-inner {
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .logo {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--navy);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            text-decoration: none;
+        }
+        .logo-dot {
+            width: 11px;
+            height: 11px;
+            background: var(--orange);
+            border-radius: 3px;
+            transform: rotate(45deg);
+        }
+        .admin-badge {
+            background: var(--navy);
+            color: #fff;
+            font-size: 0.7rem;
+            font-weight: 600;
+            letter-spacing: 0.05em;
+            padding: 3px 8px;
+            border-radius: 4px;
+            text-transform: uppercase;
+            cursor: default;
+            pointer-events: none;
+            user-select: none;
+        }
+        .nav-right {
+            display: flex;
+            align-items: center;
+            gap: 1.2rem;
+        }
+        .nav-link {
+            font-size: 0.875rem;
+            color: var(--text-muted);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+        .nav-link:hover { color: var(--orange); }
+
+        /* MAIN */
+        .main {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2.5rem 2rem 4rem;
+        }
+
+        .page-header {
+            margin-bottom: 2rem;
+        }
+        .page-header h1 {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: var(--navy);
+        }
+        .page-header p {
+            margin-top: 0.4rem;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+
+        /* TABS */
+        .tab-bar {
+            display: flex;
+            gap: 0.25rem;
+            margin-bottom: 2rem;
+            border-bottom: 2px solid var(--cream-dark);
+            padding-bottom: 0;
+        }
+        .tab-btn {
+            background: none;
+            border: none;
+            padding: 0.6rem 1.4rem;
+            font-size: 0.9rem;
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 600;
+            color: var(--text-muted);
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+            transition: color 0.2s, border-color 0.2s;
+            border-radius: 6px 6px 0 0;
+        }
+        .tab-btn:hover { color: var(--navy); }
+        .tab-btn.active {
+            color: var(--orange);
+            border-bottom-color: var(--orange);
+        }
+
+        /* GRID */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 1.25rem;
+        }
+
+        .stat-card {
+            background: #fff;
+            border-radius: 14px;
+            padding: 1.5rem 1.75rem;
+            border: 1px solid var(--border);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            transition: box-shadow 0.2s;
+        }
+        .stat-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.08); }
+        .stat-card.highlight { background: var(--navy); color: #fff; border-color: var(--navy); }
+        .stat-card.highlight .stat-label { color: rgba(255,255,255,0.55); }
+        .stat-card.highlight .stat-value { color: #fff; }
+        .stat-card.orange-card {
+            background: linear-gradient(135deg, var(--orange) 0%, var(--orange-light) 100%);
+            color: #fff;
+            border-color: var(--orange);
+        }
+        .stat-card.orange-card .stat-label { color: rgba(255,255,255,0.75); }
+        .stat-card.orange-card .stat-value { color: #fff; }
+        .stat-icon { font-size: 1.4rem; margin-bottom: 0.75rem; display: block; }
+        .stat-value {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 2.2rem;
+            font-weight: 700;
+            color: var(--navy);
+            line-height: 1;
+        }
+        .stat-value.large { font-size: 2.5rem; }
+        .stat-label {
+            font-size: 0.8rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            margin-top: 0.5rem;
+        }
+        .stat-sub { font-size: 0.8rem; color: var(--text-muted); margin-top: 0.4rem; }
+        .highlight .stat-sub, .orange-card .stat-sub { color: rgba(255,255,255,0.6); }
+
+        /* SECTION LABEL */
+        .section-label {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-muted);
+            margin: 2.5rem 0 1rem;
+        }
+
+        /* LOADING / ERROR */
+        .loading-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: var(--text-muted);
+        }
+        .loading-state .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--cream-dark);
+            border-top-color: var(--orange);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 1rem;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .error-state {
+            background: #fff0f0;
+            border: 1px solid #ffd0d0;
+            border-radius: 12px;
+            padding: 1.5rem 2rem;
+            color: #c0392b;
+            font-size: 0.9rem;
+        }
+        .success-state {
+            background: var(--green-light);
+            border: 1px solid #b2e6e0;
+            border-radius: 12px;
+            padding: 1rem 1.5rem;
+            color: #1a6b60;
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+        }
+
+        /* BUTTONS */
+        .btn-refresh {
+            background: var(--orange);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 0.5rem 1.1rem;
+            font-size: 0.85rem;
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.1s;
+        }
+        .btn-refresh:hover { background: var(--orange-light); }
+        .btn-refresh:active { transform: scale(0.97); }
+
+        .generated-at {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            margin-top: 2.5rem;
+        }
+
+        /* USERS TABLE */
+        .users-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.25rem;
+        }
+        .users-header h2 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--navy);
+        }
+        .users-count {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+        .users-table-wrap {
+            background: #fff;
+            border-radius: 14px;
+            border: 1px solid var(--border);
+            overflow-x: auto;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+        .users-table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 900px;
+        }
+        .users-table th {
+            text-align: left;
+            padding: 0.875rem 1rem;
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 0.72rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-muted);
+            background: var(--cream);
+            border-bottom: 1px solid var(--cream-dark);
+            white-space: nowrap;
+        }
+        .users-table td {
+            padding: 0.875rem 1rem;
+            font-size: 0.875rem;
+            border-bottom: 1px solid var(--cream-dark);
+            vertical-align: middle;
+        }
+        .users-table tr:last-child td { border-bottom: none; }
+        .users-table tr:hover td { background: rgba(232,145,58,0.03); }
+
+        .user-email {
+            font-weight: 500;
+            color: var(--navy);
+            word-break: break-all;
+        }
+        .user-since {
+            color: var(--text-muted);
+            font-size: 0.8rem;
+        }
+
+        /* BADGE STYLES */
+        .pro-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            font-family: 'Space Grotesk', sans-serif;
+        }
+        .pro-badge.stripe {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+        .pro-badge.admin {
+            background: var(--purple-light);
+            color: #3949ab;
+        }
+        .pro-badge.free {
+            background: var(--cream-dark);
+            color: var(--text-muted);
+        }
+
+        /* ADMIN BADGE */
+        .admin-role-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            font-family: 'Space Grotesk', sans-serif;
+        }
+        .admin-role-badge.yes {
+            background: var(--purple-light);
+            color: var(--purple);
+        }
+        .admin-role-badge.no {
+            background: var(--cream-dark);
+            color: var(--text-muted);
+        }
+
+        /* TOGGLE BUTTON */
+        .toggle-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            font-family: 'Space Grotesk', sans-serif;
+            border: 1.5px solid;
+            cursor: pointer;
+            transition: background 0.2s, color 0.2s, border-color 0.2s;
+            white-space: nowrap;
+        }
+        .toggle-btn.grant {
+            background: var(--purple-light);
+            color: #3949ab;
+            border-color: #7986cb;
+        }
+        .toggle-btn.grant:hover {
+            background: #c5cae9;
+        }
+        .toggle-btn.revoke {
+            background: var(--cream-dark);
+            color: var(--text-muted);
+            border-color: #ccc;
+        }
+        .toggle-btn.revoke:hover {
+            background: var(--red-light);
+            color: var(--red);
+            border-color: var(--red);
+        }
+        .toggle-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .toggle-btn.loading::after {
+            content: '...';
+            animation: blink 1s infinite;
+        }
+        @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+        /* Action cell with two buttons */
+        .action-cell {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        /* ADMIN TOGGLE */
+        .admin-toggle-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            font-family: 'Space Grotesk', sans-serif;
+            border: 1.5px solid;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        .admin-toggle-btn.grant-admin {
+            background: #fff;
+            color: var(--purple);
+            border-color: var(--purple);
+        }
+        .admin-toggle-btn.grant-admin:hover {
+            background: var(--purple-light);
+        }
+        .admin-toggle-btn.revoke-admin {
+            background: var(--cream-dark);
+            color: var(--text-muted);
+            border-color: #ccc;
+        }
+        .admin-toggle-btn.revoke-admin:hover {
+            background: var(--red-light);
+            color: var(--red);
+            border-color: var(--red);
+        }
+        .admin-toggle-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+        .admin-toggle-btn.self-label {
+            opacity: 0.5;
+            cursor: default;
+            border-style: dashed;
+        }
+
+        /* QA USER BADGE */
+        .qa-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            font-family: 'Space Grotesk', sans-serif;
+        }
+        .qa-badge.yes {
+            background: #fff3e0;
+            color: #e65100;
+        }
+        .qa-badge.no {
+            background: var(--cream-dark);
+            color: var(--text-muted);
+        }
+        /* QA TOGGLE BUTTON */
+        .qa-toggle-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            font-family: 'Space Grotesk', sans-serif;
+            border: 1.5px solid;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        .qa-toggle-btn.set-qa {
+            background: #fff;
+            color: #e65100;
+            border-color: #e65100;
+        }
+        .qa-toggle-btn.set-qa:hover { background: #fff3e0; }
+        .qa-toggle-btn.clear-qa {
+            background: var(--cream-dark);
+            color: var(--text-muted);
+            border-color: #ccc;
+        }
+        .qa-toggle-btn.clear-qa:hover {
+            background: var(--green-light);
+            color: #1a6b60;
+            border-color: #1a6b60;
+        }
+        .delete-user-btn {
+            display: inline-flex;
+            align-items: center;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            font-family: 'Space Grotesk', sans-serif;
+            border: 1.5px solid #C0392B;
+            background: #fff;
+            color: #C0392B;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        .delete-user-btn:hover { background: #fdecea; }
+        .delete-user-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        /* Highlight QA rows visually */
+        tr.qa-row td { background: rgba(255,243,224,0.45); }
+
+        /* Stat mini */
+        .stat-mini {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--navy);
+            font-family: 'Space Grotesk', sans-serif;
+        }
+        .stat-mini-label {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+        }
+
+        /* TOAST */
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            padding: 0.875rem 1.25rem;
+            border-radius: 10px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+            opacity: 0;
+            transform: translateY(10px);
+            transition: opacity 0.25s, transform 0.25s;
+            z-index: 9999;
+            max-width: 360px;
+        }
+        .toast.show { opacity: 1; transform: translateY(0); }
+        .toast.success { background: var(--navy); color: #fff; }
+        .toast.error { background: var(--red); color: #fff; }
+
+        /* CONFIRM MODAL */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(45, 42, 38, 0.5);
+            backdrop-filter: blur(4px);
+            z-index: 10000;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-overlay.active {
+            display: flex;
+        }
+        .modal-box {
+            background: #fff;
+            border-radius: 16px;
+            padding: 2rem 2.5rem;
+            max-width: 420px;
+            width: 90%;
+            box-shadow: 0 12px 40px rgba(0,0,0,0.15);
+            text-align: center;
+        }
+        .modal-box h3 {
+            font-size: 1.1rem;
+            color: var(--navy);
+            margin-bottom: 0.75rem;
+        }
+        .modal-box p {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            margin-bottom: 1.5rem;
+            line-height: 1.5;
+        }
+        .modal-actions {
+            display: flex;
+            gap: 0.75rem;
+            justify-content: center;
+        }
+        .modal-btn {
+            padding: 0.6rem 1.6rem;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 600;
+            cursor: pointer;
+            border: 1.5px solid transparent;
+            transition: all 0.2s;
+        }
+        .modal-btn.cancel {
+            background: var(--cream-dark);
+            color: var(--text-muted);
+            border-color: #ccc;
+        }
+        .modal-btn.cancel:hover {
+            background: #e8e0d5;
+        }
+        .modal-btn.confirm-grant {
+            background: var(--purple);
+            color: #fff;
+        }
+        .modal-btn.confirm-grant:hover {
+            background: #6d28d9;
+        }
+        .modal-btn.confirm-revoke {
+            background: var(--red);
+            color: #fff;
+        }
+        .modal-btn.confirm-revoke:hover {
+            background: #c0392b;
+        }
+
+        /* SPARKLINE */
+        .sparkline-wrap {
+            display: flex;
+            align-items: flex-end;
+            gap: 4px;
+            height: 48px;
+            margin-top: 0.75rem;
+        }
+        .spark-bar {
+            flex: 1;
+            background: var(--orange);
+            opacity: 0.75;
+            border-radius: 3px 3px 0 0;
+            min-height: 2px;
+            transition: opacity 0.2s;
+            position: relative;
+        }
+        .spark-bar:hover { opacity: 1; cursor: default; }
+        .spark-bar .spark-tip {
+            display: none;
+            position: absolute;
+            bottom: calc(100% + 4px);
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--navy);
+            color: #fff;
+            font-size: 0.7rem;
+            font-family: 'Space Grotesk', sans-serif;
+            padding: 3px 7px;
+            border-radius: 5px;
+            white-space: nowrap;
+            z-index: 10;
+        }
+        .spark-bar:hover .spark-tip { display: block; }
+        .sparkline-label {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            margin-top: 4px;
+            display: flex;
+            justify-content: space-between;
+        }
+        .traffic-card {
+            background: linear-gradient(135deg, #2D2A26 0%, #3D3A36 100%);
+            color: #fff;
+            border-radius: 16px;
+            padding: 1.4rem 1.6rem;
+            box-shadow: 0 2px 12px rgba(45,42,38,0.15);
+        }
+        .traffic-card .stat-icon { color: rgba(255,255,255,0.5); }
+        .traffic-card .stat-value { color: var(--orange); }
+        .traffic-card .stat-label { color: rgba(255,255,255,0.7); }
+        .traffic-card .stat-sub { color: rgba(255,255,255,0.45); }
+        .sparkline-card {
+            background: #fff;
+            border-radius: 16px;
+            padding: 1.4rem 1.6rem;
+            box-shadow: 0 1px 4px rgba(45,42,38,0.06);
+            grid-column: span 2;
+        }
+        .sparkline-card h4 {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            font-weight: 600;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            margin-bottom: 0.25rem;
+        }
+
+        /* VIEW BUTTON */
+        .btn-view {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            font-family: 'Space Grotesk', sans-serif;
+            background: var(--cream-dark);
+            color: var(--navy);
+            border: 1.5px solid var(--border);
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+            min-height: 44px;
+        }
+        .btn-view:hover {
+            background: var(--navy);
+            color: #fff;
+            border-color: var(--navy);
+        }
+
+        /* USER DETAIL VIEW */
+        .detail-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+        .btn-back {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 600;
+            background: var(--cream-dark);
+            color: var(--navy);
+            border: 1.5px solid var(--border);
+            cursor: pointer;
+            transition: all 0.2s;
+            min-height: 44px;
+        }
+        .btn-back:hover { background: var(--navy); color: #fff; border-color: var(--navy); }
+        .detail-user-email {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--navy);
+        }
+        .detail-tab-bar {
+            display: flex;
+            gap: 0.25rem;
+            margin-bottom: 1.5rem;
+            border-bottom: 2px solid var(--cream-dark);
+        }
+        .detail-tab-btn {
+            background: none;
+            border: none;
+            padding: 0.5rem 1.2rem;
+            font-size: 0.875rem;
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 600;
+            color: var(--text-muted);
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+            transition: color 0.2s, border-color 0.2s;
+            min-height: 44px;
+        }
+        .detail-tab-btn.active { color: var(--orange); border-bottom-color: var(--orange); }
+        .detail-tab-btn:hover { color: var(--navy); }
+        .detail-summary {
+            background: var(--cream-dark);
+            border-radius: 10px;
+            padding: 0.875rem 1.25rem;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            margin-bottom: 1.25rem;
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 500;
+        }
+        .detail-summary strong { color: var(--navy); }
+
+        /* STATUS BADGES */
+        .task-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 2px 9px;
+            border-radius: 20px;
+            font-size: 0.72rem;
+            font-weight: 600;
+            font-family: 'Space Grotesk', sans-serif;
+        }
+        .task-badge.complete { background: #e8f5e9; color: #2e7d32; }
+        .task-badge.active { background: var(--cream-dark); color: var(--text-muted); }
+
+        /* EMAIL LOG */
+        .email-log-summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.75rem;
+        }
+        .email-log-filters {
+            background: #fff;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            padding: 1.25rem 1.5rem;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            align-items: flex-end;
+            margin-bottom: 1.25rem;
+        }
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.3rem;
+        }
+        .filter-label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .filter-select, .filter-input {
+            padding: 0.45rem 0.75rem;
+            border: 1.5px solid var(--border);
+            border-radius: 6px;
+            font-size: 0.875rem;
+            font-family: 'DM Sans', sans-serif;
+            background: var(--cream);
+            color: var(--navy);
+            min-height: 36px;
+            outline: none;
+        }
+        .filter-select:focus, .filter-input:focus { border-color: var(--orange); }
+        .email-table-wrap { overflow-x: auto; }
+        .email-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.875rem;
+            background: #fff;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+        }
+        .email-table th {
+            background: var(--cream-dark);
+            padding: 0.75rem 1rem;
+            text-align: left;
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--text-muted);
+            white-space: nowrap;
+        }
+        .email-table td {
+            padding: 0.75rem 1rem;
+            border-top: 1px solid var(--border);
+            color: var(--text-dark);
+            vertical-align: middle;
+        }
+        .email-table tr:hover td { background: var(--cream); }
+        .email-status {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 20px;
+            font-size: 0.72rem;
+            font-weight: 600;
+            font-family: 'Space Grotesk', sans-serif;
+        }
+        .email-status.sent     { background: #e3f2fd; color: #1565c0; }
+        .email-status.opened   { background: #e8f5e9; color: #2e7d32; }
+        .email-status.delivered{ background: #f3e5f5; color: #6a1b9a; }
+        .email-status.bounced  { background: var(--red-light); color: #c62828; }
+        .email-status.failed   { background: #fafafa; color: #757575; border: 1px solid #e0e0e0; }
+        .template-chip {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 6px;
+            font-size: 0.72rem;
+            font-weight: 600;
+            font-family: 'Space Grotesk', sans-serif;
+            background: var(--cream-dark);
+            color: var(--navy);
+        }
+        .email-pagination {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            justify-content: flex-end;
+            margin-top: 1rem;
+            font-size: 0.875rem;
+            color: var(--text-muted);
+        }
+        .email-pagination button {
+            padding: 0.35rem 0.9rem;
+            border: 1.5px solid var(--border);
+            border-radius: 6px;
+            background: #fff;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            color: var(--navy);
+        }
+        .email-pagination button:disabled { opacity: 0.4; cursor: default; }
+        .email-pagination button:hover:not(:disabled) { border-color: var(--orange); color: var(--orange); }
+
+        /* DATA EXPLORER */
+        .explorer-layout {
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+        }
+        .explorer-input-card {
+            background: #fff;
+            border-radius: 14px;
+            border: 1px solid var(--border);
+            padding: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+        .explorer-label {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            margin-bottom: 0.75rem;
+            display: block;
+        }
+        .explorer-textarea {
+            width: 100%;
+            min-height: 120px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.875rem;
+            line-height: 1.5;
+            background: var(--cream);
+            border: 1.5px solid var(--border);
+            border-radius: 8px;
+            padding: 0.875rem 1rem;
+            color: var(--navy);
+            resize: vertical;
+            outline: none;
+            transition: border-color 0.2s;
+            box-sizing: border-box;
+        }
+        .explorer-textarea:focus { border-color: var(--orange); }
+        .explorer-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-top: 0.875rem;
+            flex-wrap: wrap;
+        }
+        .btn-run {
+            background: var(--orange);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 0.6rem 1.4rem;
+            font-size: 0.875rem;
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+            min-height: 44px;
+        }
+        .btn-run:hover { background: var(--orange-light); }
+        .btn-run:disabled { opacity: 0.6; cursor: not-allowed; }
+        .preset-btns {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+        .btn-preset {
+            background: var(--cream-dark);
+            color: var(--navy);
+            border: 1.5px solid var(--border);
+            border-radius: 6px;
+            padding: 0.4rem 0.875rem;
+            font-size: 0.78rem;
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            min-height: 44px;
+        }
+        .btn-preset:hover { background: var(--navy); color: #fff; border-color: var(--navy); }
+        .explorer-error {
+            background: var(--red-light);
+            border: 1px solid #f5c6b8;
+            border-radius: 8px;
+            padding: 0.875rem 1rem;
+            color: var(--red);
+            font-size: 0.875rem;
+            margin-top: 0.75rem;
+            font-family: 'Courier New', monospace;
+        }
+        .explorer-results-card {
+            background: #fff;
+            border-radius: 14px;
+            border: 1px solid var(--border);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            overflow: hidden;
+        }
+        .explorer-results-header {
+            padding: 0.875rem 1.25rem;
+            border-bottom: 1px solid var(--border);
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+        }
+        .explorer-results-wrap {
+            overflow-x: auto;
+            max-height: 480px;
+            overflow-y: auto;
+        }
+        .explorer-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.8rem;
+        }
+        .explorer-table th {
+            position: sticky;
+            top: 0;
+            background: var(--cream);
+            text-align: left;
+            padding: 0.6rem 0.875rem;
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--text-muted);
+            border-bottom: 1px solid var(--border);
+            white-space: nowrap;
+        }
+        .explorer-table td {
+            padding: 0.55rem 0.875rem;
+            border-bottom: 1px solid var(--cream-dark);
+            color: var(--navy);
+            font-family: 'Courier New', monospace;
+            max-width: 320px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .explorer-table tr:last-child td { border-bottom: none; }
+        .explorer-table tr:hover td { background: rgba(232,145,58,0.03); }
+        .explorer-empty {
+            padding: 3rem 2rem;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.875rem;
+        }
+
+        /* RESPONSIVE */
+        @media (max-width: 600px) {
+            .main { padding: 1.5rem 1rem 3rem; }
+            .app-nav-inner { padding: 0.875rem 1rem; }
+            .stats-grid { grid-template-columns: 1fr 1fr; gap: 0.875rem; }
+            .stat-card { padding: 1.1rem 1.2rem; }
+            .stat-value { font-size: 1.8rem; }
+            .tab-btn { padding: 0.6rem 1rem; font-size: 0.8rem; }
+            .explorer-textarea { min-height: 100px; }
+            .btn-back { min-height: 44px; }
+        }
+    </style>
+</head>
+<body>
+
+<nav class="app-nav">
+    <div class="app-nav-inner">
+        <a href="/app" class="logo">
+            <div class="logo-dot"></div>
+            FocusLedger
+            <span class="admin-badge">Admin</span>
+        </a>
+        <div class="nav-right">
+            <a href="/admin/ideas" class="nav-link">Manage Ideas</a>
+            <a href="/home" class="nav-link">Dashboard</a>
+            <button class="btn-refresh" id="btn-refresh">Refresh</button>
+        </div>
+    </div>
+</nav>
+
+<main class="main">
+    <div class="page-header">
+        <h1>Admin</h1>
+    </div>
+
+    <div class="tab-bar">
+        <button class="tab-btn active" data-tab="stats" id="tab-stats">Stats</button>
+        <button class="tab-btn" data-tab="users" id="tab-users">Users</button>
+        <button class="tab-btn" data-tab="analytics" id="tab-analytics">Analytics</button>
+        <button class="tab-btn" data-tab="email-log" id="tab-email-log">Email Log</button>
+        <button class="tab-btn" data-tab="explorer" id="tab-explorer">Data Explorer</button>
+        <button class="tab-btn" data-tab="subscriptions" id="tab-subscriptions">Subscriptions</button>
+        <button class="tab-btn" data-tab="inbox" id="tab-inbox">Inbox <span id="inbox-unread-badge" style="display:none;background:var(--orange);color:#fff;font-size:0.65rem;font-weight:700;padding:1px 6px;border-radius:20px;margin-left:4px;vertical-align:middle;"></span></button>
+        <button class="tab-btn" data-tab="promo-codes" id="tab-promo-codes">Promo Codes</button>
+        <button class="tab-btn" data-tab="unconverted-leads" id="tab-unconverted-leads">Unconverted Leads</button>
+    </div>
+
+    <!-- STATS PANEL -->
+    <div id="panel-stats">
+        <div id="content">
+            <div class="loading-state">
+                <div class="spinner"></div>
+                Loading stats...
+            </div>
+        </div>
+    </div>
+
+    <!-- USERS PANEL -->
+    <div id="panel-users" style="display:none">
+        <div id="users-content">
+            <div class="loading-state">
+                <div class="spinner"></div>
+                Loading users...
+            </div>
+        </div>
+    </div>
+
+    <!-- ANALYTICS PANEL -->
+    <div id="panel-analytics" style="display:none">
+        <div id="analytics-content">
+            <div class="loading-state">
+                <div class="spinner"></div>
+                Loading analytics...
+            </div>
+        </div>
+    </div>
+
+    <!-- EMAIL LOG PANEL -->
+    <div id="panel-email-log" style="display:none">
+        <div id="email-log-content">
+            <div class="loading-state">
+                <div class="spinner"></div>
+                Loading email log...
+            </div>
+        </div>
+    </div>
+
+    <!-- USER DETAIL PANEL (shown when a user row is clicked) -->
+    <div id="panel-user-detail" style="display:none">
+        <div id="user-detail-content">
+            <div class="loading-state">
+                <div class="spinner"></div>
+                Loading user detail...
+            </div>
+        </div>
+    </div>
+
+    <!-- DATA EXPLORER PANEL -->
+    <div id="panel-explorer" style="display:none">
+        <div class="explorer-layout">
+            <div class="explorer-input-card">
+                <label class="explorer-label" for="explorer-sql">SQL Query (SELECT only)</label>
+                <textarea class="explorer-textarea" id="explorer-sql" spellcheck="false" placeholder="SELECT id, email, created_at FROM users ORDER BY created_at DESC LIMIT 20"></textarea>
+                <div id="explorer-inline-error" style="display:none;" class="explorer-error"></div>
+                <div class="explorer-actions">
+                    <button class="btn-run" id="btn-run-query">▶ Run Query</button>
+                    <div class="preset-btns">
+                        <button class="btn-preset" data-preset="all-users">All Users</button>
+                        <button class="btn-preset" data-preset="recent-tasks">Recent Tasks</button>
+                        <button class="btn-preset" data-preset="recent-expenses">Recent Expenses</button>
+                        <button class="btn-preset" data-preset="users-by-plan">Users by Plan</button>
+                    </div>
+                </div>
+            </div>
+            <div id="explorer-results-container" style="display:none;" class="explorer-results-card">
+                <div class="explorer-results-header" id="explorer-results-header">Results</div>
+                <div class="explorer-results-wrap">
+                    <div id="explorer-results-body"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+<!-- SUBSCRIPTIONS PANEL -->
+    <div id="panel-subscriptions" style="display:none">
+        <div id="subscriptions-content">
+            <div class="loading-state"><div class="spinner"></div>Loading subscriptions...</div>
+        </div>
+    </div>
+
+<!-- INBOX PANEL -->
+    <div id="panel-inbox" style="display:none">
+        <div id="inbox-content">
+            <div class="loading-state"><div class="spinner"></div>Loading inbox...</div>
+        </div>
+    </div>
+
+<!-- PROMO CODES PANEL -->
+    <div id="panel-promo-codes" style="display:none">
+        <div id="promo-codes-content">
+            <div class="loading-state"><div class="spinner"></div>Loading promo codes...</div>
+        </div>
+    </div>
+
+    <!-- UNCONVERTED LEADS PANEL -->
+    <div id="panel-unconverted-leads" style="display:none">
+        <div id="unconverted-leads-content">
+            <div class="loading-state"><div class="spinner"></div>Loading unconverted leads...</div>
+        </div>
+    </div>
+
+</main>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- CONFIRM MODAL -->
+<div class="modal-overlay" id="confirmModal">
+    <div class="modal-box">
+        <h3 id="modal-title">Confirm</h3>
+        <p id="modal-message">Are you sure?</p>
+        <div class="modal-actions">
+            <button class="modal-btn cancel" id="modal-cancel-btn">Cancel</button>
+            <button class="modal-btn" id="modal-confirm-btn">Confirm</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let currentUserId = null;
+    let pendingAction = null;
+
+    function getToken() {
+        return localStorage.getItem('fl_token');
+    }
+
+    // Fetch with timeout — prevents indefinite spinner on Neon cold starts
+    function fetchWithTimeout(url, opts, timeoutMs) {
+        timeoutMs = timeoutMs || 12000;
+        return Promise.race([
+            fetch(url, opts),
+            new Promise(function(_, reject) {
+                setTimeout(function() { reject(new Error('Request timed out — tap Refresh to retry')); }, timeoutMs);
+            })
+        ]);
+    }
+
+    function fmt(n) {
+        if (n === null || n === undefined) return '—';
+        return n.toLocaleString();
+    }
+
+    function fmtMoney(n) {
+        if (n === null || n === undefined) return '—';
+        return '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function fmtDate(iso) {
+        if (!iso) return '—';
+        return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    }
+
+    function fmtDateTime(iso) {
+        if (!iso) return '—';
+        return new Date(iso).toLocaleString('en-US', {
+            month: 'short', day: 'numeric', year: 'numeric',
+            hour: 'numeric', minute: '2-digit'
+        });
+    }
+
+    // Format a UTC ISO timestamp in the user's timezone, with timezone label + UTC fallback.
+    // Used throughout the admin portal when viewing another user's timestamps.
+    function fmtDateLocal(iso, tz) {
+        if (!iso) return '—';
+        const userTz = tz || 'America/New_York';
+        let localStr = '—';
+        let utcStr = '—';
+        try {
+            localStr = new Date(iso).toLocaleString('en-US', {
+                timeZone: userTz,
+                month: 'short', day: 'numeric', year: 'numeric'
+            });
+            utcStr = new Date(iso).toLocaleString('en-US', {
+                timeZone: 'UTC',
+                month: 'short', day: 'numeric', year: 'numeric',
+                hour: 'numeric', minute: '2-digit', timeZoneName: 'short'
+            });
+        } catch (_) {
+            return fmtDate(iso) + ' <span style="color:var(--text-muted);font-size:0.75em;">(UTC)</span>';
+        }
+        // Pretty timezone label e.g. "America/New_York" -> "Eastern Time"
+        const tzShort = tzToShortLabel(userTz);
+        return localStr +
+            ' <span style="color:var(--orange);font-size:0.75em;font-weight:600;">' + escHtml(tzShort) + '</span>' +
+            ' <span style="color:var(--text-muted);font-size:0.7em;">UTC ' + utcStr.split(', ').pop() + '</span>';
+    }
+
+    function fmtDateTimeLocal(iso, tz) {
+        if (!iso) return '—';
+        const userTz = tz || 'America/New_York';
+        let localStr = '—';
+        let utcStr = '—';
+        try {
+            localStr = new Date(iso).toLocaleString('en-US', {
+                timeZone: userTz,
+                month: 'short', day: 'numeric', year: 'numeric',
+                hour: 'numeric', minute: '2-digit'
+            });
+            utcStr = new Date(iso).toLocaleString('en-US', {
+                timeZone: 'UTC',
+                month: 'short', day: 'numeric', year: 'numeric',
+                hour: 'numeric', minute: '2-digit', timeZoneName: 'short'
+            });
+        } catch (_) {
+            return fmtDateTime(iso) + ' <span style="color:var(--text-muted);font-size:0.75em;">(UTC)</span>';
+        }
+        const tzShort = tzToShortLabel(userTz);
+        return localStr +
+            ' <span style="color:var(--orange);font-size:0.75em;font-weight:600;">' + escHtml(tzShort) + '</span>' +
+            ' <span style="color:var(--text-muted);font-size:0.7em;">UTC ' + utcStr.split(', ').pop() + '</span>';
+    }
+
+    // Convert IANA timezone string to short display label
+    function tzToShortLabel(tz) {
+        const map = {
+            'America/New_York': 'ET',
+            'America/Chicago': 'CT',
+            'America/Denver': 'MT',
+            'America/Los_Angeles': 'PT',
+            'America/Anchorage': 'AK',
+            'Pacific/Honolulu': 'HT',
+            'Europe/London': 'GMT/BST',
+            'Europe/Paris': 'CET',
+            'Europe/Berlin': 'CET',
+            'Asia/Tokyo': 'JST',
+            'Asia/Shanghai': 'CST',
+            'Asia/Kolkata': 'IST',
+            'Australia/Sydney': 'AEST'
+        };
+        return map[tz] || tz.split('/').pop().replace(/_/g, ' ');
+    }
+
+    function showToast(msg, type) {
+        const t = document.getElementById('toast');
+        t.textContent = msg;
+        t.className = 'toast ' + type;
+        setTimeout(() => t.classList.add('show'), 10);
+        setTimeout(() => t.classList.remove('show'), 3000);
+    }
+
+    var activeTab = 'stats';
+
+    function switchTab(tab) {
+        activeTab = tab;
+        ['stats', 'users', 'analytics', 'email-log', 'explorer', 'subscriptions', 'inbox', 'promo-codes', 'unconverted-leads'].forEach(function(t) {
+            var tabEl = document.getElementById('tab-' + t);
+            if (tabEl) tabEl.classList.toggle('active', t === tab);
+        });
+        document.getElementById('panel-stats').style.display = tab === 'stats' ? '' : 'none';
+        document.getElementById('panel-users').style.display = tab === 'users' ? '' : 'none';
+        document.getElementById('panel-analytics').style.display = tab === 'analytics' ? '' : 'none';
+        document.getElementById('panel-email-log').style.display = tab === 'email-log' ? '' : 'none';
+        document.getElementById('panel-explorer').style.display = tab === 'explorer' ? '' : 'none';
+        document.getElementById('panel-subscriptions').style.display = tab === 'subscriptions' ? '' : 'none';
+        document.getElementById('panel-inbox').style.display = tab === 'inbox' ? '' : 'none';
+        document.getElementById('panel-promo-codes').style.display = tab === 'promo-codes' ? '' : 'none';
+        document.getElementById('panel-unconverted-leads').style.display = tab === 'unconverted-leads' ? '' : 'none';
+        document.getElementById('panel-user-detail').style.display = 'none';
+        if (tab === 'users') loadUsers();
+        else if (tab === 'analytics') loadAnalytics();
+        else if (tab === 'email-log') loadEmailLog(1);
+        else if (tab === 'explorer') { /* data explorer is interactive, don't auto-run */ }
+        else if (tab === 'subscriptions') loadSubscriptions();
+        else if (tab === 'inbox') loadInbox();
+        else if (tab === 'promo-codes') loadPromoCodes();
+        else if (tab === 'unconverted-leads') loadUnconvertedLeads();
+        else loadStats();
+    }
+
+    function refreshCurrent() {
+        if (activeTab === 'analytics') loadAnalytics();
+        else if (activeTab === 'email-log') loadEmailLog(emailLogPage);
+        else if (activeTab === 'stats') loadStats();
+        else if (activeTab === 'users') loadUsers();
+        else if (activeTab === 'unconverted-leads') loadUnconvertedLeads();
+        // explorer: user manually runs queries
+    }
+
+    // ── ANALYTICS ───────────────────────────────────────────────────────────
+
+    async function loadAnalytics(days) {
+        const token = getToken();
+        const content = document.getElementById('analytics-content');
+        const d = days || 30;
+
+        if (!token) { window.location.href = '/login'; return; }
+
+        content.innerHTML = '<div class="loading-state"><div class="spinner"></div>Loading analytics...</div>';
+
+        try {
+            const res = await fetchWithTimeout('/api/analytics/summary?days=' + d, {
+                headers: { 'Authorization': 'Bearer ' + token }
+            });
+
+            if (res.status === 403) {
+                content.innerHTML = '<div class="error-state">Admin access required.</div>';
+                return;
+            }
+            if (res.status === 401) { window.location.href = '/login'; return; }
+
+            const data = await res.json();
+            if (!data.success) throw new Error(data.message || 'Unknown error');
+
+            content.innerHTML = buildAnalyticsDashboard(data, d);
+        } catch (err) {
+            content.innerHTML = '<div class="error-state">Failed to load analytics: ' + escHtml(err.message) + '</div>';
+        }
+    }
+
+    function buildAnalyticsDashboard(data, days) {
+        const funnelSteps = data.funnel || [];
+        const topSources  = data.top_sources || [];
+        const deviceSplit = data.device_split || [];
+        const dauTrend    = data.dau_trend || [];
+        const featureUse  = data.feature_usage || [];
+        const pageviews   = data.pageviews_by_page || [];
+        const topEvents   = data.top_events || [];
+        const signupIntent = data.signup_intent || [];
+        const utmBreakdown = data.utm_breakdown || [];
+        const sessionDur  = data.session_duration || {};
+        const signupTrend = data.signup_trend || [];
+
+        // Period picker
+        let html = `
+            <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1.5rem;flex-wrap:wrap;">
+                <p class="section-label" style="margin:0;">Analytics — Last ${days} Days</p>
+                <div style="display:flex;gap:0.5rem;">
+                    <button class="tab-btn ${days===7?'active':''}" data-period="7" style="padding:0.4rem 0.85rem;font-size:0.78rem;">7d</button>
+                    <button class="tab-btn ${days===30?'active':''}" data-period="30" style="padding:0.4rem 0.85rem;font-size:0.78rem;">30d</button>
+                    <button class="tab-btn ${days===90?'active':''}" data-period="90" style="padding:0.4rem 0.85rem;font-size:0.78rem;">90d</button>
+                </div>
+            </div>
+        `;
+
+        // ── Funnel ─────────────────────────────────────────────────────────
+        html += '<p class="section-label">Signup Funnel</p>';
+        html += '<div class="stats-grid" style="grid-template-columns:repeat(auto-fit,minmax(140px,1fr));">';
+        const funnelColors = ['#4CAF50', '#8BC34A', '#FFC107', '#FF9800', '#F44336'];
+        funnelSteps.forEach(function(step, i) {
+            const dropoff = step.dropoff_pct !== null ? `<div class="stat-sub">↓ ${step.dropoff_pct}% drop-off</div>` : '';
+            html += `<div class="stat-card" style="border-left:3px solid ${funnelColors[i]||'#ccc'};">
+                <div class="stat-value" style="font-size:1.6rem;">${fmt(step.count)}</div>
+                <div class="stat-label">${escHtml(step.step)}</div>
+                ${dropoff}
+            </div>`;
+        });
+        // Conversion rate (first to last)
+        const firstCount = funnelSteps[0] ? funnelSteps[0].count : 0;
+        const lastCount  = funnelSteps[funnelSteps.length - 1] ? funnelSteps[funnelSteps.length - 1].count : 0;
+        const convRate   = firstCount > 0 ? ((lastCount / firstCount) * 100).toFixed(1) : '0.0';
+        html += `<div class="stat-card highlight">
+            <div class="stat-value" style="font-size:1.6rem;">${convRate}%</div>
+            <div class="stat-label">Overall Conversion</div>
+            <div class="stat-sub">Landing → Signup</div>
+        </div>`;
+        html += '</div>';
+
+        // ── Session Duration + Signup intent ──────────────────────────────
+        html += '<p class="section-label">Engagement</p>';
+        html += '<div class="stats-grid" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr));">';
+
+        const avgSec = sessionDur.avg_seconds;
+        const medSec = sessionDur.median_seconds;
+        html += `<div class="stat-card">
+            <span class="stat-icon">⏱</span>
+            <div class="stat-value">${avgSec ? Math.floor(avgSec/60)+'m '+Math.round(avgSec%60)+'s' : '—'}</div>
+            <div class="stat-label">Avg Session Duration</div>
+            <div class="stat-sub">Median: ${medSec ? Math.floor(medSec/60)+'m '+Math.round(medSec%60)+'s' : '—'}</div>
+        </div>`;
+
+        // Intent breakdown
+        const intentMap = {};
+        signupIntent.forEach(e => { intentMap[e.event_name] = e.total; });
+        html += `<div class="stat-card">
+            <span class="stat-icon">🎯</span>
+            <div class="stat-value">${fmt((intentMap['cta_pricing_free']||0) + (intentMap['cta_signup_free']||0))}</div>
+            <div class="stat-label">Free CTA Clicks</div>
+            <div class="stat-sub">vs Autopilot: ${fmt((intentMap['cta_pricing_pro']||0) + (intentMap['cta_go_pro']||0))}</div>
+        </div>`;
+
+        html += '</div>';
+
+        // ── Daily Active Users Trend ──────────────────────────────────────
+        html += '<p class="section-label">Daily Active Users (Last 30 Days)</p>';
+        if (dauTrend.length > 0) {
+            const maxDau = Math.max(...dauTrend.map(d => d.active_users), 1);
+            const dauBars = dauTrend.map(d => {
+                const pct = Math.max(2, Math.round((d.active_users / maxDau) * 100));
+                return `<div class="spark-bar" style="height:${pct}%"><div class="spark-tip">${d.day.slice(5)}: ${d.active_users} DAU</div></div>`;
+            }).join('');
+            const totalDau = dauTrend.reduce((s, d) => s + d.active_users, 0);
+            html += `<div class="sparkline-card" style="grid-column:auto;">
+                <h4>DAU Trend (Total: ${fmt(totalDau)} user-days)</h4>
+                <div class="sparkline-wrap" style="height:80px;">${dauBars}</div>
+                <div class="sparkline-label"><span>${dauTrend[0]?.day.slice(5)||''}</span><span>Today</span></div>
+            </div>`;
+        } else {
+            html += '<div class="stat-card"><div class="stat-sub">No DAU data yet — users need to visit the dashboard</div></div>';
+        }
+
+        // ── Signup Trend ──────────────────────────────────────────────────
+        html += '<p class="section-label">Signup Trend (Last 30 Days)</p>';
+        if (signupTrend.length > 0) {
+            const maxSig = Math.max(...signupTrend.map(d => d.signups), 1);
+            const sigBars = signupTrend.map(d => {
+                const pct = Math.max(2, Math.round((d.signups / maxSig) * 100));
+                return `<div class="spark-bar" style="height:${pct}%;background:var(--orange);"><div class="spark-tip">${d.day.slice(5)}: ${d.signups} signups</div></div>`;
+            }).join('');
+            const totalSig = signupTrend.reduce((s, d) => s + d.signups, 0);
+            html += `<div class="sparkline-card" style="grid-column:auto;">
+                <h4>Signups (Total: ${fmt(totalSig)} in period)</h4>
+                <div class="sparkline-wrap" style="height:80px;">${sigBars}</div>
+                <div class="sparkline-label"><span>${signupTrend[0]?.day.slice(5)||''}</span><span>Today</span></div>
+            </div>`;
+        }
+
+        // ── Pageviews by page ────────────────────────────────────────────
+        html += '<p class="section-label">Pages (Unique Visitors)</p>';
+        html += '<div class="stats-grid" style="grid-template-columns:repeat(auto-fit,minmax(140px,1fr));">';
+        pageviews.forEach(p => {
+            html += `<div class="stat-card">
+                <div class="stat-value" style="font-size:1.4rem;">${fmt(p.unique_visitors)}</div>
+                <div class="stat-label">${escHtml(p.page)}</div>
+                <div class="stat-sub">${fmt(p.pageviews)} pageviews</div>
+            </div>`;
+        });
+        html += '</div>';
+
+        // ── Top Traffic Sources ──────────────────────────────────────────
+        html += '<p class="section-label">Top Traffic Sources</p>';
+        if (topSources.length > 0) {
+            html += '<div style="overflow-x:auto;"><table class="users-table"><thead><tr><th>Source</th><th>Unique Visitors</th><th>Pageviews</th></tr></thead><tbody>';
+            topSources.slice(0, 12).forEach(s => {
+                html += `<tr><td style="font-family:monospace;font-size:0.8rem;">${escHtml(s.source)}</td><td>${fmt(s.visitors)}</td><td>${fmt(s.pageviews)}</td></tr>`;
+            });
+            html += '</tbody></table></div>';
+        } else {
+            html += '<div class="stat-card"><div class="stat-sub">No traffic source data yet</div></div>';
+        }
+
+        // ── Device Split ─────────────────────────────────────────────────
+        html += '<p class="section-label">Device Split</p>';
+        html += '<div class="stats-grid" style="grid-template-columns:repeat(auto-fit,minmax(140px,1fr));">';
+        const deviceEmoji = { mobile: '📱', desktop: '💻', tablet: '📟', unknown: '❓' };
+        deviceSplit.forEach(d => {
+            html += `<div class="stat-card">
+                <span class="stat-icon">${deviceEmoji[d.device]||'📊'}</span>
+                <div class="stat-value" style="font-size:1.4rem;">${fmt(d.visitors)}</div>
+                <div class="stat-label">${escHtml(d.device)}</div>
+            </div>`;
+        });
+        html += '</div>';
+
+        // ── UTM Breakdown ────────────────────────────────────────────────
+        html += '<p class="section-label">UTM Campaign Breakdown</p>';
+        if (utmBreakdown.length > 0) {
+            html += '<div style="overflow-x:auto;"><table class="users-table"><thead><tr><th>Source</th><th>Medium</th><th>Campaign</th><th>Visitors</th><th>Pageviews</th></tr></thead><tbody>';
+            utmBreakdown.forEach(u => {
+                html += `<tr><td style="font-family:monospace;font-size:0.8rem;">${escHtml(u.utm_source)}</td><td style="font-family:monospace;font-size:0.8rem;">${escHtml(u.utm_medium)}</td><td style="font-family:monospace;font-size:0.8rem;">${escHtml(u.utm_campaign)}</td><td>${fmt(u.visitors)}</td><td>${fmt(u.pageviews)}</td></tr>`;
+            });
+            html += '</tbody></table></div>';
+        } else {
+            html += '<div class="stat-card"><div class="stat-sub">No UTM-tagged traffic yet. Add ?utm_source=&utm_medium=&utm_campaign= to your links.</div></div>';
+        }
+
+        // ── Feature Usage ────────────────────────────────────────────────
+        html += '<p class="section-label">Feature Usage (Unique Users)</p>';
+        if (featureUse.length > 0) {
+            html += '<div style="overflow-x:auto;"><table class="users-table"><thead><tr><th>Feature</th><th>Unique Users</th><th>Total Events</th></tr></thead><tbody>';
+            featureUse.forEach(f => {
+                const name = f.event_name.replace('feature_', '').replace(/_/g, ' ');
+                html += `<tr><td>${escHtml(name)}</td><td>${fmt(f.unique_users)}</td><td>${fmt(f.total_events)}</td></tr>`;
+            });
+            html += '</tbody></table></div>';
+        } else {
+            html += '<div class="stat-card"><div class="stat-sub">No feature usage data yet — tracking is firing from this deploy forward</div></div>';
+        }
+
+        // ── Top Events ────────────────────────────────────────────────────
+        html += '<p class="section-label">All Events (Top 20)</p>';
+        if (topEvents.length > 0) {
+            html += '<div style="overflow-x:auto;"><table class="users-table"><thead><tr><th>Event</th><th>Total</th><th>Unique Visitors</th></tr></thead><tbody>';
+            topEvents.slice(0, 20).forEach(e => {
+                html += `<tr><td style="font-family:monospace;font-size:0.8rem;">${escHtml(e.event_name)}</td><td>${fmt(e.total_events)}</td><td>${fmt(e.unique_visitors)}</td></tr>`;
+            });
+            html += '</tbody></table></div>';
+        }
+
+        html += `<p style="font-size:0.75rem;color:var(--text-muted);margin-top:1.5rem;">
+            Generated at ${new Date(data.generatedAt).toLocaleString()} · Period: last ${days} days
+        </p>`;
+
+        return html;
+    }
+
+    // ── CONFIRM MODAL ───────────────────────────────────────────────────
+
+    function openModal(title, message, btnClass, btnLabel, action) {
+        pendingAction = action;
+        document.getElementById('modal-title').textContent = title;
+        document.getElementById('modal-message').textContent = message;
+        const btn = document.getElementById('modal-confirm-btn');
+        btn.className = 'modal-btn ' + btnClass;
+        btn.textContent = btnLabel;
+        document.getElementById('confirmModal').classList.add('active');
+    }
+
+    function closeModal() {
+        document.getElementById('confirmModal').classList.remove('active');
+        pendingAction = null;
+    }
+
+    function confirmAction() {
+        if (pendingAction) {
+            pendingAction();
+        }
+        closeModal();
+    }
+
+    // Modal buttons
+    document.getElementById('confirmModal').addEventListener('click', function(e) {
+        if (e.target === this) closeModal();
+    });
+    document.getElementById('modal-cancel-btn').addEventListener('click', function() {
+        closeModal();
+    });
+    document.getElementById('modal-confirm-btn').addEventListener('click', function() {
+        confirmAction();
+    });
+
+    // ── SUBSCRIPTIONS TAB ───────────────────────────────────────────────────
+
+    async function loadSubscriptions() {
+        var token = getToken();
+        var content = document.getElementById('subscriptions-content');
+        if (!token) { window.location.href = '/login'; return; }
+        content.innerHTML = '<div class="loading-state"><div class="spinner"></div>Loading subscriptions...</div>';
+
+        try {
+            var res = await fetchWithTimeout('/api/admin/subscriptions', {
+                headers: { 'Authorization': 'Bearer ' + token }
+            });
+            if (res.status === 403) { content.innerHTML = '<div class="error-state">Admin access required.</div>'; return; }
+            if (res.status === 401) { window.location.href = '/login'; return; }
+            var data = await res.json();
+            if (!data.success) throw new Error(data.message || 'Unknown error');
+            content.innerHTML = buildSubscriptionsPanel(data.subscriptions);
+        } catch (err) {
+            content.innerHTML = '<div class="error-state">Failed to load subscriptions: ' + escHtml(err.message) + '</div>';
+        }
+    }
+
+    function buildSubscriptionsPanel(subs) {
+        // Summary counts
+        var counts = { free: 0, pro_active: 0, pro_trial: 0, trial_expired: 0, cancelled: 0, past_due: 0 };
+        subs.forEach(function(s) { if (counts[s.plan_label] !== undefined) counts[s.plan_label]++; });
+        var expiringSoon = subs.filter(function(s) { return s.trial_expiry_urgency === 'soon'; }).length;
+
+        var planLabels = {
+            free: { text: 'Free', bg: 'var(--cream-dark)', color: 'var(--text-muted)', border: 'var(--border)' },
+            pro_active: { text: 'Autopilot (Active)', bg: '#d4edec', color: '#1a6b60', border: '#b2e6e0' },
+            pro_trial: { text: 'Autopilot (Trial)', bg: '#e8eaf6', color: '#4a2fa0', border: '#c5caf0' },
+            trial_expired: { text: 'Trial Expired', bg: 'var(--red-light)', color: '#a04a2a', border: '#f0b8a0' },
+            cancelled: { text: 'Cancelled', bg: '#faeae5', color: '#c05030', border: '#f0b8a0' },
+            past_due: { text: 'Past Due', bg: '#fff7e0', color: '#9a6800', border: '#f0d870' }
+        };
+
+        function planBadge(label) {
+            var s = planLabels[label] || planLabels.free;
+            return '<span style="display:inline-block;font-size:0.72rem;font-weight:700;padding:2px 8px;border-radius:20px;background:' + s.bg + ';color:' + s.color + ';border:1px solid ' + s.border + ';white-space:nowrap;">' + escHtml(s.text) + '</span>';
+        }
+
+        function fmtDate(d) {
+            if (!d) return '—';
+            return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        }
+
+        // Format date in user's local timezone with timezone label + UTC
+        function fmtDateLocal(d, tz) {
+            if (!d) return '—';
+            var userTz = tz || 'America/New_York';
+            try {
+                var local = new Date(d).toLocaleDateString('en-US', { timeZone: userTz, month: 'short', day: 'numeric', year: 'numeric' });
+                var utc = new Date(d).toLocaleDateString('en-US', { timeZone: 'UTC', month: 'short', day: 'numeric', year: 'numeric' });
+                var tzShort = tzToShortLabel(userTz);
+                return local + ' <span style="color:var(--orange);font-size:0.72em;font-weight:600;">' + escHtml(tzShort) + '</span> <span style="color:var(--text-muted);font-size:0.68em;">UTC ' + utc + '</span>';
+            } catch (_) {
+                return fmtDate(d) + ' <span style="color:var(--text-muted);font-size:0.75em;">(UTC)</span>';
+            }
+        }
+
+        function trialExpiryCell(sub) {
+            if (!sub.pro_granted_until) return '—';
+            var d = fmtDateLocal(sub.pro_granted_until, sub.timezone);
+            if (sub.trial_expiry_urgency === 'expired') {
+                return '<span style="color:var(--red);font-weight:600;">⚠ ' + d + '</span>';
+            } else if (sub.trial_expiry_urgency === 'soon') {
+                return '<span style="color:#b87800;font-weight:600;">⏰ ' + d + '</span>';
+            }
+            return d;
+        }
+
+        function sourceLabel(s) {
+            var map = { stripe: 'Self-serve', admin: 'Manual grant', referral: 'Referral' };
+            return s ? (map[s] || escHtml(s)) : '—';
+        }
+
+        // Signup attribution source — shows UTM source or referrer domain (e.g. "reddit", "google.com")
+        function signupSourceLabel(ss) {
+            if (!ss || ss === 'direct') return '<span style="color:var(--text-muted);font-size:0.78rem;">direct</span>';
+            return '<span style="font-size:0.78rem;font-weight:600;color:var(--navy);">' + escHtml(ss) + '</span>';
+        }
+
+        // Summary cards
+        var html = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:1rem;margin-bottom:2rem;">';
+        html += '<div class="stat-card"><span class="stat-icon">👤</span><div class="stat-value">' + counts.free + '</div><div class="stat-label">Free</div></div>';
+        html += '<div class="stat-card" style="background:var(--green-light);border-color:#b2e6e0;"><span class="stat-icon">✅</span><div class="stat-value" style="color:#1a6b60;">' + counts.pro_active + '</div><div class="stat-label">Autopilot Active</div></div>';
+        html += '<div class="stat-card" style="background:#e8eaf6;border-color:#c5caf0;"><span class="stat-icon">🎁</span><div class="stat-value" style="color:#4a2fa0;">' + counts.pro_trial + '</div><div class="stat-label">Autopilot Trial</div></div>';
+        if (expiringSoon > 0) {
+            html += '<div class="stat-card" style="background:#fff7e0;border-color:#f0d870;"><span class="stat-icon">⏰</span><div class="stat-value" style="color:#9a6800;">' + expiringSoon + '</div><div class="stat-label">Expiring Soon</div></div>';
+        }
+        if (counts.trial_expired > 0) {
+            html += '<div class="stat-card" style="background:var(--red-light);border-color:#f0b8a0;"><span class="stat-icon">🔴</span><div class="stat-value" style="color:#a04a2a;">' + counts.trial_expired + '</div><div class="stat-label">Trial Expired</div></div>';
+        }
+        if (counts.cancelled > 0) {
+            html += '<div class="stat-card" style="background:#faeae5;border-color:#f0b8a0;"><span class="stat-icon">✖</span><div class="stat-value" style="color:#c05030;">' + counts.cancelled + '</div><div class="stat-label">Cancelled</div></div>';
+        }
+        html += '</div>';
+
+        // Filter controls
+        html += '<div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1.25rem;align-items:center;">';
+        html += '<span style="font-size:0.8rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;">Filter:</span>';
+        ['all', 'pro_active', 'pro_trial', 'trial_expired', 'cancelled', 'free'].forEach(function(f) {
+            var label = f === 'all' ? 'All' : (planLabels[f] ? planLabels[f].text : f);
+            html += '<button class="tab-btn" id="sub-filter-' + f + '" style="padding:0.3rem 0.85rem;font-size:0.78rem;' + (f === 'all' ? 'color:var(--orange);border-bottom-color:var(--orange);' : '') + '" data-sub-filter="' + f + '">' + escHtml(label) + '</button>';
+        });
+        html += '</div>';
+
+        // Table
+        html += '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:0.85rem;" id="subs-table">';
+        html += '<thead><tr style="text-align:left;border-bottom:2px solid var(--cream-dark);">';
+        html += '<th style="padding:0.6rem 0.75rem;font-size:0.75rem;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);">User</th>';
+        html += '<th style="padding:0.6rem 0.75rem;font-size:0.75rem;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);">Status</th>';
+        html += '<th style="padding:0.6rem 0.75rem;font-size:0.75rem;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);">Acq. Source</th>';
+        html += '<th style="padding:0.6rem 0.75rem;font-size:0.75rem;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);">Sub Source</th>';
+        html += '<th style="padding:0.6rem 0.75rem;font-size:0.75rem;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);">Cycle</th>';
+        html += '<th style="padding:0.6rem 0.75rem;font-size:0.75rem;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);">Period End / Trial Expiry</th>';
+        html += '<th style="padding:0.6rem 0.75rem;font-size:0.75rem;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);">Stripe Sub ID</th>';
+        html += '</tr></thead><tbody id="subs-tbody">';
+
+        subs.forEach(function(sub) {
+            html += '<tr class="sub-row" data-plan="' + sub.plan_label + '" style="border-bottom:1px solid var(--cream-dark);">';
+            html += '<td style="padding:0.65rem 0.75rem;"><span style="font-weight:500;">' + escHtml(sub.email) + '</span></td>';
+            html += '<td style="padding:0.65rem 0.75rem;">' + planBadge(sub.plan_label) + '</td>';
+            html += '<td style="padding:0.65rem 0.75rem;">' + signupSourceLabel(sub.signup_source) + '</td>';
+            html += '<td style="padding:0.65rem 0.75rem;color:var(--text-muted);">' + sourceLabel(sub.source) + '</td>';
+            html += '<td style="padding:0.65rem 0.75rem;color:var(--text-muted);">' + (sub.billing_cycle ? escHtml(sub.billing_cycle) : '—') + '</td>';
+
+            // Period end: show trial expiry for trial/expired users, current_period_end for paid
+            var periodCell;
+            if (sub.plan_label === 'pro_trial' || sub.plan_label === 'trial_expired') {
+                periodCell = trialExpiryCell(sub);
+            } else if (sub.current_period_end) {
+                periodCell = fmtDateLocal(sub.current_period_end, sub.timezone);
+            } else {
+                periodCell = '—';
+            }
+            html += '<td style="padding:0.65rem 0.75rem;">' + periodCell + '</td>';
+
+            // Stripe sub ID — clickable to Stripe dashboard
+            var stripeCell = '—';
+            if (sub.stripe_subscription_id) {
+                var stripeUrl = 'https://dashboard.stripe.com/subscriptions/' + encodeURIComponent(sub.stripe_subscription_id);
+                stripeCell = '<a href="' + stripeUrl + '" target="_blank" rel="noopener" style="color:var(--orange);font-family:monospace;font-size:0.78rem;">' + escHtml(sub.stripe_subscription_id.slice(0, 20)) + '…</a>';
+            }
+            html += '<td style="padding:0.65rem 0.75rem;">' + stripeCell + '</td>';
+            html += '</tr>';
+        });
+
+        html += '</tbody></table></div>';
+
+        return html;
+    }
+
+    // Subscriptions filter (event delegation — CSP-safe, wired after render)
+    document.addEventListener('click', function(e) {
+        var btn = e.target.closest('[data-sub-filter]');
+        if (!btn) return;
+        var filter = btn.getAttribute('data-sub-filter');
+        // Update active state on filter buttons
+        document.querySelectorAll('[data-sub-filter]').forEach(function(b) {
+            var isActive = b.getAttribute('data-sub-filter') === filter;
+            b.style.color = isActive ? 'var(--orange)' : '';
+            b.style.borderBottomColor = isActive ? 'var(--orange)' : '';
+        });
+        // Show/hide rows
+        document.querySelectorAll('#subs-tbody .sub-row').forEach(function(row) {
+            row.style.display = (filter === 'all' || row.getAttribute('data-plan') === filter) ? '' : 'none';
+        });
+    });
+
+    // ── TAB CLICK HANDLERS (addEventListener — CSP-safe) ───────────────────
+    document.querySelectorAll('.tab-bar .tab-btn[data-tab]').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            var tab = this.getAttribute('data-tab');
+            if (tab) switchTab(tab);
+        });
+    });
+
+    // Explorer: also handle tab-explorer if it exists
+    var explorerTabBtn = document.getElementById('tab-explorer');
+    if (explorerTabBtn) {
+        explorerTabBtn.addEventListener('click', function() {
+            switchTab('explorer');
+        });
+    }
+
+    // Refresh button
+    var refreshBtn = document.getElementById('btn-refresh');
+    if (refreshBtn) {
+        refreshBtn.addEventListener('click', function() {
+            refreshCurrent();
+        });
+    }
+
+    // ── EVENT DELEGATION for dynamic content ───────────────────────────────
+
+    // Analytics period picker (rendered by buildAnalyticsDashboard)
+    document.getElementById('analytics-content').addEventListener('click', function(e) {
+        var btn = e.target.closest('[data-period]');
+        if (btn) {
+            var period = parseInt(btn.getAttribute('data-period'), 10);
+            if (period) loadAnalytics(period);
+        }
+    });
+
+    // Users panel: admin toggle + pro toggle + view detail buttons
+    document.getElementById('users-content').addEventListener('click', function(e) {
+        var adminBtn = e.target.closest('[data-admin-toggle]');
+        if (adminBtn) {
+            var userId = parseInt(adminBtn.getAttribute('data-admin-toggle'), 10);
+            var email = adminBtn.getAttribute('data-email') || '';
+            var grant = adminBtn.getAttribute('data-grant') === 'true';
+            promptAdminToggle(userId, email, grant);
+            return;
+        }
+        var proBtn = e.target.closest('[data-pro-toggle]');
+        if (proBtn) {
+            var userId = parseInt(proBtn.getAttribute('data-pro-toggle'), 10);
+            var grant = proBtn.getAttribute('data-grant') === 'true';
+            togglePro(userId, grant);
+            return;
+        }
+        var qaBtn = e.target.closest('[data-qa-toggle]');
+        if (qaBtn) {
+            var userId = parseInt(qaBtn.getAttribute('data-qa-toggle'), 10);
+            var setQa = qaBtn.getAttribute('data-set') === 'true';
+            toggleQA(userId, setQa);
+            return;
+        }
+        var viewBtn = e.target.closest('[data-view-user]');
+        if (viewBtn) {
+            var userId = parseInt(viewBtn.getAttribute('data-view-user'), 10);
+            var email = viewBtn.getAttribute('data-email') || '';
+            loadUserDetail(userId, email);
+            return;
+        }
+        var delBtn = e.target.closest('[data-delete-user]');
+        if (delBtn) {
+            var userId = parseInt(delBtn.getAttribute('data-delete-user'), 10);
+            var email = delBtn.getAttribute('data-email') || '';
+            adminDeleteUser(userId, email);
+        }
+    });
+
+    // ── TRAFFIC SECTION BUILDER ────────────────────────────────────────────
+
+    function buildSparkline(trend7d) {
+        if (!trend7d || trend7d.length === 0) return '<div style="color:var(--text-muted);font-size:0.8rem;">No data yet</div>';
+        const maxVal = Math.max(...trend7d.map(d => d.unique_visitors), 1);
+        const bars = trend7d.map(d => {
+            const pct = Math.max(2, Math.round((d.unique_visitors / maxVal) * 100));
+            const label = d.day.slice(5); // MM-DD
+            return `<div class="spark-bar" style="height:${pct}%"><div class="spark-tip">${label}: ${d.unique_visitors} uniq</div></div>`;
+        }).join('');
+        const firstDay = trend7d.length ? trend7d[0].day.slice(5) : '';
+        const lastDay  = trend7d.length ? trend7d[trend7d.length - 1].day.slice(5) : '';
+        return `
+            <div class="sparkline-wrap">${bars}</div>
+            <div class="sparkline-label"><span>${firstDay}</span><span>Today</span></div>
+        `;
+    }
+
+    function buildTrafficSection(s) {
+        if (s.visitorsToday === undefined) return '';
+        const sparkHtml = buildSparkline(s.trend7d || []);
+        const total7d = s.trend7d ? s.trend7d.reduce((sum, d) => sum + d.total_pageviews, 0) : 0;
+        return `
+            <p class="section-label">Traffic</p>
+            <div class="stats-grid">
+                <div class="stat-card traffic-card">
+                    <span class="stat-icon">👁️</span>
+                    <div class="stat-value large">${fmt(s.visitorsToday)}</div>
+                    <div class="stat-label">Unique Visitors Today</div>
+                    <div class="stat-sub">Deduplicated by device</div>
+                </div>
+
+                <div class="stat-card">
+                    <span class="stat-icon">7d</span>
+                    <div class="stat-value">${fmt(s.visitors7dTotal)}</div>
+                    <div class="stat-label">Unique Visitors — Last 7 Days</div>
+                    <div class="stat-sub">${fmt(total7d)} total pageviews</div>
+                </div>
+
+                <div class="stat-card">
+                    <span class="stat-icon">30d</span>
+                    <div class="stat-value">${fmt(s.visitors30d)}</div>
+                    <div class="stat-label">Unique Visitors — Last 30 Days</div>
+                    <div class="stat-sub">Rolling window</div>
+                </div>
+
+                <div class="sparkline-card">
+                    <h4>7-Day Unique Visitor Trend</h4>
+                    ${sparkHtml}
+                </div>
+            </div>
+        `;
+    }
+
+    // ── STATS ─────────────────────────────────────────────────────────────
+    // (loadStats defined below at line ~1841)
+
+    
+    async function loadStats() {
+        const token = getToken();
+        const content = document.getElementById('content');
+
+        if (!token) { window.location.href = '/login'; return; }
+
+        content.innerHTML = '<div class="loading-state"><div class="spinner"></div>Loading stats...</div>';
+
+        try {
+            const res = await fetchWithTimeout('/api/admin/stats', {
+                headers: { 'Authorization': 'Bearer ' + token }
+            });
+
+            if (res.status === 403) {
+                content.innerHTML = '<div class="error-state">Admin access required. Make sure your email is in the ADMIN_EMAILS environment variable.</div>';
+                return;
+            }
+            if (res.status === 401) { window.location.href = '/login'; return; }
+
+            const data = await res.json();
+            if (!data.success) throw new Error(data.message || 'Unknown error');
+
+            const s = data.stats;
+            content.innerHTML = `
+                <p class="section-label">Overview</p>
+                <div class="stats-grid">
+                    <div class="stat-card highlight">
+                        <span class="stat-icon">Users</span>
+                        <div class="stat-value large">${fmt(s.totalUsers)}</div>
+                        <div class="stat-label">Total Users</div>
+                    </div>
+
+                    <div class="stat-card orange-card">
+                        <span class="stat-icon">MRR</span>
+                        <div class="stat-value large">${fmtMoney(s.mrr)}</div>
+                        <div class="stat-label">Monthly Recurring Revenue</div>
+                        <div class="stat-sub">${fmt(s.proMonthly)} monthly + ${fmt(s.proAnnual)} annual</div>
+                    </div>
+
+                    <div class="stat-card">
+                        <span class="stat-icon">🚀</span>
+                        <div class="stat-value">${fmt(s.proTotal)}</div>
+                        <div class="stat-label">Active Autopilot Subscribers</div>
+                        <div class="stat-sub">${fmt(s.proMonthly)} monthly / ${fmt(s.proAnnual)} annual</div>
+                    </div>
+
+                    <div class="stat-card">
+                        <span class="stat-icon">Free</span>
+                        <div class="stat-value">${fmt(s.freeUsers)}</div>
+                        <div class="stat-label">Free Tier Users</div>
+                    </div>
+
+                    <div class="stat-card">
+                        <span class="stat-icon">CVR</span>
+                        <div class="stat-value">${s.conversionPct}%</div>
+                        <div class="stat-label">Conversion Rate</div>
+                        <div class="stat-sub">Autopilot / Total</div>
+                    </div>
+                </div>
+
+                <p class="section-label">Growth</p>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <span class="stat-icon">7d</span>
+                        <div class="stat-value">${fmt(s.newThisWeek)}</div>
+                        <div class="stat-label">New Signups — This Week</div>
+                        <div class="stat-sub">Last 7 days</div>
+                    </div>
+
+                    <div class="stat-card">
+                        <span class="stat-icon">30d</span>
+                        <div class="stat-value">${fmt(s.newThisMonth)}</div>
+                        <div class="stat-label">New Signups — This Month</div>
+                        <div class="stat-sub">Calendar month to date</div>
+                    </div>
+
+                    <div class="stat-card">
+                        <span class="stat-icon">Churn</span>
+                        <div class="stat-value">${fmt(s.churnCount)}</div>
+                        <div class="stat-label">Cancelled — This Month</div>
+                        <div class="stat-sub">Cancellations this calendar month</div>
+                    </div>
+                </div>
+
+                ${buildTrafficSection(s)}
+
+                <p class="generated-at">Generated ${fmtDateTime(data.generatedAt)}</p>
+            `;
+        } catch (err) {
+            console.error(err);
+            content.innerHTML = '<div class="error-state">Failed to load stats: ' + escHtml(err.message)
+                + '<br><button class="btn-refresh" onclick="loadStats()" style="margin-top:12px;">↻ Retry</button></div>';
+        }
+    }
+
+    // ── USERS ─────────────────────────────────────────────────────────────
+
+    async function loadUsers() {
+        const token = getToken();
+        const content = document.getElementById('users-content');
+
+        if (!token) { window.location.href = '/login'; return; }
+
+        content.innerHTML = '<div class="loading-state"><div class="spinner"></div>Loading users...</div>';
+
+        try {
+            const res = await fetchWithTimeout('/api/admin/users', {
+                headers: { 'Authorization': 'Bearer ' + token }
+            });
+
+            if (res.status === 403) {
+                content.innerHTML = '<div class="error-state">Admin access required.</div>';
+                return;
+            }
+            if (res.status === 401) { window.location.href = '/login'; return; }
+
+            const data = await res.json();
+            if (!data.success) throw new Error(data.message || 'Unknown error');
+
+            const users = data.users;
+            currentUserId = data.currentUserId;
+
+            if (users.length === 0) {
+                content.innerHTML = '<div class="loading-state">No users found.</div>';
+                return;
+            }
+
+            let html = `
+                <div class="users-header">
+                    <h2>User Access</h2>
+                    <span class="users-count">${users.length} total users</span>
+                </div>
+                <div id="users-action-feedback"></div>
+                <div class="users-table-wrap">
+                    <table class="users-table">
+                        <thead>
+                            <tr>
+                                <th>User</th>
+                                <th>TZ</th>
+                                <th>Signed Up</th>
+                                <th>Admin</th>
+                                <th>QA</th>
+                                <th>Autopilot Status</th>
+                                <th>Logins</th>
+                                <th>Last Login</th>
+                                <th>Active Tasks</th>
+                                <th>Actions</th>
+                                <th>Detail</th>
+                                <th>Delete</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+
+            for (const user of users) {
+                const proBadgeClass = user.pro_source === 'admin' ? 'admin' : (user.is_pro ? 'stripe' : 'free');
+                const proBadgeLabel = user.is_pro
+                    ? (user.pro_source === 'admin' ? 'Autopilot (Admin)' : 'Autopilot (Stripe)')
+                    : 'Free';
+
+                const isSelf = user.id === currentUserId;
+
+                // Admin badge
+                const adminBadge = user.is_admin
+                    ? '<span class="admin-role-badge yes">Admin</span>'
+                    : '<span class="admin-role-badge no">No</span>';
+
+                // Admin toggle button
+                let adminToggle = '';
+                if (isSelf) {
+                    adminToggle = '<button class="admin-toggle-btn self-label" disabled title="You cannot change your own admin access">You</button>';
+                } else if (user.is_admin) {
+                    adminToggle = `<button class="admin-toggle-btn revoke-admin" data-admin-toggle="${user.id}" data-email="${escHtml(user.email)}" data-grant="false">Revoke Admin</button>`;
+                } else {
+                    adminToggle = `<button class="admin-toggle-btn grant-admin" data-admin-toggle="${user.id}" data-email="${escHtml(user.email)}" data-grant="true">Grant Admin</button>`;
+                }
+
+                // Pro toggle button
+                let proToggle = '';
+                if (isSelf) {
+                    proToggle = '';
+                } else if (user.admin_pro_override) {
+                    proToggle = `<button class="toggle-btn revoke" data-pro-toggle="${user.id}" data-grant="false">Revoke Autopilot</button>`;
+                } else {
+                    proToggle = `<button class="toggle-btn grant" data-pro-toggle="${user.id}" data-grant="true">Grant Autopilot</button>`;
+                }
+
+                // QA badge + toggle
+                const qaBadge = user.is_qa_user
+                    ? '<span class="qa-badge yes">🧪 QA</span>'
+                    : '<span class="qa-badge no">–</span>';
+                let qaToggle = '';
+                if (user.is_qa_user) {
+                    qaToggle = `<button class="qa-toggle-btn clear-qa" data-qa-toggle="${user.id}" data-set="false" title="Remove QA flag — restores normal email delivery">Clear QA</button>`;
+                } else {
+                    qaToggle = `<button class="qa-toggle-btn set-qa" data-qa-toggle="${user.id}" data-set="true" title="Mark as QA/test — excluded from all automated emails">Mark QA</button>`;
+                }
+
+                html += `
+                    <tr id="user-row-${user.id}"${user.is_qa_user ? ' class="qa-row"' : ''}>
+                        <td>
+                            <div class="user-email">${escHtml(user.email)}</div>
+                        </td>
+                        <td>
+                            <div style="font-size:0.8rem;color:var(--text-muted);" title="${escHtml(user.timezone || 'America/New_York')}">${escHtml(tzToShortLabel(user.timezone) || '—')}</div>
+                        </td>
+                        <td>
+                            <div class="user-since">${fmtDateLocal(user.created_at, user.timezone)}</div>
+                        </td>
+                        <td>${adminBadge}</td>
+                        <td>${qaBadge}</td>
+                        <td>
+                            <span class="pro-badge ${proBadgeClass}">${proBadgeLabel}</span>
+                        </td>
+                        <td>
+                            <span class="stat-mini">${fmt(user.login_count)}</span>
+                        </td>
+                        <td>
+                            <span class="stat-mini">${fmtDateTimeLocal(user.last_login_at, user.timezone)}</span>
+                        </td>
+                        <td>
+                            <span class="stat-mini">${fmt(user.active_task_count)}</span>
+                        </td>
+                        <td>
+                            <div class="action-cell">
+                                ${adminToggle}
+                                ${proToggle}
+                                ${qaToggle}
+                            </div>
+                        </td>
+                        <td>
+                            <button class="btn-view" data-view-user="${user.id}" data-email="${escHtml(user.email)}">View →</button>
+                        </td>
+                        <td>
+                            ${isSelf ? '' : `<button class="delete-user-btn" data-delete-user="${user.id}" data-email="${escHtml(user.email)}" title="Permanently delete this user and all their data">Delete</button>`}
+                        </td>
+                    </tr>
+                `;
+            }
+
+            html += `
+                        </tbody>
+                    </table>
+                </div>
+            `;
+
+            content.innerHTML = html;
+        } catch (err) {
+            console.error(err);
+            content.innerHTML = '<div class="error-state">Failed to load users: ' + escHtml(err.message)
+                + '<br><button class="btn-refresh" onclick="loadUsers()" style="margin-top:12px;">↻ Retry</button></div>';
+        }
+    }
+
+    function escHtml(str) {
+        if (!str) return '';
+        return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+    }
+
+    // ── ADMIN USER DELETE ─────────────────────────────────────────────────
+
+    function adminDeleteUser(userId, email) {
+        openModal(
+            'Delete User Account',
+            'Permanently delete ' + email + ' and all their data? Tasks, expenses, documents, bank connections, and subscription will be removed. This cannot be undone.',
+            'confirm-revoke',
+            '⚠ Delete User',
+            () => doAdminDeleteUser(userId, email)
+        );
+    }
+
+    async function doAdminDeleteUser(userId, email) {
+        try {
+            const token = getToken();
+            const res = await fetch('/api/account-deletion/admin/' + userId, {
+                method: 'DELETE',
+                headers: { 'Authorization': 'Bearer ' + token }
+            });
+            const data = await res.json();
+            if (!res.ok || !data.success) {
+                throw new Error(data.message || 'Failed to delete user');
+            }
+            showToast('User ' + email + ' permanently deleted.', 'success');
+            loadUsers();
+        } catch (err) {
+            console.error('[admin-delete]', err);
+            showToast(err.message, 'error');
+        }
+    }
+
+    // ── ADMIN ROLE TOGGLE ─────────────────────────────────────────────────
+
+    function promptAdminToggle(userId, email, grantAdmin) {
+        if (grantAdmin) {
+            openModal(
+                'Grant Admin Access',
+                'Grant admin access to ' + email + '? They will be able to view stats, manage users, and grant/revoke access.',
+                'confirm-grant',
+                'Grant Admin',
+                () => toggleAdmin(userId, true)
+            );
+        } else {
+            openModal(
+                'Revoke Admin Access',
+                'Revoke admin access from ' + email + '? They will no longer be able to access admin pages.',
+                'confirm-revoke',
+                'Revoke Admin',
+                () => toggleAdmin(userId, false)
+            );
+        }
+    }
+
+    async function toggleAdmin(userId, grantAdmin) {
+        try {
+            const token = getToken();
+            const res = await fetch('/api/admin/users/' + userId + '/role', {
+                method: 'PATCH',
+                headers: {
+                    'Authorization': 'Bearer ' + token,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ is_admin: grantAdmin })
+            });
+
+            const data = await res.json();
+
+            if (!res.ok || !data.success) {
+                throw new Error(data.message || 'Failed to update admin access');
+            }
+
+            showToast(data.message, 'success');
+            loadUsers();
+        } catch (err) {
+            console.error(err);
+            showToast(err.message, 'error');
+        }
+    }
+
+    // ── PRO TOGGLE ───────────────────────────────────────────────────────
+
+    async function togglePro(userId, grant) {
+        try {
+            const token = getToken();
+            const res = await fetch('/api/admin/users/' + userId + '/pro', {
+                method: 'PATCH',
+                headers: {
+                    'Authorization': 'Bearer ' + token,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ grant: grant })
+            });
+
+            const data = await res.json();
+
+            if (!res.ok || !data.success) {
+                throw new Error(data.message || 'Failed to update user Pro access');
+            }
+
+            showToast(data.message, 'success');
+            loadUsers();
+        } catch (err) {
+            console.error(err);
+            showToast(err.message, 'error');
+        }
+    }
+
+    // ── QA TOGGLE ─────────────────────────────────────────────────────────
+
+    async function toggleQA(userId, setQa) {
+        try {
+            const token = getToken();
+            const res = await fetch('/api/admin/users/' + userId + '/qa', {
+                method: 'PATCH',
+                headers: {
+                    'Authorization': 'Bearer ' + token,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ is_qa: setQa })
+            });
+
+            const data = await res.json();
+
+            if (!res.ok || !data.success) {
+                throw new Error(data.message || 'Failed to update QA flag');
+            }
+
+            showToast(data.message, 'success');
+            loadUsers();
+        } catch (err) {
+            console.error(err);
+            showToast(err.message, 'error');
+        }
+    }
+
+    function capitalize(s) {
+        if (!s) return '';
+        return s.charAt(0).toUpperCase() + s.slice(1);
+    }
+
+    // ── USER DETAIL ───────────────────────────────────────────────────────
+
+    var detailActiveSubTab = 'tasks';
+
+    async function loadUserDetail(userId, email) {
+        var token = getToken();
+        if (!token) { window.location.href = '/login'; return; }
+
+        // Hide main panels, show detail panel
+        document.getElementById('panel-stats').style.display = 'none';
+        document.getElementById('panel-users').style.display = 'none';
+        document.getElementById('panel-analytics').style.display = 'none';
+        document.getElementById('panel-explorer').style.display = 'none';
+        var detailPanel = document.getElementById('panel-user-detail');
+        detailPanel.style.display = '';
+
+        var content = document.getElementById('user-detail-content');
+        content.innerHTML = '<div class="loading-state"><div class="spinner"></div>Loading...</div>';
+
+        try {
+            var res = await fetch('/api/admin/users/' + userId + '/detail', {
+                headers: { 'Authorization': 'Bearer ' + token }
+            });
+            if (res.status === 403) { content.innerHTML = '<div class="error-state">Admin access required.</div>'; return; }
+            if (res.status === 401) { window.location.href = '/login'; return; }
+            var data = await res.json();
+            if (!data.success) throw new Error(data.message || 'Unknown error');
+
+            var summary = data.summary;
+            var tasks = data.tasks;
+            var expenses = data.expenses;
+            var user = data.user;
+
+            var tasksSummaryText = summary.tasks.total + ' task' + (summary.tasks.total !== 1 ? 's' : '') +
+                ' — ' + summary.tasks.completed + ' complete, ' + summary.tasks.active + ' active';
+            var expensesSummaryText = summary.expenses.total + ' expense' + (summary.expenses.total !== 1 ? 's' : '') +
+                ' — $' + summary.expenses.totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' total';
+
+            // Build tasks HTML
+            var tasksHtml = '<div class="detail-summary">' + escHtml(tasksSummaryText) + '</div>';
+            if (tasks.length === 0) {
+                tasksHtml += '<div class="loading-state" style="padding:2rem;">No tasks yet.</div>';
+            } else {
+                tasksHtml += '<div class="users-table-wrap"><table class="users-table" style="min-width:600px;">';
+                tasksHtml += '<thead><tr><th>Title</th><th>Status</th><th>Priority</th><th>Due</th><th>Created</th></tr></thead><tbody>';
+                tasks.forEach(function(t) {
+                    var badge = t.is_completed
+                        ? '<span class="task-badge complete">✓ Complete</span>'
+                        : '<span class="task-badge active">Active</span>';
+                    tasksHtml += '<tr>' +
+                        '<td style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:inherit;">' + escHtml(t.title) + '</td>' +
+                        '<td>' + badge + '</td>' +
+                        '<td style="text-transform:capitalize;">' + escHtml(t.priority || 'medium') + '</td>' +
+                        '<td>' + (t.due_date ? fmtDateLocal(t.due_date, user.timezone) : '—') + '</td>' +
+                        '<td>' + fmtDateLocal(t.created_at, user.timezone) + '</td>' +
+                        '</tr>';
+                });
+                tasksHtml += '</tbody></table></div>';
+            }
+
+            // Build expenses HTML
+            var expensesHtml = '<div class="detail-summary">' + escHtml(expensesSummaryText) + '</div>';
+            if (expenses.length === 0) {
+                expensesHtml += '<div class="loading-state" style="padding:2rem;">No expenses yet.</div>';
+            } else {
+                expensesHtml += '<div class="users-table-wrap"><table class="users-table" style="min-width:500px;">';
+                expensesHtml += '<thead><tr><th>Description</th><th>Amount</th><th>Category</th><th>Date</th></tr></thead><tbody>';
+                expenses.forEach(function(e) {
+                    expensesHtml += '<tr>' +
+                        '<td style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:inherit;">' + escHtml(e.description || '—') + '</td>' +
+                        '<td style="font-weight:600;font-family:\'Space Grotesk\',sans-serif;">$' + parseFloat(e.amount).toLocaleString('en-US', {minimumFractionDigits:2,maximumFractionDigits:2}) + '</td>' +
+                        '<td>' + escHtml(e.category_name || '—') + '</td>' +
+                        '<td>' + fmtDate(e.expense_date) + '</td>' +
+                        '</tr>';
+                });
+                expensesHtml += '</tbody></table></div>';
+            }
+
+            content.innerHTML = '<div class="detail-header">' +
+                '<button class="btn-back" id="btn-back-to-users">← Back</button>' +
+                '<div class="detail-user-email">' + escHtml(user.email) + '</div>' +
+                '<div style="font-size:0.75rem;color:var(--text-muted);">Timezone: <strong style="color:var(--orange);">' + escHtml(tzToShortLabel(user.timezone) || '—') + '</strong> <span style="font-weight:400;">(' + escHtml(user.timezone || 'America/New_York') + ')</span></div>' +
+                '<div style="font-size:0.8rem;color:var(--text-muted);margin-left:auto;">Member since ' + fmtDateLocal(user.created_at, user.timezone) + '</div>' +
+                '</div>' +
+                '<div class="detail-tab-bar">' +
+                '<button class="detail-tab-btn active" data-detail-tab="tasks">Tasks (' + summary.tasks.total + ')</button>' +
+                '<button class="detail-tab-btn" data-detail-tab="expenses">Expenses (' + summary.expenses.total + ')</button>' +
+                '</div>' +
+                '<div id="detail-panel-tasks">' + tasksHtml + '</div>' +
+                '<div id="detail-panel-expenses" style="display:none;">' + expensesHtml + '</div>';
+
+            // Wire back button
+            document.getElementById('btn-back-to-users').addEventListener('click', function() {
+                document.getElementById('panel-user-detail').style.display = 'none';
+                document.getElementById('panel-users').style.display = '';
+                // Re-activate the users tab
+                ['stats','users','analytics','email-log','explorer'].forEach(function(t) {
+                    var el = document.getElementById('tab-' + t);
+                    if (el) el.classList.toggle('active', t === 'users');
+                });
+                activeTab = 'users';
+            });
+
+        } catch (err) {
+            content.innerHTML = '<div class="error-state">Failed to load user detail: ' + escHtml(err.message) + '</div>';
+        }
+    }
+
+    // Sub-tab switching for user detail (event delegation on detail content)
+    document.getElementById('user-detail-content').addEventListener('click', function(e) {
+        var btn = e.target.closest('[data-detail-tab]');
+        if (!btn) return;
+        var tab = btn.getAttribute('data-detail-tab');
+        document.querySelectorAll('.detail-tab-btn').forEach(function(b) {
+            b.classList.toggle('active', b.getAttribute('data-detail-tab') === tab);
+        });
+        document.getElementById('detail-panel-tasks').style.display = tab === 'tasks' ? '' : 'none';
+        document.getElementById('detail-panel-expenses').style.display = tab === 'expenses' ? '' : 'none';
+    });
+
+    // ── EMAIL LOG ──────────────────────────────────────────────────────────
+
+    var emailLogPage = 1;
+    var emailLogFilters = { template_type: '', status: '', from: '', to: '' };
+
+    async function loadEmailLog(page) {
+        var token = getToken();
+        if (!token) { window.location.href = '/login'; return; }
+
+        emailLogPage = page || 1;
+        var content = document.getElementById('email-log-content');
+        content.innerHTML = '<div class="loading-state"><div class="spinner"></div>Loading email log...</div>';
+
+        try {
+            // Load stats + log in parallel
+            var params = new URLSearchParams({
+                page: emailLogPage,
+                limit: 50
+            });
+            if (emailLogFilters.template_type) params.set('template_type', emailLogFilters.template_type);
+            if (emailLogFilters.status)        params.set('status', emailLogFilters.status);
+            if (emailLogFilters.from)          params.set('from', emailLogFilters.from);
+            if (emailLogFilters.to)            params.set('to', emailLogFilters.to);
+
+            var [statsRes, logRes] = await Promise.all([
+                fetch('/api/outbound-email/log/stats', { headers: { 'Authorization': 'Bearer ' + token } }),
+                fetch('/api/outbound-email/log?' + params.toString(), { headers: { 'Authorization': 'Bearer ' + token } })
+            ]);
+
+            var statsData = await statsRes.json();
+            var logData   = await logRes.json();
+
+            if (!logData.success) throw new Error(logData.message || 'Failed to load');
+
+            var stats = (statsData.success && statsData.stats) ? statsData.stats : {};
+            var rows  = logData.data || [];
+            var pagination = logData.pagination || {};
+
+            // Summary cards
+            var summaryHtml = '<div class="email-log-summary">' +
+                '<div class="stat-card"><span class="stat-icon">📤</span><div class="stat-value">' + fmt(stats.sent_30d || 0) + '</div><div class="stat-label">Sent (30d)</div></div>' +
+                '<div class="stat-card"><span class="stat-icon">👁️</span><div class="stat-value">' + (stats.open_rate_30d || 0) + '%</div><div class="stat-label">Open Rate (30d)</div></div>' +
+                '<div class="stat-card"><span class="stat-icon">🚫</span><div class="stat-value">' + (stats.bounce_rate_30d || 0) + '%</div><div class="stat-label">Bounce Rate (30d)</div></div>' +
+                '<div class="stat-card"><span class="stat-icon">👋</span><div class="stat-value">' + fmt((stats.total_by_type || {}).welcome || 0) + '</div><div class="stat-label">Welcome Emails</div></div>' +
+                '<div class="stat-card"><span class="stat-icon">📅</span><div class="stat-value">' + fmt((stats.total_by_type || {}).weekly_nudge || 0) + '</div><div class="stat-label">Weekly Nudges</div></div>' +
+                '<div class="stat-card"><span class="stat-icon">💤</span><div class="stat-value">' + fmt((stats.total_by_type || {}).re_engagement || 0) + '</div><div class="stat-label">Re-engagement</div></div>' +
+                '</div>';
+
+            // Filters
+            var filtersHtml = '<div class="email-log-filters">' +
+                '<div class="filter-group"><label class="filter-label">Type</label>' +
+                '<select class="filter-select" id="el-filter-type"><option value="">All</option>' +
+                '<option value="welcome"' + (emailLogFilters.template_type === 'welcome' ? ' selected' : '') + '>Welcome</option>' +
+                '<option value="weekly_nudge"' + (emailLogFilters.template_type === 'weekly_nudge' ? ' selected' : '') + '>Weekly Nudge</option>' +
+                '<option value="re_engagement"' + (emailLogFilters.template_type === 're_engagement' ? ' selected' : '') + '>Re-engagement</option>' +
+                '</select></div>' +
+                '<div class="filter-group"><label class="filter-label">Status</label>' +
+                '<select class="filter-select" id="el-filter-status"><option value="">All</option>' +
+                '<option value="sent"' + (emailLogFilters.status === 'sent' ? ' selected' : '') + '>Sent</option>' +
+                '<option value="opened"' + (emailLogFilters.status === 'opened' ? ' selected' : '') + '>Opened</option>' +
+                '<option value="delivered"' + (emailLogFilters.status === 'delivered' ? ' selected' : '') + '>Delivered</option>' +
+                '<option value="bounced"' + (emailLogFilters.status === 'bounced' ? ' selected' : '') + '>Bounced</option>' +
+                '<option value="failed"' + (emailLogFilters.status === 'failed' ? ' selected' : '') + '>Failed</option>' +
+                '</select></div>' +
+                '<div class="filter-group"><label class="filter-label">From</label><input type="date" class="filter-input" id="el-filter-from" value="' + escHtml(emailLogFilters.from) + '"></div>' +
+                '<div class="filter-group"><label class="filter-label">To</label><input type="date" class="filter-input" id="el-filter-to" value="' + escHtml(emailLogFilters.to) + '"></div>' +
+                '<button class="btn-refresh" id="el-apply-filters" style="align-self:flex-end;">Apply</button>' +
+                '</div>';
+
+            // Table
+            var tableHtml = '<div class="email-table-wrap"><table class="email-table">' +
+                '<thead><tr><th>Date</th><th>Recipient</th><th>Subject</th><th>Type</th><th>Status</th><th>Opened</th></tr></thead><tbody>';
+
+            if (rows.length === 0) {
+                tableHtml += '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:2rem;">No emails yet.</td></tr>';
+            } else {
+                rows.forEach(function(r) {
+                    var typeLabel = r.template_type === 'weekly_nudge' ? 'Weekly Nudge'
+                        : r.template_type === 're_engagement' ? 'Re-engagement'
+                        : r.template_type === 'welcome' ? 'Welcome' : escHtml(r.template_type);
+                    tableHtml += '<tr>' +
+                        '<td style="white-space:nowrap;font-size:0.8rem;">' + fmtDateTime(r.created_at) + '</td>' +
+                        '<td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escHtml(r.to_email) + '</td>' +
+                        '<td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escHtml(r.subject) + '</td>' +
+                        '<td><span class="template-chip">' + escHtml(typeLabel) + '</span></td>' +
+                        '<td><span class="email-status ' + escHtml(r.status) + '">' + escHtml(r.status) + '</span></td>' +
+                        '<td>' + (r.opened_at ? '✅ ' + fmtDateTime(r.opened_at) : '—') + '</td>' +
+                        '</tr>';
+                });
+            }
+            tableHtml += '</tbody></table></div>';
+
+            // Pagination
+            var totalPages = pagination.pages || 1;
+            var paginationHtml = '<div class="email-pagination">' +
+                '<span>' + (rows.length > 0 ? ((emailLogPage - 1) * 50 + 1) + '–' + ((emailLogPage - 1) * 50 + rows.length) + ' of ' + fmt(pagination.total) : '0') + '</span>' +
+                '<button id="el-prev-page" ' + (emailLogPage <= 1 ? 'disabled' : '') + '>← Prev</button>' +
+                '<span>Page ' + emailLogPage + ' / ' + totalPages + '</span>' +
+                '<button id="el-next-page" ' + (emailLogPage >= totalPages ? 'disabled' : '') + '>Next →</button>' +
+                '</div>';
+
+            content.innerHTML = summaryHtml + filtersHtml + tableHtml + paginationHtml;
+
+            // Wire filter apply button
+            document.getElementById('el-apply-filters').addEventListener('click', function() {
+                emailLogFilters.template_type = document.getElementById('el-filter-type').value;
+                emailLogFilters.status        = document.getElementById('el-filter-status').value;
+                emailLogFilters.from          = document.getElementById('el-filter-from').value;
+                emailLogFilters.to            = document.getElementById('el-filter-to').value;
+                loadEmailLog(1);
+            });
+
+            // Pagination buttons
+            var prevBtn = document.getElementById('el-prev-page');
+            var nextBtn = document.getElementById('el-next-page');
+            if (prevBtn) prevBtn.addEventListener('click', function() { if (emailLogPage > 1) loadEmailLog(emailLogPage - 1); });
+            if (nextBtn) nextBtn.addEventListener('click', function() { if (emailLogPage < totalPages) loadEmailLog(emailLogPage + 1); });
+
+        } catch (err) {
+            content.innerHTML = '<div class="error-state">Failed to load email log: ' + escHtml(err.message) + '</div>';
+        }
+    }
+
+    // ── DATA EXPLORER ─────────────────────────────────────────────────────
+
+    var PRESETS = {
+        'all-users': 'SELECT id, email, created_at, is_admin, admin_pro_override FROM users ORDER BY created_at DESC',
+        'recent-tasks': 'SELECT id, user_id, title, is_completed, priority, due_date, created_at FROM tasks ORDER BY created_at DESC LIMIT 50',
+        'recent-expenses': 'SELECT id, user_id, amount, description, expense_date, created_at FROM expenses ORDER BY expense_date DESC, created_at DESC LIMIT 50',
+        'users-by-plan': 'SELECT s.plan, s.status, COUNT(*)::int AS count FROM app_subscription s GROUP BY s.plan, s.status ORDER BY count DESC'
+    };
+
+    // Preset button clicks
+    document.querySelectorAll('.btn-preset').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            var key = btn.getAttribute('data-preset');
+            if (PRESETS[key]) {
+                document.getElementById('explorer-sql').value = PRESETS[key];
+                document.getElementById('explorer-inline-error').style.display = 'none';
+            }
+        });
+    });
+
+    // Run query
+    document.getElementById('btn-run-query').addEventListener('click', runExplorerQuery);
+
+    async function runExplorerQuery() {
+        var token = getToken();
+        if (!token) { window.location.href = '/login'; return; }
+
+        var sql = document.getElementById('explorer-sql').value.trim();
+        var errEl = document.getElementById('explorer-inline-error');
+        var resultsContainer = document.getElementById('explorer-results-container');
+        var resultsHeader = document.getElementById('explorer-results-header');
+        var resultsBody = document.getElementById('explorer-results-body');
+        var runBtn = document.getElementById('btn-run-query');
+
+        errEl.style.display = 'none';
+
+        if (!sql) {
+            errEl.textContent = 'Enter a SQL query first.';
+            errEl.style.display = '';
+            return;
+        }
+
+        // Client-side pre-validation
+        var upperSql = sql.toUpperCase().replace(/\s+/g, ' ').trim();
+        var blockedWords = ['INSERT', 'UPDATE', 'DELETE', 'DROP', 'ALTER', 'TRUNCATE', 'CREATE', 'GRANT', 'REVOKE'];
+        for (var i = 0; i < blockedWords.length; i++) {
+            var re = new RegExp('(^|\\s|;)' + blockedWords[i] + '(\\s|;|$)');
+            if (re.test(upperSql)) {
+                errEl.textContent = 'Blocked: "' + blockedWords[i] + '" is not allowed. Only SELECT statements.';
+                errEl.style.display = '';
+                return;
+            }
+        }
+        if (!upperSql.startsWith('SELECT') && !upperSql.startsWith('WITH')) {
+            errEl.textContent = 'Only SELECT (or WITH ... SELECT) queries are allowed.';
+            errEl.style.display = '';
+            return;
+        }
+
+        runBtn.disabled = true;
+        runBtn.textContent = '⏳ Running...';
+        resultsContainer.style.display = 'none';
+
+        try {
+            var res = await fetch('/api/admin/query', {
+                method: 'POST',
+                headers: {
+                    'Authorization': 'Bearer ' + token,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ sql: sql })
+            });
+
+            var data = await res.json();
+
+            if (!res.ok || !data.success) {
+                errEl.textContent = data.message || 'Query failed.';
+                errEl.style.display = '';
+                return;
+            }
+
+            var columns = data.columns;
+            var rows = data.rows;
+            var rowCount = data.rowCount;
+
+            resultsHeader.textContent = rowCount + ' row' + (rowCount !== 1 ? 's' : '') + ' returned';
+
+            if (columns.length === 0 || rowCount === 0) {
+                resultsBody.innerHTML = '<div class="explorer-empty">No results returned.</div>';
+            } else {
+                var tableHtml = '<table class="explorer-table"><thead><tr>';
+                columns.forEach(function(col) {
+                    tableHtml += '<th>' + escHtml(col) + '</th>';
+                });
+                tableHtml += '</tr></thead><tbody>';
+                rows.forEach(function(row) {
+                    tableHtml += '<tr>';
+                    columns.forEach(function(col) {
+                        var val = row[col];
+                        var display = val === null || val === undefined ? '<span style="color:var(--text-muted);font-style:italic;">null</span>' : escHtml(String(val));
+                        tableHtml += '<td title="' + escHtml(val === null ? 'null' : String(val)) + '">' + display + '</td>';
+                    });
+                    tableHtml += '</tr>';
+                });
+                tableHtml += '</tbody></table>';
+                resultsBody.innerHTML = tableHtml;
+            }
+
+            resultsContainer.style.display = '';
+        } catch (err) {
+            errEl.textContent = 'Network error: ' + err.message;
+            errEl.style.display = '';
+        } finally {
+            runBtn.disabled = false;
+            runBtn.textContent = '▶ Run Query';
+        }
+    }
+
+    // Allow Ctrl+Enter / Cmd+Enter to run query
+    document.getElementById('explorer-sql').addEventListener('keydown', function(e) {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+            e.preventDefault();
+            runExplorerQuery();
+        }
+    });
+
+    // ── INBOX ─────────────────────────────────────────────────────────────
+
+    var inboxCurrentThread = null;
+
+    async function loadInbox() {
+        var token = getToken();
+        var content = document.getElementById('inbox-content');
+        if (!token) { window.location.href = '/login'; return; }
+        content.innerHTML = '<div class="loading-state"><div class="spinner"></div>Loading inbox...</div>';
+        try {
+            var res = await fetchWithTimeout('/api/inbox/threads', { headers: { 'Authorization': 'Bearer ' + token } });
+            var data = await res.json();
+            if (!res.ok) {
+                var errMsg = 'Error ' + res.status + ': ' + (data.message || res.statusText || 'Failed to load inbox');
+                content.innerHTML = '<div class="error-state">' + escHtml(errMsg) + '</div>';
+                showToast(errMsg, 'error');
+                console.error('[inbox] Thread list load failed:', res.status, data);
+                return;
+            }
+            if (!data.success) { content.innerHTML = '<div class="error-state">' + escHtml(data.message || 'Failed') + '</div>'; return; }
+
+            // Update unread badge on tab
+            var badge = document.getElementById('inbox-unread-badge');
+            if (data.unread > 0) { badge.textContent = data.unread; badge.style.display = ''; }
+            else { badge.style.display = 'none'; }
+
+            if (!data.threads || data.threads.length === 0) {
+                content.innerHTML = '<div class="loading-state" style="padding:3rem 2rem;"><p style="color:var(--text-muted);font-size:0.95rem;">No emails yet. Inbound emails will appear here.</p></div>';
+                return;
+            }
+
+            var html = '<div style="display:flex;gap:0;height:600px;border:1px solid var(--border);border-radius:14px;overflow:hidden;background:#fff;">';
+            html += '<div id="inbox-thread-list" style="width:320px;min-width:280px;border-right:1px solid var(--border);overflow-y:auto;background:var(--cream);">';
+            data.threads.forEach(function(t) {
+                var unread = t.unread_count > 0;
+                var name = escHtml(t.customer_name || t.customer_email || 'Unknown');
+                var subj = escHtml(t.subject || '(no subject)');
+                var date = fmtDateTime(t.last_message_at);
+                var count = t.message_count;
+                html += '<div class="inbox-thread-item' + (unread ? ' unread' : '') + '" data-thread-id="' + escHtml(encodeURIComponent(t.thread_id)) + '" style="padding:0.9rem 1rem;cursor:pointer;border-bottom:1px solid var(--border);transition:background 0.15s;">';
+                html += '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:0.5rem;">';
+                html += '<span style="font-weight:' + (unread ? '700' : '500') + ';font-size:0.875rem;color:var(--navy);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + name + '</span>';
+                html += '<span style="font-size:0.72rem;color:var(--text-muted);white-space:nowrap;">' + date + '</span>';
+                html += '</div>';
+                html += '<div style="font-size:0.8rem;color:' + (unread ? 'var(--navy)' : 'var(--text-muted)') + ';margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + subj + '</div>';
+                html += '<div style="font-size:0.72rem;color:var(--text-muted);margin-top:3px;">' + count + ' message' + (count !== 1 ? 's' : '') + (unread ? ' · <span style="color:var(--orange);font-weight:600;">' + t.unread_count + ' unread</span>' : '') + '</div>';
+                html += '</div>';
+            });
+            html += '</div>';
+            html += '<div id="inbox-thread-view" style="flex:1;overflow-y:auto;padding:1.5rem;display:flex;align-items:center;justify-content:center;">';
+            html += '<div style="color:var(--text-muted);font-size:0.9rem;text-align:center;"><div style="font-size:2rem;margin-bottom:0.5rem;">✉️</div>Select a conversation</div>';
+            html += '</div>';
+            html += '</div>';
+
+            content.innerHTML = html;
+
+            // WHY: addEventListener delegation instead of inline onclick — inline
+            // onclick on innerHTML-injected elements fails silently when the async
+            // handler throws (unhandled promise rejection the browser swallows).
+            // Event delegation on the container is robust and CSP-safe.
+            var threadList = document.getElementById('inbox-thread-list');
+            if (threadList) {
+                threadList.addEventListener('click', function(e) {
+                    var item = e.target.closest('.inbox-thread-item');
+                    if (item) openInboxThread(item);
+                });
+            }
+        } catch (err) {
+            content.innerHTML = '<div class="error-state">Network error: ' + escHtml(err.message) + '</div>';
+        }
+    }
+
+    async function openInboxThread(el) {
+        console.log('[inbox] openInboxThread called', el);
+        var token = getToken();
+        if (!token) { window.location.href = '/login'; return; }
+        var encodedThreadId = el.getAttribute('data-thread-id');
+        if (!encodedThreadId) { console.error('[inbox] Missing data-thread-id on element'); return; }
+        var threadView = document.getElementById('inbox-thread-view');
+        if (!threadView) { console.error('[inbox] inbox-thread-view element not found'); return; }
+        // Reset flex centering (only needed for placeholder state)
+        threadView.style.alignItems = '';
+        threadView.style.justifyContent = '';
+        threadView.innerHTML = '<div class="loading-state"><div class="spinner"></div>Loading...</div>';
+
+        // Highlight selected thread
+        document.querySelectorAll('.inbox-thread-item').forEach(function(i) { i.style.background = ''; });
+        el.style.background = '#fff';
+
+        try {
+            var res = await fetchWithTimeout('/api/inbox/threads/' + encodedThreadId, { headers: { 'Authorization': 'Bearer ' + token } });
+            var data = await res.json();
+            if (!res.ok) {
+                var errMsg = 'Error ' + res.status + ': ' + (data.message || res.statusText || 'Request failed');
+                threadView.innerHTML = '<div class="error-state">' + escHtml(errMsg) + '</div>';
+                showToast(errMsg, 'error');
+                console.error('[inbox] Thread fetch failed:', res.status, data);
+                return;
+            }
+            if (!data.success) {
+                threadView.innerHTML = '<div class="error-state">' + escHtml(data.message || 'Failed to load thread') + '</div>';
+                showToast(data.message || 'Failed to load thread', 'error');
+                return;
+            }
+
+            var messages = data.messages || [];
+            var lastInbound = messages.slice().reverse().find(function(m) { return m.direction === 'inbound'; });
+            var toEmail = lastInbound ? lastInbound.from_email : '';
+            var lastSubject = (messages[0] || {}).subject || '';
+
+            // Store thread context for reply
+            inboxCurrentThread = { encodedThreadId: encodedThreadId, toEmail: toEmail, subject: lastSubject };
+
+            var html = '<div style="max-width:680px;width:100%;">';
+            messages.forEach(function(m) {
+                var isOut = m.direction === 'outbound';
+                var align = isOut ? 'flex-end' : 'flex-start';
+                var bg    = isOut ? 'var(--navy)' : '#F5F4F0';
+                var color = isOut ? '#fff' : 'var(--text-dark)';
+                var label = isOut ? 'You (FocusLedger)' : escHtml(m.from_name ? m.from_name + ' <' + m.from_email + '>' : m.from_email);
+                html += '<div style="display:flex;flex-direction:column;align-items:' + align + ';margin-bottom:1.25rem;">';
+                html += '<div style="font-size:0.72rem;color:var(--text-muted);margin-bottom:4px;">' + label + ' · ' + fmtDateTime(m.received_at) + '</div>';
+                html += '<div style="background:' + bg + ';color:' + color + ';border-radius:12px;padding:0.875rem 1rem;max-width:500px;font-size:0.875rem;line-height:1.55;word-break:break-word;">';
+                if (m.body_text) {
+                    html += '<pre style="white-space:pre-wrap;font-family:inherit;margin:0;">' + escHtml(m.body_text) + '</pre>';
+                } else if (m.body_html) {
+                    html += '<div style="font-size:0.8rem;color:var(--text-muted);font-style:italic;">[HTML email — view below]</div>';
+                } else {
+                    html += '<span style="color:var(--text-muted);font-style:italic;">(no body)</span>';
+                }
+                html += '</div></div>';
+            });
+
+            // Reply composer
+            html += '<div style="border-top:1px solid var(--border);padding-top:1.25rem;margin-top:0.75rem;">';
+            html += '<div style="font-family:\'Space Grotesk\',sans-serif;font-size:0.75rem;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-muted);margin-bottom:0.6rem;">Reply to ' + escHtml(toEmail) + '</div>';
+            html += '<textarea id="inbox-reply-body" style="width:100%;min-height:100px;border:1.5px solid var(--border);border-radius:8px;padding:0.75rem;font-family:\'DM Sans\',sans-serif;font-size:0.875rem;color:var(--text-dark);background:#fff;resize:vertical;outline:none;" placeholder="Type your reply..."></textarea>';
+            html += '<div style="display:flex;justify-content:flex-end;margin-top:0.6rem;">';
+            html += '<button id="inbox-send-reply-btn" style="background:var(--orange);color:#fff;border:none;border-radius:8px;padding:0.55rem 1.25rem;font-size:0.875rem;font-family:\'Space Grotesk\',sans-serif;font-weight:600;cursor:pointer;">Send Reply</button>';
+            html += '</div></div>';
+            html += '</div>';
+
+            threadView.innerHTML = html;
+            threadView.scrollTop = threadView.scrollHeight;
+
+            // Bind reply button via addEventListener (not inline onclick)
+            var replyBtn = document.getElementById('inbox-send-reply-btn');
+            if (replyBtn) replyBtn.addEventListener('click', function() { sendInboxReply(); });
+
+            // Remove unread indicator from thread list item
+            el.classList.remove('unread');
+            el.querySelector('div > span:first-child').style.fontWeight = '500';
+            // Refresh unread badge
+            var badge = document.getElementById('inbox-unread-badge');
+            var remaining = document.querySelectorAll('.inbox-thread-item.unread').length;
+            if (remaining > 0) { badge.textContent = remaining; badge.style.display = ''; }
+            else { badge.style.display = 'none'; }
+
+        } catch (err) {
+            threadView.innerHTML = '<div class="error-state">Network error: ' + escHtml(err.message) + '</div>';
+        }
+    }
+
+    async function sendInboxReply() {
+        if (!inboxCurrentThread) return;
+        var token = getToken();
+        var body  = (document.getElementById('inbox-reply-body').value || '').trim();
+        if (!body) { showToast('Reply body cannot be empty', 'error'); return; }
+
+        var btn = document.getElementById('inbox-send-reply-btn');
+        if (btn) { btn.disabled = true; btn.textContent = 'Sending...'; }
+
+        try {
+            var res = await fetchWithTimeout('/api/inbox/threads/' + inboxCurrentThread.encodedThreadId + '/reply', {
+                method: 'POST',
+                headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ body: body, to_email: inboxCurrentThread.toEmail, subject: inboxCurrentThread.subject })
+            });
+            var data = await res.json();
+            if (data.success) {
+                showToast('Reply sent!', 'success');
+                // Reload thread to show the outbound message
+                var el = document.querySelector('.inbox-thread-item[data-thread-id="' + inboxCurrentThread.encodedThreadId + '"]');
+                if (el) openInboxThread(el);
+            } else {
+                showToast(data.message || 'Failed to send reply', 'error');
+                if (btn) { btn.disabled = false; btn.textContent = 'Send Reply'; }
+            }
+        } catch (err) {
+            showToast('Network error: ' + err.message, 'error');
+            if (btn) { btn.disabled = false; btn.textContent = 'Send Reply'; }
+        }
+    }
+
+    // ── PROMO CODES ────────────────────────────────────────────────────────
+
+    var promoCodesCache = [];
+
+    async function loadPromoCodes() {
+        var content = document.getElementById('promo-codes-content');
+        content.innerHTML = '<div class="loading-state"><div class="spinner"></div>Loading promo codes...</div>';
+        try {
+            var resp = await fetchWithTimeout('/api/admin/promo-codes', {
+                headers: { 'Authorization': 'Bearer ' + getToken() }
+            });
+            var data = await resp.json();
+            if (!data.success) throw new Error(data.message);
+            promoCodesCache = data.promo_codes || [];
+            renderPromoCodes(promoCodesCache);
+        } catch (err) {
+            content.innerHTML = '<div class="loading-state" style="color:var(--error)">Failed: ' + err.message + '</div>';
+        }
+    }
+
+    function renderPromoCodes(codes) {
+        var content = document.getElementById('promo-codes-content');
+        var now = new Date();
+        var rows = codes.map(function(c) {
+            var isExpired = c.expires_at && new Date(c.expires_at) < now;
+            var isMaxed = c.max_redemptions !== null && c.redemption_count >= c.max_redemptions;
+            var status = !c.is_active ? '<span style="color:#999">Inactive</span>'
+                : isExpired ? '<span style="color:var(--error)">Expired</span>'
+                : isMaxed ? '<span style="color:var(--error)">Maxed</span>'
+                : '<span style="color:#22c55e">Active</span>';
+            return '<tr>' +
+                '<td><strong>' + c.code + '</strong></td>' +
+                '<td>' + c.type + '</td>' +
+                '<td>' + c.value + ' days</td>' +
+                '<td>' + c.redemption_count + ' / ' + (c.max_redemptions !== null ? c.max_redemptions : '∞') + '</td>' +
+                '<td>' + status + '</td>' +
+                '<td>' + fmtDate(c.expires_at) + '</td>' +
+                '<td>' + fmtDate(c.created_at) + '</td>' +
+                '<td><button class="tab-btn" style="padding:0.3rem 0.7rem;font-size:0.75rem;" data-action="toggle-promo" data-promo-id="' + c.id + '" data-new-active="' + !c.is_active + '">' + (c.is_active ? 'Deactivate' : 'Activate') + '</button></td>' +
+            '</tr>';
+        }).join('');
+
+        content.innerHTML = '<div style="margin-bottom:1.5rem;">' +
+            '<p class="section-label" style="margin:0 0 1rem;">Promo Codes</p>' +
+            '<button class="tab-btn" style="margin-bottom:1rem;" data-action="show-promo-form">+ Create Code</button>' +
+            '<div id="promo-form-wrap" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.25rem;margin-bottom:1.5rem;">' +
+                '<p style="font-weight:700;margin:0 0 1rem;">New Promo Code</p>' +
+                '<div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;">' +
+                    '<div><label style="font-size:0.78rem;color:var(--text-secondary);display:block;margin-bottom:4px;">Code *</label><input id="pc-code" type="text" placeholder="MEGADHD" style="width:100%;padding:0.5rem;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text-primary);font-size:0.9rem;" /></div>' +
+                    '<div><label style="font-size:0.78rem;color:var(--text-secondary);display:block;margin-bottom:4px;">Days (value) *</label><input id="pc-value" type="number" min="1" placeholder="30" style="width:100%;padding:0.5rem;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text-primary);font-size:0.9rem;" /></div>' +
+                    '<div><label style="font-size:0.78rem;color:var(--text-secondary);display:block;margin-bottom:4px;">Type</label><select id="pc-type" style="width:100%;padding:0.5rem;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text-primary);font-size:0.9rem;"><option value="free_period">free_period</option><option value="trial_extension">trial_extension</option></select></div>' +
+                    '<div><label style="font-size:0.78rem;color:var(--text-secondary);display:block;margin-bottom:4px;">Max Redemptions (blank = unlimited)</label><input id="pc-max" type="number" min="1" placeholder="100" style="width:100%;padding:0.5rem;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text-primary);font-size:0.9rem;" /></div>' +
+                    '<div><label style="font-size:0.78rem;color:var(--text-secondary);display:block;margin-bottom:4px;">Expires At (optional)</label><input id="pc-expires" type="datetime-local" style="width:100%;padding:0.5rem;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text-primary);font-size:0.9rem;" /></div>' +
+                '</div>' +
+                '<div style="margin-top:1rem;display:flex;gap:0.75rem;">' +
+                    '<button class="tab-btn active" data-action="submit-promo">Create Code</button>' +
+                    '<button class="tab-btn" data-action="cancel-promo-form">Cancel</button>' +
+                '</div>' +
+            '</div>' +
+            '<div style="overflow-x:auto;">' +
+                '<table class="users-table"><thead><tr>' +
+                    '<th>Code</th><th>Type</th><th>Value</th><th>Redemptions</th><th>Status</th><th>Expires</th><th>Created</th><th>Action</th>' +
+                '</tr></thead><tbody>' +
+                (rows || '<tr><td colspan="8" style="text-align:center;color:var(--text-secondary);">No promo codes yet</td></tr>') +
+                '</tbody></table>' +
+            '</div>' +
+        '</div>';
+    }
+
+    // ── UNCONVERTED LEADS TAB ─────────────────────────────────────────────
+
+    async function loadUnconvertedLeads() {
+        var token = getToken();
+        var content = document.getElementById('unconverted-leads-content');
+        if (!token) { window.location.href = '/login'; return; }
+
+        try {
+            var res = await fetchWithTimeout('/api/admin/leads/unconverted', {
+                headers: { 'Authorization': 'Bearer ' + token }
+            });
+            if (res.status === 401) { window.location.href = '/login'; return; }
+            var data = await res.json();
+            if (!data.success) throw new Error(data.message || 'Unknown error');
+
+            var s = data.stats;
+            var leads = data.leads || [];
+
+            var statsHtml = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:0.75rem;margin-bottom:2rem;">' +
+                '<div class="stat-card"><span class="stat-icon">Captures</span><div class="stat-value large">' + fmt(s.total) + '</div><div class="stat-label">Total Captured</div></div>' +
+                '<div class="stat-card"><span class="stat-icon">Converted</span><div class="stat-value large">' + fmt(s.converted) + '</div><div class="stat-label">Signed Up</div></div>' +
+                '<div class="stat-card orange-card"><span class="stat-icon">Stale</span><div class="stat-value large">' + fmt(s.unconverted) + '</div><div class="stat-label">Unconverted</div></div>' +
+                '<div class="stat-card"><span class="stat-icon">Rate</span><div class="stat-value large">' + s.conversionRate + '%</div><div class="stat-label">Conversion Rate</div></div>' +
+                '</div>';
+
+            var magnetLabels = { science_cheat_sheet: 'Science Cheat Sheet', daily_three: 'Daily Three Template' };
+            var rows = leads.map(function(l) {
+                var magnet = magnetLabels[l.lead_magnet_type] || l.lead_magnet_type || '—';
+                var daysSince = l.days_since_capture !== null ? l.days_since_capture : '—';
+                return '<tr>' +
+                    '<td style="font-weight:500;">' + escHtml(l.email) + '</td>' +
+                    '<td><span style="background:var(--cream-dark);padding:2px 8px;border-radius:12px;font-size:0.78rem;font-weight:600;">' + escHtml(magnet) + '</span></td>' +
+                    '<td>' + fmtDate(l.captured_at) + '</td>' +
+                    '<td style="color:' + (daysSince > 30 ? '#e05c5c' : 'var(--text-secondary)') + ';font-weight:' + (daysSince > 30 ? '600' : '400') + ';">' + daysSince + 'd</td>' +
+                    '</tr>';
+            }).join('');
+
+            var tableHtml = rows
+                ? '<div style="overflow-x:auto;"><table class="users-table"><thead><tr>' +
+                    '<th>Email</th><th>Lead Magnet</th><th>Captured</th><th>Days Since</th>' +
+                    '</tr></thead><tbody>' + rows + '</tbody></table></div>'
+                : '<div style="text-align:center;color:var(--text-secondary);padding:2rem;">No unconverted leads — everyone who grabbed a freebie has signed up.</div>';
+
+            content.innerHTML = '<p class="section-label">Unconverted Leads</p>' + statsHtml + tableHtml;
+
+        } catch (err) {
+            console.error(err);
+            content.innerHTML = '<div class="error-state">Failed to load leads: ' + escHtml(err.message) + '</div>';
+        }
+    }
+
+    // ── PROMO CODES: DOCUMENT-LEVEL EVENT DELEGATION ──────────────────────
+    // ARCHITECTURAL FIX (3rd regression): All promo-code button interactions
+    // use document.body delegation with closest(). This guarantees the handler
+    // survives ANY innerHTML re-render because the listener target (document)
+    // can never be destroyed. Previous fixes attached to #panel-promo-codes
+    // which is technically stable, but the e.target.id check was brittle and
+    // any JS error before the setup code (line ~2950 of a 3000-line script)
+    // would silently prevent attachment. Document-level delegation runs early,
+    // uses closest() to handle nested elements, and eliminates all inline
+    // onclick handlers that created scope/global-function dependencies.
+    document.addEventListener('click', function(e) {
+        var btn = e.target.closest('[data-action]');
+        if (!btn) return;
+        var action = btn.getAttribute('data-action');
+
+        // Only handle promo-code actions
+        if (action === 'show-promo-form') {
+            var wrap = document.getElementById('promo-form-wrap');
+            if (wrap) { wrap.style.display = ''; }
+            var codeInput = document.getElementById('pc-code');
+            if (codeInput) { codeInput.focus(); }
+
+        } else if (action === 'cancel-promo-form') {
+            var wrap = document.getElementById('promo-form-wrap');
+            if (wrap) { wrap.style.display = 'none'; }
+
+        } else if (action === 'submit-promo') {
+            e.preventDefault();
+            if (btn.disabled) return;
+
+            var code = document.getElementById('pc-code').value.trim();
+            var value = parseInt(document.getElementById('pc-value').value, 10);
+            var type = document.getElementById('pc-type').value;
+            var maxRaw = document.getElementById('pc-max').value.trim();
+            var expiresRaw = document.getElementById('pc-expires').value;
+
+            if (!code) { showToast('Code is required', 'error'); return; }
+            if (!value || value < 1) { showToast('Days must be a positive number', 'error'); return; }
+
+            btn.disabled = true; btn.textContent = 'Creating...';
+            var body = { code: code, type: type, value: value };
+            if (maxRaw) body.max_redemptions = parseInt(maxRaw, 10);
+            if (expiresRaw) body.expires_at = new Date(expiresRaw).toISOString();
+
+            fetch('/api/admin/promo-codes', {
+                method: 'POST',
+                headers: { 'Authorization': 'Bearer ' + getToken(), 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            }).then(function(resp) { return resp.json(); }).then(function(data) {
+                if (!data.success) throw new Error(data.message || 'Failed to create promo code');
+                showToast('Promo code created: ' + data.promo_code.code, 'success');
+                var wrap = document.getElementById('promo-form-wrap');
+                if (wrap) wrap.style.display = 'none';
+                loadPromoCodes();
+            }).catch(function(err) {
+                showToast('Error: ' + err.message, 'error');
+                btn.disabled = false; btn.textContent = 'Create Code';
+            });
+
+        } else if (action === 'toggle-promo') {
+            var id = parseInt(btn.getAttribute('data-promo-id'), 10);
+            var newActive = btn.getAttribute('data-new-active') === 'true';
+            btn.disabled = true;
+            fetch('/api/admin/promo-codes/' + id, {
+                method: 'PATCH',
+                headers: { 'Authorization': 'Bearer ' + getToken(), 'Content-Type': 'application/json' },
+                body: JSON.stringify({ is_active: newActive })
+            }).then(function(resp) { return resp.json(); }).then(function(data) {
+                if (!data.success) throw new Error(data.message || 'Toggle failed');
+                showToast(newActive ? 'Code activated' : 'Code deactivated', 'success');
+                loadPromoCodes();
+            }).catch(function(err) {
+                showToast('Error: ' + err.message, 'error');
+                btn.disabled = false;
+            });
+        }
+    });
+
+    // ── INITIAL LOAD ───────────────────────────────────────────────────────
+
+    // Initial load
+    loadStats();
+</script>
+</body>
+</html>

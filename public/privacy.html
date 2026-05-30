@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#E8913A">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="FocusLedger">
+<link rel="icon" type="image/png" sizes="32x32" href="/icons/fl-icon.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/icons/fl-icon.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/fl-icon.png">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Privacy Policy - FocusLedger</title>
+    <meta name="description" content="FocusLedger Privacy Policy. Learn what data we collect, how we protect it, third-party integrations, your rights, and our commitment to never selling your personal information.">
+    <link rel="canonical" href="https://focusledger.net/privacy">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --orange: #E8913A;
+            --orange-light: #F0A855;
+            --navy: #2D2A26;
+            --cream: #FAF9F6;
+            --cream-dark: #F0EEE9;
+            --text-dark: #2D2A26;
+            --text-muted: #6B6560;
+            --green: #5BA4A4;
+        
+            --success: #7DB87D;
+            --warning: #E07A5F;
+            --error: #E07A5F;
+            --error-light: #FAEAE5;
+            --border: #E8E5E0;
+            --surface: #FFFFFF;
+        }
+        body {
+            font-family: 'DM Sans', sans-serif;
+            color: var(--text-dark);
+            background: var(--cream);
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+        h1, h2, h3 { font-family: 'Space Grotesk', sans-serif; }
+
+        /* NAV */
+        .legal-nav {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: rgba(250, 249, 246, 0.92);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(0,0,0,0.04);
+        }
+        .legal-nav-inner {
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        .logo {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--navy);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            text-decoration: none;
+        }
+        .logo-dot {
+            width: 12px;
+            height: 12px;
+            background: var(--orange);
+            border-radius: 3px;
+            transform: rotate(45deg);
+        }
+        .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+        .nav-links a {
+            font-size: 0.88rem;
+            color: var(--text-muted);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+        .nav-links a:hover { color: var(--orange); }
+        .nav-links a.active { color: var(--navy); font-weight: 600; }
+
+        /* LAYOUT */
+        .legal-wrap {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 2.5rem 2rem 4rem;
+            display: grid;
+            grid-template-columns: 200px 1fr;
+            gap: 3rem;
+        }
+
+        @media (max-width: 700px) {
+            .legal-wrap {
+                grid-template-columns: 1fr;
+                gap: 1.5rem;
+                padding: 1.5rem 1.25rem 3rem;
+            }
+        }
+
+        /* TABLE OF CONTENTS */
+        .toc {
+            position: sticky;
+            top: 5.5rem;
+            align-self: start;
+        }
+        @media (max-width: 700px) {
+            .toc { position: static; border-bottom: 1px solid #E8E5E0; padding-bottom: 1.5rem; }
+        }
+        .toc-title {
+            font-size: 0.72rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-muted);
+            margin-bottom: 0.75rem;
+        }
+        .toc ol {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 0.1rem;
+        }
+        .toc li a {
+            display: block;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            text-decoration: none;
+            padding: 0.3rem 0;
+            border-left: 2px solid transparent;
+            padding-left: 0.75rem;
+            transition: color 0.15s, border-color 0.15s;
+            line-height: 1.3;
+        }
+        .toc li a:hover, .toc li a.active {
+            color: var(--orange);
+            border-left-color: var(--orange);
+        }
+        .toc ol ol {
+            margin-left: 0.5rem;
+            margin-top: 0.15rem;
+        }
+        .toc ol ol a {
+            font-size: 0.8rem;
+            padding-left: 1.25rem;
+        }
+
+        /* CONTENT */
+        .legal-content h1 {
+            font-size: 2.25rem;
+            color: var(--navy);
+            margin-bottom: 0.5rem;
+            line-height: 1.2;
+        }
+        .legal-content .last-updated {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 2.5rem;
+            font-style: italic;
+        }
+        .legal-content h2 {
+            font-size: 1.3rem;
+            color: var(--navy);
+            margin-top: 2.25rem;
+            margin-bottom: 0.75rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #E8E5E0;
+        }
+        .legal-content h3 {
+            font-size: 1rem;
+            color: var(--navy);
+            margin-top: 1.25rem;
+            margin-bottom: 0.5rem;
+        }
+        .legal-content p {
+            font-size: 0.92rem;
+            color: #3D3D5C;
+            margin-bottom: 1rem;
+            line-height: 1.7;
+        }
+        .legal-content ul, .legal-content ol {
+            margin-bottom: 1rem;
+            padding-left: 1.5rem;
+        }
+        .legal-content li {
+            font-size: 0.92rem;
+            color: #3D3D5C;
+            margin-bottom: 0.4rem;
+            line-height: 1.6;
+        }
+        .legal-content strong {
+            color: var(--navy);
+            font-weight: 600;
+        }
+        .legal-content a {
+            color: var(--orange);
+            text-decoration: none;
+        }
+        .legal-content a:hover { text-decoration: underline; }
+
+        /* HIGHLIGHT BOX */
+        .highlight-box {
+            background: white;
+            border: 1px solid #E8E5E0;
+            border-radius: 12px;
+            padding: 1.25rem 1.5rem;
+            margin: 1.5rem 0;
+        }
+        .highlight-box p {
+            margin: 0;
+            font-size: 0.9rem;
+        }
+        .highlight-box .highlight-title {
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 600;
+            color: var(--navy);
+            font-size: 0.95rem;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+        .highlight-box .highlight-title svg {
+            width: 16px;
+            height: 16px;
+            stroke: var(--green);
+            flex-shrink: 0;
+        }
+
+        /* TABLE */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0 1.5rem;
+            font-size: 0.88rem;
+        }
+        .data-table th, .data-table td {
+            text-align: left;
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid #E8E5E0;
+        }
+        .data-table th {
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 600;
+            color: var(--navy);
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            background: white;
+        }
+        .data-table tr:last-child td { border-bottom: none; }
+        .data-table td { color: #3D3D5C; vertical-align: top; }
+        .provider-tag {
+            display: inline-block;
+            background: var(--cream-dark);
+            padding: 0.2rem 0.6rem;
+            border-radius: 6px;
+            font-size: 0.78rem;
+            font-weight: 500;
+            color: var(--navy);
+        }
+
+        /* FOOTER */
+        .legal-footer {
+            text-align: center;
+            padding: 2rem;
+            border-top: 1px solid #E8E5E0;
+            margin-top: 2rem;
+        }
+        .legal-footer p {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+        }
+        .legal-footer a {
+            color: var(--orange);
+            text-decoration: none;
+        }
+        .legal-footer a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+
+    <!-- NAV -->
+    <div class="legal-nav">
+        <div class="legal-nav-inner">
+            <a href="/" class="logo">
+                <div class="logo-dot"></div>
+                FocusLedger
+            </a>
+            <div class="nav-links">
+                <a href="/terms">Terms of Service</a>
+                <a href="/app">Open App</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="legal-wrap">
+        <!-- TABLE OF CONTENTS -->
+        <nav class="toc">
+            <div class="toc-title">Contents</div>
+            <ol>
+                <li><a href="#overview">Overview</a></li>
+                <li><a href="#collect">What We Collect</a></li>
+                <li><a href="#storage">How We Store &amp; Protect Data</a></li>
+                <li><a href="#third-party">Third-Party Integrations</a></li>
+                <li><a href="#rights">Your Rights</a></li>
+                <li><a href="#cookies">Cookies &amp; Sessions</a></li>
+                <li><a href="#adhd">ADHD Data Sensitivity</a></li>
+                <li><a href="#retention">Data Retention</a></li>
+                <li><a href="#children">Children's Privacy</a></li>
+                <li><a href="#changes">Policy Changes</a></li>
+                <li><a href="#contact">Contact</a></li>
+            </ol>
+        </nav>
+
+        <!-- MAIN CONTENT -->
+        <article class="legal-content">
+            <h1>Privacy Policy</h1>
+            <p class="last-updated">Last updated: April 22, 2026</p>
+
+            <h2 id="overview">1. Overview</h2>
+            <p>FocusLedger is built for people with ADHD who want to understand their money and manage their tasks in one place. We take your privacy seriously. This policy explains what data we collect, why we need it, how we protect it, and what rights you have.</p>
+            <p>We are Polsia, Inc., the company behind FocusLedger. If you have questions about this policy, contact us at <a href="mailto:privacy@focusledger.app">privacy@focusledger.app</a>.</p>
+
+            <h2 id="collect">2. What We Collect</h2>
+            <p>We collect only what we need to run the service. Here's what, why, and how:</p>
+
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Data Type</th>
+                        <th>What We Collect</th>
+                        <th>Why</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Account Info</strong></td>
+                        <td>Name (optional), email address, hashed password</td>
+                        <td>Account creation, login, service communications</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Tasks &amp; Steps</strong></td>
+                        <td>Task names, descriptions, steps, due dates, completion status, recurrence rules</td>
+                        <td>Core app functionality</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Expenses</strong></td>
+                        <td>Amount, category, date, description, associated task (if any)</td>
+                        <td>Spending tracking and budget view</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Bank &amp; Account Data</strong></td>
+                        <td>Transaction amount, merchant name, date, category; account names, account types (checking/savings/credit), institution names (via Plaid). We do NOT store account numbers, routing numbers, or bank login credentials.</td>
+                        <td>Automated expense tracking for Autopilot users (via Plaid)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Email Data</strong></td>
+                        <td>Email subject, sender, date, and body snippets for task detection (via read-only OAuth). We do NOT store full email content long-term.</td>
+                        <td>Email-to-task linking (Autopilot feature)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Usage Data</strong></td>
+                        <td>Pages visited, features used, timestamp (server logs)</td>
+                        <td>Product improvement, debugging, security</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Device Info</strong></td>
+                        <td>Browser type, IP address, PWA install state</td>
+                        <td>Security, product improvement</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <p>We do not collect biometric data, precise location data, health information, or any data not listed above.</p>
+
+            <h2 id="storage">3. How We Store &amp; Protect Data</h2>
+            <p>All personal data is stored in a PostgreSQL database hosted on Neon (a fully managed PostgreSQL service by Neon Technologies). Data is encrypted at rest on Neon servers.</p>
+            <p><strong>OAuth tokens</strong> (bank connections via Plaid, email OAuth connections) are encrypted at rest using AES-256-GCM before being stored in our database. These tokens are only accessible to your own account and are never shared between users.</p>
+            <p><strong>Passwords</strong> are hashed using bcrypt with a cost factor of 12. We never store plaintext passwords.</p>
+            <p><strong>Data isolation:</strong> Each user can only access their own data. We enforce this at the application layer via authenticated session tokens.</p>
+            <p>Data transit is protected by TLS 1.2+. We do not support outdated cipher suites.</p>
+
+            <h2 id="third-party">4. Third-Party Integrations</h2>
+            <p>We use third-party services to operate FocusLedger. Each handles data according to their own privacy policies:</p>
+
+            <div class="highlight-box">
+                <div class="highlight-title">
+                    <svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                    We never sell your data. Full stop.
+                </div>
+                <p>Your personal data is never sold, licensed, or shared with advertisers, data brokers, or third parties for advertising purposes.</p>
+            </div>
+
+            <h3>Plaid, Inc. (Bank &amp; Financial Data)</h3>
+            <p>FocusLedger uses <strong>Plaid</strong> to connect your bank and credit accounts. When you link a bank account (Autopilot feature), Plaid acts as a secure data intermediary between your financial institution and FocusLedger.</p>
+            <p><strong>What financial data FocusLedger receives via Plaid:</strong></p>
+            <ul>
+                <li>Transaction amounts, dates, and merchant names</li>
+                <li>Account names and account types (checking, savings, credit)</li>
+                <li>Institution names (e.g., "Chase", "Bank of America")</li>
+                <li>Account balances (when available)</li>
+            </ul>
+            <p><strong>What FocusLedger does NOT store:</strong></p>
+            <ul>
+                <li>Bank account numbers or routing numbers</li>
+                <li>Bank login credentials (username or password)</li>
+                <li>Full card numbers or PINs</li>
+            </ul>
+            <p>Your bank credentials are entered directly into Plaid's secure interface — FocusLedger never sees or handles them. FocusLedger receives only the transaction and account metadata you explicitly authorize.</p>
+            <ul>
+                <li>Plaid's <a href="https://plaid.com/legal/#end-user-privacy-policy" target="_blank" rel="noopener">End User Privacy Policy</a> governs their data handling</li>
+                <li>You can disconnect your bank connection at any time from Settings</li>
+                <li>Plaid may retain data per their own retention policy after disconnection</li>
+            </ul>
+
+            <h3>Stripe, Inc. (Payment Processing)</h3>
+            <p>Stripe processes your subscription payments. We do not store your full card details on our servers:</p>
+            <ul>
+                <li>Stripe stores card details; we store only a tokenized payment reference</li>
+                <li>Stripe's <a href="https://stripe.com/privacy" target="_blank" rel="noopener">Privacy Policy</a> governs payment data</li>
+                <li>Stripe may retain transaction records per their legal obligations</li>
+            </ul>
+
+            <h3>Google / Gmail (Email OAuth)</h3>
+            <p>When you connect Gmail via Google OAuth (Autopilot feature), FocusLedger requests <strong>read-only</strong> access to your inbox. We use this access to surface actionable emails as suggested tasks — we do not send email, modify your inbox, or access your contacts.</p>
+            <p><strong>What FocusLedger accesses via Gmail:</strong></p>
+            <ul>
+                <li>Email subject lines, sender names, and received dates</li>
+                <li>Email body snippets to identify actionable items (not stored long-term)</li>
+            </ul>
+            <p><strong>What FocusLedger does NOT do:</strong></p>
+            <ul>
+                <li>We do not store full email body content beyond the immediate session</li>
+                <li>We do not train AI models on your email content</li>
+                <li>We do not share email content with third parties</li>
+                <li>We do not access your Google Contacts or other Google services</li>
+            </ul>
+            <ul>
+                <li>Google's <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Privacy Policy</a> governs their data handling</li>
+                <li>You can disconnect Gmail at any time from Settings in FocusLedger</li>
+                <li>You can also revoke access directly from your <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener">Google Account permissions page</a></li>
+            </ul>
+
+            <h3>Microsoft, Yahoo (Email OAuth)</h3>
+            <p>The same read-only access and data handling principles apply to Outlook (Microsoft) and Yahoo email connections as described above for Gmail.</p>
+            <ul>
+                <li>Your email credentials are held by the provider, not FocusLedger</li>
+                <li>You can revoke OAuth access from Settings or directly from your Microsoft/Yahoo account security settings</li>
+            </ul>
+
+            <h2 id="rights">5. Your Rights</h2>
+            <p>You have complete control over your data. You can:</p>
+
+            <h3>Export Your Data</h3>
+            <p>Contact us at <a href="mailto:privacy@focusledger.app">privacy@focusledger.app</a> with "Data Export" in the subject line. We'll provide a full export of your tasks, expenses, and account data in JSON format within 30 days.</p>
+
+            <h3>Delete Your Account</h3>
+            <p>Delete your account from the Settings page. This permanently removes all your personal data from FocusLedger within 30 days. Bank connections via Plaid are disconnected automatically.</p>
+
+            <h3>Disconnect Linked Accounts</h3>
+            <p>You can disconnect your bank account or email OAuth connection at any time from Settings. Revoking access through the provider (Google, Plaid, etc.) also severs the connection.</p>
+
+            <h3>Correct Inaccurate Data</h3>
+            <p>You can edit any task, expense, or profile information directly in the app at any time.</p>
+
+            <h3>Opt Out of Non-Essential Communications</h3>
+            <p>You can unsubscribe from marketing emails via the unsubscribe link in each email. Transactional emails (account security, billing) cannot be opted out of.</p>
+
+            <h3> lodge a Complaint</h3>
+            <p>If you believe your privacy rights have been violated, you have the right to file a complaint with the relevant data protection authority in your jurisdiction. You can also contact us directly at <a href="mailto:privacy@focusledger.app">privacy@focusledger.app</a>.</p>
+
+            <h2 id="cookies">6. Cookies &amp; Sessions</h2>
+            <p>FocusLedger uses JWT (JSON Web Token) based sessions stored in browser localStorage (not traditional cookies). Here's what that means:</p>
+            <ul>
+                <li><strong>Session token:</strong> A JWT stored in localStorage authenticates your requests to the API. It expires after 30 days of inactivity.</li>
+                <li><strong>No tracking cookies:</strong> We do not use tracking cookies, advertising cookies, or third-party analytics cookies.</li>
+                <li><strong>Service Worker:</strong> Our PWA uses a Service Worker to cache app resources for offline functionality. It does not track you.</li>
+                <li><strong>Meta Pixel:</strong> We use Meta Pixel (Facebook) for advertising attribution only. It tracks page views and conversion events &mdash; not personal data beyond what Meta's own policies govern.</li>
+            </ul>
+            <p>You can disable localStorage by clearing your browser data, but this will log you out of FocusLedger.</p>
+
+            <h2 id="adhd">7. ADHD Data Sensitivity</h2>
+            <p>We understand that the data in FocusLedger &mdash; your productivity patterns, task completion rates, spending behavior, financial history &mdash; is inherently personal and potentially sensitive, especially for people with ADHD who may have spent years navigating shame around these areas.</p>
+            <p><strong>Our commitments:</strong></p>
+            <ul>
+                <li><strong>Never sell your data.</strong> Your task data, financial data, or usage patterns will never be sold, licensed, or transferred to any third party for advertising, profiling, or data brokerage purposes.</li>
+                <li><strong>No advertising profiling.</strong> We do not use your productivity data or financial data to build advertising profiles or target you with ads anywhere.</li>
+                <li><strong>No secondary use.</strong> Data you enter into FocusLedger is used only to provide the FocusLedger service to you.</li>
+                <li><strong>No third-party analytics sold to others.</strong> Our analytics data is for internal product improvement only.</li>
+            </ul>
+            <p>If this changes in any way, we will notify you by email at least 30 days before the change takes effect.</p>
+
+            <h2 id="retention">8. Data Retention</h2>
+            <p>We retain your data for as long as your account is active, plus a grace period:</p>
+            <ul>
+                <li><strong>Active accounts:</strong> Data retained indefinitely while you use the service.</li>
+                <li><strong>Deleted accounts:</strong> All personal data deleted within 30 days of account deletion request.</li>
+                <li><strong>Bank transactions:</strong> Transaction data retained for 24 months after sync. Older transactions are purged.</li>
+                <li><strong>Server logs:</strong> Retained for 90 days maximum, then purged.</li>
+                <li><strong>Marketing emails:</strong> If you delete your account, you are unsubscribed from all marketing emails immediately.</li>
+            </ul>
+            <p>We may retain aggregated, anonymized data indefinitely for product improvement purposes. This data cannot be linked back to you.</p>
+
+            <h2 id="children">9. Children's Privacy</h2>
+            <p>FocusLedger is not designed for or directed at children under 13. We do not knowingly collect personal information from anyone under 13 years of age.</p>
+            <p>If we learn that we have collected personal information from a child under 13, we will take immediate steps to delete that data. If you are a parent or guardian and believe your child has provided us with personal information, contact us at <a href="mailto:privacy@focusledger.app">privacy@focusledger.app</a> with "Children's Data" in the subject line.</p>
+
+            <h2 id="changes">10. Changes to This Policy</h2>
+            <p>We may update this Privacy Policy from time to time. When we make changes:</p>
+            <ul>
+                <li>We update the "Last updated" date at the top of this page</li>
+                <li>For material changes affecting your rights or data handling, we notify you by email</li>
+                <li>We post a notice in the app dashboard</li>
+            </ul>
+            <p>Continued use of FocusLedger after changes constitutes acceptance of the updated policy.</p>
+
+            <h2 id="contact">11. Contact</h2>
+            <p>Questions, concerns, or requests about your data? We're here:</p>
+            <p><strong>Email:</strong> <a href="mailto:privacy@focusledger.app">privacy@focusledger.app</a><br>
+            <strong>Company:</strong> Polsia, Inc.<br>
+            <strong>Website:</strong> <a href="https://focusledger.net">https://focusledger.net</a></p>
+            <p>We aim to respond to all privacy inquiries within 72 hours.</p>
+        </article>
+    </div>
+
+    <!-- FOOTER -->
+    <div class="legal-footer">
+        <p>FocusLedger &mdash; Built by <a href="https://polsia.com">Polsia</a> &middot; <a href="/terms">Terms of Service</a></p>
+    </div>
+
+    <script>
+    (function() {
+        var headings = document.querySelectorAll('.legal-content h2[id]');
+        var tocLinks = document.querySelectorAll('.toc a');
+        function onScroll() {
+            var scrollPos = window.scrollY + 80;
+            var activeId = null;
+            headings.forEach(function(h) {
+                if (h.offsetTop <= scrollPos) activeId = h.id;
+            });
+            tocLinks.forEach(function(a) {
+                a.classList.remove('active');
+                if (a.getAttribute('href') === '#' + activeId) a.classList.add('active');
+            });
+        }
+        window.addEventListener('scroll', onScroll, { passive: true });
+        onScroll();
+    })();
+    </script>
+
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' })
+                    .catch(function() {});
+            });
+            navigator.serviceWorker.addEventListener('message', function(e) {
+                if (e.data && e.data.type === 'SW_UPDATED') window.location.reload();
+            });
+        }
+    </script>
+    <!-- Analytics -->
+    <script src="/js/analytics.js"></script>
+    <script>FLA.trackPage('privacy');</script>
+</body>
+</html>

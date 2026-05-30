@@ -1,0 +1,2120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#011e5c">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="FocusLedger">
+    <link rel="icon" type="image/png" sizes="32x32" href="/icons/fl-icon.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/icons/fl-icon.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/fl-icon.png">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FocusLedger — The place on the internet that helps you spend less time on the internet.</title>
+    <meta name="description" content="Tasks done. Bills paid. Impulse spending flagged. FocusLedger is executive functioning on autopilot — built by a CPA with ADHD, designed for how ADHD brains actually work.">
+    <!-- Open Graph -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://focusledger.net/">
+    <meta property="og:title" content="FocusLedger — The place on the internet that helps you spend less time on the internet.">
+    <meta property="og:description" content="Tasks done. Bills paid. Impulse spending flagged. FocusLedger is executive functioning on autopilot — built by a CPA with ADHD, designed for how ADHD brains actually work.">
+    <meta property="og:image" content="https://focusledger.net/icons/og-home.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:site_name" content="FocusLedger">
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="FocusLedger — The place on the internet that helps you spend less time on the internet.">
+    <meta name="twitter:description" content="Tasks done. Bills paid. Impulse spending flagged. FocusLedger is executive functioning on autopilot — built by a CPA with ADHD.">
+    <meta name="twitter:image" content="https://focusledger.net/icons/og-home.png">
+    <!-- Canonical -->
+    <link rel="canonical" href="https://focusledger.net/">
+    <!-- Meta Pixel base + PageView -->
+    <script>
+    !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+    n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
+    n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
+    t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,
+    document,'script','https://connect.facebook.net/en_US/fbevents.js');
+    fbq('init','1597499061553078');
+    fbq('track','PageView');
+    </script>
+    <noscript><img height="1" width="1" style="display:none"
+    src="https://www.facebook.com/tr?id=1597499061553078&ev=PageView&noscript=1"/></noscript>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        /* ── CSS CUSTOM PROPERTY: --calm (0=energetic, 8=calm) ──
+           Registered as animatable via CSS.registerProperty in scroll script.
+           Sections set this via IntersectionObserver. CSS derives all
+           progressive-calm values from it. */
+        :root {
+            --calm: 0;
+            --trust-blue: #011e5c;
+            --gold: #c9a84c;
+            --warm-white: #faf9f7;
+            --alt-bg: #f5f3ef;
+            --surface: #ffffff;
+            --text-primary: #1a1a1a;
+            --text-secondary: #6b6b6b;
+            --border: #e8e5e0;
+            --green: #5BA4A4;
+            --green-muted: #4A9292;
+            --font-serif: Georgia, "Times New Roman", serif;
+            --font-sans: Inter, system-ui, -apple-system, sans-serif;
+            --card-radius: 4px;
+            --card-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            --btn-radius: 4px;
+        }
+
+        body {
+            font-family: var(--font-sans);
+            color: var(--text-primary);
+            background: var(--warm-white);
+            overflow-x: hidden;
+            line-height: 1.6;
+        }
+
+        /* ── NAV (unchanged) ── */
+        nav {
+            background: var(--trust-blue);
+            position: sticky;
+            top: 0;
+            z-index: 200;
+        }
+        .nav-inner {
+            padding: 0 2rem;
+            height: 64px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .logo {
+            font-family: var(--font-sans);
+            font-size: 1.35rem;
+            font-weight: 700;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            text-decoration: none;
+        }
+        .logo-dot {
+            width: 10px;
+            height: 10px;
+            background: var(--gold);
+            border-radius: 2px;
+            transform: rotate(45deg);
+        }
+        .logo-icon {
+            height: 28px;
+            width: auto;
+            display: block;
+            flex-shrink: 0;
+        }
+        .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+        .nav-links-pages {
+            display: contents;
+        }
+        .nav-links a {
+            color: rgba(255,255,255,0.8);
+            text-decoration: none;
+            font-size: 0.925rem;
+            font-weight: 500;
+            padding: 0.5rem 0.85rem;
+            border-radius: var(--btn-radius);
+            transition: all 0.2s;
+        }
+        .nav-links a:hover {
+            color: white;
+            background: rgba(255,255,255,0.08);
+        }
+        .nav-cta {
+            background: var(--gold) !important;
+            color: #1a1a1a !important;
+        }
+        .nav-hamburger {
+            display: none;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 0.5rem;
+            color: rgba(255,255,255,0.85);
+        }
+        .nav-hamburger svg { width: 22px; height: 22px; }
+        .nav-mobile-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 300;
+            background: rgba(1,30,92,0.55);
+        }
+        .nav-mobile-overlay.active { display: block; }
+        .nav-mobile-drawer {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: min(280px, 85vw);
+            background: var(--trust-blue);
+            height: 100%;
+            padding: 1.5rem;
+            transform: translateX(100%);
+            transition: transform 0.25s ease;
+        }
+        .nav-mobile-overlay.active .nav-mobile-drawer { transform: translateX(0); }
+        .nav-mobile-drawer-header {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 1.5rem;
+        }
+        .nav-mobile-close {
+            background: none;
+            border: none;
+            color: rgba(255,255,255,0.7);
+            cursor: pointer;
+            padding: 0.25rem;
+        }
+        .nav-mobile-close svg { width: 22px; height: 22px; }
+        .nav-mobile-links { display: flex; flex-direction: column; gap: 0.25rem; }
+        .nav-mobile-links a {
+            color: rgba(255,255,255,0.85);
+            text-decoration: none;
+            font-size: 1rem;
+            font-weight: 500;
+            padding: 0.85rem 0.75rem;
+            border-radius: var(--btn-radius);
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            transition: all 0.15s;
+        }
+        .nav-mobile-links a:hover { color: white; background: rgba(255,255,255,0.08); }
+        .nav-mobile-links a.nav-mobile-cta {
+            background: var(--gold);
+            color: #1a1a1a;
+            text-align: center;
+            border-radius: var(--btn-radius);
+            border-bottom: none;
+            margin-top: 0.75rem;
+            font-weight: 600;
+        }
+        .nav-mobile-links a.nav-mobile-cta:hover { background: #d4b56a; }
+        .nav-cta:hover {
+            opacity: 0.9 !important;
+            background: var(--gold) !important;
+        }
+
+        /* ── CALM-LEVEL SYSTEM ──
+           Hero (calm=0): tighter, busier, more saturated — designed overwhelm.
+           Final CTA (calm=8): spacious, dark navy, gold — this is what relief feels like.
+           Each section is styled to match its energy level. The --calm prop
+           adds a smooth scroll-linked bridge between them. */
+
+        /* ── HERO: calm=0, most energetic ── */
+        .hero {
+            /* Slightly bluer/more saturated warm-white at calm=0 */
+            background: #f6f4f1;
+            padding: 4rem 2rem 5rem;
+            /* A subtle texture / energy marker */
+            border-top: 3px solid var(--trust-blue);
+        }
+        .hero-inner {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 4rem;
+            align-items: center;
+        }
+
+        /* Founder credibility badge */
+        .founder-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: rgba(1,30,92,0.06);
+            border: 1px solid rgba(1,30,92,0.12);
+            color: var(--trust-blue);
+            font-size: 0.8rem;
+            font-weight: 600;
+            letter-spacing: 0.04em;
+            padding: 0.4rem 0.9rem;
+            border-radius: 2px;
+            margin-bottom: 1.5rem;
+        }
+        .founder-badge::before {
+            content: '◆';
+            color: var(--gold);
+            font-size: 0.65rem;
+        }
+
+        .hero-eyebrow {
+            display: inline-block;
+            background: rgba(201,168,76,0.12);
+            color: #8B6914;
+            font-size: 0.78rem;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            padding: 0.35rem 0.9rem;
+            border-radius: 2px;
+            margin-bottom: 1.25rem;
+        }
+        .hero-text h1 {
+            font-family: var(--font-serif);
+            /* Tight at calm=0: energetic feel */
+            font-size: 3.6rem;
+            line-height: 1.08;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            color: var(--trust-blue);
+            margin-bottom: 1.25rem;
+        }
+        .hero-text h1 em {
+            font-style: normal;
+            color: var(--gold);
+        }
+        .hero-sub {
+            font-size: 1.1rem;
+            line-height: 1.6;
+            color: var(--text-secondary);
+            max-width: 460px;
+            margin-bottom: 2rem;
+            font-weight: 500;
+        }
+        .hero-cta-wrap {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.75rem;
+        }
+        .hero-cta-btn {
+            display: inline-flex;
+            align-items: center;
+            background: var(--trust-blue);
+            color: white;
+            padding: 0.9rem 2rem;
+            border-radius: var(--btn-radius);
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 1rem;
+            transition: opacity 0.2s, background 0.2s, box-shadow 0.2s;
+            min-height: 48px;
+            box-shadow: 0 4px 16px rgba(1,30,92,0.25);
+        }
+        .hero-cta-btn:hover { opacity: 0.88; }
+        /* Google-branded primary CTA button */
+        .hero-google-btn {
+            background: #ffffff !important;
+            color: #1a1a1a !important;
+            border: 2px solid #dadce0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.10), 0 4px 16px rgba(0,0,0,0.06);
+            gap: 0.65rem;
+            font-size: 1.05rem;
+        }
+        .hero-google-btn:hover {
+            background: #f8f9fa !important;
+            border-color: #bdc1c6;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.13);
+            opacity: 1 !important;
+        }
+        .hero-google-btn svg { flex-shrink: 0; }
+        /* Secondary links row below the Google button */
+        .hero-alt-links {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+        .hero-link-sep { color: var(--text-secondary); font-size: 0.85rem; }
+        .hero-login-link {
+            color: var(--trust-blue);
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 500;
+            opacity: 0.7;
+        }
+        .hero-login-link:hover { opacity: 1; text-decoration: underline; }
+
+        /* Proof strip */
+        .hero-proof-strip {
+            margin-top: 1.5rem;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem 1.25rem;
+        }
+        .proof-item {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            font-size: 0.82rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+        .proof-item .check-icon {
+            width: 16px;
+            height: 16px;
+            color: var(--green);
+            flex-shrink: 0;
+        }
+
+        /* Hero visual */
+        .hero-visual {
+            position: relative;
+        }
+        /* Mockup "breathes" — fast at calm=0, slows with scroll */
+        .mockup-browser {
+            background: var(--surface);
+            border-radius: 6px;
+            box-shadow: 0 8px 48px rgba(1,30,92,0.16);
+            overflow: hidden;
+            animation: mockup-breathe 2s ease-in-out infinite;
+        }
+        @keyframes mockup-breathe {
+            0%, 100% { box-shadow: 0 8px 48px rgba(1,30,92,0.16); transform: translateY(0); }
+            50% { box-shadow: 0 16px 64px rgba(1,30,92,0.22); transform: translateY(-3px); }
+        }
+        .mockup-bar {
+            background: var(--trust-blue);
+            padding: 0.75rem 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .mockup-dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.25);
+        }
+        .mockup-url {
+            flex: 1;
+            background: rgba(255,255,255,0.12);
+            border-radius: 3px;
+            height: 22px;
+            margin: 0 0.5rem;
+            display: flex;
+            align-items: center;
+            padding: 0 0.75rem;
+            font-size: 0.72rem;
+            color: rgba(255,255,255,0.6);
+            font-family: var(--font-sans);
+        }
+        .mockup-body {
+            padding: 1rem;
+            background: var(--warm-white);
+        }
+        .zone-row {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+        .zone-card {
+            background: var(--surface);
+            border-radius: 3px;
+            padding: 0.75rem;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+            flex: 1;
+        }
+        .zone-card-label {
+            font-size: 0.65rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--trust-blue);
+            margin-bottom: 0.5rem;
+            opacity: 0.7;
+        }
+        .mock-task {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.25rem 0;
+        }
+        .mock-check {
+            width: 14px;
+            height: 14px;
+            border-radius: 2px;
+            border: 1.5px solid #d0ccc6;
+            flex-shrink: 0;
+        }
+        .mock-check.done {
+            background: var(--green);
+            border-color: var(--green);
+        }
+        .mock-text {
+            font-size: 0.72rem;
+            color: var(--text-primary);
+        }
+        .mock-text.done {
+            text-decoration: line-through;
+            color: var(--text-secondary);
+        }
+        .mock-stat {
+            text-align: center;
+            padding: 0.4rem 0;
+        }
+        .mock-amount {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--trust-blue);
+        }
+        .mock-label {
+            font-size: 0.62rem;
+            color: var(--text-secondary);
+        }
+        .mock-news-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 0.5rem;
+            padding: 0.3rem 0;
+            border-bottom: 1px solid var(--border);
+        }
+        .mock-news-item:last-child { border-bottom: none; }
+        .mock-news-text {
+            font-size: 0.68rem;
+            color: var(--text-primary);
+            line-height: 1.35;
+            flex: 1;
+        }
+        .mock-bias {
+            font-size: 0.58rem;
+            padding: 0.1rem 0.4rem;
+            border-radius: 50px;
+            white-space: nowrap;
+            font-weight: 600;
+            background: rgba(122,122,122,0.1);
+            color: #666;
+        }
+
+        /* Impulse alert badge — ADHD differentiator visible in mockup */
+        .mock-alert {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            background: rgba(201,168,76,0.12);
+            border: 1px solid rgba(201,168,76,0.25);
+            border-radius: 2px;
+            padding: 0.35rem 0.5rem;
+            margin-top: 0.4rem;
+        }
+        .mock-alert-text {
+            font-size: 0.62rem;
+            color: #8B6914;
+            font-weight: 600;
+        }
+
+        /* ── PAIN SECTION: calm=2, medium-high energy ── */
+        .pain {
+            background: var(--warm-white);
+            padding: 5rem 2rem;
+            /* Slightly busier: left border accent */
+        }
+        .pain-inner {
+            max-width: 960px;
+            margin: 0 auto;
+        }
+        .pain-header {
+            margin-bottom: 3rem;
+        }
+        .pain-header .section-eyebrow {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--gold);
+            font-weight: 600;
+            margin-bottom: 0.85rem;
+            display: block;
+        }
+        .pain-header h2 {
+            font-family: var(--font-serif);
+            font-size: 2.4rem;
+            font-weight: 700;
+            color: var(--trust-blue);
+            line-height: 1.15;
+            margin-bottom: 0.75rem;
+            letter-spacing: -0.01em;
+        }
+        .pain-header p {
+            font-size: 1.05rem;
+            color: var(--text-secondary);
+            line-height: 1.7;
+            max-width: 600px;
+        }
+        .pain-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1.25rem;
+        }
+        .pain-card {
+            background: var(--surface);
+            border-radius: var(--card-radius);
+            padding: 1.5rem;
+            border: 1px solid var(--border);
+            box-shadow: var(--card-shadow);
+            border-left: 3px solid var(--trust-blue);
+        }
+        .pain-card h3 {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--trust-blue);
+            margin-bottom: 0.4rem;
+        }
+        .pain-card p {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+        .pain-resolve {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            margin-top: 0.75rem;
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: var(--green-muted);
+        }
+        .pain-resolve::before { content: '→'; }
+
+        /* ── ZONES/SOLUTION: calm=4, medium energy ── */
+        .zones {
+            background: var(--alt-bg);
+            padding: 5rem 2rem;
+        }
+        .zones-inner {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .section-header {
+            text-align: center;
+            margin-bottom: 3.5rem;
+        }
+        .section-eyebrow {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--gold);
+            font-weight: 600;
+            margin-bottom: 0.85rem;
+            display: block;
+        }
+        .section-header h2 {
+            font-family: var(--font-serif);
+            font-size: 2.25rem;
+            font-weight: 700;
+            color: var(--trust-blue);
+            margin-bottom: 0.75rem;
+            line-height: 1.2;
+        }
+        .section-header p {
+            font-size: 1.05rem;
+            color: var(--text-secondary);
+            max-width: 540px;
+            margin: 0 auto;
+            line-height: 1.65;
+        }
+        .zones-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1.5rem;
+        }
+        .zone-feature {
+            background: var(--surface);
+            border-radius: var(--card-radius);
+            padding: 2rem;
+            box-shadow: var(--card-shadow);
+        }
+        .zone-number {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 32px;
+            height: 32px;
+            background: var(--trust-blue);
+            color: white;
+            font-size: 0.8rem;
+            font-weight: 700;
+            border-radius: 2px;
+            margin-bottom: 1rem;
+        }
+        .zone-feature h3 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--trust-blue);
+            margin-bottom: 0.6rem;
+        }
+        .zone-feature p {
+            font-size: 0.925rem;
+            color: var(--text-secondary);
+            line-height: 1.65;
+        }
+        .zone-items {
+            margin-top: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+        .zone-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+        .zone-item::before {
+            content: '';
+            width: 5px;
+            height: 5px;
+            background: var(--gold);
+            border-radius: 1px;
+            flex-shrink: 0;
+            transform: rotate(45deg);
+        }
+
+        /* ── ADHD FEATURES: calm=5, medium energy ── */
+        .diffs {
+            background: var(--warm-white);
+            padding: 5rem 2rem;
+        }
+        .diffs-inner {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .diffs-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.5rem;
+            margin-top: 3.5rem;
+        }
+        .diff-card {
+            background: var(--surface);
+            border-radius: var(--card-radius);
+            padding: 2rem;
+            border: 1px solid var(--border);
+            box-shadow: var(--card-shadow);
+        }
+        .diff-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 3px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
+            margin-bottom: 1rem;
+        }
+        .diff-icon.blue { background: rgba(1,30,92,0.07); }
+        .diff-icon.gold { background: rgba(201,168,76,0.12); }
+        .diff-icon.teal { background: rgba(91,164,164,0.1); }
+        .diff-card h3 {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--trust-blue);
+            margin-bottom: 0.5rem;
+        }
+        .diff-card p {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            line-height: 1.65;
+        }
+
+        /* ── CREDIBILITY: calm=6, soft + calming ── */
+        .credibility {
+            background: #f0ede8;
+            padding: 6rem 2rem;
+        }
+        .credibility-inner {
+            max-width: 900px;
+            margin: 0 auto;
+            text-align: center;
+        }
+        .credibility-inner .section-eyebrow {
+            color: var(--gold);
+        }
+        .credibility-inner h2 {
+            font-family: var(--font-serif);
+            font-size: 2rem;
+            font-weight: 400; /* lighter — calmer feel */
+            color: var(--trust-blue);
+            margin-bottom: 1rem;
+            line-height: 1.3;
+        }
+        .credibility-inner > p {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            line-height: 1.75;
+            max-width: 540px;
+            margin: 0 auto 3rem;
+        }
+        .cred-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1.25rem;
+            text-align: left;
+        }
+        .cred-card {
+            background: var(--surface);
+            border-radius: var(--card-radius);
+            padding: 1.75rem;
+            border: 1px solid var(--border);
+        }
+        .cred-card-icon {
+            font-size: 1.6rem;
+            margin-bottom: 0.75rem;
+        }
+        .cred-card h3 {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--trust-blue);
+            margin-bottom: 0.4rem;
+        }
+        .cred-card p {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            line-height: 1.65;
+        }
+        .cred-founder {
+            grid-column: span 2;
+            background: var(--trust-blue);
+            color: white;
+            border: none;
+        }
+        .cred-founder h3 {
+            color: var(--gold);
+            font-size: 1.05rem;
+        }
+        .cred-founder p {
+            color: rgba(255,255,255,0.75);
+        }
+
+        /* ── APP GRAVEYARD ── */
+        .graveyard {
+            background: var(--trust-blue);
+            padding: 5rem 2rem;
+            text-align: center;
+        }
+        .graveyard-inner {
+            max-width: 740px;
+            margin: 0 auto;
+        }
+        .graveyard .section-eyebrow {
+            color: rgba(255,255,255,0.5);
+        }
+        .graveyard h2 {
+            font-family: var(--font-serif);
+            font-size: 2.25rem;
+            color: white;
+            margin-bottom: 1rem;
+            line-height: 1.2;
+        }
+        .graveyard h2 em {
+            font-style: normal;
+            color: var(--gold);
+        }
+        .graveyard p {
+            font-size: 1rem;
+            color: rgba(255,255,255,0.65);
+            line-height: 1.7;
+            margin-bottom: 2.25rem;
+        }
+        .dead-apps {
+            display: flex;
+            justify-content: center;
+            gap: 0.6rem;
+            flex-wrap: wrap;
+        }
+        .dead-pill {
+            background: rgba(255,255,255,0.06);
+            color: rgba(255,255,255,0.45);
+            padding: 0.5rem 1.1rem;
+            border-radius: 2px;
+            font-size: 0.875rem;
+            border: 1px solid rgba(255,255,255,0.08);
+            text-decoration: line-through;
+            text-decoration-color: rgba(201,168,76,0.4);
+        }
+        .dead-pill.alive {
+            background: rgba(201,168,76,0.12);
+            color: var(--gold);
+            border-color: rgba(201,168,76,0.3);
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        /* ── PRICING: calm=7 ── */
+        .pricing {
+            background: var(--alt-bg);
+            padding: 5.5rem 2rem;
+        }
+        .pricing-inner {
+            max-width: 700px;
+            margin: 0 auto;
+            text-align: center;
+        }
+        .pricing-inner h2 {
+            font-family: var(--font-serif);
+            font-size: 2rem;
+            font-weight: 400; /* softer weight — calmer */
+            color: var(--trust-blue);
+            margin-bottom: 0.85rem;
+        }
+        .pricing-inner > p {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            line-height: 1.65;
+            margin-bottom: 2.5rem;
+        }
+        .pricing-cards {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.25rem;
+            margin-bottom: 2rem;
+        }
+        .pricing-card {
+            background: var(--surface);
+            border-radius: var(--card-radius);
+            padding: 1.75rem;
+            border: 1.5px solid var(--border);
+            text-align: left;
+            box-shadow: var(--card-shadow);
+        }
+        .pricing-card.featured {
+            border-color: var(--trust-blue);
+        }
+        .plan-label {
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+        }
+        .pricing-card.featured .plan-label {
+            color: var(--trust-blue);
+        }
+        .plan-price {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--trust-blue);
+            line-height: 1;
+            margin-bottom: 0.3rem;
+            font-family: var(--font-sans);
+        }
+        .plan-price .period {
+            font-size: 1rem;
+            font-weight: 400;
+            color: var(--text-secondary);
+        }
+        .plan-desc {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            margin-top: 0.5rem;
+            line-height: 1.55;
+        }
+        .pricing-link {
+            font-size: 0.9rem;
+            color: var(--trust-blue);
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .pricing-link:hover { text-decoration: underline; }
+
+        /* ── WHY INTEGRATED: calm=6 ── */
+        .why-integrated {
+            background: var(--trust-blue);
+            padding: 5rem 2rem;
+            color: white;
+        }
+        .why-integrated-inner {
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+        .why-integrated .section-header {
+            text-align: center;
+            margin-bottom: 2.5rem;
+        }
+        .why-integrated .section-eyebrow {
+            color: rgba(201,168,76,0.8);
+        }
+        .why-integrated .section-header h2 {
+            color: white;
+            font-size: 2.25rem;
+        }
+        .why-integrated .section-header p {
+            color: rgba(255,255,255,0.65);
+        }
+        .apps-row {
+            display: flex;
+            justify-content: center;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-bottom: 3rem;
+        }
+        .app-pill {
+            padding: 0.45rem 1rem;
+            border-radius: 2px;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+        .app-pill.dead {
+            background: rgba(255,255,255,0.06);
+            color: rgba(255,255,255,0.35);
+            border: 1px solid rgba(255,255,255,0.08);
+            text-decoration: line-through;
+            text-decoration-color: rgba(201,168,76,0.3);
+        }
+        .app-pill.alive {
+            background: rgba(201,168,76,0.15);
+            color: var(--gold);
+            border: 1px solid rgba(201,168,76,0.35);
+            font-weight: 700;
+            text-decoration: none;
+        }
+        .why-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.5rem;
+        }
+        .why-card {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: var(--card-radius);
+            padding: 2rem;
+            transition: background 0.2s;
+        }
+        .why-card:hover {
+            background: rgba(255,255,255,0.08);
+        }
+        .why-icon {
+            font-size: 1.75rem;
+            margin-bottom: 1rem;
+        }
+        .why-card h3 {
+            font-size: 1rem;
+            font-weight: 700;
+            color: white;
+            margin-bottom: 0.6rem;
+            line-height: 1.3;
+        }
+        .why-card p {
+            font-size: 0.9rem;
+            color: rgba(255,255,255,0.6);
+            line-height: 1.65;
+        }
+        @media (max-width: 900px) {
+            .why-grid { grid-template-columns: 1fr; }
+            .pricing-grid { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 600px) {
+            .why-integrated { padding: 3.5rem 1.25rem; }
+            .why-integrated .section-header h2 { font-size: 1.85rem; }
+        }
+
+        /* ── PRICING GRID (landing page subset) ── */
+        .pricing-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.25rem;
+            margin-bottom: 1.5rem;
+        }
+        .pricing-card.free,
+        .pricing-card.pro {
+            background: var(--surface);
+            border-radius: var(--card-radius);
+            padding: 1.75rem;
+            border: 1.5px solid var(--border);
+            text-align: left;
+            box-shadow: var(--card-shadow);
+            position: relative;
+        }
+        .pricing-card.pro {
+            border-color: var(--trust-blue);
+        }
+        .pricing-badge {
+            position: absolute;
+            top: -11px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--trust-blue);
+            color: white;
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            padding: 0.25rem 0.85rem;
+            border-radius: 2px;
+            white-space: nowrap;
+        }
+        .pricing-card-header h3 {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: var(--trust-blue);
+            margin-bottom: 0.3rem;
+        }
+        .pricing-price {
+            font-size: 2.1rem;
+            font-weight: 700;
+            color: var(--trust-blue);
+            line-height: 1;
+            margin-bottom: 0.25rem;
+        }
+        .pricing-price span {
+            font-size: 1rem;
+            font-weight: 400;
+            color: var(--text-secondary);
+        }
+        .pricing-period {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-bottom: 1.25rem;
+            line-height: 1.4;
+        }
+        .pricing-features {
+            list-style: none;
+            margin-bottom: 1.25rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+        }
+        .pricing-features li {
+            font-size: 0.875rem;
+            color: var(--text-primary);
+            display: flex;
+            align-items: flex-start;
+            gap: 0.5rem;
+            line-height: 1.4;
+        }
+        .pricing-features li.included::before {
+            content: '✓';
+            color: var(--green);
+            font-weight: 700;
+            font-size: 0.8rem;
+            flex-shrink: 0;
+            margin-top: 1px;
+        }
+        .pricing-features li.excluded::before {
+            content: '–';
+            color: var(--text-secondary);
+            font-weight: 400;
+            flex-shrink: 0;
+            margin-top: 1px;
+        }
+        .pricing-features li.excluded {
+            color: var(--text-secondary);
+        }
+        .pricing-features li.excluded em {
+            font-style: normal;
+            color: var(--gold);
+            font-size: 0.78rem;
+        }
+        .pricing-btn {
+            display: block;
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border-radius: var(--btn-radius);
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 0.925rem;
+            text-align: center;
+            transition: all 0.2s;
+            background: var(--alt-bg);
+            color: var(--trust-blue);
+            border: 1.5px solid var(--border);
+        }
+        .pricing-btn:hover {
+            background: var(--border);
+        }
+        .pricing-btn.pricing-btn-pro {
+            background: var(--trust-blue);
+            color: white;
+            border-color: var(--trust-blue);
+        }
+        .pricing-btn.pricing-btn-pro:hover {
+            opacity: 0.88;
+        }
+        .pricing-try-free {
+            margin-top: 0.75rem;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            text-align: center;
+        }
+        .pricing-compare {
+            text-align: center;
+        }
+        .pricing-compare a {
+            font-size: 0.875rem;
+            color: var(--trust-blue);
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .pricing-compare a:hover { text-decoration: underline; }
+
+        /* ── FINAL CTA: calm=8, maximum calm — dark navy, gold, spacious ── */
+        .final-cta {
+            background: #0d1628; /* dark navy — this is what FocusLedger feels like */
+            padding: 8rem 2rem;  /* very spacious */
+            text-align: center;
+        }
+        .final-cta-inner {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .final-cta .section-eyebrow {
+            color: rgba(201,168,76,0.7);
+        }
+        .final-cta h2 {
+            font-family: var(--font-serif);
+            font-size: 2.75rem;
+            color: white;
+            margin-bottom: 1.25rem;
+            line-height: 1.2;
+            font-weight: 400; /* light — maximum calm */
+            letter-spacing: 0.01em;
+        }
+        .final-cta h2 em {
+            font-style: normal;
+            color: var(--gold);
+        }
+        .final-cta > .final-cta-inner > p {
+            font-size: 1.05rem;
+            color: rgba(255,255,255,0.55);
+            line-height: 1.8;
+            margin-bottom: 2.5rem;
+            font-weight: 300;
+        }
+        .final-cta-btn {
+            display: inline-flex;
+            align-items: center;
+            background: var(--gold);
+            color: #1a1a1a;
+            padding: 1.05rem 2.75rem;
+            border-radius: var(--btn-radius);
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 1rem;
+            transition: opacity 0.2s;
+            min-height: 52px;
+            letter-spacing: 0.01em;
+        }
+        .final-cta-btn:hover { opacity: 0.88; }
+        .final-cta .no-cc {
+            margin-top: 1.25rem;
+            font-size: 0.85rem;
+            color: rgba(255,255,255,0.35);
+            letter-spacing: 0.02em;
+        }
+
+        /* ── FOOTER ── */
+        footer {
+            background: var(--trust-blue);
+            padding: 1.75rem 2rem;
+            text-align: center;
+        }
+        footer p {
+            color: rgba(255,255,255,0.45);
+            font-size: 0.85rem;
+            line-height: 1.8;
+        }
+        footer a {
+            color: rgba(255,255,255,0.65);
+            text-decoration: none;
+        }
+        footer a:hover { color: white; }
+
+        /* ── RESPONSIVE ── */
+        @media (max-width: 900px) {
+            .hero-inner {
+                grid-template-columns: 1fr;
+                gap: 3rem;
+            }
+            .hero-text h1 { font-size: 2.6rem; }
+            .mockup-browser { max-width: 520px; margin: 0 auto; }
+            .pain-grid,
+            .zones-grid,
+            .diffs-grid,
+            .cred-grid {
+                grid-template-columns: 1fr;
+            }
+            .cred-founder { grid-column: span 1; }
+            .pricing-cards { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 600px) {
+            .hero { padding: 3rem 1.25rem 4rem; }
+            .hero-text h1 { font-size: 2.2rem; letter-spacing: -0.01em; }
+            .nav-inner { padding: 0 1.25rem; }
+            .nav-links-pages { display: none !important; }
+            .nav-hamburger { display: flex; }
+            .zones, .diffs, .graveyard, .pricing { padding: 3.5rem 1.25rem; }
+            .pain, .credibility { padding: 4rem 1.25rem; }
+            .section-header h2 { font-size: 1.85rem; }
+            .graveyard h2 { font-size: 1.85rem; }
+            .final-cta { padding: 5rem 1.25rem; }
+            .final-cta h2 { font-size: 2rem; }
+            .zone-row { flex-direction: column; }
+        }
+
+        /* ── SCROLL CALM: smooth transitions driven by --calm (0=energetic → 8=calm) ──
+           The IntersectionObserver updates --calm as the user scrolls.
+           These rules interpolate visual properties smoothly between calm levels.
+           All transitions are 0.9s ease to match the --calm transition duration. */
+
+        /* Smooth background transitions as --calm increases */
+        .hero, [data-calm-stage] {
+            transition:
+                background-color 0.9s ease,
+                padding 0.9s ease,
+                opacity 0.6s ease,
+                transform 0.6s ease;
+        }
+
+        /* Body and sections: background shifts from energetic cream → calm warm tone
+           calc(): at calm=0 → #f6f4f1 (energetic), at calm=8 → #f5f3ef (calm) */
+        body {
+            transition: background 0.9s ease;
+            background: color-mix(in srgb, #f6f4f1 calc(var(--calm) / 8 * 100%), #f0ede8);
+        }
+
+        /* Hero text: font-weight and letter-spacing shift with calm
+           Bold/tight at top → light/spacious at bottom */
+        .hero-text h1 {
+            transition: font-weight 0.9s ease, letter-spacing 0.9s ease;
+            font-weight: 700;
+            letter-spacing: calc(-0.02em + (var(--calm) / 8) * 0.03em);
+        }
+
+        /* Hero section padding: tight at top → spacious at bottom */
+        .hero {
+            transition: padding 0.9s ease, background 0.9s ease;
+            padding: 4rem 2rem 5rem;
+            padding-top: calc(4rem + (var(--calm) / 8) * 1rem);
+            padding-bottom: calc(5rem - (var(--calm) / 8) * 1rem);
+        }
+
+        /* Pain section: medium energy, starts easing */
+        .pain {
+            transition: padding 0.9s ease;
+            padding: 5rem 2rem;
+            padding-top: calc(5rem - (var(--calm) / 8) * 0.5rem);
+        }
+
+        /* Zone/solution section: opens up more */
+        .zones, .diffs {
+            padding: calc(5rem - (var(--calm) / 8) * 1.5rem) 2rem;
+        }
+
+        /* Credibility section: airy and calm */
+        .credibility {
+            padding: calc(6rem - (var(--calm) / 8) * 2rem) 2rem;
+        }
+
+        /* Typography weight across headings: heavier at top → lighter at bottom */
+        .pain-header h2,
+        .section-header h2,
+        .zone-feature h3 {
+            transition: font-weight 0.9s ease;
+            font-weight: calc(700 - (var(--calm) / 8) * 200);
+        }
+
+        /* Zone feature cards: open up with calm */
+        .zone-feature {
+            transition: padding 0.9s ease;
+            padding: calc(2rem - (var(--calm) / 8) * 0.5rem);
+        }
+
+        /* Diff cards: spacious at bottom */
+        .diff-card {
+            transition: padding 0.9s ease;
+            padding: calc(2rem + (var(--calm) / 8) * 0.5rem);
+        }
+
+        /* Graveyard: dark section stays dark — intentional contrast point */
+        .graveyard {
+            background: var(--trust-blue);
+        }
+
+        /* Pricing: background softens with calm */
+        .pricing {
+            background: color-mix(in srgb, #f5f3ef calc(var(--calm) / 8 * 60%), #eceae5);
+        }
+
+        /* Final CTA: maximum calm — dark navy, lots of space */
+        .final-cta {
+            transition: padding 0.9s ease, background 0.9s ease;
+            padding: calc(8rem - (8 - var(--calm)) * 0.5rem) 2rem;
+            background: #0d1628;
+        }
+        .final-cta h2 {
+            transition: font-weight 0.9s ease, letter-spacing 0.9s ease;
+            font-weight: calc(400 + (var(--calm) / 8) * 100);
+            letter-spacing: calc(0.01em + (var(--calm) / 8) * 0.02em);
+        }
+
+        /* Mockup breathing: faster animation at top, slows as calm increases
+           At calm=0: 2s (energetic), at calm=8: 4s (calm) */
+        .mockup-browser {
+            animation-duration: calc(2s + (var(--calm) / 8) * 2s);
+        }
+
+        /* Scroll reveal: sections fade in smoothly as they enter viewport */
+        [data-calm-stage] {
+            opacity: 1;
+            transform: none;
+        }
+        [data-calm-stage] {
+            opacity: calc(0.7 + (var(--calm) / 8) * 0.3);
+            transition: opacity 0.8s ease, transform 0.8s ease;
+            transform: translateY(calc((8 - var(--calm)) * 4px));
+        }
+        /* ── MOBILE HERO SPACING FIX ──
+           These rules must come AFTER the calm-system overrides above
+           so they win the cascade on mobile viewports. The calm-system
+           rules set hero padding via calc() at the same specificity,
+           so order matters. */
+        @media (max-width: 600px) {
+            /* Nav fix: remove double-padding (design-system.css also pads <nav>)
+               and ensure logo-left / CTA+hamburger-right layout */
+            body > nav {
+                padding: 0 !important;
+            }
+            .nav-inner {
+                padding: 0 1rem;
+                height: 56px;
+            }
+            .nav-links {
+                gap: 0.5rem;
+            }
+            .hero {
+                padding: 1rem 1.25rem 2rem !important;
+                border-top: none;
+            }
+            .founder-badge {
+                margin-bottom: 0.5rem;
+                font-size: 0.75rem;
+                padding: 0.3rem 0.7rem;
+            }
+            .hero-eyebrow {
+                margin-bottom: 0.5rem;
+                font-size: 0.72rem;
+                padding: 0.3rem 0.7rem;
+            }
+            .hero-text h1 {
+                margin-bottom: 0.75rem;
+            }
+            .hero-sub {
+                margin-bottom: 0.75rem;
+                font-size: 1rem;
+            }
+            .hero-cta-wrap {
+                gap: 0.5rem !important;
+            }
+            .hero-proof-strip {
+                margin-top: 0.75rem;
+                gap: 0.3rem 0.75rem;
+            }
+            .proof-item {
+                font-size: 0.78rem;
+            }
+            /* Google sign-in container: collapse if button fails to render */
+            #google-signin-hero:empty {
+                display: none;
+            }
+        }
+        @media (max-width: 400px) {
+            .hero-text h1 {
+                font-size: 1.9rem !important;
+            }
+            .hero-sub {
+                font-size: 0.95rem;
+                margin-bottom: 0.6rem;
+            }
+        }
+    </style>
+    <!-- Design system overrides (loaded after inline styles) -->
+    <link rel="stylesheet" href="/css/design-system.css">
+    <!-- Interactive demo styles -->
+    <link rel="stylesheet" href="/css/demo.css?v=21">
+    <!-- Structured Data: SoftwareApplication + Organization + FAQ -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "SoftwareApplication",
+          "name": "FocusLedger",
+          "url": "https://focusledger.net",
+          "description": "An ADHD-native personal command center combining task management, expense tracking, impulse spending detection, and news — all in one tab.",
+          "applicationCategory": "ProductivityApplication",
+          "operatingSystem": "Web",
+          "offers": [
+            {
+              "@type": "Offer",
+              "name": "Free",
+              "price": "0",
+              "priceCurrency": "USD",
+              "description": "Task management, expense tracking, ideas, journal, values alignment, and news."
+            },
+            {
+              "@type": "Offer",
+              "name": "Autopilot",
+              "price": "9",
+              "priceCurrency": "USD",
+              "priceSpecification": {
+                "@type": "UnitPriceSpecification",
+                "price": "9",
+                "priceCurrency": "USD",
+                "unitCode": "MON"
+              },
+              "description": "Bank sync via Plaid, impulse spending detection, and advanced analytics."
+            }
+          ],
+          "creator": {
+            "@type": "Person",
+            "name": "Sean Hendler",
+            "jobTitle": "CPA, Founder"
+          }
+        },
+        {
+          "@type": "Organization",
+          "name": "FocusLedger",
+          "url": "https://focusledger.net",
+          "logo": "https://focusledger.net/icons/fl-icon.png",
+          "sameAs": [],
+          "contactPoint": {
+            "@type": "ContactPoint",
+            "contactType": "customer support",
+            "url": "https://focusledger.net/contact"
+          }
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Is FocusLedger free?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes. FocusLedger is free to use. The free tier includes task management, expense tracking, ideas inbox, daily journal, values alignment, and news. Autopilot ($9.99/month) adds bank sync and impulse spending detection."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Is FocusLedger designed for ADHD?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes. FocusLedger was built by a CPA with ADHD specifically for how ADHD brains work — low friction, forgiving of time blindness, with everything in one place to reduce context switching."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "What is impulse spending detection?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "FocusLedger analyzes your spending patterns to flag purchases that match common ADHD impulsivity patterns — small recurring charges, duplicate apps, and late-night purchases — so you can catch them before they add up."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Does FocusLedger sync with my bank?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes, via Plaid on the Pro plan. Connect your bank accounts to automatically import transactions and see your full financial picture without manual entry."
+              }
+            }
+          ]
+        }
+      ]
+    }
+    </script>
+    <!-- Google Identity Services (One Tap + rendered button) -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body>
+<noscript><p style="padding:2rem;text-align:center;font-family:'DM Sans',sans-serif;color:#374151">FocusLedger requires JavaScript.</p></noscript>
+
+<!-- Google One Tap configuration — auto_prompt=false; we trigger manually after 1.5s -->
+<div id="g_id_onload"
+     data-client_id="1016507011974-09skpvssf4i2jgn3rdt4ncegh5menm21.apps.googleusercontent.com"
+     data-context="signup"
+     data-ux_mode="popup"
+     data-callback="handleGoogleOneTap"
+     data-auto_prompt="false"
+     data-itp_support="true"></div>
+
+    <nav>
+        <div class="nav-inner">
+            <a href="/" class="logo">
+                <img src="/icons/fl-icon.png" class="logo-icon" alt="FocusLedger">
+                FocusLedger
+            </a>
+            <div class="nav-links">
+                <span class="nav-links-pages">
+                    <a href="/adhd-tax">ADHD Tax Calc</a>
+                    <a href="/pricing">Pricing</a>
+                    <a href="/login" id="navAuthLink">Log In</a>
+                </span>
+                <a href="/signup" id="navCtaLink" class="nav-cta">Start Free</a>
+                <button class="nav-hamburger" id="navHamburger" aria-label="Open menu">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                        <line x1="3" y1="6" x2="21" y2="6"></line>
+                        <line x1="3" y1="12" x2="21" y2="12"></line>
+                        <line x1="3" y1="18" x2="21" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Mobile hamburger overlay menu -->
+    <div class='nav-mobile-overlay' id='navMobileOverlay'>
+        <div class='nav-mobile-drawer'>
+            <div class='nav-mobile-drawer-header'>
+                <button class='nav-mobile-close' id='navMobileClose' aria-label='Close menu'>
+                    <svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.5' stroke-linecap='round'>
+                        <line x1='18' y1='6' x2='6' y2='18'></line>
+                        <line x1='6' y1='6' x2='18' y2='18'></line>
+                    </svg>
+                </button>
+            </div>
+            <div class='nav-mobile-links'>
+                <a href='/adhd-tax'>ADHD Tax Calc</a>
+                <a href='/pricing'>Pricing</a>
+                <a href='/contact'>Contact</a>
+                <a href='/login' id='mobileNavAuthLink'>Log In</a>
+                <a href='/signup' id='mobileNavCtaLink' class='nav-mobile-cta'>Start Free</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── HERO: calm=0 — energetic, ADHD-focused, honest ── -->
+    <section class="hero" data-calm-stage="0">
+        <div class="hero-inner">
+            <div class="hero-text">
+                <!-- Founder credibility badge -->
+                <div class="founder-badge">Built by a CPA with ADHD</div>
+                <span class="hero-eyebrow">Executive functioning on autopilot</span>
+                <h1>The place on the internet that helps you spend less time on the internet.</h1>
+                <p class="hero-sub">One tab for tasks, money, and your day — then you’re done.</p>
+                <div class="hero-cta-wrap" style="flex-direction:column;align-items:flex-start;gap:0.75rem;">
+                    <!-- Google Sign-In button — primary CTA (rendered by GSI) -->
+                    <div id="google-signin-hero"></div>
+                    <!-- Secondary: email/password signup
+                         "Or" prefix is conditional — shown only when GSI button renders above.
+                         JS below detects whether GSI populated the container and toggles copy. -->
+                    <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
+                        <a href="/signup" id="heroEmailLink" class="hero-cta-link" style="font-size:0.875rem;color:var(--text-secondary);text-decoration:none;font-weight:500;border-bottom:1px solid rgba(0,0,0,0.2);padding-bottom:1px;">Sign up with email →</a>
+                        <a href="/login" class="hero-login-link">Already have an account →</a>
+                    </div>
+                </div>
+                <!-- Honest credibility strip — real features, zero fabrication -->
+                <div class="hero-proof-strip">
+                    <div class="proof-item">
+                        <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                        Voice input
+                    </div>
+                    <div class="proof-item">
+                        <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                        Zero-guilt dismissals
+                    </div>
+                    <div class="proof-item">
+                        <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                        Impulse spending alerts
+                    </div>
+                    <div class="proof-item">
+                        <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                        Free forever. No credit card.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ── INTERACTIVE DEMO: calm=5.5 ── -->
+    <section class="demo-section" data-calm-stage="5" id="demoSection">
+        <div class="demo-section-header">
+            <span class="section-eyebrow">Try it now — no signup</span>
+            <h2>See FocusLedger before you commit.</h2>
+            <p>Type a task. Check it off. That's the core — try it before you sign up.</p>
+        </div>
+
+        <!-- Browser chrome wrapper -->
+        <div class="demo-browser">
+            <div class="demo-browser-chrome">
+                <div class="demo-browser-dots">
+                    <span></span><span></span><span></span>
+                </div>
+                <div class="demo-browser-url">focusledger.net · demo mode</div>
+                <div class="demo-live-badge">LIVE</div>
+            </div>
+            <div class="demo-app">
+
+                <!-- ── MORNING SCREEN: greeting → mood ── -->
+                <div class="demo-screen morning-screen visible" id="morningScreen">
+                    <!-- Step 1: greeting + mood -->
+                    <div class="morning-step active" id="morningStep1">
+                        <div class="morning-greeting">Good morning</div>
+                        <div class="morning-date" id="morningDate"></div>
+                        <div class="morning-name">How are you showing up<br>today, <em>friend?</em></div>
+                        <div class="mood-label">Pick your energy level</div>
+                        <div class="mood-row">
+                            <button class="mood-btn" data-mood="energized" aria-label="Energized">⚡<span class="mood-text">Energized</span></button>
+                            <button class="mood-btn" data-mood="good" aria-label="Good">😊<span class="mood-text">Good</span></button>
+                            <button class="mood-btn" data-mood="okay" aria-label="Okay">😐<span class="mood-text">Okay</span></button>
+                            <button class="mood-btn" data-mood="foggy" aria-label="Foggy">🌫️<span class="mood-text">Foggy</span></button>
+                            <button class="mood-btn" data-mood="struggling" aria-label="Struggling">😓<span class="mood-text">Struggling</span></button>
+                        </div>
+                    </div>
+                </div><!-- /morningScreen -->
+
+                <!-- ── DASHBOARD SCREEN (tasks — revealed after mood) ── -->
+                <div class="demo-screen dashboard-screen" id="dashboardScreen">
+                    <!-- Mini nav — tasks only, no tabs -->
+                    <div class="demo-nav">
+                        <div class="demo-logo">
+                            <div class="demo-logo-dot"></div>
+                            FocusLedger
+                        </div>
+                    </div>
+
+                    <!-- Content area -->
+                    <div class="demo-content">
+
+                        <!-- TASKS PANEL -->
+                        <div class="demo-panel active" id="panel-tasks">
+                            <div class="demo-tasks-header">
+                                <div class="demo-tasks-title">Today's tasks</div>
+                                <div class="demo-tasks-count" id="demoTaskCount">No tasks yet</div>
+                            </div>
+                            <form class="demo-task-input-wrap" id="demoTaskInputWrap" action="javascript:void(0)">
+                                <input type="text" class="demo-task-input" id="demoTaskInput" placeholder="Add a task..." autocomplete="off" enterkeyhint="done" aria-label="Add a task" />
+                            </form>
+                            <div class="demo-task-list" id="demoTaskList"><div class="demo-empty-state">Type a task above and press Enter to add it.</div></div>
+                        </div>
+
+                    </div><!-- /demo-content -->
+                </div><!-- /dashboardScreen -->
+
+            </div><!-- /demo-app -->
+        </div><!-- /demo-browser -->
+
+        <!-- Soft CTA nudge (appears after first interaction) -->
+        <div class="demo-cta-nudge" id="demoCta">
+            <div class="demo-cta-text">
+                <strong>Want to keep this?</strong> Sign up free and save your tasks. No credit card.
+            </div>
+            <a href="/signup" class="demo-cta-btn">Start Free</a>
+        </div>
+
+    </section><!-- /demo-section -->
+
+    <!-- ── ADHD PAIN POINTS: calm=2 ── -->
+    <section class="pain" data-calm-stage="2">
+        <div class="pain-inner">
+            <div class="pain-header">
+                <span class="section-eyebrow">We get it</span>
+                <h2>ADHD isn't &quot;just forgetting things.&quot;<br>It's the cost of remembering everything.</h2>
+                <p>The bill you paid late because it slipped from working memory. The $47 subscription you forgot you signed up for. The task you couldn't start because it felt too big, too vague, too everything. This is the ADHD tax — and FocusLedger is built to eliminate it.</p>
+            </div>
+            <div class="pain-grid">
+                <div class="pain-card">
+                    <h3>Forgotten bills &amp; late fees</h3>
+                    <p>You <em>know</em> you set a reminder. You still paid the $35 late fee. FocusLedger tracks what's due, when it's due, and nags you at the right time — not 5 minutes before.</p>
+                    <div class="pain-icon">💸</div>
+                </div>
+                <div class="pain-card">
+                    <h3>Impulse buys that add up</h3>
+                    <p>$12 here, $47 there. Individually fine. Collectively? You have 3 meditation apps. FocusLedger flags the duplicates and asks: <em>do you actually use this?</em></p>
+                    <div class="pain-icon">🛒</div>
+                </div>
+                <div class="pain-card">
+                    <h3>Tasks that stay on the list forever</h3>
+                    <p>Brain-incompatible tasks. &quot;Do taxes&quot; isn't a task — it's a project. FocusLedger breaks it down: gather docs, find software, block 3 hours, do it. Done. Finally done.</p>
+                    <div class="pain-icon">✅</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ── HOW IT WORKS: calm=3 ── -->
+    <section class="how-it-works" data-calm-stage="3">
+        <div class="how-it-works-inner">
+            <div class="section-header">
+                <span class="section-eyebrow">The system</span>
+                <h2>Three steps to owning your day</h2>
+                <p>Not a to-do app. A command center for how your brain actually works.</p>
+            </div>
+            <div class="how-steps">
+                <div class="how-step">
+                    <div class="how-step-num">1</div>
+                    <div class="how-step-content">
+                        <h3>Morning launch — 2 minutes</h3>
+                        <p>Pick your mood. Write your 3 priorities. Launch. That 30-second decision at 7am is what separates a controlled morning from a reactive one.</p>
+                    </div>
+                </div>
+                <div class="how-step">
+                    <div class="how-step-num">2</div>
+                    <div class="how-step-content">
+                        <h3>Track through the day — 30 seconds</h3>
+                        <p>Add spending as it happens. Add tasks when they hit you. Add journal notes at night. No friction. No review sessions. No weekly planning ceremonies.</p>
+                    </div>
+                </div>
+                <div class="how-step">
+                    <div class="how-step-num">3</div>
+                    <div class="how-step-content">
+                        <h3>Weekly reset — Sunday, 15 minutes</h3>
+                        <p>See what you spent. See what got done. See where you went off-plan. Align it with what actually matters to you. Start next week intentional.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ── VALUES ALIGNMENT: calm=4 ── -->
+    <section class="values" data-calm-stage="4">
+        <div class="values-inner">
+            <div class="section-header">
+                <span class="section-eyebrow">Values first</span>
+                <h2>Your money and time go where your values are</h2>
+                <p>Most budgeting fails because it starts with numbers. FocusLedger starts with what matters to you.</p>
+            </div>
+            <div class="values-card">
+                <div class="values-card-header">
+                    <div class="values-card-icon">🎯</div>
+                    <div>
+                        <h3>Values alignment check-in</h3>
+                        <p>Every journal entry asks: did today reflect what you care about?</p>
+                    </div>
+                </div>
+                <p class="values-card-detail">You're not just tracking spending — you're tracking whether your spending reflects your priorities. That $200 on takeout wasn't bad. But if your value is &quot;cook more at home&quot; — that's data. That's a conversation waiting to happen.</p>
+                <div class="values-example">
+                    <span class="values-example-tag">Example</span>
+                    <p>You value &quot;Quality time with family.&quot; Your spending this month: $340 on restaurants, $0 on a family board game night. FocusLedger doesn't judge. It just asks: <em>is this working?</em></p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+
+    <!-- ── WHY INTEGRATED: calm=6 — context switching is the enemy ── -->
+    <section class="why-integrated" data-calm-stage="6">
+        <div class="why-integrated-inner">
+            <div class="section-header">
+                <span class="section-eyebrow">One place. Not seven.</span>
+                <h2>Every app switch costs you.</h2>
+                <p>For ADHD brains, context switching isn't a minor inconvenience — it's where the day falls apart.</p>
+            </div>
+            <div class="apps-row" aria-hidden="true">
+                <div class="app-pill dead">Todoist</div>
+                <div class="app-pill dead">YNAB</div>
+                <div class="app-pill dead">Notion</div>
+                <div class="app-pill dead">Mint</div>
+                <div class="app-pill dead">Apple Notes</div>
+                <div class="app-pill dead">Google Calendar</div>
+                <div class="app-pill dead">Headspace</div>
+                <div class="app-pill alive">FocusLedger</div>
+            </div>
+            <div class="why-grid">
+                <div class="why-card">
+                    <div class="why-icon">🧠</div>
+                    <h3>Context switching drains ADHD brains</h3>
+                    <p>Every time you open a new app, you lose your train of thought. Working memory — the thing ADHD impairs most — gets wiped. FocusLedger keeps you in one cognitive space.</p>
+                </div>
+                <div class="why-card">
+                    <div class="why-icon">🔗</div>
+                    <h3>Tasks and money are connected</h3>
+                    <p>Your $300 Amazon order isn't separate from the task "research standing desks." Your task "call dentist" isn't separate from your health spending. Integration surfaces these links automatically.</p>
+                </div>
+                <div class="why-card">
+                    <div class="why-icon">⚡</div>
+                    <h3>One place means you actually use it</h3>
+                    <p>The graveyard of productivity apps you've abandoned isn't a discipline problem. It's a friction problem. One tab you keep open beats seven specialized apps you rotate through and forget.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ── PRICING: calm=7 ── -->
+    <section class="pricing" data-calm-stage="7" id="pricing">
+        <div class="pricing-inner">
+            <div class="section-header">
+                <span class="section-eyebrow">Pricing</span>
+                <h2>Built for how you actually work</h2>
+                <p>Start free. Scale when it clicks.</p>
+            </div>
+            <div class="pricing-grid">
+                <div class="pricing-card free">
+                    <div class="pricing-card-header">
+                        <h3>Free</h3>
+                        <div class="pricing-price">$0</div>
+                        <div class="pricing-period">forever — no credit card</div>
+                    </div>
+                    <ul class="pricing-features">
+                        <li class="included">Up to 10 active tasks</li>
+                        <li class="included">Break-it-down steps</li>
+                        <li class="included">Manual spending tracker</li>
+                        <li class="included">Journal &amp; ideas capture</li>
+                        <li class="included">Values &amp; alignment check-in</li>
+                        <li class="included">Morning launch routine</li>
+                        <li class="excluded">Bank sync (Plaid) — <em>Pro</em></li>
+                        <li class="excluded">Unlimited tasks &amp; recurring — <em>Pro</em></li>
+                        <li class="excluded">Impulse spending alerts — <em>Pro</em></li>
+                    </ul>
+                    <a href="/signup" class="pricing-btn">Start Free</a>
+                </div>
+                <div class="pricing-card pro">
+                    <div class="pricing-badge">Most Popular</div>
+                    <div class="pricing-card-header">
+                        <h3>Pro</h3>
+                        <div class="pricing-price">$9.99<span>/mo</span></div>
+                        <div class="pricing-period">billed monthly &middot; <a href="/pricing" style="font-size:0.8rem;color:var(--trust-blue);text-decoration:none;">or $100/year</a></div>
+                    </div>
+                    <ul class="pricing-features">
+                        <li class="included">Everything in Free</li>
+                        <li class="included">Unlimited tasks &amp; recurring</li>
+                        <li class="included">Bank &amp; credit card sync (Plaid)</li>
+                        <li class="included">AI-powered break-it-down</li>
+                        <li class="included">Impulse spending detection</li>
+                        <li class="included">Full spending analytics</li>
+                        <li class="included">Values alignment nudges</li>
+                        <li class="included">Subscription audit</li>
+                    </ul>
+                    <a href="/pricing" class="pricing-btn pricing-btn-pro">Get Autopilot — $9.99/mo</a>
+                    <div class="pricing-try-free">Cancel anytime &middot; no credit card for Free tier</div>
+                </div>
+            </div>
+            <div class="pricing-compare">
+                <a href="/pricing">See full feature comparison →</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- ── FINAL CTA: calm=8 ── -->
+    <section class="final-cta" data-calm-stage="8">
+        <div class="final-cta-inner">
+            <div class="final-cta-logo">
+                <img src="/icons/fl-icon.png" class="logo-icon" alt="FocusLedger">
+                <span>FocusLedger</span>
+            </div>
+            <h2>Own your day.<br>Stop letting your brain own you.</h2>
+            <p>20 minutes of setup. A lifetime of knowing where you stand.</p>
+            <div class="final-cta-buttons">
+                <a href="/signup" class="btn btn-primary btn-large">Start free — takes 2 minutes</a>
+            </div>
+            <div class="final-cta-trust">
+                <span>No credit card</span>
+                <span>·</span>
+                <span>Data stays yours</span>
+                <span>·</span>
+                <span>No ads. No data brokering. Ever.</span>
+                <span>·</span>
+                <span>Cancel anytime</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- ── FOOTER ── -->
+    <footer class="site-footer">
+        <div class="footer-inner">
+            <div class="footer-logo">
+                <img src="/icons/fl-icon.png" class="logo-icon" alt="FocusLedger">
+                FocusLedger
+            </div>
+            <nav class="footer-nav">
+                <a href="/pricing">Pricing</a>
+                <a href="/story">Our story</a>
+                <a href="/changelog">Changelog</a>
+                <a href="/contact">Contact</a>
+                <a href="/privacy">Privacy</a>
+                <a href="/terms">Terms</a>
+            </nav>
+            <div class="footer-legal">Built for ADHD brains, by an ADHD brain. 2026 FocusLedger.</div>
+        </div>
+    </footer>
+
+    <script src="/js/demo.js?v=21"></script>
+    <script src="/js/analytics.js"></script>
+    <script>
+    (function() {
+        'use strict';
+
+        document.querySelectorAll('a[href^="#"]').forEach(function(anchor) {
+            anchor.addEventListener('click', function(e) {
+                var targetId = anchor.getAttribute('href').substring(1);
+                var target = document.getElementById(targetId);
+                if (target) {
+                    e.preventDefault();
+                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            });
+        });
+
+        var calmTargets = document.querySelectorAll('[data-calm-stage]');
+        if (calmTargets.length > 0 && window.IntersectionObserver) {
+            var calmObserver = new IntersectionObserver(function(entries) {
+                entries.forEach(function(entry) {
+                    if (entry.isIntersecting) {
+                        var stage = entry.target.getAttribute('data-calm-stage');
+                        document.documentElement.style.setProperty('--calm', stage);
+                    }
+                });
+            }, { threshold: 0.3 });
+            calmTargets.forEach(function(el) { calmObserver.observe(el); });
+        }
+
+
+        /* Mobile hamburger menu: open/close the slide-out drawer */
+        var hamburgerBtn = document.getElementById('navHamburger');
+        var mobileOverlay = document.getElementById('navMobileOverlay');
+        var mobileClose = document.getElementById('navMobileClose');
+        if (hamburgerBtn && mobileOverlay) {
+            hamburgerBtn.addEventListener('click', function() {
+                mobileOverlay.classList.add('active');
+                hamburgerBtn.setAttribute('aria-expanded', 'true');
+                document.body.style.overflow = 'hidden';
+            });
+            function closeMobileMenu() {
+                mobileOverlay.classList.remove('active');
+                hamburgerBtn.setAttribute('aria-expanded', 'false');
+                document.body.style.overflow = '';
+            }
+            if (mobileClose) mobileClose.addEventListener('click', closeMobileMenu);
+            mobileOverlay.addEventListener('click', function(e) {
+                if (e.target === mobileOverlay) closeMobileMenu();
+            });
+            mobileOverlay.querySelectorAll('a').forEach(function(link) {
+                link.addEventListener('click', closeMobileMenu);
+            });
+        }
+    })();
+    </script>
+
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' }).catch(function() {});
+            });
+            navigator.serviceWorker.addEventListener('message', function(e) {
+                if (e.data && e.data.type === 'SW_UPDATED') window.location.reload();
+            });
+        }
+    </script>
+
+    <script>
+    /* Google Sign-In: render button into hero + trigger One Tap prompt.
+       Uses client_id from #g_id_onload data attribute (single source of truth).
+       Detects whether button actually rendered and conditionally adds "Or" prefix
+       to the email signup link. If GSI is blocked (ad blockers, script fail),
+       the email link stays as "Sign up with email →" (no confusing "Or"). */
+    (function() {
+        'use strict';
+
+        /* Update email link copy based on whether GSI button is visible */
+        function updateEmailLinkCopy(gsiRendered) {
+            var emailLink = document.getElementById('heroEmailLink');
+            if (!emailLink) return;
+            emailLink.textContent = gsiRendered
+                ? 'Or sign up with email \u2192'
+                : 'Sign up with email \u2192';
+        }
+
+        function initGoogleSignIn() {
+            if (typeof google === 'undefined' || !google.accounts) {
+                updateEmailLinkCopy(false);
+                return;
+            }
+            var onloadEl = document.getElementById('g_id_onload');
+            var clientId = onloadEl && onloadEl.getAttribute('data-client_id');
+            if (!clientId) {
+                updateEmailLinkCopy(false);
+                return;
+            }
+
+            google.accounts.id.initialize({
+                client_id: clientId,
+                callback: function(response) {
+                    fetch('/api/auth/google/one-tap', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ credential: response.credential })
+                    }).then(function(res) { return res.json(); })
+                      .then(function(data) {
+                          if (data.success && data.token) {
+                              localStorage.setItem('fl_token', data.token);
+                              if (data.isNewUser) {
+                                  localStorage.setItem('fl_just_signed_up', '1');
+                                  if (typeof FLA !== 'undefined') FLA.trackEvent('funnel_signup_complete');
+                                  if (typeof fbq === 'function') fbq('track', 'Lead');
+                              }
+                              window.location.href = '/home';
+                          }
+                      }).catch(function() {});
+                }
+            });
+
+            /* Render an explicit sign-in button into the hero container */
+            var heroBtn = document.getElementById('google-signin-hero');
+            if (heroBtn) {
+                google.accounts.id.renderButton(heroBtn, {
+                    theme: 'outline',
+                    size: 'large',
+                    text: 'signup_with',
+                    shape: 'rectangular',
+                    logo_alignment: 'left',
+                    width: 280
+                });
+            }
+
+            /* Check if GSI actually rendered after a short delay.
+               renderButton is async — the iframe takes ~300-500ms to appear.
+               We poll briefly: if the container has children, GSI worked. */
+            var checks = 0;
+            var gsiCheck = setInterval(function() {
+                checks++;
+                var container = document.getElementById('google-signin-hero');
+                if (container && container.children.length > 0) {
+                    clearInterval(gsiCheck);
+                    updateEmailLinkCopy(true);
+                } else if (checks >= 10) {
+                    clearInterval(gsiCheck);
+                    updateEmailLinkCopy(false);
+                }
+            }, 300);
+
+            /* One Tap prompt after 1.5s delay */
+            setTimeout(function() {
+                google.accounts.id.prompt();
+            }, 1500);
+        }
+
+        /* Also wire the global callback referenced by #g_id_onload data-callback */
+        window.handleGoogleOneTap = function(response) {
+            fetch('/api/auth/google/one-tap', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ credential: response.credential })
+            }).then(function(res) { return res.json(); })
+              .then(function(data) {
+                  if (data.success && data.token) {
+                      localStorage.setItem('fl_token', data.token);
+                      if (data.isNewUser) {
+                          localStorage.setItem('fl_just_signed_up', '1');
+                          if (typeof FLA !== 'undefined') FLA.trackEvent('funnel_signup_complete');
+                          if (typeof fbq === 'function') fbq('track', 'Lead');
+                      }
+                      window.location.href = '/home';
+                  }
+              }).catch(function() {});
+        };
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initGoogleSignIn);
+        } else {
+            initGoogleSignIn();
+        }
+    })();
+    </script>
+</body>
+</html>

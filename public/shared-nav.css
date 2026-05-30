@@ -1,0 +1,761 @@
+/* shared-nav.css — bottom nav bar (mobile) + left sidebar (desktop) + hamburger slide-out */
+/* Injected by shared-nav.js; do NOT import manually alongside it */
+
+:root {
+  --nav-brand: #011e5c;
+  --nav-brand-light: rgba(1,30,92,0.08);
+  --nav-brand-active: #c9a84c;
+  --nav-bg: #011e5c;
+  --nav-border: rgba(255,255,255,0.1);
+  --nav-text: rgba(255,255,255,0.62);
+  --nav-text-active: #c9a84c;
+  --nav-text-hover: #ffffff;
+  --nav-height: 60px;
+  --nav-sidebar-width: 200px;
+  --nav-z: 1000;
+  --menu-z: 1100;
+  --overlay-z: 1050;
+  --transition-speed: 0.22s;
+}
+
+/* ── Custom Scrollbars (Desktop) ──────────────────────────── */
+/* Neutral gray works on both dark sidebar and light content areas */
+@media (min-width: 900px) {
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: rgba(100, 100, 100, 0.35);
+    border-radius: 3px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(100, 100, 100, 0.55);
+  }
+}
+
+/* ── Page Transition Wrapper ─────────────────────────────── */
+.page-content-wrapper {
+  opacity: 1;
+  transition: opacity 0.15s ease;
+}
+
+/* ── Mobile content width: match bottom nav (full viewport) ── */
+/* Mobile bottom nav spans left:0 → right:0 (100vw).
+   Content must not exceed that width, with safe side padding. */
+@media (max-width: 899px) {
+  .page-content-wrapper,
+  body > main,
+  body > .main-content,
+  body > .content,
+  body > .app-content {
+    width: 100%;
+    max-width: 100%;
+    padding-left: 1rem;
+    padding-right: 1rem;
+    box-sizing: border-box;
+  }
+
+  /* Ensure child elements (task cards, forms, inputs) inherit the
+     constrained width so nothing bleeds wider than the viewport */
+  .page-content-wrapper *,
+  body > main *,
+  body > .main-content *,
+  body > .content *,
+  body > .app-content * {
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+}
+.page-content-wrapper.transitioning-out {
+  opacity: 0;
+  transition: opacity 0.1s ease;
+}
+.page-content-wrapper.transitioning-in {
+  animation: pageFadeIn 0.2s ease forwards;
+}
+@keyframes pageFadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Body-level page transitions (fade on navigation) ─── */
+body.transitioning-out {
+  opacity: 0.85;
+  transition: opacity 0.1s ease;
+}
+body.transitioning-in {
+  animation: bodyFadeIn 0.2s ease forwards;
+}
+@keyframes bodyFadeIn {
+  from { opacity: 0.7; }
+  to   { opacity: 1; }
+}
+
+/* ── Hamburger Scale Animation ──────────────────────────── */
+#shared-hamburger-btn {
+  transition: background var(--transition-speed) ease,
+              transform 0.15s ease;
+  /* Relative positioning needed for the active-page dot */
+  position: fixed;
+}
+#shared-hamburger-btn:hover {
+  transform: scale(1.05);
+}
+
+/* ── Hamburger Active-Page Dot ───────────────────────────── */
+/* Small gold dot in the top-right corner of the hamburger button.
+   Shown only when the user is on a secondary (hamburger-menu) page,
+   so they know they're "off the primary 4 tabs". */
+.shared-ham-dot {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--nav-brand-active);
+  border: 1.5px solid var(--nav-bg);
+  pointer-events: none;
+}
+
+/* ── Mobile Bottom Navigation (≤899px) ──────────────────── */
+
+/* Desktop sidebar is hidden on mobile — double defense:
+   1. CSS display none (media query fallback)
+   2. body[data-nav-shell] attribute (JS-gated, no reliance on CSS media queries) */
+#shared-sidebar {
+  display: none;
+}
+
+/* JS guarantees mobile shell only exists when data-nav-shell="mobile" —
+   no CSS needed to hide it on desktop. Left for safety only. */
+body[data-nav-shell="desktop"] #shared-bottom-nav {
+  display: none !important;
+}
+
+#shared-bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: var(--nav-height);
+  background: var(--nav-bg);
+  border-top: 1px solid var(--nav-border);
+  z-index: var(--nav-z);
+  display: flex;
+  align-items: stretch;
+  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.18);
+  /* safe area inset for iOS home indicator */
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+.shared-nav-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  text-decoration: none;
+  color: var(--nav-text);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  border: none;
+  background: none;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+  transition: color var(--transition-speed) ease,
+              background var(--transition-speed) ease;
+  /* Spring ease for active-state transitions — snappy, physical feel */
+  --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.shared-nav-item.active {
+  color: var(--nav-text-active);
+  /* Spring slide: icon pill slides in with bounce when this becomes active */
+  transition: color 0.3s var(--spring),
+              background 0.3s var(--spring);
+}
+
+.shared-nav-item:hover,
+.shared-nav-item:focus-visible {
+  color: var(--nav-text-hover);
+  outline: none;
+  transition: color 0.15s ease,
+              background 0.15s ease;
+}
+
+.shared-nav-item.active .shared-nav-icon {
+  background: rgba(201,168,76,0.15);
+}
+
+.shared-nav-icon {
+  width: 36px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  font-size: 18px;
+  line-height: 1;
+  transition: background var(--transition-speed) ease;
+}
+
+.shared-nav-label {
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+/* ── Hamburger Button ─────────────────────────────────────── */
+
+#shared-hamburger-btn {
+  position: fixed;
+  top: 12px;
+  right: 16px;
+  z-index: var(--menu-z);
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  border: none;
+  background: var(--nav-bg);
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.22);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 10px 9px;
+  -webkit-tap-highlight-color: transparent;
+  transition: background var(--transition-speed) ease;
+}
+
+#shared-hamburger-btn:hover {
+  background: #02287a;
+}
+
+#shared-hamburger-btn:focus-visible {
+  outline: 2px solid var(--nav-brand-active);
+  outline-offset: 2px;
+}
+
+.shared-ham-bar {
+  width: 20px;
+  height: 2px;
+  background: rgba(255,255,255,0.85);
+  border-radius: 2px;
+  transition: transform var(--transition-speed) ease,
+              opacity var(--transition-speed) ease;
+  transform-origin: center;
+}
+
+/* Animate bars → X when open */
+#shared-hamburger-btn.open .shared-ham-bar:nth-child(1) {
+  transform: translateY(7px) rotate(45deg);
+}
+#shared-hamburger-btn.open .shared-ham-bar:nth-child(2) {
+  opacity: 0;
+  transform: scaleX(0);
+}
+#shared-hamburger-btn.open .shared-ham-bar:nth-child(3) {
+  transform: translateY(-7px) rotate(-45deg);
+}
+
+/* ── Slide-out Menu ───────────────────────────────────────── */
+
+#shared-menu-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: var(--overlay-z);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--transition-speed) ease;
+}
+
+#shared-menu-overlay.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+#shared-slide-menu {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(280px, 80vw);
+  max-width: 100vw;
+  background: white;
+  z-index: var(--menu-z);
+  box-shadow: -4px 0 20px rgba(0, 0, 0, 0.12);
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  transform: translateX(100%);
+  transition: transform var(--transition-speed) cubic-bezier(0.4, 0, 0.2, 1);
+  /* safe-area for iOS notch right side */
+  padding-right: env(safe-area-inset-right, 0);
+  /* Phase 1 fix: contain any wide content; padding included in width */
+  overflow-x: hidden;
+  box-sizing: border-box;
+}
+
+#shared-slide-menu.open {
+  transform: translateX(0);
+}
+
+.shared-menu-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 20px 16px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.shared-menu-logo {
+  font-size: 15px;
+  font-weight: 700;
+  color: #011e5c;
+  letter-spacing: -0.01em;
+}
+
+.shared-menu-close {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: none;
+  background: #f3f4f6;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  color: #6b7280;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.shared-menu-close:hover {
+  background: rgba(1,30,92,0.08);
+  color: #011e5c;
+}
+
+/* ── PRO Badge ──────────────────────────────────────────── */
+/* Shown in menu header for Autopilot/Tandem users */
+.shared-pro-badge {
+  display: none;
+  background: linear-gradient(135deg, #c9a84c, #e0c06a);
+  color: #1a1a1a;
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 0.18rem 0.55rem;
+  border-radius: 5px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.shared-pro-badge.visible {
+  display: inline-block;
+}
+
+.shared-menu-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 0;
+  list-style: none;
+  margin: 0;
+}
+
+.shared-menu-link {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 13px 20px;
+  text-decoration: none;
+  color: #374151;
+  font-size: 15px;
+  font-weight: 500;
+  transition: background var(--transition-speed) ease,
+              color var(--transition-speed) ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.shared-menu-link:hover,
+.shared-menu-link:focus-visible {
+  background: rgba(1,30,92,0.06);
+  color: #011e5c;
+  outline: none;
+}
+
+.shared-menu-link .shared-menu-icon {
+  font-size: 20px;
+  width: 24px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+/* Active state: highlight the current page in the slide-out menu */
+.shared-menu-link.active {
+  color: #011e5c;
+  background: rgba(1,30,92,0.08);
+  font-weight: 600;
+  border-left: 3px solid var(--nav-brand-active);
+  padding-left: 17px; /* compensate for border so text stays aligned */
+}
+
+/* ── Sign Out in slide-out menu ─────────────────────────── */
+/* Sign Out <li> gets a top border to visually separate it from nav items */
+.shared-menu-signout-item {
+  border-top: 1px solid #e5e7eb;
+  margin-top: 8px;
+  padding-top: 4px;
+}
+
+/* Sign Out is a <button> inside a <li> — reset button defaults,
+   then apply shared-menu-link styles so it matches other items */
+.shared-menu-signout-btn {
+  width: 100%;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 500;
+  color: #9b1c1c; /* muted red — destructive action signal */
+}
+
+.shared-menu-signout-btn:hover,
+.shared-menu-signout-btn:focus-visible {
+  background: rgba(155, 28, 28, 0.06);
+  color: #7f1d1d;
+  outline: none;
+}
+
+/* ── Sidebar Sign Out button (desktop only) ─────────────── */
+/* On desktop the Sign Out sits at the bottom of the sidebar.
+   It's a <button> styled to match the other sidebar nav items. */
+.shared-nav-signout {
+  color: rgba(255,255,255,0.45);
+  font-family: inherit;
+  cursor: pointer;
+  background: none;
+  border: none;
+  width: 100%;
+  text-align: left;
+}
+
+.shared-nav-signout:hover,
+.shared-nav-signout:focus-visible {
+  background: rgba(255, 80, 80, 0.1);
+  color: rgba(255, 160, 160, 0.9);
+  outline: none;
+}
+
+/* ── Body padding so content isn't hidden behind fixed nav ── */
+
+body.shared-nav-active {
+  padding-bottom: calc(var(--nav-height) + env(safe-area-inset-bottom, 0px));
+}
+
+/* ── Reduced motion ────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  .shared-ham-bar,
+  #shared-menu-overlay,
+  #shared-slide-menu,
+  .shared-nav-item,
+  .shared-nav-icon,
+  .shared-nav-sidebar-item,
+  .shared-menu-link {
+    transition: none !important;
+  }
+}
+
+/* ── Hide hamburger dot on desktop (sidebar replaces hamburger) ── */
+@media (min-width: 900px) {
+  .shared-ham-dot {
+    display: none;
+  }
+}
+
+/* ── Responsive (320px baseline) ─────────────────────────── */
+
+@media (max-width: 360px) {
+  .shared-nav-label {
+    font-size: 9px;
+  }
+  .shared-nav-icon {
+    font-size: 16px;
+  }
+}
+
+/* ── Mobile: hide sidebar extras from bottom nav ─────────── */
+/* Bottom nav should show only the 4 primary tabs (NAV_ITEMS).
+   Sidebar items (Journal, Routines, etc.), dividers, section labels,
+   and the sidebar Sign Out are desktop-only — hide them on mobile. */
+@media (max-width: 767px) {
+  #shared-bottom-nav .shared-nav-divider {
+    display: none !important;
+  }
+  #shared-bottom-nav .shared-nav-section-label {
+    display: none !important;
+  }
+  #shared-bottom-nav .shared-nav-signout {
+    display: none !important;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   DESKTOP SIDEBAR — 900px and wider
+   Mobile bottom nav + hamburger are hidden.
+   Sidebar is a completely separate DOM element.
+   ═══════════════════════════════════════════════════════════ */
+
+@media (min-width: 900px) {
+
+  /* ── Hide mobile bottom nav on desktop ──────────────── */
+  #shared-bottom-nav {
+    display: none !important;
+  }
+
+  /* ── Desktop sidebar always shows on ≥900px when JS set data-nav-shell="desktop" ── */
+  #shared-sidebar {
+    display: flex;
+  }
+
+  /* JS guarantees desktop shell only exists when data-nav-shell="desktop" —
+     no CSS needed to show it. Left as belt-and-suspenders. */
+  body[data-nav-shell="mobile"] #shared-sidebar {
+    display: none !important;
+  }
+
+  /* ── Sidebar shell ────────────────────────────────────── */
+  #shared-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: var(--nav-sidebar-width);
+    background: #011e5c;
+    border-right: 1px solid rgba(255,255,255,0.08);
+    box-shadow: 2px 0 12px rgba(0,0,0,0.12);
+    z-index: var(--nav-z);
+    overflow-y: auto;
+    overflow-x: hidden;
+    display: flex;
+    flex-direction: column;
+    padding-bottom: 1rem;
+    padding-bottom: env(safe-area-inset-bottom, 1rem);
+  }
+
+  /* ── Sidebar brand header ────────────────────────────── */
+  .shared-sidebar-brand {
+    padding: 1.5rem 1.25rem 1rem;
+    font-family: 'Space Grotesk', system-ui, sans-serif;
+    font-size: 1rem;
+    font-weight: 700;
+    color: white;
+    letter-spacing: -0.01em;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    margin-bottom: 0.5rem;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  /* ── Nav items (vertical row) ─────────────────────────── */
+  .shared-nav-item {
+    flex: 0 0 auto;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 0.75rem;
+    padding: 0.7rem 1.25rem;
+    border-radius: 0;
+    position: relative;
+    background: transparent;
+    transition: background 0.15s ease,
+                color 0.15s ease;
+  }
+
+  .shared-nav-item:hover,
+  .shared-nav-item:focus-visible {
+    background: rgba(255,255,255,0.07);
+    color: var(--nav-text-hover);
+  }
+
+  .shared-nav-item.active {
+    background: rgba(201,168,76,0.12);
+    color: var(--nav-text-active);
+    font-weight: 600;
+  }
+
+  /* 4px left accent bar for active item */
+  .shared-nav-item.active::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 20%;
+    height: 60%;
+    width: 4px;
+    background: var(--nav-brand-active);
+    border-radius: 0 2px 2px 0;
+  }
+
+  .shared-nav-item.active .shared-nav-icon {
+    background: transparent;
+  }
+
+  .shared-nav-icon {
+    width: 24px;
+    height: 24px;
+    font-size: 17px;
+    border-radius: 6px;
+    flex-shrink: 0;
+    transition: transform 0.15s ease;
+  }
+
+  .shared-nav-label {
+    font-size: 0.88rem;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+
+  .shared-nav-item.active .shared-nav-label {
+    font-weight: 600;
+  }
+
+  /* ── Hide hamburger on desktop ────────────────────────── */
+  #shared-hamburger-btn {
+    display: none !important;
+  }
+
+  /* ── Hide slide-out menu on desktop ────────────────────── */
+  #shared-slide-menu,
+  #shared-menu-overlay {
+    display: none !important;
+  }
+
+  /* ── Body padding for sidebar ─────────────────────────── */
+  body.shared-nav-active {
+    padding-bottom: 0;
+    padding-left: var(--nav-sidebar-width);
+  }
+
+  /* Fixed navs need left offset */
+  .app-nav[style*="position: fixed"],
+  .settings-nav[style*="position: fixed"],
+  .portal-nav[style*="position: fixed"] {
+    left: var(--nav-sidebar-width);
+    width: calc(100% - var(--nav-sidebar-width));
+  }
+
+  [style*="position: fixed"][style*="left: 0"],
+  [style*="position: fixed"][style*="left:0"] {
+    left: var(--nav-sidebar-width);
+    width: calc(100% - var(--nav-sidebar-width));
+  }
+}
+
+/* ─── Sidebar section divider (injected via JS as .shared-nav-divider) ─── */
+.shared-nav-divider {
+  height: 1px;
+  background: rgba(255,255,255,0.08);
+  margin: 0.5rem 1.25rem;
+  flex-shrink: 0;
+}
+
+/* Only visible on desktop sidebar */
+.shared-nav-divider {
+  display: none;
+}
+
+@media (min-width: 900px) {
+  .shared-nav-divider {
+    display: block;
+  }
+}
+
+/* ─── Section label in sidebar (injected via JS as .shared-nav-section-label) ─── */
+.shared-nav-section-label {
+  display: none;
+  padding: 0.5rem 1.25rem 0.25rem;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.35);
+  flex-shrink: 0;
+}
+
+@media (min-width: 900px) {
+  .shared-nav-section-label {
+    display: block;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   CONTENT WIDTH CONSTRAINTS — 1200px+ desktop
+   Content: never narrower than 600px, never wider than 900px
+   Sidebar stays fixed at 200px on all desktop sizes.
+   ═══════════════════════════════════════════════════════════ */
+
+/* 1200px–1439px: content takes ~700px, comfortable padding on sides */
+@media (min-width: 1200px) {
+  body.shared-nav-active {
+    /* Content container should max at 900px */
+  }
+
+  /* Target common page content wrappers — the main scrollable area */
+  .page-content-wrapper,
+  body.shared-nav-active > main,
+  body.shared-nav-active > .main-content,
+  body.shared-nav-active > .content,
+  body.shared-nav-active > .app-content,
+  body.shared-nav-active > .container,
+  body.shared-nav-active > .page-container {
+    max-width: 900px;
+    /* At 1200px with 200px sidebar: 1000px available → 900px content + 100px padding */
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 2rem;
+    padding-right: 2rem;
+    /* Content is never narrower than 600px — no min-width needed since max is 900px */
+  }
+}
+
+/* 1440px: comfortable padding, content still capped at 900px */
+@media (min-width: 1440px) {
+  .page-content-wrapper,
+  body.shared-nav-active > main,
+  body.shared-nav-active > .main-content,
+  body.shared-nav-active > .content,
+  body.shared-nav-active > .app-content,
+  body.shared-nav-active > .container,
+  body.shared-nav-active > .page-container {
+    padding-left: 3rem;
+    padding-right: 3rem;
+  }
+}
+
+/* 1680px+: content capped at 900px with generous side padding */
+@media (min-width: 1680px) {
+  .page-content-wrapper,
+  body.shared-nav-active > main,
+  body.shared-nav-active > .main-content,
+  body.shared-nav-active > .content,
+  body.shared-nav-active > .app-content,
+  body.shared-nav-active > .container,
+  body.shared-nav-active > .page-container {
+    max-width: 900px;
+    padding-left: 4rem;
+    padding-right: 4rem;
+  }
+}

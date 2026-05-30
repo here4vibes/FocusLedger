@@ -1,0 +1,50 @@
+# FocusLedger
+
+> FocusLedger is an ADHD-native personal command center: tasks, money tracking, impulse spending detection, and news — all in one tab. Built by a CPA with ADHD.
+
+## What is FocusLedger?
+
+FocusLedger is a productivity and personal finance app designed specifically for people with ADHD. It combines task management, expense tracking, impulse spending detection, bank account sync, daily journaling, a focus calendar, and local/global news — all in a single, low-friction interface.
+
+The app was built by a CPA with ADHD who needed something that worked with how ADHD brains actually function: forgiving of time blindness, low-click, and forgiving of perfectionism paralysis.
+
+## Who is it for?
+
+- Adults with ADHD, ADD, or executive function challenges
+- People who struggle with impulse spending, forgotten bills, or task paralysis
+- Anyone who wants their finances and to-dos in one place without juggling 10 apps
+- Particularly useful for people who have tried and failed with generic productivity apps
+
+## Key Features
+
+- **Task management** — quick-capture tasks with AI-powered breakdown ("break it down" into steps)
+- **Expense tracking** — log spending by category, detect impulse purchases
+- **Bank sync** — connect bank accounts via Plaid (Pro feature)
+- **Impulse spending detection** — flags purchases that match ADHD impulsivity patterns
+- **Ideas inbox** — frictionless idea capture so nothing gets lost
+- **Daily journal** — mood tracking and reflection
+- **Values alignment** — daily check-ins tied to personal values
+- **Focus calendar** — time blocks for deep work
+- **News tab** — local and global news without switching apps
+
+## Pricing
+
+- **Free** — task management, expense tracking, ideas, journal, values alignment, news
+- **Pro ($9/month)** — adds bank sync via Plaid, impulse spending detection, and advanced analytics
+
+## ADHD Tax Calculator
+
+Free interactive tool at `/adhd-tax` that calculates your annual "ADHD tax" — the real financial cost of ADHD including late fees, impulse purchases, app subscriptions you forgot about, and missed savings.
+
+## Founded by
+
+Sean Hendler, CPA — built FocusLedger out of personal necessity as someone with ADHD who couldn't find a productivity tool that fit how his brain works.
+
+## Links
+
+- Homepage: https://focusledger.net
+- Pricing: https://focusledger.net/pricing
+- ADHD Tax Calculator: https://focusledger.net/adhd-tax
+- Sign up free: https://focusledger.net/signup
+- Contact/support: https://focusledger.net/contact
+- Privacy policy: https://focusledger.net/privacy

@@ -1,0 +1,1021 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#011e5c">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="FocusLedger">
+  <link rel="icon" type="image/png" sizes="32x32" href="/icons/fl-icon.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/icons/fl-icon.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/icons/fl-icon.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>FocusLedger — Routines</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --orange: #c9a84c;
+      --orange-light: #d4b56a;
+      --navy: #011e5c;
+      --navy-mid: #02287a;
+      --navy-light: #033099;
+      --cream: #faf9f7;
+      --cream-dark: #f5f3ef;
+      --text-dark: #1a1a1a;
+      --text-muted: #6b6b6b;
+      --green: #5BA4A4;
+      --green-muted: #4A9292;
+      --success: #7DB87D;
+      --warning: #E07A5F;
+      --error: #E07A5F;
+      --error-light: #FAEAE5;
+      --border: #e8e5e0;
+      --surface: #FFFFFF;
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      color: var(--text-dark);
+      background: var(--cream);
+      min-height: 100vh;
+      overflow-x: hidden;
+      padding-bottom: env(safe-area-inset-bottom, 0px);
+    }
+
+    h1, h2, h3, h4 { font-family: 'Space Grotesk', sans-serif; }
+
+    /* ── NAV ─────────────────────────────────────────── */
+    .page-nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(250,249,246,0.92);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgba(0,0,0,0.04);
+    }
+    .page-nav-inner {
+      padding: 1rem 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      max-width: 720px;
+      margin: 0 auto;
+    }
+    .back-link {
+      color: var(--navy);
+      text-decoration: none;
+      font-size: 0.875rem;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    .back-link:hover { text-decoration: underline; }
+    .logo {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--navy);
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      text-decoration: none;
+    }
+    .logo-dot {
+      width: 10px; height: 10px;
+      background: var(--orange);
+      border-radius: 2px;
+      transform: rotate(45deg);
+    }
+
+    /* ── LAYOUT ──────────────────────────────────────── */
+    .page-wrap {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 1.5rem 1.5rem 4rem;
+    }
+    .page-header {
+      margin-bottom: 2rem;
+    }
+    .page-title {
+      font-size: 1.75rem;
+      font-weight: 700;
+      color: var(--navy);
+      margin-bottom: 0.35rem;
+    }
+    .page-sub {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+    }
+
+    /* ── SECTION ─────────────────────────────────────── */
+    .section { margin-bottom: 2.5rem; }
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+    .section-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--navy);
+    }
+    .skip-link {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      text-decoration: none;
+      cursor: pointer;
+      background: none;
+      border: none;
+      padding: 0;
+      font-family: inherit;
+    }
+    .skip-link:hover { text-decoration: underline; }
+
+    /* ── TEMPLATE CARDS ──────────────────────────────── */
+    .template-grid {
+      display: grid;
+      gap: 0.875rem;
+    }
+
+    .template-card {
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: 14px;
+      padding: 1.1rem 1.25rem;
+      cursor: pointer;
+      transition: border-color 0.15s, box-shadow 0.15s;
+      position: relative;
+    }
+    .template-card:hover {
+      border-color: var(--navy-light);
+      box-shadow: 0 2px 12px rgba(1,30,92,0.08);
+    }
+    .template-card.selected {
+      border-color: var(--navy);
+      box-shadow: 0 0 0 3px rgba(1,30,92,0.1);
+    }
+
+    .template-card-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 0.75rem;
+      margin-bottom: 0.5rem;
+    }
+    .template-card-left { flex: 1; min-width: 0; }
+    .template-name {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--navy);
+      margin-bottom: 0.2rem;
+    }
+    .template-desc {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+    .template-meta {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+      flex-shrink: 0;
+    }
+    .meta-chip {
+      font-size: 0.72rem;
+      font-weight: 600;
+      padding: 0.2rem 0.55rem;
+      border-radius: 99px;
+      letter-spacing: 0.02em;
+    }
+    .chip-morning   { background: #FFF3DC; color: #B87A00; }
+    .chip-evening   { background: #E8EAF6; color: #3949AB; }
+    .chip-weekly    { background: #E8F5E9; color: #2E7D32; }
+    .chip-productivity { background: #FCE4EC; color: #C2185B; }
+    .chip-movement  { background: #E0F7FA; color: #00838F; }
+
+    .template-tasks-preview {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.3rem 0.5rem;
+      margin-top: 0.65rem;
+    }
+    .task-pill {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      background: var(--cream-dark);
+      border-radius: 6px;
+      padding: 0.15rem 0.5rem;
+      border: 1px solid var(--border);
+    }
+    .task-pill-more {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      padding: 0.15rem 0;
+      font-style: italic;
+    }
+
+    .template-time {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      margin-top: 0.5rem;
+    }
+
+    .use-btn {
+      margin-top: 0.875rem;
+      width: 100%;
+      padding: 0.6rem 1rem;
+      background: var(--navy);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      font-family: 'Space Grotesk', sans-serif;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .use-btn:hover { background: var(--navy-mid); }
+    .use-btn:active { background: var(--navy-light); }
+    .use-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* ── ADOPT MODAL ─────────────────────────────────── */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.45);
+      z-index: 200;
+      align-items: flex-end;
+      justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: var(--surface);
+      border-radius: 20px 20px 0 0;
+      padding: 1.5rem 1.5rem calc(1.5rem + env(safe-area-inset-bottom, 0px));
+      width: 100%;
+      max-width: 720px;
+      max-height: 90vh;
+      overflow-y: auto;
+      animation: slideUp 0.22s ease;
+    }
+    @keyframes slideUp {
+      from { transform: translateY(60px); opacity: 0; }
+      to   { transform: translateY(0);    opacity: 1; }
+    }
+    .modal-handle {
+      width: 36px; height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      margin: 0 auto 1.2rem;
+    }
+    .modal-title {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--navy);
+      margin-bottom: 0.25rem;
+    }
+    .modal-sub {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      margin-bottom: 1.25rem;
+    }
+    .adopted-from {
+      font-size: 0.78rem;
+      color: var(--green-muted);
+      background: #E8F5F5;
+      padding: 0.3rem 0.75rem;
+      border-radius: 6px;
+      display: inline-block;
+      margin-bottom: 1.1rem;
+    }
+
+    .form-group { margin-bottom: 1rem; }
+    .form-label {
+      display: block;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 0.4rem;
+    }
+    .form-input, .form-select {
+      width: 100%;
+      padding: 0.65rem 0.875rem;
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      font-size: 0.925rem;
+      font-family: 'DM Sans', sans-serif;
+      color: var(--text-dark);
+      background: var(--surface);
+      transition: border-color 0.15s;
+    }
+    .form-input:focus, .form-select:focus {
+      outline: none;
+      border-color: var(--navy);
+    }
+
+    .task-edit-list { margin-top: 0.5rem; }
+    .task-edit-item {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      padding: 0.4rem 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .task-edit-item:last-child { border-bottom: none; }
+    .task-edit-input {
+      flex: 1;
+      border: none;
+      background: transparent;
+      font-size: 0.9rem;
+      font-family: 'DM Sans', sans-serif;
+      color: var(--text-dark);
+      padding: 0.2rem 0;
+    }
+    .task-edit-input:focus { outline: none; }
+    .task-remove-btn {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 1rem;
+      padding: 0.2rem;
+      line-height: 1;
+      border-radius: 4px;
+    }
+    .task-remove-btn:hover { color: var(--error); background: var(--error-light); }
+    .add-task-btn {
+      margin-top: 0.6rem;
+      background: none;
+      border: 1.5px dashed var(--border);
+      border-radius: 8px;
+      padding: 0.45rem 0.875rem;
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      cursor: pointer;
+      width: 100%;
+      font-family: 'DM Sans', sans-serif;
+      transition: border-color 0.15s;
+    }
+    .add-task-btn:hover { border-color: var(--navy); color: var(--navy); }
+
+    .modal-actions {
+      display: flex;
+      gap: 0.75rem;
+      margin-top: 1.5rem;
+    }
+    .btn-primary {
+      flex: 1;
+      padding: 0.75rem 1rem;
+      background: var(--navy);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-size: 0.925rem;
+      font-weight: 700;
+      font-family: 'Space Grotesk', sans-serif;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .btn-primary:hover { background: var(--navy-mid); }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-ghost {
+      padding: 0.75rem 1rem;
+      background: var(--cream-dark);
+      color: var(--text-dark);
+      border: none;
+      border-radius: 10px;
+      font-size: 0.925rem;
+      font-weight: 600;
+      font-family: 'Space Grotesk', sans-serif;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .btn-ghost:hover { background: var(--border); }
+
+    /* ── MY ROUTINES ─────────────────────────────────── */
+    .routine-card {
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: 14px;
+      padding: 1rem 1.25rem;
+      margin-bottom: 0.875rem;
+    }
+    .routine-card-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 0.75rem;
+      margin-bottom: 0.5rem;
+    }
+    .routine-name {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--navy);
+    }
+    .routine-badge {
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 0.15rem 0.5rem;
+      border-radius: 99px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .badge-am   { background: #FFF3DC; color: #B87A00; }
+    .badge-pm   { background: #E8EAF6; color: #3949AB; }
+    .badge-weekly { background: #E8F5E9; color: #2E7D32; }
+    .adopted-badge {
+      font-size: 0.7rem;
+      color: var(--green-muted);
+      background: #E8F5F5;
+      padding: 0.15rem 0.5rem;
+      border-radius: 99px;
+      margin-left: 0.4rem;
+    }
+
+    .routine-tasks-list {
+      list-style: none;
+      margin: 0.4rem 0 0;
+    }
+    .routine-tasks-list li {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      padding: 0.18rem 0;
+      padding-left: 1.1rem;
+      position: relative;
+    }
+    .routine-tasks-list li::before {
+      content: '·';
+      position: absolute;
+      left: 0.1rem;
+      color: var(--orange);
+    }
+    .routine-tasks-empty {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      font-style: italic;
+    }
+
+    .routine-actions {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 0.875rem;
+    }
+    .btn-sm {
+      padding: 0.35rem 0.75rem;
+      font-size: 0.78rem;
+      font-weight: 600;
+      font-family: 'Space Grotesk', sans-serif;
+      border-radius: 7px;
+      cursor: pointer;
+      transition: background 0.15s;
+      border: none;
+    }
+    .btn-complete {
+      background: var(--navy);
+      color: #fff;
+    }
+    .btn-complete:hover { background: var(--navy-mid); }
+    .btn-complete.done { background: var(--success); }
+    .btn-delete {
+      background: var(--cream-dark);
+      color: var(--error);
+    }
+    .btn-delete:hover { background: var(--error-light); }
+
+    .empty-state {
+      text-align: center;
+      padding: 2rem;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+
+    /* ── CREATE ROUTINE BUTTON ───────────────────────── */
+    .create-btn {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: none;
+      border: 1.5px dashed var(--border);
+      border-radius: 12px;
+      padding: 0.875rem 1.25rem;
+      color: var(--text-muted);
+      font-size: 0.875rem;
+      font-family: 'DM Sans', sans-serif;
+      cursor: pointer;
+      width: 100%;
+      transition: border-color 0.15s;
+      margin-top: 0.5rem;
+    }
+    .create-btn:hover { border-color: var(--navy); color: var(--navy); }
+
+    /* ── TOAST ────────────────────────────────────────── */
+    .toast {
+      position: fixed;
+      bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px));
+      left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: var(--navy);
+      color: #fff;
+      padding: 0.65rem 1.25rem;
+      border-radius: 10px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      font-family: 'Space Grotesk', sans-serif;
+      z-index: 999;
+      transition: transform 0.2s ease;
+      white-space: nowrap;
+    }
+    .toast.show { transform: translateX(-50%) translateY(0); }
+
+    /* ── LOADING ─────────────────────────────────────── */
+    .skeleton {
+      background: linear-gradient(90deg, #f0ede8 25%, #e8e5e0 50%, #f0ede8 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.4s infinite;
+      border-radius: 8px;
+    }
+    @keyframes shimmer {
+      0%   { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+    .skel-card {
+      height: 100px;
+      border-radius: 14px;
+      margin-bottom: 0.875rem;
+    }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="page-nav">
+  <div class="page-nav-inner">
+    <a href="/app/tasks" class="back-link">← Back</a>
+    <a href="/app/tasks" class="logo"><span class="logo-dot"></span>FocusLedger</a>
+    <span style="width:60px"></span>
+  </div>
+</nav>
+
+<!-- PAGE CONTENT -->
+<div class="page-wrap">
+
+  <div class="page-header">
+    <h1 class="page-title">Routines</h1>
+    <p class="page-sub">Build habits that stick — structure your day, track your streaks.</p>
+  </div>
+
+  <!-- TEMPLATE SECTION -->
+  <div class="section" id="template-section">
+    <div class="section-header">
+      <h2 class="section-title">Start from a template</h2>
+      <button class="skip-link" id="skip-templates-btn" onclick="skipTemplates()">Skip templates</button>
+    </div>
+    <div class="template-grid" id="template-grid">
+      <!-- skeleton while loading -->
+      <div class="skeleton skel-card"></div>
+      <div class="skeleton skel-card"></div>
+      <div class="skeleton skel-card"></div>
+    </div>
+  </div>
+
+  <!-- MY ROUTINES SECTION -->
+  <div class="section" id="my-routines-section">
+    <div class="section-header">
+      <h2 class="section-title">My Routines</h2>
+    </div>
+    <div id="routines-list">
+      <!-- loaded by JS -->
+    </div>
+    <button class="create-btn" onclick="openBlankRoutineModal()">
+      <span>＋</span> Create blank routine
+    </button>
+  </div>
+
+</div>
+
+<!-- ADOPT / EDIT MODAL -->
+<div class="modal-overlay" id="adopt-modal" onclick="maybeCloseModal(event)">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title-text">
+    <div class="modal-handle"></div>
+    <h2 class="modal-title" id="modal-title-text">Use this template</h2>
+    <p class="modal-sub" id="modal-sub-text">Edit the name and tasks before saving.</p>
+    <div class="adopted-from" id="adopted-from-label" style="display:none"></div>
+
+    <form id="adopt-form" onsubmit="submitAdopt(event)">
+      <div class="form-group">
+        <label class="form-label" for="routine-name-input">Routine name</label>
+        <input class="form-input" id="routine-name-input" type="text" placeholder="e.g. Morning Starter" autocomplete="off" autocorrect="off" autocapitalize="off" required>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="routine-type-select">Type</label>
+        <select class="form-select" id="routine-type-select">
+          <option value="am">Morning (AM)</option>
+          <option value="pm">Evening (PM)</option>
+          <option value="weekly">Weekly</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Tasks</label>
+        <div class="task-edit-list" id="task-edit-list">
+          <!-- tasks injected by JS -->
+        </div>
+        <button type="button" class="add-task-btn" onclick="addTaskRow()">+ Add a task</button>
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn-ghost" onclick="closeModal()">Cancel</button>
+        <button type="submit" class="btn-primary" id="adopt-submit-btn">Save routine</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+  const API = '/api';
+  let token = null;
+  let currentTemplateId = null; // null = blank routine
+  let myRoutines = [];
+
+  // ── AUTH ──────────────────────────────────────────────────────────────────
+  function getToken() {
+    if (token) return token;
+    token = localStorage.getItem('token');
+    if (!token) { window.location.href = '/login'; return null; }
+    return token;
+  }
+
+  async function apiFetch(path, opts = {}) {
+    const t = getToken();
+    if (!t) return null;
+    const res = await fetch(API + path, {
+      ...opts,
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + t, ...(opts.headers || {}) }
+    });
+    if (res.status === 401) { window.location.href = '/login'; return null; }
+    return res.json();
+  }
+
+  // ── TOAST ─────────────────────────────────────────────────────────────────
+  function showToast(msg) {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    setTimeout(() => el.classList.remove('show'), 2800);
+  }
+
+  // ── TEMPLATE CARDS ────────────────────────────────────────────────────────
+  const CATEGORY_LABELS = {
+    morning: 'Morning', evening: 'Evening', weekly: 'Weekly',
+    productivity: 'Productivity', movement: 'Movement'
+  };
+  const CATEGORY_CHIPS = {
+    morning: 'chip-morning', evening: 'chip-evening', weekly: 'chip-weekly',
+    productivity: 'chip-productivity', movement: 'chip-movement'
+  };
+  const CATEGORY_TYPES = {
+    morning: 'am', evening: 'pm', weekly: 'weekly',
+    productivity: 'am', movement: 'am'
+  };
+
+  async function loadTemplates() {
+    const data = await apiFetch('/routines/templates');
+    const grid = document.getElementById('template-grid');
+    if (!data || !data.success) {
+      grid.innerHTML = '<p style="color:var(--text-muted);font-size:.875rem">Could not load templates.</p>';
+      return;
+    }
+    if (!data.templates.length) {
+      grid.innerHTML = '<p style="color:var(--text-muted);font-size:.875rem">No templates available.</p>';
+      return;
+    }
+
+    grid.innerHTML = data.templates.map(t => {
+      const tasks = Array.isArray(t.tasks) ? t.tasks : [];
+      const preview = tasks.slice(0, 3);
+      const more = tasks.length - 3;
+      const chipClass = CATEGORY_CHIPS[t.category] || 'chip-morning';
+      const label = CATEGORY_LABELS[t.category] || t.category;
+
+      return `
+        <div class="template-card" data-id="${t.id}" onclick="openTemplateModal(${t.id})">
+          <div class="template-card-top">
+            <div class="template-card-left">
+              <div class="template-name">${escHtml(t.name)}</div>
+              <div class="template-desc">${escHtml(t.description)}</div>
+            </div>
+            <div class="template-meta">
+              <span class="meta-chip ${chipClass}">${label}</span>
+            </div>
+          </div>
+          <div class="template-time">⏱ ~${t.estimated_minutes} min · ${tasks.length} tasks</div>
+          <div class="template-tasks-preview">
+            ${preview.map(tt => `<span class="task-pill">${escHtml(tt.title)}</span>`).join('')}
+            ${more > 0 ? `<span class="task-pill-more">+${more} more</span>` : ''}
+          </div>
+          <button class="use-btn" onclick="event.stopPropagation(); openTemplateModal(${t.id})">Use this template</button>
+        </div>
+      `;
+    }).join('');
+
+    window._templates = data.templates;
+  }
+
+  function skipTemplates() {
+    document.getElementById('template-section').style.display = 'none';
+    showToast('Template section hidden. Create a blank routine below.');
+  }
+
+  // ── MODAL: OPEN ───────────────────────────────────────────────────────────
+  function openTemplateModal(templateId) {
+    const tpl = (window._templates || []).find(t => t.id === templateId);
+    if (!tpl) return;
+
+    currentTemplateId = templateId;
+    const tasks = Array.isArray(tpl.tasks) ? tpl.tasks.sort((a,b) => (a.order||0)-(b.order||0)) : [];
+
+    document.getElementById('modal-title-text').textContent = 'Use "' + tpl.name + '"';
+    document.getElementById('modal-sub-text').textContent = 'Rename and edit tasks before saving.';
+    document.getElementById('routine-name-input').value = tpl.name;
+
+    const typeMap = CATEGORY_TYPES;
+    document.getElementById('routine-type-select').value = typeMap[tpl.category] || 'am';
+
+    const adoptedLabel = document.getElementById('adopted-from-label');
+    adoptedLabel.textContent = '📌 Adopted from ' + tpl.name;
+    adoptedLabel.style.display = 'inline-block';
+
+    renderTaskEditList(tasks.map(t => t.title));
+    document.getElementById('adopt-modal').classList.add('open');
+    document.getElementById('routine-name-input').focus();
+  }
+
+  function openBlankRoutineModal() {
+    currentTemplateId = null;
+    document.getElementById('modal-title-text').textContent = 'New routine';
+    document.getElementById('modal-sub-text').textContent = 'Give it a name and add your tasks.';
+    document.getElementById('routine-name-input').value = '';
+    document.getElementById('routine-type-select').value = 'am';
+    document.getElementById('adopted-from-label').style.display = 'none';
+    renderTaskEditList(['']);
+    document.getElementById('adopt-modal').classList.add('open');
+    document.getElementById('routine-name-input').focus();
+  }
+
+  function maybeCloseModal(e) {
+    if (e.target === document.getElementById('adopt-modal')) closeModal();
+  }
+  function closeModal() {
+    document.getElementById('adopt-modal').classList.remove('open');
+  }
+
+  // ── TASK EDIT LIST ────────────────────────────────────────────────────────
+  function renderTaskEditList(titles) {
+    const list = document.getElementById('task-edit-list');
+    list.innerHTML = titles.map((title, i) => `
+      <div class="task-edit-item" data-index="${i}">
+        <span style="color:var(--text-muted);font-size:.75rem;min-width:1.2rem">${i+1}</span>
+        <input class="task-edit-input" type="text" value="${escAttr(title)}"
+               placeholder="Task name" aria-label="Task ${i+1}" onkeydown="handleTaskKeydown(event, ${i})">
+        <button type="button" class="task-remove-btn" onclick="removeTaskRow(${i})" title="Remove">✕</button>
+      </div>
+    `).join('');
+  }
+
+  function getTaskTitles() {
+    return Array.from(document.querySelectorAll('.task-edit-input')).map(el => el.value.trim()).filter(Boolean);
+  }
+
+  function addTaskRow() {
+    const titles = getTaskTitles();
+    titles.push('');
+    renderTaskEditList(titles);
+    // focus last
+    const inputs = document.querySelectorAll('.task-edit-input');
+    if (inputs.length) inputs[inputs.length - 1].focus();
+  }
+
+  function removeTaskRow(idx) {
+    const inputs = Array.from(document.querySelectorAll('.task-edit-input'));
+    const titles = inputs.map(el => el.value.trim());
+    titles.splice(idx, 1);
+    renderTaskEditList(titles.length ? titles : ['']);
+  }
+
+  function handleTaskKeydown(e, idx) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      addTaskRow();
+    }
+  }
+
+  // ── MODAL: SUBMIT ─────────────────────────────────────────────────────────
+  async function submitAdopt(e) {
+    e.preventDefault();
+    const submitBtn = document.getElementById('adopt-submit-btn');
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Saving…';
+
+    const name = document.getElementById('routine-name-input').value.trim();
+    const routine_type = document.getElementById('routine-type-select').value;
+
+    // gather tasks
+    const taskTitles = getTaskTitles();
+
+    try {
+      let result;
+      if (currentTemplateId) {
+        // Use from-template endpoint — creates routine + all tasks at once
+        result = await apiFetch('/routines/from-template', {
+          method: 'POST',
+          body: JSON.stringify({ template_id: currentTemplateId, name, routine_type })
+        });
+
+        // If user edited tasks, we'd need to update them.
+        // For simplicity in V1, we create the routine from template first,
+        // then if names differ from template tasks, update them.
+        // Actually: we handle this by checking if names match template tasks.
+        // If user modified tasks, we patch after creation.
+        if (result && result.success) {
+          const templateTasks = (window._templates || []).find(t => t.id === currentTemplateId)?.tasks || [];
+          const templateTitles = templateTasks.sort((a,b) => (a.order||0)-(b.order||0)).map(t => t.title);
+          const tasksDiffer = JSON.stringify(taskTitles) !== JSON.stringify(templateTitles);
+
+          if (tasksDiffer && result.routine && result.routine.tasks) {
+            // Update task titles where they differ
+            const createdTasks = result.routine.tasks;
+            for (let i = 0; i < Math.min(createdTasks.length, taskTitles.length); i++) {
+              if (createdTasks[i].title !== taskTitles[i]) {
+                await apiFetch('/tasks/' + createdTasks[i].id, {
+                  method: 'PUT',
+                  body: JSON.stringify({ title: taskTitles[i] })
+                });
+              }
+            }
+            // If user added extra tasks beyond template count
+            for (let i = createdTasks.length; i < taskTitles.length; i++) {
+              const taskRes = await apiFetch('/tasks', {
+                method: 'POST',
+                body: JSON.stringify({ title: taskTitles[i] })
+              });
+              if (taskRes && taskRes.task) {
+                await apiFetch('/routines/' + result.routine.id + '/tasks', {
+                  method: 'POST',
+                  body: JSON.stringify({ task_id: taskRes.task.id })
+                });
+              }
+            }
+          }
+        }
+      } else {
+        // Blank routine flow: create routine, then create+link each task
+        result = await apiFetch('/routines', {
+          method: 'POST',
+          body: JSON.stringify({ name, routine_type })
+        });
+        if (result && result.success && taskTitles.length) {
+          for (const title of taskTitles) {
+            const taskRes = await apiFetch('/tasks', {
+              method: 'POST',
+              body: JSON.stringify({ title })
+            });
+            if (taskRes && taskRes.task) {
+              await apiFetch('/routines/' + result.routine.id + '/tasks', {
+                method: 'POST',
+                body: JSON.stringify({ task_id: taskRes.task.id })
+              });
+            }
+          }
+        }
+      }
+
+      if (result && result.success) {
+        closeModal();
+        showToast('Routine created! 🎉');
+        await loadMyRoutines();
+      } else {
+        showToast('Something went wrong. Try again.');
+      }
+    } catch (err) {
+      console.error(err);
+      showToast('Error saving routine.');
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Save routine';
+    }
+  }
+
+  // ── MY ROUTINES ───────────────────────────────────────────────────────────
+  async function loadMyRoutines() {
+    const data = await apiFetch('/routines');
+    const container = document.getElementById('routines-list');
+
+    if (!data || !data.success) {
+      container.innerHTML = '<p class="empty-state">Could not load routines.</p>';
+      return;
+    }
+
+    myRoutines = data.routines || [];
+
+    if (!myRoutines.length) {
+      container.innerHTML = '<p class="empty-state">No routines yet. Start from a template or create a blank one below.</p>';
+      return;
+    }
+
+    container.innerHTML = myRoutines.map(r => {
+      const badgeClass = r.routine_type === 'pm' ? 'badge-pm' : r.routine_type === 'weekly' ? 'badge-weekly' : 'badge-am';
+      const badgeLabel = r.routine_type === 'pm' ? 'PM' : r.routine_type === 'weekly' ? 'Weekly' : 'AM';
+      const tasks = r.tasks || [];
+      const adoptedLabel = r.source_template_name ? `<span class="adopted-badge">from ${escHtml(r.source_template_name)}</span>` : '';
+
+      const taskList = tasks.length
+        ? `<ul class="routine-tasks-list">${tasks.slice(0,5).map(t => `<li>${escHtml(t.title)}</li>`).join('')}${tasks.length > 5 ? `<li style="font-style:italic">+${tasks.length-5} more</li>` : ''}</ul>`
+        : `<p class="routine-tasks-empty">No tasks linked yet.</p>`;
+
+      return `
+        <div class="routine-card" data-id="${r.id}">
+          <div class="routine-card-top">
+            <div>
+              <span class="routine-name">${escHtml(r.name)}</span>
+              ${adoptedLabel}
+            </div>
+            <span class="routine-badge ${badgeClass}">${badgeLabel}</span>
+          </div>
+          ${taskList}
+          <div class="routine-actions">
+            <button class="btn-sm btn-complete" id="complete-btn-${r.id}" onclick="completeRoutine(${r.id}, this)">Mark complete</button>
+            <button class="btn-sm btn-delete" onclick="deleteRoutine(${r.id})">Remove</button>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  async function completeRoutine(routineId, btn) {
+    btn.disabled = true;
+    btn.textContent = 'Saving…';
+    const data = await apiFetch('/routines/' + routineId + '/complete', { method: 'POST' });
+    if (data && data.success) {
+      btn.textContent = '✓ Done';
+      btn.classList.add('done');
+      const streak = data.streak;
+      if (streak && streak.current_streak > 1) {
+        showToast(`🔥 ${streak.current_streak}-day streak!`);
+      } else {
+        showToast('Routine complete!');
+      }
+    } else {
+      btn.disabled = false;
+      btn.textContent = 'Mark complete';
+      showToast('Could not save completion.');
+    }
+  }
+
+  async function deleteRoutine(routineId) {
+    if (!confirm('Remove this routine? Your tasks will stay in your task list.')) return;
+    const data = await apiFetch('/routines/' + routineId, { method: 'DELETE' });
+    if (data && data.success) {
+      showToast('Routine removed.');
+      await loadMyRoutines();
+    } else {
+      showToast('Could not remove routine.');
+    }
+  }
+
+  // ── HELPERS ───────────────────────────────────────────────────────────────
+  function escHtml(str) {
+    return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+  function escAttr(str) {
+    return String(str || '').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+
+  // ── INIT ──────────────────────────────────────────────────────────────────
+  document.addEventListener('DOMContentLoaded', async () => {
+    if (!getToken()) return;
+    await Promise.all([loadTemplates(), loadMyRoutines()]);
+
+    // If user already has routines, de-emphasize template section but keep visible
+    // for discovery (show it but collapse to 3 items by default).
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,949 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#011e5c">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="FocusLedger">
+<link rel="icon" type="image/png" sizes="32x32" href="/icons/fl-icon.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/icons/fl-icon.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/fl-icon.png">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FocusLedger Pricing — Free, Autopilot & Tandem Plans for ADHD Productivity</title>
+    <meta name="description" content="FocusLedger is free to start. Upgrade to Autopilot for bank sync, impulse spending detection, and unlimited tracking. Tandem adds partner accountability for two.">
+    <!-- Open Graph -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://focusledger.net/pricing">
+    <meta property="og:title" content="FocusLedger Pricing — Free, Autopilot & Tandem">
+    <meta property="og:description" content="Free forever. Autopilot for $9.99/mo. Tandem for $14.99/mo — partner accountability built for ADHD brains.">
+    <meta property="og:image" content="https://focusledger.net/icons/og-home.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:site_name" content="FocusLedger">
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="FocusLedger Pricing — Free, Autopilot & Tandem">
+    <meta name="twitter:description" content="Free forever. Autopilot for $9.99/mo. Tandem for $14.99/mo — partner accountability built for ADHD brains.">
+    <meta name="twitter:image" content="https://focusledger.net/icons/og-home.png">
+    <!-- Canonical -->
+    <link rel="canonical" href="https://focusledger.net/pricing">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+    <!-- Meta Pixel base + PageView -->
+    <script>
+    !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+    n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
+    n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
+    t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,
+    document,'script','https://connect.facebook.net/en_US/fbevents.js');
+    fbq('init','1597499061553078');
+    fbq('track','PageView');
+    </script>
+    <noscript><img height="1" width="1" style="display:none"
+    src="https://www.facebook.com/tr?id=1597499061553078&ev=PageView&noscript=1"/></noscript>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --orange: #c9a84c;
+            --orange-light: #d4b56a;
+            --navy: #011e5c;
+            --navy-mid: #02287a;
+            --navy-light: #033099;
+            --cream: #faf9f7;
+            --cream-dark: #f5f3ef;
+            --text-dark: #1a1a1a;
+            --text-muted: #6b6b6b;
+            --green: #5BA4A4;
+            --green-muted: #4A9292;
+        
+            --success: #7DB87D;
+            --warning: #E07A5F;
+            --error: #E07A5F;
+            --error-light: #FAEAE5;
+            --border: #e8e5e0;
+            --surface: #FFFFFF;
+            --teal: #2A9D8F;
+            --teal-dark: #238B7E;
+            --teal-light: #3AB5A6;
+        }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            color: var(--text-dark);
+            background: var(--cream);
+            min-height: 100vh;
+        }
+
+        h1, h2, h3, h4 {
+            font-family: 'Space Grotesk', sans-serif;
+        }
+
+        /* NAV */
+        .pricing-nav {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: rgba(250, 249, 246, 0.92);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(0,0,0,0.04);
+        }
+        .pricing-nav-inner {
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+        .logo {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--navy);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            text-decoration: none;
+        }
+        .logo-dot {
+            width: 12px;
+            height: 12px;
+            background: var(--orange);
+            border-radius: 3px;
+            transform: rotate(45deg);
+        }
+        .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+        .nav-links a {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+        .nav-links a:hover {
+            color: var(--orange);
+        }
+        .nav-links .btn-app {
+            background: var(--navy);
+            color: white;
+            padding: 0.5rem 1.25rem;
+            border-radius: 8px;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+        .nav-links .btn-app:hover {
+            background: var(--navy-mid);
+            color: white;
+        }
+
+        /* HERO */
+        .pricing-hero {
+            text-align: center;
+            padding: 4rem 2rem 2rem;
+            max-width: 700px;
+            margin: 0 auto;
+        }
+        .pricing-hero h1 {
+            font-size: 2.8rem;
+            font-weight: 700;
+            color: var(--navy);
+            line-height: 1.15;
+            margin-bottom: 1rem;
+        }
+        .pricing-hero h1 span {
+            color: var(--orange);
+        }
+        .pricing-hero p {
+            font-size: 1.15rem;
+            color: var(--text-muted);
+            line-height: 1.6;
+            max-width: 520px;
+            margin: 0 auto;
+        }
+
+        /* BILLING TOGGLE */
+        .billing-toggle {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
+            margin: 2.5rem auto 0;
+        }
+        .billing-toggle span {
+            font-size: 0.95rem;
+            color: var(--text-muted);
+            font-weight: 500;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+        .billing-toggle span.active {
+            color: var(--navy);
+            font-weight: 600;
+        }
+        .billing-switch {
+            width: 48px;
+            height: 26px;
+            background: #D8D5D0;
+            border-radius: 13px;
+            position: relative;
+            cursor: pointer;
+            transition: background 0.25s;
+        }
+        .billing-switch.annual {
+            background: var(--green);
+        }
+        .billing-switch .switch-knob {
+            width: 22px;
+            height: 22px;
+            background: white;
+            border-radius: 50%;
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            transition: left 0.25s;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+        }
+        .billing-switch.annual .switch-knob {
+            left: 24px;
+        }
+        .save-badge {
+            background: #D4EDEC;
+            color: var(--green-muted);
+            font-size: 0.75rem;
+            font-weight: 600;
+            padding: 0.25rem 0.65rem;
+            border-radius: 50px;
+            white-space: nowrap;
+        }
+
+        /* PRICING CARDS */
+        .pricing-cards {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 2rem;
+            max-width: 1100px;
+            margin: 3rem auto;
+            padding: 0 2rem;
+            align-items: start;
+        }
+        .pricing-card {
+            background: white;
+            border-radius: 20px;
+            padding: 2.5rem;
+            border: 2px solid #E8E5E0;
+            position: relative;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .pricing-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 40px rgba(45, 42, 38, 0.08);
+        }
+        .pricing-card.featured {
+            border-color: var(--orange);
+            box-shadow: 0 8px 32px rgba(201, 168, 76, 0.12);
+        }
+        .popular-badge {
+            position: absolute;
+            top: -12px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--orange);
+            color: white;
+            font-size: 0.72rem;
+            font-weight: 600;
+            padding: 0.3rem 1rem;
+            border-radius: 50px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            white-space: nowrap;
+        }
+        .pricing-card .plan-name {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.15rem;
+            font-weight: 600;
+            color: var(--navy);
+            margin-bottom: 0.5rem;
+        }
+        .pricing-card .plan-desc {
+            font-size: 0.88rem;
+            color: var(--text-muted);
+            margin-bottom: 1.5rem;
+            line-height: 1.5;
+        }
+        .pricing-card .price {
+            font-family: 'Space Grotesk', sans-serif;
+            display: flex;
+            align-items: baseline;
+            gap: 0.15rem;
+            margin-bottom: 0.25rem;
+        }
+        .pricing-card .price .currency {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--navy);
+        }
+        .pricing-card .price .amount {
+            font-size: 3.2rem;
+            font-weight: 700;
+            color: var(--navy);
+            line-height: 1;
+        }
+        .pricing-card .price .period {
+            font-size: 1rem;
+            color: var(--text-muted);
+            font-weight: 400;
+        }
+        .pricing-card .price-note {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            margin-bottom: 1.5rem;
+        }
+        .pricing-card .price-note .strike {
+            text-decoration: line-through;
+            color: #B0ADA8;
+        }
+        .pricing-card .features {
+            list-style: none;
+            margin-bottom: 2rem;
+        }
+        .pricing-card .features li {
+            font-size: 0.9rem;
+            color: var(--text-dark);
+            padding: 0.5rem 0;
+            display: flex;
+            align-items: flex-start;
+            gap: 0.6rem;
+            line-height: 1.4;
+        }
+        .pricing-card .features li .check {
+            flex-shrink: 0;
+            width: 20px;
+            height: 20px;
+            background: #D4EDEC;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-top: 1px;
+        }
+        .pricing-card .features li .check svg {
+            width: 12px;
+            height: 12px;
+            stroke: var(--green-muted);
+        }
+        .pricing-card .features li.disabled {
+            color: #B0ADA8;
+        }
+        .pricing-card .features li.disabled .check {
+            background: #F5F2ED;
+        }
+        .pricing-card .features li.disabled .check svg {
+            stroke: #D0CCC8;
+        }
+        .pricing-card .features li .coming-soon {
+            font-size: 0.7rem;
+            background: #F5F2ED;
+            color: var(--text-muted);
+            padding: 0.15rem 0.5rem;
+            border-radius: 50px;
+            white-space: nowrap;
+            margin-left: auto;
+        }
+        .btn-plan {
+            display: block;
+            width: 100%;
+            padding: 0.85rem;
+            border: none;
+            border-radius: 12px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            text-align: center;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+        .btn-plan.free {
+            background: var(--cream);
+            color: var(--navy);
+            border: 2px solid #D8D5D0;
+        }
+        .btn-plan.free:hover {
+            background: var(--cream-dark);
+            border-color: #D0CCC8;
+        }
+        .btn-plan.pro {
+            background: var(--orange);
+            color: white;
+        }
+        .btn-plan.pro:hover {
+            background: var(--orange-light);
+        }
+        .btn-plan.tandem {
+            background: var(--teal);
+            color: white;
+        }
+        .btn-plan.tandem:hover {
+            background: var(--teal-light);
+        }
+        .partner-badge {
+            position: absolute;
+            top: -12px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--teal);
+            color: white;
+            font-size: 0.72rem;
+            font-weight: 600;
+            padding: 0.3rem 1rem;
+            border-radius: 50px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            white-space: nowrap;
+        }
+
+        /* FAQ SECTION */
+        .faq-section {
+            max-width: 650px;
+            margin: 2rem auto 4rem;
+            padding: 0 2rem;
+        }
+        .faq-section h2 {
+            text-align: center;
+            font-size: 1.6rem;
+            color: var(--navy);
+            margin-bottom: 2rem;
+        }
+        .faq-item {
+            border-bottom: 1px solid #E8E5E0;
+            padding: 1.25rem 0;
+        }
+        .faq-item:last-child {
+            border-bottom: none;
+        }
+        .faq-q {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--navy);
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+        }
+        .faq-q svg {
+            flex-shrink: 0;
+            width: 18px;
+            height: 18px;
+            stroke: var(--text-muted);
+            transition: transform 0.2s;
+        }
+        .faq-item.open .faq-q svg {
+            transform: rotate(180deg);
+        }
+        .faq-a {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            line-height: 1.6;
+            margin-top: 0.75rem;
+            padding-right: 2rem;
+            /* Smooth animation using max-height */
+            max-height: 0;
+            overflow: hidden;
+            opacity: 0;
+            transition: max-height 0.3s ease, opacity 0.25s ease;
+        }
+        .faq-item.open .faq-a {
+            max-height: 500px;
+            overflow: visible;
+            opacity: 1;
+        }
+
+        /* FOOTER */
+        .pricing-footer {
+            text-align: center;
+            padding: 2rem;
+            border-top: 1px solid #E8E5E0;
+        }
+        .pricing-footer p {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+        }
+        .pricing-footer a {
+            color: var(--orange);
+            text-decoration: none;
+        }
+
+        /* RESPONSIVE */
+        @media (max-width: 900px) {
+            .pricing-cards {
+                grid-template-columns: 1fr 1fr;
+                max-width: 700px;
+            }
+        }
+        @media (max-width: 700px) {
+            .pricing-cards {
+                grid-template-columns: 1fr;
+                max-width: 420px;
+            }
+            .pricing-hero h1 {
+                font-size: 2rem;
+            }
+            .pricing-nav-inner {
+                padding: 0.75rem 1rem;
+            }
+            .nav-links {
+                gap: 1rem;
+            }
+        }
+    </style>
+<link rel="stylesheet" href="/css/design-system.css">
+    <!-- Structured Data: SoftwareApplication with Offers -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "FocusLedger",
+      "url": "https://focusledger.net",
+      "description": "ADHD-native personal command center: tasks, money tracking, impulse spending detection, and news in one tab.",
+      "applicationCategory": "ProductivityApplication",
+      "operatingSystem": "Web",
+      "offers": [
+        {
+          "@type": "Offer",
+          "name": "Free",
+          "price": "0",
+          "priceCurrency": "USD",
+          "description": "Task management, expense tracking, ideas inbox, daily journal, values alignment, and news. Free forever."
+        },
+        {
+          "@type": "Offer",
+          "name": "Autopilot",
+          "price": "9.99",
+          "priceCurrency": "USD",
+          "priceSpecification": {
+            "@type": "UnitPriceSpecification",
+            "price": "9.99",
+            "priceCurrency": "USD",
+            "unitCode": "MON"
+          },
+          "description": "Everything in Free plus bank sync via Plaid, impulse spending detection, and advanced spending analytics."
+        },
+        {
+          "@type": "Offer",
+          "name": "Tandem",
+          "price": "14.99",
+          "priceCurrency": "USD",
+          "priceSpecification": {
+            "@type": "UnitPriceSpecification",
+            "price": "14.99",
+            "priceCurrency": "USD",
+            "unitCode": "MON"
+          },
+          "description": "Partner accountability with shared tasks, partner dashboard, and Buddy as your shared coach. Includes everything in Autopilot for two."
+        }
+      ]
+    }
+    </script>
+</head>
+<body>
+
+    <!-- NAV -->
+    <div class="pricing-nav">
+        <div class="pricing-nav-inner">
+            <a href="/" class="logo">
+                <div class="logo-dot"></div>
+                FocusLedger
+            </a>
+            <div class="nav-links">
+                <a href="/">Home</a>
+                <a href="/app" class="btn-app">Open App</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- HERO -->
+    <div class="pricing-hero">
+        <h1>Start where you are.<br><span>Grow at your pace.</span></h1>
+        <p>The free tier isn't a limitation — it's a foundation. Autopilot isn't a purchase — it's an investment in how your daily life feels.</p>
+
+        <!-- BILLING TOGGLE -->
+        <div class="billing-toggle">
+            <span id="monthlyLabel" class="active">Monthly</span>
+            <div class="billing-switch" id="billingSwitch">
+                <div class="switch-knob"></div>
+            </div>
+            <span id="annualLabel">Annual</span>
+            <span class="save-badge">Save ~$20/yr</span>
+        </div>
+    </div>
+
+    <!-- PRICING CARDS -->
+    <div class="pricing-cards">
+
+        <!-- FREE PLAN -->
+        <div class="pricing-card">
+            <div class="plan-name">Free</div>
+            <div class="plan-desc">A foundation, not a limitation. Start building clarity — no credit card, no commitment, no expiry.</div>
+            <div class="price">
+                <span class="currency">$</span>
+                <span class="amount">0</span>
+                <span class="period">/forever</span>
+            </div>
+            <div class="price-note">No expiry. No credit card. Yours, always.</div>
+            <ul class="features">
+                <li>
+                    <span class="check"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></span>
+                    10 active tasks
+                </li>
+                <li>
+                    <span class="check"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></span>
+                    2 recurring tasks
+                </li>
+                <li>
+                    <span class="check"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></span>
+                    Break-it-down steps
+                </li>
+                <li>
+                    <span class="check"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></span>
+                    Journal & ideas capture
+                </li>
+                <li>
+                    <span class="check"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></span>
+                    Values & alignment check-in
+                </li>
+                <li>
+                    <span class="check"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></span>
+                    Manual spending tracker
+                </li>
+                <li>
+                    <span class="check"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></span>
+                    Weekly budget view
+                </li>
+                <li>
+                    <span class="check"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></span>
+                    Full ADHD-friendly UI
+                </li>
+                <li class="disabled">
+                    <span class="check"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></span>
+                    Unlimited tasks & recurring
+                </li>
+                <li class="disabled">
+                    <span class="check"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></span>
+                    Bank sync & AI nudges
+                </li>
+            </ul>
+            <a href="/app" class="btn-plan free">Get Started Free</a>
+        </div>
+
+        <!-- AUTOPILOT PLAN -->
+        <div class="pricing-card featured">
+            <div class="popular-badge">Most Popular</div>
+            <div class="plan-name">Autopilot</div>
+            <div class="plan-desc">The full cognitive environment — unlimited tasks, bank sync, AI-powered clarity, and everything we build next.</div>
+            <div class="price" id="proPrice">
+                <span class="currency">$</span>
+                <span class="amount" id="proPriceAmount">9.99</span>
+                <span class="period" id="proPricePeriod">/month</span>
+            </div>
+            <div class="price-note" id="proPriceNote">Billed monthly. Cancel anytime.</div>
+            <ul class="features">
+                <li>
+                    <span class="check"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></span>
+                    <span><strong>Unlimited</strong> active tasks</span>
+                </li>
+                <li>
+                    <span class="check"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></span>
+                    <span><strong>Unlimited</strong> recurring tasks &amp; expenses</span>
+                </li>
+                <li>
+                    <span class="check"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></span>
+                    AI-powered break-it-down steps
+                </li>
+                <li>
+                    <span class="check"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></span>
+                    Full spending tracker + budget
+                </li>
+                <li>
+                    <span class="check"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></span>
+                    Bank & credit card sync
+                </li>
+                <li>
+                    <span class="check"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></span>
+                    Values alignment nudges
+                </li>
+                <li>
+                    <span class="check"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></span>
+                    Full ADHD-friendly UI
+                </li>
+                <li>
+                    <span class="check"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></span>
+                    Financial dashboard & impulse detection
+                    <span class="coming-soon">Coming soon</span>
+                </li>
+                <li>
+                    <span class="check"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></span>
+                    Email-to-task linking
+                    <span class="coming-soon">Coming soon</span>
+                </li>
+            </ul>
+            <a href="#" class="btn-plan pro" id="proBtn">Switch to Autopilot</a>
+        </div>
+
+        <!-- TANDEM PLAN -->
+        <div class="pricing-card" id="tandemCard">
+            <div class="partner-badge">For Two</div>
+            <div class="plan-name">Tandem</div>
+            <div class="plan-desc">Accountability that works with your brain, not against it. Partner dashboard, shared task visibility, and Buddy as your shared coach.</div>
+            <div class="price" id="tandemPrice">
+                <span class="currency">$</span>
+                <span class="amount" id="tandemPriceAmount">14.99</span>
+                <span class="period" id="tandemPricePeriod">/month</span>
+            </div>
+            <div class="price-note" id="tandemPriceNote">Billed monthly. Cancel anytime.</div>
+            <ul class="features">
+                <li>
+                    <span class="check"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></span>
+                    <span><strong>Everything in Autopilot</strong>, shared between two</span>
+                </li>
+                <li>
+                    <span class="check"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></span>
+                    Partner dashboard — see their shared tasks at a glance
+                </li>
+                <li>
+                    <span class="check"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></span>
+                    Buddy-mediated accountability — Buddy knows when your partner's counting on you
+                </li>
+                <li>
+                    <span class="check"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></span>
+                    Privacy-first sharing — tasks stay private until you choose to share
+                </li>
+                <li>
+                    <span class="check"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></span>
+                    "Tell Buddy" — signal concern topics privately, get coaching support
+                </li>
+                <li>
+                    <span class="check"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></span>
+                    <span>14-day free trial for <strong>both</strong> partners</span>
+                </li>
+            </ul>
+            <a href="/signup?plan=tandem" class="btn-plan tandem" id="tandemBtn">Start Tandem Trial</a>
+        </div>
+
+    </div>
+
+    <!-- FAQ -->
+    <div class="faq-section">
+        <h2>Questions worth asking.</h2>
+
+        <div class="faq-item">
+            <div class="faq-q">
+                What happens when I hit 10 tasks on Free?
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </div>
+            <div class="faq-a">You can still complete and manage your existing tasks. You just can't add new ones until you finish some or switch to Autopilot. Think of it as the app trusting you to close the loop. All your data stays safe — always.</div>
+        </div>
+
+        <div class="faq-item">
+            <div class="faq-q">
+                Can I cancel Autopilot anytime?
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </div>
+            <div class="faq-a">Yes. Cancel anytime from Settings. You keep Autopilot features through the end of your billing period. No guilt, no dark patterns, no "are you sure you want to leave?" guilt trip.</div>
+        </div>
+
+        <div class="faq-item">
+            <div class="faq-q">
+                Why tasks AND spending in one app?
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </div>
+            <div class="faq-a">Marshall McLuhan argued that every tool changes how you think before you think about anything. Every app switch is a context switch — and context switching is where ADHD brains hemorrhage energy. FocusLedger is one cognitive environment, not a collection of tools you have to stitch together yourself. <a href="/science" style="color: var(--orange); text-decoration: none; font-weight: 500;">See the full framework →</a></div>
+        </div>
+
+        <div class="faq-item">
+            <div class="faq-q">
+                Why does this app feel different from other ADHD apps?
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </div>
+            <div class="faq-a">Most ADHD apps are what McLuhan called "hot" media — dense with information, demanding attention, overwhelming by design. FocusLedger is intentionally "cool": spacious, inviting, trusting. It presents less and asks less, so your brain can do more. The interface is the intervention. <a href="/science" style="color: var(--orange); text-decoration: none; font-weight: 500;">See the research behind our approach →</a></div>
+        </div>
+
+        <div class="faq-item">
+            <div class="faq-q">
+                Is annual billing worth it?
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </div>
+            <div class="faq-a">Annual works out to ~$8.33/month instead of $9.99 — you save ~$20 per year. If FocusLedger has become part of how you move through your week, annual is the natural commitment. Less friction, less cost.</div>
+        </div>
+
+        <div class="faq-item">
+            <div class="faq-q">
+                What about "Coming soon" features?
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </div>
+            <div class="faq-a">Features ship continuously. Autopilot and Tandem subscribers get everything automatically as it arrives — no extra charge, no upgrade cycle. Going Autopilot early is how you shape what gets built next. <a href="/science" style="color: var(--orange); text-decoration: none; font-weight: 500;">The science of building lasting habits →</a></div>
+        </div>
+
+        <div class="faq-item">
+            <div class="faq-q">
+                How does Tandem work if my partner doesn't have FocusLedger yet?
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </div>
+            <div class="faq-a">Tandem starts a 14-day free trial for both of you. Your partner signs up and you can link accounts — no credit card required during the trial. Tasks stay private by default — you choose what to share.</div>
+        </div>
+
+        <div class="faq-item">
+            <div class="faq-q">
+                Who can see my tasks in Tandem?
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </div>
+            <div class="faq-a">Only tasks you explicitly mark as shared or household are visible to your partner. Private tasks are never shown. Your data is yours — Tandem is designed around that principle.</div>
+        </div>
+    </div>
+
+    <!-- FOOTER -->
+    <div class="pricing-footer">
+        <p style="margin-bottom: 0.4rem; font-style: italic; color: #B0ADA8; font-size: 0.78rem;">"The everyday deserves the same care as the extraordinary." — inspired by Alain de Botton</p>
+        <p>FocusLedger &mdash; Built by <a href="https://polsia.com">Polsia</a> &middot; <a href="/story">About</a> &middot; <a href="/changelog">Changelog</a> &middot; <a href="/terms">Terms of Service</a> &middot; <a href="/privacy">Privacy Policy</a></p>
+    </div>
+
+    <script>
+    (function() {
+        'use strict';
+
+        // FAQ accordion — event delegation for reliable cross-browser/mobile behavior
+        document.addEventListener('click', function(e) {
+            var q = e.target.closest('.faq-q');
+            if (!q) return;
+            var item = q.closest('.faq-item');
+            if (!item) return;
+            item.classList.toggle('open');
+        });
+
+        var isAnnual = false;
+        var MONTHLY_LINK = 'https://buy.stripe.com/eVq28re6pbAA0VBgWlbsc0a';
+        var ANNUAL_LINK = 'https://buy.stripe.com/3cI14n0fzawwfQv21rbsc0b';
+
+        var billingSwitch = document.getElementById('billingSwitch');
+        var monthlyLabel = document.getElementById('monthlyLabel');
+        var annualLabel = document.getElementById('annualLabel');
+        var proPriceAmount = document.getElementById('proPriceAmount');
+        var proPricePeriod = document.getElementById('proPricePeriod');
+        var proPriceNote = document.getElementById('proPriceNote');
+        var proBtn = document.getElementById('proBtn');
+        var tandemPriceAmount = document.getElementById('tandemPriceAmount');
+        var tandemPricePeriod = document.getElementById('tandemPricePeriod');
+        var tandemPriceNote = document.getElementById('tandemPriceNote');
+
+        function updatePricing() {
+            if (isAnnual) {
+                billingSwitch.classList.add('annual');
+                monthlyLabel.classList.remove('active');
+                annualLabel.classList.add('active');
+                proPriceAmount.textContent = '8.33';
+                proPricePeriod.textContent = '/month';
+                proPriceNote.innerHTML = 'Billed as $100/year. <span class="strike">$119.88</span>';
+                proBtn.href = ANNUAL_LINK;
+                tandemPriceAmount.textContent = '12.42';
+                tandemPricePeriod.textContent = '/month';
+                tandemPriceNote.innerHTML = 'Billed as $149/year. <span class="strike">$179.88</span>';
+            } else {
+                billingSwitch.classList.remove('annual');
+                monthlyLabel.classList.add('active');
+                annualLabel.classList.remove('active');
+                proPriceAmount.textContent = '9.99';
+                proPricePeriod.textContent = '/month';
+                proPriceNote.textContent = 'Billed monthly. Cancel anytime.';
+                proBtn.href = MONTHLY_LINK;
+                tandemPriceAmount.textContent = '14.99';
+                tandemPricePeriod.textContent = '/month';
+                tandemPriceNote.textContent = 'Billed monthly. Cancel anytime.';
+            }
+        }
+
+        billingSwitch.addEventListener('click', function() {
+            isAnnual = !isAnnual;
+            updatePricing();
+        });
+        monthlyLabel.addEventListener('click', function() {
+            isAnnual = false;
+            updatePricing();
+        });
+        annualLabel.addEventListener('click', function() {
+            isAnnual = true;
+            updatePricing();
+        });
+
+        // Initialize
+        updatePricing();
+
+        // Check if already Pro — show "You're on Pro" instead
+        fetch('/api/subscription/status')
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (data.success && data.subscription && data.subscription.is_pro) {
+                    proBtn.textContent = 'You\'re on Autopilot';
+                    proBtn.href = '/settings';
+                    proBtn.classList.remove('pro');
+                    proBtn.style.background = 'var(--green)';
+                    proBtn.style.color = 'white';
+                }
+            })
+            .catch(function() {});
+    })();
+    </script>
+
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' })
+                    .then(function(reg) { console.log('[PWA] SW registered:', reg.scope); })
+                    .catch(function(err) { console.warn('[PWA] SW registration failed:', err); });
+            });
+            navigator.serviceWorker.addEventListener('message', function(e) {
+                if (e.data && e.data.type === 'SW_UPDATED') window.location.reload();
+            });
+        }
+    </script>
+    <!-- Analytics: shared library + page/event tracking -->
+    <script src="/js/analytics.js"></script>
+    <script>
+    (function() {
+        FLA.trackPage('pricing');
+        FLA.trackEvent('funnel_pricing_visit');
+
+        // CTA button tracking
+        function bindPricingCtaTracking() {
+            // Free plan button
+            document.querySelectorAll('.btn-plan.free').forEach(function(el) {
+                el.addEventListener('click', function() { FLA.trackEvent('cta_pricing_free'); });
+            });
+            // Pro plan button
+            var proBtn = document.getElementById('proBtn');
+            if (proBtn) {
+                proBtn.addEventListener('click', function() { FLA.trackEvent('cta_pricing_pro'); });
+            }
+            // Tandem plan button
+            var tandemBtn = document.getElementById('tandemBtn');
+            if (tandemBtn) {
+                tandemBtn.addEventListener('click', function() { FLA.trackEvent('cta_pricing_tandem'); });
+            }
+        }
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', bindPricingCtaTracking);
+        } else {
+            bindPricingCtaTracking();
+        }
+    })();
+    </script>
+</body>
+</html>

@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link rel="icon" type="image/png" sizes="32x32" href="/icons/fl-icon.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/icons/fl-icon.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/fl-icon.png">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#E8913A">
+    <title>Add to FocusLedger</title>
+    <link rel="manifest" href="/manifest.json">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --navy: #2D2A26;
+            --navy-light: #252540;
+            --orange: #E8913A;
+            --orange-hover: #e05a29;
+            --cream: #F5F0E8;
+            --text-muted: #9090b0;
+            --border: rgba(255,255,255,0.08);
+            --card-bg: #20203a;
+        
+            --success: #7DB87D;
+            --warning: #E07A5F;
+            --error: #E07A5F;
+            --error-light: #FAEAE5;
+            --border: #E8E5E0;
+            --surface: #FFFFFF;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        html, body {
+            min-height: 100%;
+            background: var(--navy);
+            color: var(--cream);
+            font-family: 'DM Sans', sans-serif;
+            font-size: 16px;
+        }
+
+        .nav {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: var(--cream);
+            text-decoration: none;
+        }
+
+        .logo-dot {
+            width: 10px;
+            height: 10px;
+            background: var(--orange);
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .container {
+            max-width: 520px;
+            margin: 0 auto;
+            padding: 2rem 1.25rem;
+        }
+
+        .page-header {
+            margin-bottom: 1.5rem;
+        }
+
+        .page-header h1 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.4rem;
+            font-weight: 600;
+            color: var(--cream);
+            margin-bottom: 0.3rem;
+        }
+
+        .page-header p {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        .share-preview {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 0.875rem 1rem;
+            margin-bottom: 1.25rem;
+            font-size: 0.875rem;
+        }
+
+        .share-preview-label {
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.4rem;
+        }
+
+        .share-preview-content {
+            color: var(--cream);
+            word-break: break-word;
+            line-height: 1.5;
+        }
+
+        .share-preview-url {
+            color: var(--orange);
+            font-size: 0.8rem;
+            margin-top: 0.3rem;
+            word-break: break-all;
+            opacity: 0.85;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            margin-bottom: 0.4rem;
+        }
+
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            color: var(--cream);
+            font-family: 'DM Sans', sans-serif;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.15s;
+            resize: vertical;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus {
+            border-color: var(--orange);
+        }
+
+        .form-group textarea {
+            min-height: 80px;
+            font-size: 0.9rem;
+        }
+
+        .char-hint {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 0.25rem;
+        }
+
+        .btn-primary {
+            width: 100%;
+            background: var(--orange);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 0.875rem 1rem;
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.15s, opacity 0.15s;
+            margin-top: 0.5rem;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: var(--orange-hover);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+        }
+
+        .btn-secondary {
+            width: 100%;
+            background: transparent;
+            color: var(--text-muted);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: border-color 0.15s, color 0.15s;
+            margin-top: 0.5rem;
+            text-decoration: none;
+            display: block;
+            text-align: center;
+        }
+
+        .btn-secondary:hover {
+            border-color: var(--text-muted);
+            color: var(--cream);
+        }
+
+        /* Success state */
+        .success-state {
+            display: none;
+            text-align: center;
+            padding: 2rem 0;
+        }
+
+        .success-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            animation: bounce-in 0.4s ease;
+        }
+
+        @keyframes bounce-in {
+            0% { transform: scale(0.5); opacity: 0; }
+            70% { transform: scale(1.15); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .success-title {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: var(--cream);
+            margin-bottom: 0.4rem;
+        }
+
+        .success-subtitle {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            margin-bottom: 1.5rem;
+        }
+
+        /* Error/alert */
+        .alert {
+            background: rgba(232, 145, 58, 0.12);
+            border: 1px solid rgba(232, 145, 58, 0.3);
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            font-size: 0.875rem;
+            color: var(--cream);
+            margin-bottom: 1rem;
+            display: none;
+        }
+
+        .alert.visible {
+            display: block;
+        }
+
+        .alert.upgrade {
+            background: rgba(232, 145, 58, 0.08);
+            border-color: rgba(232, 145, 58, 0.25);
+        }
+
+        .alert a {
+            color: var(--orange);
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        /* Loading spinner */
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+            vertical-align: middle;
+            margin-right: 6px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Confetti canvas */
+        #confettiCanvas {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            pointer-events: none;
+            z-index: 999;
+        }
+
+        /* Redirecting state */
+        .redirect-msg {
+            display: none;
+            text-align: center;
+            padding: 3rem 1rem;
+        }
+
+        .redirect-msg p {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        /* Responsive tweak */
+        @media (max-width: 480px) {
+            .container {
+                padding: 1.25rem 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <nav class="nav">
+        <a href="/app" class="logo">
+            <div class="logo-dot"></div>
+            FocusLedger
+        </a>
+    </nav>
+
+    <canvas id="confettiCanvas"></canvas>
+
+    <!-- Redirecting to login (shown briefly before redirect) -->
+    <div class="redirect-msg" id="redirectMsg">
+        <p>Saving your share... one moment.</p>
+    </div>
+
+    <div class="container" id="mainContent" style="display:none;">
+
+        <div class="page-header">
+            <h1>Add as task</h1>
+            <p>Edit the title below, then save.</p>
+        </div>
+
+        <!-- Preview of what was shared -->
+        <div class="share-preview" id="sharePreview" style="display:none;">
+            <div class="share-preview-label">Shared content</div>
+            <div class="share-preview-content" id="previewText"></div>
+            <div class="share-preview-url" id="previewUrl"></div>
+        </div>
+
+        <!-- Error/upgrade alerts -->
+        <div class="alert" id="alertMsg"></div>
+
+        <!-- Task form -->
+        <div id="taskForm">
+            <div class="form-group">
+                <label for="taskTitle">Task title</label>
+                <input
+                    type="text"
+                    id="taskTitle"
+                    placeholder="What needs doing?"
+                    maxlength="200"
+                    autocomplete="off"
+                    autocorrect="on"
+                    spellcheck="true"
+                >
+                <div class="char-hint" id="charHint"></div>
+            </div>
+
+            <div class="form-group" id="notesGroup" style="display:none;">
+                <label for="taskNotes">Notes <span style="font-weight:400;opacity:0.6;">(optional)</span></label>
+                <textarea
+                    id="taskNotes"
+                    placeholder="Extra context from what was shared..."
+                    maxlength="1000"
+                ></textarea>
+            </div>
+
+            <button class="btn-primary" id="saveBtn" onclick="saveTask()">Save task</button>
+            <a href="/app" class="btn-secondary">Cancel</a>
+        </div>
+
+        <!-- Success state -->
+        <div class="success-state" id="successState">
+            <div class="success-icon">✅</div>
+            <div class="success-title">Task added</div>
+            <div class="success-subtitle">Heading to your dashboard...</div>
+            <a href="/app" class="btn-primary" style="display:inline-block; width:auto; padding: 0.75rem 2rem; text-decoration:none;">Open FocusLedger</a>
+        </div>
+
+    </div>
+
+    <script>
+    (function() {
+        'use strict';
+
+        var STORAGE_KEY = 'fl_pending_share';
+        var TOKEN_KEY = 'fl_token';
+
+        // ── Parse URL search params ───────────────────────────────────────────
+        function parseShareParams() {
+            var p = new URLSearchParams(window.location.search);
+            return {
+                title: (p.get('title') || '').trim(),
+                text:  (p.get('text')  || '').trim(),
+                url:   (p.get('url')   || '').trim()
+            };
+        }
+
+        // ── Build a smart task title from shared content ──────────────────────
+        function buildTaskTitle(share) {
+            // Priority: explicit title → text (truncated) → url domain
+            if (share.title) return share.title;
+            if (share.text)  return share.text.length > 120 ? share.text.slice(0, 117) + '…' : share.text;
+            if (share.url) {
+                try {
+                    return 'Check out: ' + new URL(share.url).hostname.replace('www.', '');
+                } catch(e) {
+                    return share.url.length > 120 ? share.url.slice(0, 117) + '…' : share.url;
+                }
+            }
+            return '';
+        }
+
+        // ── Build supplemental notes from shared content ──────────────────────
+        function buildNotes(share, usedAsTitle) {
+            var parts = [];
+            // If title was used as task title, include text + url
+            // If text was used as task title, include url only
+            if (share.title && share.text) parts.push(share.text);
+            if (share.url) parts.push(share.url);
+            return parts.join('\n').trim();
+        }
+
+        // ── Show alert message ────────────────────────────────────────────────
+        function showAlert(msg, isUpgrade) {
+            var el = document.getElementById('alertMsg');
+            el.innerHTML = msg;
+            el.className = 'alert visible' + (isUpgrade ? ' upgrade' : '');
+        }
+
+        // ── Save task to API ──────────────────────────────────────────────────
+        window.saveTask = function() {
+            var title = document.getElementById('taskTitle').value.trim();
+            if (!title) {
+                showAlert('Give the task a title first.');
+                document.getElementById('taskTitle').focus();
+                return;
+            }
+
+            var notes = document.getElementById('taskNotes').value.trim();
+            var token = localStorage.getItem(TOKEN_KEY);
+
+            if (!token) {
+                // Shouldn't happen, but handle gracefully
+                storeAndRedirectToLogin(parseShareParams());
+                return;
+            }
+
+            var saveBtn = document.getElementById('saveBtn');
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = '<span class="spinner"></span>Saving…';
+
+            var payload = { title: title };
+            if (notes) payload.description = notes;
+
+            fetch('/api/tasks', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + token
+                },
+                body: JSON.stringify(payload)
+            })
+            .then(function(r) { return r.json().then(function(d) { return { status: r.status, data: d }; }); })
+            .then(function(res) {
+                if (res.status === 200 || res.status === 201 || res.data.success) {
+                    // Clear any pending share
+                    localStorage.removeItem(STORAGE_KEY);
+                    showSuccess();
+                } else if (res.status === 402 || (res.data && res.data.code === 'TASK_LIMIT_REACHED')) {
+                    saveBtn.disabled = false;
+                    saveBtn.textContent = 'Save task';
+                    showAlert(
+                        'You\'ve hit the 10-task free limit. <a href="/pricing">Switch to Autopilot</a> to keep going.',
+                        true
+                    );
+                } else if (res.status === 401) {
+                    // Token expired — re-auth
+                    localStorage.removeItem(TOKEN_KEY);
+                    storeAndRedirectToLogin(parseShareParams());
+                } else {
+                    saveBtn.disabled = false;
+                    saveBtn.textContent = 'Save task';
+                    showAlert(res.data.message || 'Something went wrong. Try again.');
+                }
+            })
+            .catch(function() {
+                saveBtn.disabled = false;
+                saveBtn.textContent = 'Save task';
+                showAlert('Couldn\'t reach the server. Check your connection.');
+            });
+        };
+
+        // ── Show success state + confetti ─────────────────────────────────────
+        function showSuccess() {
+            document.getElementById('taskForm').style.display = 'none';
+            document.getElementById('sharePreview').style.display = 'none';
+            document.getElementById('alertMsg').className = 'alert';
+            document.getElementById('pageHeader') && (document.getElementById('pageHeader').style.display = 'none');
+            document.querySelector('.page-header').style.display = 'none';
+
+            var s = document.getElementById('successState');
+            s.style.display = 'block';
+
+            launchConfetti();
+
+            // Auto-redirect after 2.5s
+            setTimeout(function() {
+                window.location.href = '/app';
+            }, 2500);
+        }
+
+        // ── Store share data + redirect to login ──────────────────────────────
+        function storeAndRedirectToLogin(share) {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(share));
+            window.location.href = '/login?redirect=share';
+        }
+
+        // ── Simple confetti burst ─────────────────────────────────────────────
+        function launchConfetti() {
+            var canvas = document.getElementById('confettiCanvas');
+            var ctx = canvas.getContext('2d');
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+
+            var particles = [];
+            var colors = ['#E8913A', '#F5F0E8', '#5B8DEF', '#FFD700', '#7ED321'];
+
+            for (var i = 0; i < 80; i++) {
+                particles.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height * 0.4,
+                    vx: (Math.random() - 0.5) * 4,
+                    vy: Math.random() * 2 + 1,
+                    size: Math.random() * 6 + 3,
+                    color: colors[Math.floor(Math.random() * colors.length)],
+                    rotation: Math.random() * Math.PI * 2,
+                    rotSpeed: (Math.random() - 0.5) * 0.2
+                });
+            }
+
+            var start = null;
+            var duration = 2000;
+
+            function animate(ts) {
+                if (!start) start = ts;
+                var progress = ts - start;
+
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                particles.forEach(function(p) {
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    p.vy += 0.05; // gravity
+                    p.rotation += p.rotSpeed;
+
+                    ctx.save();
+                    ctx.translate(p.x, p.y);
+                    ctx.rotate(p.rotation);
+                    ctx.fillStyle = p.color;
+                    ctx.globalAlpha = Math.max(0, 1 - progress / duration);
+                    ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size * 0.5);
+                    ctx.restore();
+                });
+
+                if (progress < duration) {
+                    requestAnimationFrame(animate);
+                } else {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                }
+            }
+
+            requestAnimationFrame(animate);
+        }
+
+        // ── Character counter ─────────────────────────────────────────────────
+        var titleInput = document.getElementById('taskTitle');
+        titleInput.addEventListener('input', function() {
+            var len = this.value.length;
+            var hint = document.getElementById('charHint');
+            if (len > 150) {
+                hint.textContent = (200 - len) + ' characters left';
+                hint.style.color = len > 180 ? '#E8913A' : 'var(--text-muted)';
+            } else {
+                hint.textContent = '';
+            }
+        });
+
+        // Allow Enter to submit
+        titleInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                window.saveTask();
+            }
+        });
+
+        // ── Main init ─────────────────────────────────────────────────────────
+        function init() {
+            var token = localStorage.getItem(TOKEN_KEY);
+            var share;
+
+            // Try to get share from URL params first, then localStorage (post-login)
+            var urlShare = parseShareParams();
+            var hasUrlShare = urlShare.title || urlShare.text || urlShare.url;
+            var pendingShare = null;
+
+            try {
+                var stored = localStorage.getItem(STORAGE_KEY);
+                if (stored) pendingShare = JSON.parse(stored);
+            } catch(e) {}
+
+            if (hasUrlShare) {
+                share = urlShare;
+                // If also have pending, clear it (URL takes precedence)
+                if (pendingShare) localStorage.removeItem(STORAGE_KEY);
+            } else if (pendingShare) {
+                share = pendingShare;
+                localStorage.removeItem(STORAGE_KEY);
+            } else {
+                // Nothing to share — came here directly, redirect to app
+                window.location.href = '/app';
+                return;
+            }
+
+            if (!token) {
+                // Not logged in — save share and send to login
+                document.getElementById('redirectMsg').style.display = 'block';
+                storeAndRedirectToLogin(share);
+                return;
+            }
+
+            // Logged in — show the task form
+            document.getElementById('mainContent').style.display = 'block';
+
+            var taskTitle = buildTaskTitle(share);
+            var notes = buildNotes(share, taskTitle === share.title);
+
+            document.getElementById('taskTitle').value = taskTitle;
+
+            // Show preview of shared content
+            var hasPreview = share.text || share.url;
+            if (hasPreview) {
+                document.getElementById('sharePreview').style.display = 'block';
+                var previewText = share.text || '';
+                if (previewText) {
+                    document.getElementById('previewText').textContent =
+                        previewText.length > 200 ? previewText.slice(0, 197) + '…' : previewText;
+                }
+                if (share.url) {
+                    document.getElementById('previewUrl').textContent = share.url;
+                }
+            }
+
+            // Show notes field if we have supplemental content
+            if (notes) {
+                document.getElementById('notesGroup').style.display = 'block';
+                document.getElementById('taskNotes').value = notes;
+            }
+
+            // Auto-select title for easy editing
+            titleInput.focus();
+            titleInput.select();
+        }
+
+        init();
+
+    })();
+    </script>
+
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' })
+                    .then(function(reg) { console.log('[PWA] SW registered:', reg.scope); })
+                    .catch(function(err) { console.warn('[PWA] SW registration failed:', err); });
+            });
+            navigator.serviceWorker.addEventListener('message', function(e) {
+                if (e.data && e.data.type === 'SW_UPDATED') window.location.reload();
+            });
+        }
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,1303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+    <link rel="icon" type="image/png" sizes="32x32" href="/icons/fl-icon.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/icons/fl-icon.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/fl-icon.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- SEO -->
+  <title>ADHD Tax Calculator — What Does Your ADHD Really Cost You? | FocusLedger</title>
+  <meta name="description" content="Calculate your annual ADHD tax — app subscriptions, late fees, impulse spending, missed bills. Free interactive tool from FocusLedger.">
+  <link rel="canonical" href="https://focusledger.net/adhd-tax">
+
+  <!-- OpenGraph / Social Share -->
+  <meta property="og:title" content="ADHD Tax Calculator — What Does Your ADHD Really Cost You?">
+  <meta property="og:description" content="Calculate your annual ADHD tax — app subscriptions, late fees, impulse spending, missed bills. Free interactive tool from FocusLedger.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://focusledger.net/adhd-tax">
+  <meta property="og:image" content="https://focusledger.net/icons/og-adhd-tax.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="ADHD Tax Calculator — What Does Your ADHD Really Cost You?">
+  <meta name="twitter:description" content="Find out the real annual cost of your ADHD. Free calculator from FocusLedger.">
+  <meta name="twitter:image" content="https://focusledger.net/icons/og-adhd-tax.png">
+
+  <!-- Schema.org WebApplication -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "ADHD Tax Calculator",
+    "description": "Calculate the annual financial cost of ADHD — app subscriptions, late fees, impulse spending, missed bills.",
+    "url": "https://focusledger.net/adhd-tax",
+    "applicationCategory": "FinanceApplication",
+    "operatingSystem": "Any",
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+    "author": { "@type": "Organization", "name": "FocusLedger" }
+  }
+  </script>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --orange:    #c9a84c;
+      --orange-lt: #F0A855;
+      --navy:      #1a1a1a;
+      --navy-mid:  #3D3A36;
+      --cream:     #FAF9F6;
+      --cream-dk:  #F0EEE9;
+      --muted:     #6B6560;
+      --green:     #5BA4A4;
+      --radius:    16px;
+    
+            --success: #7DB87D;
+            --warning: #E07A5F;
+            --error: #E07A5F;
+            --error-light: #FAEAE5;
+            --border: #e8e5e0;
+            --surface: #FFFFFF;
+        }
+
+    html, body {
+      height: 100%;
+      font-family: 'DM Sans', sans-serif;
+      background: var(--cream);
+      color: var(--navy);
+      overflow-x: hidden;
+    }
+
+    h1, h2, h3 { font-family: 'Space Grotesk', sans-serif; }
+
+    /* ── NAV ──────────────────────────────── */
+    .nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1.25rem 1.5rem;
+      max-width: 640px;
+      margin: 0 auto;
+    }
+    .logo {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: var(--navy);
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    .logo-dot {
+      width: 10px; height: 10px;
+      background: var(--orange);
+      border-radius: 2px;
+      transform: rotate(45deg);
+      flex-shrink: 0;
+    }
+    .nav-cta {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--muted);
+      text-decoration: none;
+    }
+
+    /* ── MAIN WRAPPER ─────────────────────── */
+    .page {
+      min-height: auto;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 0 1.5rem 2rem;
+    }
+
+    /* ── PROGRESS BAR ─────────────────────── */
+    .progress-wrap {
+      width: 100%;
+      max-width: 480px;
+      margin: 0.5rem 0 2rem;
+    }
+    .progress-label {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-bottom: 0.5rem;
+      font-weight: 500;
+    }
+    .progress-bar {
+      height: 6px;
+      background: var(--cream-dk);
+      border-radius: 99px;
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      background: var(--orange);
+      border-radius: 99px;
+      transition: width 0.4s ease;
+    }
+
+    /* ── SCREEN SYSTEM ────────────────────── */
+    .screen {
+      display: none;
+      width: 100%;
+      max-width: 480px;
+      animation: fadeUp 0.3s ease;
+    }
+    .screen.active { display: block; }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── HERO SCREEN ──────────────────────── */
+    .hero-badge {
+      display: inline-block;
+      background: #FFE8D8;
+      color: var(--orange);
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      padding: 0.35rem 0.9rem;
+      border-radius: 99px;
+      margin-bottom: 1.5rem;
+    }
+    .hero-title {
+      font-size: clamp(1.8rem, 6vw, 2.5rem);
+      font-weight: 700;
+      line-height: 1.15;
+      color: var(--navy);
+      margin-bottom: 1.25rem;
+    }
+    .hero-title span { color: var(--orange); }
+    .hero-sub {
+      font-size: 1.05rem;
+      color: var(--muted);
+      line-height: 1.65;
+      margin-bottom: 2.5rem;
+    }
+    .hero-stats {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 2.5rem;
+    }
+    .stat-pill {
+      flex: 1;
+      background: white;
+      border: 1px solid #EEE;
+      border-radius: 12px;
+      padding: 1rem;
+      text-align: center;
+    }
+    .stat-num {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: var(--orange);
+      display: block;
+    }
+    .stat-lbl {
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-top: 0.2rem;
+      display: block;
+    }
+    .time-note {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin-bottom: 1.5rem;
+    }
+    .time-dot {
+      width: 8px; height: 8px;
+      background: var(--green);
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    /* ── QUESTION SCREEN ──────────────────── */
+    .q-label {
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--orange);
+      margin-bottom: 0.75rem;
+    }
+    .q-title {
+      font-size: clamp(1.3rem, 4.5vw, 1.65rem);
+      font-weight: 700;
+      line-height: 1.25;
+      color: var(--navy);
+      margin-bottom: 1.75rem;
+    }
+    .options {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      margin-bottom: 2rem;
+    }
+    .option-btn {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      min-height: 64px;
+      padding: 0 1.25rem;
+      background: white;
+      border: 2px solid #E8E5E0;
+      border-radius: 14px;
+      cursor: pointer;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 1rem;
+      font-weight: 500;
+      color: var(--navy);
+      text-align: left;
+      transition: border-color 0.15s, background 0.15s, transform 0.1s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .option-btn:hover, .option-btn:focus {
+      border-color: var(--orange);
+      background: #FAF9F6;
+      outline: none;
+    }
+    .option-btn.selected {
+      border-color: var(--orange);
+      background: #FFF5F0;
+    }
+    .option-btn:active { transform: scale(0.98); }
+    .option-check {
+      width: 22px; height: 22px;
+      border: 2px solid #DDD;
+      border-radius: 50%;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .option-btn.selected .option-check {
+      border-color: var(--orange);
+      background: var(--orange);
+    }
+    .option-btn.selected .option-check::after {
+      content: '';
+      width: 6px; height: 6px;
+      background: white;
+      border-radius: 50%;
+    }
+    .option-text { flex: 1; padding-right: 1rem; line-height: 1.3; }
+    .option-sub {
+      display: block;
+      font-size: 0.8rem;
+      color: var(--muted);
+      font-weight: 400;
+      margin-top: 2px;
+    }
+
+    /* ── Q5 AMOUNT INPUT ──────────────────── */
+    .sub-input-wrap {
+      margin-top: 1rem;
+      display: none;
+    }
+    .sub-input-wrap.visible { display: block; }
+    .sub-input-label {
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin-bottom: 0.5rem;
+      display: block;
+    }
+    .sub-input-row {
+      display: flex;
+      align-items: center;
+      background: white;
+      border: 2px solid #E8E5E0;
+      border-radius: 12px;
+      padding: 0 1rem;
+      transition: border-color 0.15s;
+    }
+    .sub-input-row:focus-within { border-color: var(--orange); }
+    .sub-input-prefix {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--muted);
+      padding-right: 0.5rem;
+    }
+    .sub-input-field {
+      flex: 1;
+      min-height: 52px;
+      border: none;
+      background: transparent;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 1rem;
+      color: var(--navy);
+      outline: none;
+    }
+    .sub-input-suffix {
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    /* ── EMAIL SCREEN ─────────────────────── */
+    .email-icon {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+      display: block;
+    }
+    .email-title {
+      font-size: clamp(1.4rem, 5vw, 1.8rem);
+      font-weight: 700;
+      line-height: 1.2;
+      margin-bottom: 0.75rem;
+    }
+    .email-sub {
+      font-size: 0.95rem;
+      color: var(--muted);
+      line-height: 1.6;
+      margin-bottom: 1.75rem;
+    }
+    .email-input-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+    .email-field {
+      width: 100%;
+      min-height: 56px;
+      padding: 0 1.25rem;
+      border: 2px solid #E8E5E0;
+      border-radius: 12px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 1rem;
+      color: var(--navy);
+      background: white;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .email-field:focus { border-color: var(--orange); }
+    .email-note {
+      font-size: 0.78rem;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    /* ── PRIMARY BUTTON ──────────────────── */
+    .btn-primary {
+      display: block;
+      width: 100%;
+      min-height: 56px;
+      padding: 0 1.5rem;
+      background: var(--orange);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 1.05rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.1s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .btn-primary:hover { opacity: 0.9; }
+    .btn-primary:active { transform: scale(0.98); }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* ── BACK BUTTON ──────────────────────── */
+    .btn-back {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      background: none;
+      border: none;
+      color: var(--muted);
+      font-size: 0.9rem;
+      font-weight: 500;
+      cursor: pointer;
+      padding: 0.5rem 0;
+      margin-bottom: 1.5rem;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .btn-back:hover { color: var(--navy); }
+
+    /* ── RESULTS SCREEN ──────────────────── */
+    .results-header {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+    .results-label {
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--orange);
+      margin-bottom: 0.5rem;
+    }
+    .results-total {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: clamp(2.5rem, 10vw, 3.5rem);
+      font-weight: 700;
+      color: var(--navy);
+      line-height: 1.1;
+    }
+    .results-total span { color: var(--orange); }
+    .results-sub {
+      font-size: 0.95rem;
+      color: var(--muted);
+      margin-top: 0.5rem;
+    }
+
+    .breakdown-card {
+      background: white;
+      border-radius: var(--radius);
+      overflow: hidden;
+      margin-bottom: 1.25rem;
+    }
+    .breakdown-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1rem 1.25rem;
+      border-bottom: 1px solid #ECEAE5;
+    }
+    .breakdown-row:last-child { border-bottom: none; }
+    .breakdown-row.total-row {
+      background: #FAF9F6;
+      border-top: 2px solid #FFE0CC;
+    }
+    .breakdown-lbl {
+      font-size: 0.9rem;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+    .breakdown-lbl.total { color: var(--navy); font-weight: 700; font-size: 1rem; }
+    .breakdown-icon { font-size: 1.1rem; }
+    .breakdown-val {
+      font-weight: 600;
+      font-size: 0.95rem;
+      color: var(--navy);
+    }
+    .breakdown-val.total { color: var(--orange); font-size: 1.1rem; font-weight: 700; }
+
+    .comparison-chip {
+      display: inline-block;
+      padding: 0.35rem 0.9rem;
+      border-radius: 99px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      margin: 0 0.3rem;
+    }
+    .comparison-chip.above { background: #FFE8D8; color: var(--orange); }
+    .comparison-chip.below { background: #E0F5F3; color: #2A9D8F; }
+
+    .comparison-text {
+      font-size: 0.92rem;
+      color: var(--muted);
+      line-height: 1.65;
+      margin-bottom: 1.5rem;
+      text-align: center;
+    }
+
+    .cta-card {
+      background: var(--navy);
+      border-radius: var(--radius);
+      padding: 1.5rem 1.25rem;
+      text-align: center;
+      margin-bottom: 1.25rem;
+    }
+    .cta-card h3 {
+      color: white;
+      font-size: 1.15rem;
+      margin-bottom: 0.6rem;
+    }
+    .cta-card p {
+      color: #AAAACC;
+      font-size: 0.88rem;
+      line-height: 1.55;
+      margin-bottom: 1.25rem;
+    }
+    .cta-card p strong { color: var(--green); }
+    .btn-cta {
+      display: inline-block;
+      background: var(--orange);
+      color: white;
+      text-decoration: none;
+      padding: 0.8rem 2rem;
+      border-radius: 99px;
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 700;
+      font-size: 1rem;
+      transition: opacity 0.2s;
+    }
+    .btn-cta:hover { opacity: 0.9; }
+
+    .share-section {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+    .share-title {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--muted);
+      margin-bottom: 0.9rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .share-buttons {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 0.6rem;
+    }
+    .share-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.6rem 1.1rem;
+      border-radius: 99px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-decoration: none;
+      cursor: pointer;
+      border: none;
+      min-height: 44px;
+      -webkit-tap-highlight-color: transparent;
+      transition: opacity 0.2s;
+    }
+    .share-btn:hover { opacity: 0.85; }
+    .share-btn.copy  { background: var(--cream-dk); color: var(--navy); }
+    .share-btn.x     { background: #000; color: #fff; }
+    .share-btn.reddit { background: #FF4500; color: #fff; }
+    .share-btn.facebook { background: #1877F2; color: #fff; }
+
+    /* ── LOADING OVERLAY ─────────────────── */
+    .loading-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(250,249,246,0.85);
+      backdrop-filter: blur(4px);
+      z-index: 99;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 1rem;
+    }
+    .loading-overlay.visible { display: flex; }
+    .spinner {
+      width: 44px; height: 44px;
+      border: 4px solid #FFE0CC;
+      border-top-color: var(--orange);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-text {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--navy);
+    }
+
+    /* ── ERROR MESSAGE ────────────────────── */
+    .error-msg {
+      background: #FFF0F0;
+      border: 1px solid #FFB3B3;
+      border-radius: 10px;
+      padding: 0.75rem 1rem;
+      font-size: 0.88rem;
+      color: #CC3333;
+      margin-bottom: 1rem;
+      display: none;
+    }
+    .error-msg.visible { display: block; }
+
+    /* ── FOOTER ──────────────────────────── */
+    footer {
+      text-align: center;
+      padding: 2rem 1.5rem;
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+    footer a { color: var(--muted); }
+
+    /* ── RESPONSIVE ──────────────────────── */
+    @media (min-width: 520px) {
+      .page { padding: 0 2rem 4rem; }
+    }
+  </style>
+<link rel="stylesheet" href="/css/design-system.css">
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav class="nav">
+    <a href="/" class="logo"><span class="logo-dot"></span>FocusLedger</a>
+    <a href="/signup" class="nav-cta">Get Started Free</a>
+  </nav>
+
+  <!-- LOADING OVERLAY -->
+  <div class="loading-overlay" id="loadingOverlay" aria-live="polite" aria-label="Calculating your results">
+    <div class="spinner"></div>
+    <p class="loading-text">Crunching the numbers…</p>
+  </div>
+
+  <main class="page" id="mainPage">
+
+    <!-- PROGRESS BAR (hidden on hero and results) -->
+    <div class="progress-wrap" id="progressWrap" style="display:none">
+      <div class="progress-label" id="progressLabel">Question 1 of 5</div>
+      <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:20%"></div></div>
+    </div>
+
+    <!-- ──────────── SCREEN 0: HERO ──────────── -->
+    <div class="screen active" id="screen-0">
+      <div class="hero-badge">Free Calculator</div>
+      <h1 class="hero-title">What does your ADHD <span>actually</span> cost you?</h1>
+      <p class="hero-sub">
+        Late fees, abandoned subscriptions, impulse buys — they add up quietly.
+        This calculator puts a number on it. Takes about 60 seconds.
+        No judgment, just clarity.
+      </p>
+
+      <div class="hero-stats">
+        <div class="stat-pill">
+          <span class="stat-num">$2,100</span>
+          <span class="stat-lbl">avg ADHD tax/yr</span>
+        </div>
+        <div class="stat-pill">
+          <span class="stat-num">5</span>
+          <span class="stat-lbl">quick questions</span>
+        </div>
+        <div class="stat-pill">
+          <span class="stat-num">60s</span>
+          <span class="stat-lbl">to your number</span>
+        </div>
+      </div>
+
+      <div class="time-note">
+        <span class="time-dot"></span>
+        No account needed — just answers
+      </div>
+
+      <button class="btn-primary" onclick="startQuiz()">Find out what my ADHD costs →</button>
+    </div>
+
+    <!-- ──────────── SCREEN 1: Q1 ──────────── -->
+    <div class="screen" id="screen-1">
+      <button class="btn-back" onclick="goBack(1)">← Back</button>
+      <div class="q-label">Question 1 of 5</div>
+      <h2 class="q-title">How many productivity or finance apps do you pay for right now?</h2>
+      <div class="options" role="radiogroup" aria-labelledby="q1-title">
+        <button class="option-btn" data-q="appStack" data-val="none" onclick="selectOption(this)">
+          <span class="option-text">None
+            <span class="option-sub">I'm not paying for any right now</span>
+          </span>
+          <span class="option-check" aria-hidden="true"></span>
+        </button>
+        <button class="option-btn" data-q="appStack" data-val="1-2" onclick="selectOption(this)">
+          <span class="option-text">1–2 apps
+            <span class="option-sub">Like one task app + maybe a budget tracker</span>
+          </span>
+          <span class="option-check" aria-hidden="true"></span>
+        </button>
+        <button class="option-btn" data-q="appStack" data-val="3-4" onclick="selectOption(this)">
+          <span class="option-text">3–4 apps
+            <span class="option-sub">Building a system, slowly</span>
+          </span>
+          <span class="option-check" aria-hidden="true"></span>
+        </button>
+        <button class="option-btn" data-q="appStack" data-val="5+" onclick="selectOption(this)">
+          <span class="option-text">5 or more apps
+            <span class="option-sub">Multiple apps, multiple price points, multiple abandoned hopes</span>
+          </span>
+          <span class="option-check" aria-hidden="true"></span>
+        </button>
+      </div>
+    </div>
+
+    <!-- ──────────── SCREEN 2: Q2 ──────────── -->
+    <div class="screen" id="screen-2">
+      <button class="btn-back" onclick="goBack(2)">← Back</button>
+      <div class="q-label">Question 2 of 5</div>
+      <h2 class="q-title">How often do you pay a late fee or overdraft charge?</h2>
+      <div class="options" role="radiogroup">
+        <button class="option-btn" data-q="lateFees" data-val="never" onclick="selectOption(this)">
+          <span class="option-text">Never
+            <span class="option-sub">I'm on top of due dates</span>
+          </span>
+          <span class="option-check" aria-hidden="true"></span>
+        </button>
+        <button class="option-btn" data-q="lateFees" data-val="once_year" onclick="selectOption(this)">
+          <span class="option-text">Once a year or so
+            <span class="option-sub">It happens, but rarely</span>
+          </span>
+          <span class="option-check" aria-hidden="true"></span>
+        </button>
+        <button class="option-btn" data-q="lateFees" data-val="monthly" onclick="selectOption(this)">
+          <span class="option-text">About once a month
+            <span class="option-sub">A recurring tax I keep meaning to fix</span>
+          </span>
+          <span class="option-check" aria-hidden="true"></span>
+        </button>
+        <button class="option-btn" data-q="lateFees" data-val="multiple_month" onclick="selectOption(this)">
+          <span class="option-text">Multiple times a month
+            <span class="option-sub">It's genuinely a problem</span>
+          </span>
+          <span class="option-check" aria-hidden="true"></span>
+        </button>
+      </div>
+    </div>
+
+    <!-- ──────────── SCREEN 3: Q3 ──────────── -->
+    <div class="screen" id="screen-3">
+      <button class="btn-back" onclick="goBack(3)">← Back</button>
+      <div class="q-label">Question 3 of 5</div>
+      <h2 class="q-title">What's your rough monthly impulse or regret purchase total?</h2>
+      <p style="font-size:0.9rem; color:var(--muted); margin-bottom:1.5rem; line-height:1.5;">
+        That book you won't read. The gadget you forgot about. The thing that seemed essential at 11pm.
+      </p>
+      <div class="options" role="radiogroup">
+        <button class="option-btn" data-q="impulse" data-val="under_50" onclick="selectOption(this)">
+          <span class="option-text">Under $50/month
+            <span class="option-sub">$300/year — small but real</span>
+          </span>
+          <span class="option-check" aria-hidden="true"></span>
+        </button>
+        <button class="option-btn" data-q="impulse" data-val="50_150" onclick="selectOption(this)">
+          <span class="option-text">$50–$150/month
+            <span class="option-sub">$600–$1,800/year — adds up fast</span>
+          </span>
+          <span class="option-check" aria-hidden="true"></span>
+        </button>
+        <button class="option-btn" data-q="impulse" data-val="150_400" onclick="selectOption(this)">
+          <span class="option-text">$150–$400/month
+            <span class="option-sub">$1,800–$4,800/year — yeah, it shows</span>
+          </span>
+          <span class="option-check" aria-hidden="true"></span>
+        </button>
+        <button class="option-btn" data-q="impulse" data-val="400_plus" onclick="selectOption(this)">
+          <span class="option-text">$400+ per month
+            <span class="option-sub">$4,800+/year — the number hurts to see</span>
+          </span>
+          <span class="option-check" aria-hidden="true"></span>
+        </button>
+      </div>
+    </div>
+
+    <!-- ──────────── SCREEN 4: Q4 ──────────── -->
+    <div class="screen" id="screen-4">
+      <button class="btn-back" onclick="goBack(4)">← Back</button>
+      <div class="q-label">Question 4 of 5</div>
+      <h2 class="q-title">How often do you miss or accidentally double-pay a bill?</h2>
+      <div class="options" role="radiogroup">
+        <button class="option-btn" data-q="missedBills" data-val="never" onclick="selectOption(this)">
+          <span class="option-text">Never
+            <span class="option-sub">I have a solid system for bills</span>
+          </span>
+          <span class="option-check" aria-hidden="true"></span>
+        </button>
+        <button class="option-btn" data-q="missedBills" data-val="rarely" onclick="selectOption(this)">
+          <span class="option-text">Rarely — maybe once a year
+            <span class="option-sub">Usually catch it before it's a problem</span>
+          </span>
+          <span class="option-check" aria-hidden="true"></span>
+        </button>
+        <button class="option-btn" data-q="missedBills" data-val="monthly" onclick="selectOption(this)">
+          <span class="option-text">About monthly
+            <span class="option-sub">It's embarrassing how often this happens</span>
+          </span>
+          <span class="option-check" aria-hidden="true"></span>
+        </button>
+        <button class="option-btn" data-q="missedBills" data-val="often" onclick="selectOption(this)">
+          <span class="option-text">Often — multiple times a month
+            <span class="option-sub">I genuinely lose track of what I've paid</span>
+          </span>
+          <span class="option-check" aria-hidden="true"></span>
+        </button>
+      </div>
+    </div>
+
+    <!-- ──────────── SCREEN 5: Q5 ──────────── -->
+    <div class="screen" id="screen-5">
+      <button class="btn-back" onclick="goBack(5)">← Back</button>
+      <div class="q-label">Question 5 of 5 (optional)</div>
+      <h2 class="q-title">Have you paid for a subscription in the last year that you never actually used?</h2>
+      <p style="font-size:0.9rem; color:var(--muted); margin-bottom:1.5rem; line-height:1.5;">
+        The gym. The language app. The meditation thing. That streaming service you forgot was still running.
+      </p>
+      <div class="options" role="radiogroup">
+        <button class="option-btn" data-q="unusedSubsYesNo" data-val="no" onclick="selectOption(this); hideSubInput()">
+          <span class="option-text">No — I'm pretty good at canceling things</span>
+          <span class="option-check" aria-hidden="true"></span>
+        </button>
+        <button class="option-btn" data-q="unusedSubsYesNo" data-val="yes" onclick="selectOption(this); showSubInput()">
+          <span class="option-text">Yes — there's definitely something I forgot about</span>
+          <span class="option-check" aria-hidden="true"></span>
+        </button>
+      </div>
+
+      <div class="sub-input-wrap" id="subInputWrap">
+        <label class="sub-input-label" for="unusedSubsAmount">About how much per month? (estimate — skip if you're not sure)</label>
+        <div class="sub-input-row">
+          <span class="sub-input-prefix">$</span>
+          <input
+            class="sub-input-field"
+            id="unusedSubsAmount"
+            type="number"
+            min="0"
+            max="9999"
+            placeholder="e.g. 15"
+            inputmode="decimal"
+            aria-label="Monthly unused subscription cost"
+          >
+          <span class="sub-input-suffix">/month</span>
+        </div>
+      </div>
+
+      <div style="margin-top: 2rem;">
+        <button class="btn-primary" id="btnContinueQ5" onclick="continueFromQ5()">See my results →</button>
+      </div>
+    </div>
+
+    <!-- ──────────── SCREEN 6: EMAIL GATE ──────────── -->
+    <div class="screen" id="screen-6">
+      <button class="btn-back" onclick="goBack(6)">← Back</button>
+
+      <span class="email-icon" aria-hidden="true">📊</span>
+      <h2 class="email-title">Your ADHD Tax is ready.</h2>
+      <p class="email-sub">
+        Enter your email to see the full breakdown — sent to your inbox so you can reference it anytime.
+        No spam, no pitch sequence. Just your number.
+      </p>
+
+      <div class="error-msg" id="emailError"></div>
+
+      <div class="email-input-wrap">
+        <input
+          class="email-field"
+          id="emailInput"
+          type="email"
+          placeholder="you@example.com"
+          autocomplete="email"
+          inputmode="email"
+          aria-label="Your email address"
+        >
+        <button class="btn-primary" id="btnSubmit" onclick="submitResults()">Show my ADHD Tax →</button>
+        <p class="email-note">Results also shown instantly on-screen. Unsubscribe anytime.</p>
+      </div>
+    </div>
+
+    <!-- ──────────── SCREEN 7: RESULTS ──────────── -->
+    <div class="screen" id="screen-7">
+      <!-- Header -->
+      <div class="results-header">
+        <div class="results-label">Your Annual ADHD Tax</div>
+        <div class="results-total"><span id="rTotal">$0</span><span style="font-size:1.5rem; color:var(--muted)">/yr</span></div>
+        <p class="results-sub" id="rSub">Here's where it goes.</p>
+      </div>
+
+      <!-- Breakdown -->
+      <div class="breakdown-card" id="breakdownCard">
+        <div class="breakdown-row">
+          <span class="breakdown-lbl"><span class="breakdown-icon">📱</span> App subscriptions</span>
+          <span class="breakdown-val" id="rAppStack">$0</span>
+        </div>
+        <div class="breakdown-row">
+          <span class="breakdown-lbl"><span class="breakdown-icon">💸</span> Late fees &amp; overdrafts</span>
+          <span class="breakdown-val" id="rLateFees">$0</span>
+        </div>
+        <div class="breakdown-row">
+          <span class="breakdown-lbl"><span class="breakdown-icon">🛒</span> Impulse purchases</span>
+          <span class="breakdown-val" id="rImpulse">$0</span>
+        </div>
+        <div class="breakdown-row">
+          <span class="breakdown-lbl"><span class="breakdown-icon">📋</span> Missed or double bills</span>
+          <span class="breakdown-val" id="rMissedBills">$0</span>
+        </div>
+        <div class="breakdown-row">
+          <span class="breakdown-lbl"><span class="breakdown-icon">🔁</span> Unused subscriptions</span>
+          <span class="breakdown-val" id="rUnusedSubs">$0</span>
+        </div>
+        <div class="breakdown-row total-row">
+          <span class="breakdown-lbl total">Total ADHD Tax</span>
+          <span class="breakdown-val total" id="rTotalRow">$0</span>
+        </div>
+      </div>
+
+      <!-- Comparison -->
+      <p class="comparison-text" id="rComparison"></p>
+
+      <!-- CTA Card -->
+      <div class="cta-card">
+        <h3>Cut your ADHD Tax down.</h3>
+        <p id="rCtaCopy">FocusLedger handles tasks + spending in one app built for ADHD brains. <strong>$180/year</strong> vs your ADHD tax.</p>
+        <a href="/signup" class="btn-cta" id="ctaSignupBtn" onclick="track('cta_click_signup')">Try FocusLedger free →</a>
+      </div>
+
+      <!-- Social Share -->
+      <div class="share-section">
+        <p class="share-title">Share your result</p>
+        <div class="share-buttons">
+          <button class="share-btn copy" onclick="copyLink()" id="copyBtn" aria-label="Copy share link">
+            🔗 Copy link
+          </button>
+          <a class="share-btn x" id="shareX" href="#" target="_blank" rel="noopener" onclick="track('share_x')">
+            𝕏 Post
+          </a>
+          <a class="share-btn reddit" id="shareReddit" href="#" target="_blank" rel="noopener" onclick="track('share_reddit')">
+            🟠 Reddit
+          </a>
+          <a class="share-btn facebook" id="shareFacebook" href="#" target="_blank" rel="noopener" onclick="track('share_facebook')">
+            f Share
+          </a>
+        </div>
+      </div>
+
+      <!-- Retake -->
+      <div style="text-align:center; margin-top: 1rem;">
+        <button onclick="retake()" style="background:none; border:none; color:var(--muted); font-size:0.85rem; cursor:pointer; text-decoration:underline;">
+          Retake the calculator
+        </button>
+      </div>
+    </div>
+
+  </main>
+
+  <footer>
+    <p>FocusLedger &mdash; <a href="/">focusledger.net</a> &middot; <a href="/privacy">Privacy</a> &middot; <a href="/terms">Terms</a></p>
+  </footer>
+
+  <script>
+  // ──────────────────────────────────────────────
+  // STATE
+  // ──────────────────────────────────────────────
+  var answers = {};
+  var currentScreen = 0;
+  var shareHash = null;
+
+  // ──────────────────────────────────────────────
+  // ANALYTICS (fire-and-forget)
+  // ──────────────────────────────────────────────
+  function track(event, props) {
+    try {
+      var slug = 'focusledger';
+      var vid = localStorage.getItem('polsia_vid') || '';
+      fetch('https://polsia.com/api/beacon/event', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ s: slug, v: vid, e: event, p: props || {}, page: 'adhd_tax' }),
+        keepalive: true
+      }).catch(function(){});
+    } catch(e) {}
+  }
+
+  // ──────────────────────────────────────────────
+  // SCREEN NAVIGATION
+  // ──────────────────────────────────────────────
+  function showScreen(n) {
+    document.querySelectorAll('.screen').forEach(function(s) { s.classList.remove('active'); });
+    document.getElementById('screen-' + n).classList.add('active');
+    currentScreen = n;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+
+    // Progress bar
+    var wrap = document.getElementById('progressWrap');
+    if (n >= 1 && n <= 5) {
+      wrap.style.display = 'block';
+      document.getElementById('progressLabel').textContent = 'Question ' + n + ' of 5';
+      document.getElementById('progressFill').style.width = (n / 5 * 100) + '%';
+    } else {
+      wrap.style.display = 'none';
+    }
+  }
+
+  function startQuiz() {
+    track('quiz_start');
+    showScreen(1);
+  }
+
+  function goBack(from) {
+    if (from === 1) { showScreen(0); }
+    else if (from === 6) { showScreen(5); }
+    else { showScreen(from - 1); }
+  }
+
+  // ──────────────────────────────────────────────
+  // OPTION SELECTION (tap-to-select, auto-advance)
+  // ──────────────────────────────────────────────
+  function selectOption(btn) {
+    var q = btn.getAttribute('data-q');
+    var val = btn.getAttribute('data-val');
+
+    // Deselect siblings
+    btn.closest('.options').querySelectorAll('.option-btn').forEach(function(b) {
+      b.classList.remove('selected');
+      b.setAttribute('aria-pressed', 'false');
+    });
+    btn.classList.add('selected');
+    btn.setAttribute('aria-pressed', 'true');
+
+    answers[q] = val;
+    track('question_answered', { q: q, val: val });
+
+    // Auto-advance to next screen (except Q5 which has continue button)
+    var screenMap = { appStack: 1, lateFees: 2, impulse: 3, missedBills: 4 };
+    if (screenMap[q]) {
+      setTimeout(function() { showScreen(screenMap[q] + 1); }, 220);
+    }
+  }
+
+  // ──────────────────────────────────────────────
+  // Q5 UNUSED SUBS
+  // ──────────────────────────────────────────────
+  function showSubInput() {
+    document.getElementById('subInputWrap').classList.add('visible');
+    setTimeout(function() {
+      document.getElementById('unusedSubsAmount').focus();
+    }, 100);
+  }
+  function hideSubInput() {
+    document.getElementById('subInputWrap').classList.remove('visible');
+    document.getElementById('unusedSubsAmount').value = '';
+  }
+  function continueFromQ5() {
+    if (!answers.unusedSubsYesNo) {
+      answers.unusedSubsYesNo = 'no'; // treat skipping as "no"
+    }
+    answers.unusedSubsAmount = document.getElementById('unusedSubsAmount').value || '';
+    track('question_answered', { q: 'unusedSubs', val: answers.unusedSubsYesNo });
+    showScreen(6);
+  }
+
+  // ──────────────────────────────────────────────
+  // EMAIL SUBMIT + RESULTS
+  // ──────────────────────────────────────────────
+  function showError(msg) {
+    var el = document.getElementById('emailError');
+    el.textContent = msg;
+    el.classList.add('visible');
+  }
+  function clearError() {
+    document.getElementById('emailError').classList.remove('visible');
+  }
+
+  function submitResults() {
+    clearError();
+    var email = document.getElementById('emailInput').value.trim();
+    if (!email || !email.includes('@')) {
+      showError('Please enter a valid email address.');
+      document.getElementById('emailInput').focus();
+      return;
+    }
+
+    var btn = document.getElementById('btnSubmit');
+    btn.disabled = true;
+    btn.textContent = 'Calculating…';
+    document.getElementById('loadingOverlay').classList.add('visible');
+    track('email_submitted');
+
+    // Ensure Q5 defaults
+    if (!answers.unusedSubsYesNo) { answers.unusedSubsYesNo = 'no'; }
+    answers.unusedSubsAmount = document.getElementById('unusedSubsAmount').value || '';
+
+    fetch('/api/adhd-tax/submit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email, answers: answers })
+    })
+    .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
+    .then(function(res) {
+      document.getElementById('loadingOverlay').classList.remove('visible');
+      btn.disabled = false;
+      btn.textContent = 'Show my ADHD Tax →';
+
+      if (!res.ok) {
+        showError(res.data.error || 'Something went wrong. Please try again.');
+        return;
+      }
+
+      shareHash = res.data.shareHash;
+      // Update URL with share hash (for bookmarking/sharing)
+      if (history.replaceState) {
+        history.replaceState(null, '', '/adhd-tax?r=' + shareHash);
+      }
+
+      renderResults(res.data.results);
+      track('results_viewed', { total: res.data.results.total });
+    })
+    .catch(function(err) {
+      document.getElementById('loadingOverlay').classList.remove('visible');
+      btn.disabled = false;
+      btn.textContent = 'Show my ADHD Tax →';
+      showError('Connection error. Please check your internet and try again.');
+    });
+  }
+
+  // ──────────────────────────────────────────────
+  // RENDER RESULTS
+  // ──────────────────────────────────────────────
+  function fmt(n) {
+    return '$' + Math.round(n).toLocaleString('en-US');
+  }
+
+  function renderResults(results) {
+    var total = results.total;
+    var b = results.breakdown;
+    var avg = results.averageAnnual;
+    var cmp = results.comparedToAverage;
+
+    document.getElementById('rTotal').textContent = fmt(total);
+    document.getElementById('rTotalRow').textContent = fmt(total) + '/yr';
+    document.getElementById('rAppStack').textContent = fmt(b.appStack);
+    document.getElementById('rLateFees').textContent = fmt(b.lateFees);
+    document.getElementById('rImpulse').textContent = fmt(b.impulse);
+    document.getElementById('rMissedBills').textContent = fmt(b.missedBills);
+    document.getElementById('rUnusedSubs').textContent = fmt(b.unusedSubs);
+
+    var cmpChip = '<span class="comparison-chip ' + cmp + '">' + (cmp === 'above' ? '▲ above' : '▼ below') + ' average</span>';
+    document.getElementById('rComparison').innerHTML =
+      'The average ADHD adult pays ' + fmt(avg) + '/year. ' +
+      'You\'re ' + cmpChip + ' that — your total is ' + fmt(total) + '/year.';
+
+    var saving = total - 180;
+    document.getElementById('rCtaCopy').innerHTML =
+      'FocusLedger handles tasks + spending in one place built for ADHD. ' +
+      'At <strong>$180/year</strong>, it costs ' +
+      (saving > 0 ? fmt(saving) + ' less than your current ADHD tax.' : 'a fraction of your ADHD tax.');
+
+    // Social share copy
+    var shareUrl = 'https://focusledger.net/adhd-tax' + (shareHash ? '?r=' + shareHash : '');
+    var shareText = 'I just found out my ADHD costs me ' + fmt(total) + '/year. Scary accurate: ' + shareUrl;
+
+    document.getElementById('shareX').href =
+      'https://twitter.com/intent/tweet?text=' + encodeURIComponent(shareText);
+    document.getElementById('shareReddit').href =
+      'https://www.reddit.com/submit?url=' + encodeURIComponent(shareUrl) +
+      '&title=' + encodeURIComponent('I just found out my ADHD costs me ' + fmt(total) + '/year (free calculator)');
+    document.getElementById('shareFacebook').href =
+      'https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(shareUrl);
+
+    showScreen(7);
+  }
+
+  // ──────────────────────────────────────────────
+  // COPY LINK
+  // ──────────────────────────────────────────────
+  function copyLink() {
+    var url = 'https://focusledger.net/adhd-tax' + (shareHash ? '?r=' + shareHash : '');
+    track('share_copy');
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(url).then(function() {
+        var btn = document.getElementById('copyBtn');
+        btn.textContent = '✓ Copied!';
+        setTimeout(function() { btn.innerHTML = '🔗 Copy link'; }, 2000);
+      });
+    } else {
+      // Fallback for older browsers
+      var ta = document.createElement('textarea');
+      ta.value = url;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      var btn = document.getElementById('copyBtn');
+      btn.textContent = '✓ Copied!';
+      setTimeout(function() { btn.innerHTML = '🔗 Copy link'; }, 2000);
+    }
+  }
+
+  // ──────────────────────────────────────────────
+  // RETAKE
+  // ──────────────────────────────────────────────
+  function retake() {
+    answers = {};
+    shareHash = null;
+    if (history.replaceState) {
+      history.replaceState(null, '', '/adhd-tax');
+    }
+    // Clear all selected options
+    document.querySelectorAll('.option-btn.selected').forEach(function(b) {
+      b.classList.remove('selected');
+    });
+    document.getElementById('emailInput').value = '';
+    document.getElementById('unusedSubsAmount').value = '';
+    hideSubInput();
+    clearError();
+    showScreen(0);
+  }
+
+  // ──────────────────────────────────────────────
+  // LOAD FROM SHARE HASH (on page load)
+  // ──────────────────────────────────────────────
+  (function init() {
+    // Polsia analytics visitor ID
+    var slug = 'focusledger';
+    var vid = localStorage.getItem('polsia_vid');
+    if (!vid) {
+      vid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        var r = Math.random() * 16 | 0;
+        return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+      });
+      localStorage.setItem('polsia_vid', vid);
+    }
+    new Image().src = 'https://polsia.com/api/beacon/pixel?s=' + encodeURIComponent(slug) + '&v=' + encodeURIComponent(vid);
+    track('page_view');
+
+    // Check for ?r=<hash> in URL (shared results)
+    var params = new URLSearchParams(window.location.search);
+    var r = params.get('r');
+    if (r && /^[a-f0-9]{16}$/.test(r)) {
+      shareHash = r;
+      document.getElementById('loadingOverlay').classList.add('visible');
+      fetch('/api/adhd-tax/results/' + r)
+        .then(function(resp) { return resp.json(); })
+        .then(function(data) {
+          document.getElementById('loadingOverlay').classList.remove('visible');
+          if (data.results) {
+            renderResults(data.results);
+            track('results_viewed_shared', { hash: r });
+          }
+        })
+        .catch(function() {
+          document.getElementById('loadingOverlay').classList.remove('visible');
+          // If load fails, just show the hero screen
+        });
+    }
+
+    // Keyboard: Enter on email field submits
+    document.getElementById('emailInput').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') { submitResults(); }
+    });
+  })();
+  </script>
+  <!-- Analytics -->
+  <script src="/js/analytics.js"></script>
+  <script>FLA.trackPage('adhd-tax');</script>
+    <footer style="background:#011e5c;padding:2rem;text-align:center;">
+        <div style="display:flex;justify-content:center;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.75rem;">
+            <a href="/" style="color:rgba(255,255,255,0.7);text-decoration:none;font-size:0.82rem;">Home</a>
+            <a href="/story" style="color:rgba(255,255,255,0.7);text-decoration:none;font-size:0.82rem;">About</a>
+            <a href="/changelog" style="color:rgba(255,255,255,0.7);text-decoration:none;font-size:0.82rem;">Changelog</a>
+            <a href="/pricing" style="color:rgba(255,255,255,0.7);text-decoration:none;font-size:0.82rem;">Pricing</a>
+            <a href="/contact" style="color:rgba(255,255,255,0.7);text-decoration:none;font-size:0.82rem;">Contact</a>
+            <a href="/terms" style="color:rgba(255,255,255,0.7);text-decoration:none;font-size:0.82rem;">Terms</a>
+            <a href="/privacy" style="color:rgba(255,255,255,0.7);text-decoration:none;font-size:0.82rem;">Privacy</a>
+        </div>
+        <p style="color:rgba(255,255,255,0.5);font-size:0.78rem;margin:0;">FocusLedger &copy; 2026</p>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+    <meta charset='UTF-8'>
+    <link rel='manifest' href='/manifest.json'>
+    <meta name='theme-color' content='#011e5c'>
+    <meta name='apple-mobile-web-app-capable' content='yes'>
+    <meta name='apple-mobile-web-app-status-bar-style' content='black-translucent'>
+    <meta name='apple-mobile-web-app-title' content='FocusLedger'>
+<link rel="icon" type="image/png" sizes="32x32" href="/icons/fl-icon.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/icons/fl-icon.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/fl-icon.png">
+    <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+    <title>Log In — FocusLedger</title>
+    <meta name='description' content='Log in to FocusLedger — your ADHD command center for tasks, money tracking, and executive functioning.'>
+    <meta name='robots' content='noindex'>
+    <link rel='canonical' href='https://focusledger.net/login'>
+    <link rel='preconnect' href='https://fonts.googleapis.com'>
+    <link rel='preconnect' href='https://fonts.gstatic.com' crossorigin>
+    <link href='https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500&display=swap' rel='stylesheet'>
+    <!-- Meta Pixel base + PageView -->
+    <script>
+    !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+    n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
+    n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
+    t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,
+    document,'script','https://connect.facebook.net/en_US/fbevents.js');
+    fbq('init','1597499061553078');
+    fbq('track','PageView');
+    </script>
+    <noscript><img height='1' width='1' style='display:none'
+    src='https://www.facebook.com/tr?id=1597499061553078&ev=PageView&noscript=1'/></noscript>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --orange: #c9a84c;
+            --orange-light: #d4b56a;
+            --navy: #011e5c;
+            --cream: #faf9f7;
+            --cream-dark: #f5f3ef;
+            --text-dark: #1a1a1a;
+            --text-muted: #6b6b6b;
+            --green: #5BA4A4;
+
+            --success: #7DB87D;
+            --warning: #E07A5F;
+            --error: #E07A5F;
+            --error-light: #FAEAE5;
+            --border: #e8e5e0;
+            --surface: #FFFFFF;
+        }
+        body {
+            font-family: 'DM Sans', sans-serif;
+            color: var(--text-dark);
+            background: var(--cream);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        h1, h2, h3 { font-family: 'Space Grotesk', sans-serif; }
+
+        /* NAV */
+        .auth-nav {
+            padding: 1.25rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1200px;
+            margin: 0 auto;
+            width: 100%;
+        }
+        .logo {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--navy);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            text-decoration: none;
+        }
+        .logo-dot {
+            width: 12px;
+            height: 12px;
+            background: var(--orange);
+            border-radius: 3px;
+            transform: rotate(45deg);
+        }
+
+        /* MAIN */
+        .auth-container {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+        .auth-card {
+            background: white;
+            border-radius: 20px;
+            padding: 2.5rem;
+            width: 100%;
+            max-width: 420px;
+            box-shadow: 0 8px 40px rgba(45, 42, 38, 0.06);
+            border: 1px solid #E8E5E0;
+        }
+        .auth-card h1 {
+            font-size: 1.75rem;
+            color: var(--navy);
+            margin-bottom: 0.5rem;
+            text-align: center;
+        }
+        .auth-card .subtitle {
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            margin-bottom: 2rem;
+        }
+
+        /* FORM */
+        .form-group {
+            margin-bottom: 1.25rem;
+        }
+        .form-group label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--navy);
+            margin-bottom: 0.4rem;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 0.8rem 1rem;
+            border: 2px solid #E8E5E0;
+            border-radius: 12px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.95rem;
+            color: var(--text-dark);
+            background: white;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .form-group input:focus {
+            border-color: var(--orange-light);
+        }
+        .form-group input::placeholder {
+            color: #B0ADA8;
+        }
+        .btn-submit {
+            width: 100%;
+            padding: 0.9rem;
+            background: var(--orange);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.1s;
+            margin-top: 0.5rem;
+        }
+        .btn-submit:hover {
+            background: var(--orange-light);
+        }
+        .btn-submit:active {
+            transform: scale(0.98);
+        }
+        .btn-submit:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .btn-google {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+            padding: 0.8rem 1rem;
+            background: #ffffff;
+            color: #3c4043;
+            border: 1.5px solid #dadce0;
+            border-radius: 12px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.95rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.2s, box-shadow 0.2s, border-color 0.2s;
+            margin-bottom: 0.5rem;
+        }
+        .btn-google:hover {
+            background: #f8f9fa;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border-color: #c6c6c6;
+        }
+        .btn-google:active {
+            transform: scale(0.98);
+        }
+        .btn-google:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        .btn-google svg { flex-shrink: 0; }
+        .btn-google.loading { pointer-events: none; opacity: 0.7; }
+
+        .or-divider {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin: 1.25rem 0;
+            color: #9aa0a6;
+            font-size: 0.82rem;
+        }
+        .or-divider::before,
+        .or-divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: #e8e5e0;
+        }
+
+        /* ERROR */
+        .error-msg {
+            display: none;
+            background: #FFF5F0;
+            color: var(--orange);
+            padding: 0.75rem 1rem;
+            border-radius: 10px;
+            font-size: 0.88rem;
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+        .error-msg.visible {
+            display: block;
+        }
+
+        /* LINKS */
+        .auth-footer {
+            text-align: center;
+            margin-top: 1.5rem;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+        .auth-footer a {
+            color: var(--orange);
+            text-decoration: none;
+            font-weight: 500;
+        }
+        .auth-footer a:hover {
+            text-decoration: underline;
+        }
+
+        /* FOOTER */
+        .page-footer {
+            text-align: center;
+            padding: 1.5rem;
+        }
+        .page-footer p {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+        }
+        .page-footer a {
+            color: var(--orange);
+            text-decoration: none;
+        }
+
+        @media (max-width: 480px) {
+            .auth-card {
+                padding: 2rem 1.5rem;
+            }
+            .auth-nav {
+                padding: 1rem 1.25rem;
+            }
+        }
+    </style>
+<link rel='stylesheet' href='/css/design-system.css'>
+</head>
+<body>
+<noscript><p style="padding:2rem;text-align:center;font-family:'DM Sans',sans-serif;color:#374151">FocusLedger requires JavaScript.</p></noscript>
+
+    <div class='auth-nav'>
+        <a href='/' class='logo'>
+            <div class='logo-dot'></div>
+            FocusLedger
+        </a>
+    </div>
+
+    <div class='auth-container'>
+        <div class='auth-card'>
+            <!-- Returning user framing — acknowledge the gap, no guilt attached. -->
+            <h1>Welcome back — your day, your pace.</h1>
+            <p class='subtitle'>Everything you left is still here. Pick up where you want to.</p>
+
+            <div class='error-msg' id='errorMsg'></div>
+
+            <!-- Google Sign-In button — shown first to reduce friction -->
+            <button type='button' class='btn-google' id='googleBtn'>
+                <svg width='20' height='20' viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'>
+                    <path d='M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z' fill='#4285F4'/>
+                    <path d='M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z' fill='#34A853'/>
+                    <path d='M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z' fill='#FBBC05'/>
+                    <path d='M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z' fill='#EA4335'/>
+                </svg>
+                Log in with Google
+            </button>
+
+            <div class='or-divider'>or</div>
+
+            <form id='loginForm' onsubmit='return false;'>
+                <div class='form-group'>
+                    <label for='email'>Email</label>
+                    <input type='email' id='email' placeholder='you@example.com' required autocomplete='email'>
+                </div>
+                <div class='form-group'>
+                    <label for='password'>Password</label>
+                    <input type='password' id='password' placeholder='Your password' required autocomplete='current-password'>
+                </div>
+                <button type='submit' class='btn-submit' id='submitBtn'>Log In</button>
+            </form>
+
+            <div class='auth-footer'>
+                <a href='/forgot-password'>Forgot password?</a> &nbsp;&middot;&nbsp; <a href='/signup'>Sign up</a>
+            </div>
+        </div>
+    </div>
+
+    <div class='page-footer'>
+        <p>FocusLedger &mdash; Built by <a href='https://polsia.com'>Polsia</a> &middot; <a href='/terms'>Terms of Service</a> &middot; <a href='/privacy'>Privacy Policy</a></p>
+    </div>
+
+    <script>
+    (function() {
+        'use strict';
+
+        // Determine post-login destination
+        // Post-login check-in flow handles once-per-day gating internally.
+        // Special redirects (share) bypass the check-in.
+        var redirectParam = new URLSearchParams(window.location.search).get('redirect');
+        var hasPendingShare = !!localStorage.getItem('fl_pending_share');
+        // WHY: Buddy is now the persistent post-login landing page.
+        // It handles routing internally: check-in flow if due, status view if already done.
+        var postLoginDest = (redirectParam === 'share' || hasPendingShare) ? '/share' : '/app/buddy';
+
+        // ── Handle Google OAuth callback ────────────────────────────────────────
+        // After Google redirects back with google_token=..., store token and go to app
+        var googleToken  = new URLSearchParams(window.location.search).get('google_token');
+        var googleLinked = new URLSearchParams(window.location.search).get('google_linked');
+        var googleEmail  = new URLSearchParams(window.location.search).get('google_email');
+        var googleError  = new URLSearchParams(window.location.search).get('google_error');
+
+        if (googleToken) {
+            history.replaceState(null, '', '/login');
+            localStorage.setItem('fl_token', googleToken);
+            if (googleEmail) {
+                localStorage.setItem('fl_user', JSON.stringify({ email: googleEmail }));
+            }
+            if (typeof FLA !== 'undefined') FLA.trackEvent('login_google');
+            // Migrate demo session if the user came from the landing page demo
+            migrateDemoSession(googleToken);
+            // Show brief success message then redirect
+            var successMsg = document.getElementById('errorMsg');
+            if (googleLinked === '1') {
+                successMsg.textContent = 'Welcome back! We have linked your Google account.';
+            } else {
+                successMsg.textContent = 'Signed in with Google! Redirecting...';
+            }
+            successMsg.style.background = '#EAFAF0';
+            successMsg.style.color = '#2E7D32';
+            successMsg.classList.add('visible');
+            setTimeout(function() {
+                window.location.href = postLoginDest;
+            }, 800);
+            return;
+        }
+
+        if (googleError) {
+            var errorMessages = {
+                'access_denied':   'Sign-in was cancelled. You can try again or use your email and password.',
+                'invalid_callback': 'Something went wrong with Google. Please try again.',
+                'invalid_state':   'Session expired. Please try again.',
+                'userinfo_failed': 'Could not get your info from Google. Please try again.',
+                'server_error':    'Server error. Please try again in a moment.',
+                'email_taken':     'An account with that Google email already has a password set. Log in with your email and password.'
+            };
+            var msg = errorMessages[googleError] || 'Google sign-in failed. Please try again or use your email and password.';
+            var errorEl = document.getElementById('errorMsg');
+            errorEl.textContent = msg;
+            errorEl.classList.add('visible');
+        }
+
+        // If already logged in, redirect to destination
+        if (localStorage.getItem('fl_token')) {
+            window.location.href = postLoginDest;
+            return;
+        }
+
+        var form = document.getElementById('loginForm');
+        var emailInput = document.getElementById('email');
+        var passwordInput = document.getElementById('password');
+        var submitBtn = document.getElementById('submitBtn');
+        var errorMsg = document.getElementById('errorMsg');
+
+        // ── Google Sign-In button ───────────────────────────────────────────────
+        var googleBtn = document.getElementById('googleBtn');
+
+        // Save original button HTML so we can restore it on error without escaping issues
+        var googleBtnOriginalHTML = googleBtn.innerHTML;
+
+        googleBtn.addEventListener('click', function() {
+            googleBtn.disabled = true;
+            googleBtn.classList.add('loading');
+            googleBtn.textContent = 'Connecting to Google...';
+
+            fetch('/api/auth/google/start?return_to=login')
+                .then(function(r) {
+                    return r.json().catch(function() {
+                        throw new Error('Server returned an invalid response. Please try again.');
+                    });
+                })
+                .then(function(data) {
+                    if (data.success && data.url) {
+                        window.location.href = data.url;
+                    } else {
+                        showError(data.message || 'Google sign-in is not available. Please use your email and password.');
+                        googleBtn.disabled = false;
+                        googleBtn.classList.remove('loading');
+                        googleBtn.innerHTML = googleBtnOriginalHTML;
+                    }
+                })
+                .catch(function(err) {
+                    console.error('[login] Google OAuth start error:', err);
+                    showError('Could not reach the server. Check your connection and try again.');
+                    googleBtn.disabled = false;
+                    googleBtn.classList.remove('loading');
+                    googleBtn.innerHTML = googleBtnOriginalHTML;
+                });
+        });
+
+        function showError(msg) {
+            errorMsg.textContent = msg;
+            errorMsg.classList.add('visible');
+        }
+
+        function hideError() {
+            errorMsg.classList.remove('visible');
+        }
+
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            hideError();
+
+            var email = emailInput.value.trim();
+            var password = passwordInput.value;
+
+            if (!email || !password) {
+                showError('Email and password are both needed.');
+                return;
+            }
+
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Logging in...';
+
+            fetch('/api/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: email, password: password, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone })
+            })
+            .then(function(r) {
+                return r.json().catch(function() {
+                    throw new Error('Server returned an invalid response. Please try again.');
+                });
+            })
+            .then(function(data) {
+                if (data.success && data.token) {
+                    localStorage.setItem('fl_token', data.token);
+                    if (data.user) {
+                        localStorage.setItem('fl_user', JSON.stringify(data.user));
+                    }
+                    // Migrate demo session if the user came from the landing page demo
+                    migrateDemoSession(data.token);
+                    // Offer biometric login after first successful email/password login.
+                    // Only triggers in native iOS context; no-op in browser.
+                    var alreadyPrompted = localStorage.getItem('fl_biometric_prompted');
+                    var biometricEnabled = typeof FLBiometric !== 'undefined' && FLBiometric.isEnabled();
+                    if (!alreadyPrompted && !biometricEnabled && typeof FLBiometric !== 'undefined') {
+                        localStorage.setItem('fl_biometric_prompted', '1');
+                        var savedEmail = emailInput.value.trim();
+                        var savedPassword = passwordInput.value;
+                        FLBiometric.showOptInPrompt(savedEmail, savedPassword, function() {
+                            window.location.href = postLoginDest;
+                        });
+                    } else {
+                        window.location.href = postLoginDest;
+                    }
+                } else {
+                    showError(data.message || 'That did not work. Check your email and password.');
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Log In';
+                }
+            })
+            .catch(function(err) {
+                console.error('[login] fetch error:', err);
+                showError('Could not reach the server. Check your connection and try again.');
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Log In';
+            });
+        });
+
+        // Enter key on password field submits
+        passwordInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                form.dispatchEvent(new Event('submit'));
+            }
+        });
+
+        // ── Demo session migration ─────────────────────────────────────────────────
+        // After login, if a Buddy demo session token is in localStorage (from the
+        // landing page demo), migrate its tasks + values into the account.
+        // Fire-and-forget: never blocks login or redirect.
+        function migrateDemoSession(authToken) {
+            try {
+                var demoToken = localStorage.getItem('fl_demo_session_token');
+                if (!demoToken) return;
+                fetch('/api/auth/migrate-demo-session', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + authToken },
+                    body: JSON.stringify({ session_token: demoToken })
+                })
+                .then(function(r) { return r.json(); })
+                .then(function(result) {
+                    if (result.migrated) {
+                        // Signal app.html to show the "welcome back" import banner
+                        try {
+                            localStorage.setItem('fl_demo_migrated', JSON.stringify({
+                                taskCount: result.imported && result.imported.taskCount || 0
+                            }));
+                        } catch(e) {}
+                        localStorage.removeItem('fl_demo_session_token');
+                    }
+                })
+                .catch(function() {});
+            } catch(e) {}
+        }
+
+    })();
+    </script>
+
+    <!-- Biometric: Face ID / Touch ID for iOS Capacitor shell; no-op in browser -->
+    <script src="/js/biometric.js"></script>
+    <script>
+    // Biometric auto-login: if user opted in, prompt Face ID on page load.
+    // Runs only in native Capacitor shell (FLBiometric no-ops in browser).
+    (function() {
+        if (typeof FLBiometric === 'undefined' || !FLBiometric.isEnabled()) return;
+        var postLoginDest = (new URLSearchParams(window.location.search).get('redirect') === 'share' ||
+            localStorage.getItem('fl_pending_share')) ? '/share' : '/app/buddy';
+        FLBiometric.authenticate('Log in to FocusLedger')
+            .then(function(creds) {
+                if (!creds) return;
+                return fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: creds.email, password: creds.password, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone })
+                })
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (data.success && data.token) {
+                        localStorage.setItem('fl_token', data.token);
+                        if (data.user) localStorage.setItem('fl_user', JSON.stringify(data.user));
+                        window.location.href = postLoginDest;
+                    }
+                    // Credential mismatch (password changed) — fall through to form
+                });
+            })
+            .catch(function() {}); // cancelled or error — show form normally
+    })();
+    </script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' })
+                    .then(function(reg) { console.log('[PWA] SW registered:', reg.scope); })
+                    .catch(function(err) { console.warn('[PWA] SW registration failed:', err); });
+            });
+            navigator.serviceWorker.addEventListener('message', function(e) {
+                if (e.data && e.data.type === 'SW_UPDATED') window.location.reload();
+            });
+        }
+    </script>
+    <!-- Analytics -->
+    <script src='/js/analytics.js'></script>
+    <script>FLA.trackPage('login'); FLA.trackEvent('funnel_login_visit');</script>
+</body>
+</html>

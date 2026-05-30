@@ -1,0 +1,3295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#011e5c">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="FocusLedger">
+<link rel="icon" type="image/png" sizes="32x32" href="/icons/fl-icon.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/icons/fl-icon.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/fl-icon.png">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>FocusLedger - Settings</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/buddy-widget.css">
+    <!-- Meta Pixel base + PageView -->
+    <script>
+    !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+    n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
+    n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
+    t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,
+    document,'script','https://connect.facebook.net/en_US/fbevents.js');
+    fbq('init','1597499061553078');
+    fbq('track','PageView');
+    </script>
+    <noscript><img height="1" width="1" style="display:none"
+    src="https://www.facebook.com/tr?id=1597499061553078&ev=PageView&noscript=1"/></noscript>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --orange: #c9a84c;
+            --orange-light: #d4b56a;
+            --navy: #011e5c;
+            --navy-mid: #02287a;
+            --navy-light: #033099;
+            --cream: #faf9f7;
+            --cream-dark: #f5f3ef;
+            --text-dark: #1a1a1a;
+            --text-muted: #6b6b6b;
+            --green: #5BA4A4;
+            --green-muted: #4A9292;
+        
+            --success: #7DB87D;
+            --warning: #E07A5F;
+            --error: #E07A5F;
+            --error-light: #FAEAE5;
+            --border: #e8e5e0;
+            --surface: #FFFFFF;
+        }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            color: var(--text-dark);
+            background: var(--cream);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        h1, h2, h3, h4 {
+            font-family: 'Space Grotesk', sans-serif;
+        }
+
+        /* NAV */
+        .settings-nav {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: rgba(250, 249, 246, 0.92);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(0,0,0,0.04);
+        }
+        .settings-nav-inner {
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .logo {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--navy);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            text-decoration: none;
+        }
+        .logo-dot {
+            width: 12px;
+            height: 12px;
+            background: var(--orange);
+            border-radius: 3px;
+            transform: rotate(45deg);
+        }
+        .back-link {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            text-decoration: none;
+            transition: color 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+        .back-link:hover {
+            color: var(--orange);
+        }
+
+        /* MAIN */
+        .settings-main {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 2.5rem 2rem;
+        }
+        .settings-main h1 {
+            font-size: 1.8rem;
+            color: var(--navy);
+            margin-bottom: 2rem;
+        }
+
+        /* SECTIONS */
+        .settings-section {
+            background: white;
+            border-radius: 16px;
+            padding: 2rem;
+            border: 1px solid #E8E5E0;
+            box-shadow: 0 4px 20px rgba(45, 42, 38, 0.04);
+            margin-bottom: 1.5rem;
+        }
+        .settings-section h2 {
+            font-size: 1.1rem;
+            color: var(--navy);
+            margin-bottom: 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        /* PLAN CARD */
+        .plan-status {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+        .plan-info {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        .plan-badge {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 0.82rem;
+            font-weight: 600;
+            padding: 0.35rem 0.85rem;
+            border-radius: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+        .plan-badge.free {
+            background: #E8E5E0;
+            color: var(--text-muted);
+        }
+        .plan-badge.pro {
+            background: linear-gradient(135deg, var(--orange), var(--orange-light));
+            color: white;
+        }
+        .plan-name-label {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--navy);
+        }
+
+        .plan-details {
+            font-size: 0.88rem;
+            color: var(--text-muted);
+            line-height: 1.6;
+        }
+        .plan-details .detail-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #F5F2ED;
+        }
+        .plan-details .detail-row:last-child {
+            border-bottom: none;
+        }
+        .plan-details .detail-label {
+            color: var(--text-muted);
+        }
+        .plan-details .detail-value {
+            color: var(--navy);
+            font-weight: 500;
+        }
+
+        /* TASK USAGE BAR */
+        .usage-section {
+            margin-top: 1.25rem;
+        }
+        .usage-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+        .usage-label {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+        .usage-count {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--navy);
+        }
+        .usage-bar-track {
+            height: 8px;
+            background: #E8E5E0;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .usage-bar-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.4s ease;
+            background: var(--green);
+        }
+        .usage-bar-fill.warning {
+            background: var(--orange-light);
+        }
+        .usage-bar-fill.full {
+            background: var(--orange);
+        }
+
+        /* BUTTONS */
+        .btn-upgrade {
+            display: block;
+            width: 100%;
+            padding: 0.85rem;
+            margin-top: 1.5rem;
+            background: var(--orange);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            text-align: center;
+            text-decoration: none;
+            transition: background 0.2s;
+        }
+        .btn-upgrade:hover {
+            background: var(--orange-light);
+        }
+        .btn-cancel {
+            display: inline-block;
+            margin-top: 1rem;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            background: none;
+            border: none;
+            cursor: pointer;
+            text-decoration: underline;
+            text-underline-offset: 2px;
+            font-family: 'DM Sans', sans-serif;
+            transition: color 0.2s;
+        }
+        .btn-cancel:hover {
+            color: var(--orange);
+        }
+
+        /* LOADING */
+        .loading-state {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-muted);
+        }
+
+        /* CONFIRM MODAL */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(45, 42, 38, 0.4);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-overlay.visible {
+            display: flex;
+        }
+        .modal-card {
+            background: white;
+            border-radius: 16px;
+            padding: 2rem;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(45, 42, 38, 0.15);
+            text-align: center;
+        }
+        .modal-card h3 {
+            font-size: 1.2rem;
+            color: var(--navy);
+            margin-bottom: 0.75rem;
+        }
+        .modal-card p {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            margin-bottom: 1.5rem;
+            line-height: 1.5;
+        }
+        .modal-actions {
+            display: flex;
+            gap: 0.75rem;
+        }
+        .modal-actions button {
+            flex: 1;
+            padding: 0.7rem;
+            border-radius: 10px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .modal-actions .btn-keep {
+            background: var(--navy);
+            color: white;
+            border: none;
+        }
+        .modal-actions .btn-keep:hover {
+            background: var(--navy-mid);
+        }
+        .modal-actions .btn-confirm-cancel {
+            background: white;
+            color: var(--orange);
+            border: 2px solid #E8E5E0;
+        }
+        .modal-actions .btn-confirm-cancel:hover {
+            border-color: var(--orange);
+        }
+
+        /* UPGRADE MODAL */
+        .upgrade-modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(45, 42, 38, 0.5);
+            z-index: 1001;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+        .upgrade-modal-overlay.visible {
+            display: flex;
+        }
+        .upgrade-modal-card {
+            background: white;
+            border-radius: 20px;
+            padding: 2rem 1.75rem;
+            max-width: 440px;
+            width: 100%;
+            box-shadow: 0 24px 80px rgba(45, 42, 38, 0.2);
+            text-align: center;
+            position: relative;
+        }
+        .upgrade-modal-close {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: var(--text-muted);
+            padding: 0.25rem;
+            font-size: 1.2rem;
+            line-height: 1;
+            transition: color 0.2s;
+        }
+        .upgrade-modal-close:hover { color: var(--navy); }
+        .upgrade-modal-badge {
+            display: inline-block;
+            background: var(--orange);
+            color: white;
+            font-size: 0.75rem;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            border-radius: 20px;
+            padding: 0.3rem 0.9rem;
+            margin-bottom: 1rem;
+        }
+        .upgrade-modal-card h3 {
+            font-size: 1.4rem;
+            color: var(--navy);
+            margin-bottom: 0.5rem;
+            line-height: 1.25;
+        }
+        .upgrade-modal-card .sub-copy {
+            font-size: 0.88rem;
+            color: var(--text-muted);
+            margin-bottom: 1.5rem;
+            line-height: 1.5;
+        }
+        .billing-toggle-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
+        }
+        .billing-toggle-row .toggle-label {
+            font-size: 0.88rem;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+        .billing-toggle-row .toggle-label.active {
+            color: var(--navy);
+            font-weight: 600;
+        }
+        .billing-switch-sm {
+            width: 40px;
+            height: 22px;
+            background: #E8E5E0;
+            border-radius: 11px;
+            cursor: pointer;
+            position: relative;
+            transition: background 0.2s;
+        }
+        .billing-switch-sm.annual {
+            background: var(--orange);
+        }
+        .billing-switch-sm .switch-knob {
+            width: 18px;
+            height: 18px;
+            background: white;
+            border-radius: 50%;
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            transition: transform 0.2s;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+        }
+        .billing-switch-sm.annual .switch-knob {
+            transform: translateX(18px);
+        }
+        .save-badge-sm {
+            font-size: 0.72rem;
+            font-weight: 700;
+            color: var(--green);
+            background: rgba(91,164,164,0.12);
+            border-radius: 10px;
+            padding: 0.2rem 0.6rem;
+        }
+        .upgrade-price-display {
+            margin-bottom: 1.5rem;
+        }
+        .upgrade-price-display .price-amount {
+            font-size: 2.75rem;
+            font-weight: 700;
+            color: var(--navy);
+            font-family: 'Space Grotesk', sans-serif;
+            line-height: 1;
+        }
+        .upgrade-price-display .price-amount sup {
+            font-size: 1.25rem;
+            vertical-align: top;
+            margin-top: 0.5rem;
+        }
+        .upgrade-price-display .price-period {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-top: 0.25rem;
+        }
+        .upgrade-features-mini {
+            list-style: none;
+            margin-bottom: 1.5rem;
+            text-align: left;
+        }
+        .upgrade-features-mini li {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            font-size: 0.88rem;
+            color: var(--text-dark);
+            padding: 0.3rem 0;
+        }
+        .upgrade-features-mini li .check-icon {
+            width: 16px;
+            height: 16px;
+            background: rgba(91,164,164,0.15);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .btn-upgrade-modal {
+            display: block;
+            width: 100%;
+            padding: 0.9rem;
+            background: var(--orange);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            text-align: center;
+            text-decoration: none;
+            transition: background 0.2s, transform 0.1s;
+        }
+        .btn-upgrade-modal:hover {
+            background: var(--orange-light);
+            transform: translateY(-1px);
+        }
+        .upgrade-dismiss-link {
+            display: block;
+            margin-top: 0.9rem;
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            text-decoration: none;
+            cursor: pointer;
+            background: none;
+            border: none;
+            font-family: inherit;
+            width: 100%;
+        }
+        .upgrade-dismiss-link:hover { color: var(--navy); text-decoration: underline; }
+
+        /* UPGRADED SUCCESS TOAST */
+        .upgrade-success-toast {
+            display: none;
+            position: fixed;
+            bottom: 1.5rem;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #1a3a1a;
+            color: white;
+            padding: 0.9rem 1.5rem;
+            border-radius: 14px;
+            font-size: 0.95rem;
+            font-weight: 500;
+            z-index: 2000;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.25);
+            max-width: 90vw;
+            text-align: center;
+            animation: toastIn 0.3s ease;
+        }
+        .upgrade-success-toast.visible { display: block; }
+        @keyframes toastIn {
+            from { opacity: 0; transform: translateX(-50%) translateY(1rem); }
+            to { opacity: 1; transform: translateX(-50%) translateY(0); }
+        }
+
+        /* FOOTER */
+        .settings-footer {
+            text-align: center;
+            padding: 2rem;
+            margin-top: 2rem;
+        }
+        .settings-footer p {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+        }
+        .settings-footer a {
+            color: var(--orange);
+            text-decoration: none;
+        }
+
+        @media (max-width: 768px) {
+            .settings-main {
+                /* bottom padding via shared-nav body padding */
+            }
+        }
+        @media (max-width: 480px) {
+            .settings-nav-inner {
+                padding: 0.75rem 1rem;
+            }
+            .settings-main {
+                padding: 1.5rem 1rem;
+                /* bottom padding via shared-nav body padding */
+            }
+            .plan-status {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+        }
+
+        /* NOTIFICATIONS SECTION */
+        .notif-row {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 1rem;
+            margin-bottom: 1.25rem;
+        }
+        .notif-label {
+            flex: 1;
+        }
+        .notif-label strong {
+            font-size: 0.95rem;
+            color: var(--navy);
+            display: block;
+            margin-bottom: 0.25rem;
+        }
+        .notif-label p {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            line-height: 1.5;
+            margin: 0;
+        }
+        .notif-toggle-wrap {
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .notif-toggle-label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            min-width: 28px;
+        }
+        .toggle-track {
+            width: 44px;
+            height: 24px;
+            background: #D8D5D0;
+            border-radius: 12px;
+            position: relative;
+            cursor: pointer;
+            transition: background 0.2s;
+            border: none;
+            outline: none;
+            min-height: 44px;
+            min-width: 44px;
+            display: flex;
+            align-items: center;
+            padding: 0 3px;
+        }
+        .toggle-track.active {
+            background: var(--orange);
+        }
+        .toggle-knob {
+            width: 18px;
+            height: 18px;
+            background: white;
+            border-radius: 50%;
+            transition: transform 0.2s;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+            pointer-events: none;
+        }
+        .toggle-track.active .toggle-knob {
+            transform: translateX(20px);
+        }
+        .notif-status-msg {
+            font-size: 0.82rem;
+            padding: 0.75rem 1rem;
+            border-radius: 10px;
+            margin-top: 0.5rem;
+            display: none;
+        }
+        .notif-status-msg.success {
+            background: #D4EDEC;
+            color: var(--green-muted, #4A9292);
+            display: block;
+        }
+        .notif-status-msg.error {
+            background: #FFF0EE;
+            color: #E05252;
+            display: block;
+        }
+        .notif-status-msg.info {
+            background: rgba(201, 168, 76, 0.08);
+            color: var(--navy);
+            display: block;
+        }
+        .notif-not-supported {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            padding: 0.75rem 1rem;
+            background: var(--cream-dark, #F0EEE9);
+            border-radius: 10px;
+        }
+
+        /* INSTALL APP SECTION */
+        .install-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+        }
+        .install-row-label strong {
+            font-size: 0.95rem;
+            font-family: 'Space Grotesk', sans-serif;
+            color: var(--navy);
+        }
+        .install-row-label p {
+            font-size: 0.83rem;
+            color: var(--text-muted);
+            margin-top: 0.2rem;
+        }
+        .install-cta-btn {
+            background: var(--orange);
+            color: white;
+            border: none;
+            padding: 0.55rem 1.25rem;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            cursor: pointer;
+            min-height: 44px;
+            white-space: nowrap;
+            font-family: 'DM Sans', sans-serif;
+            transition: opacity 0.15s;
+            flex-shrink: 0;
+        }
+        .install-cta-btn:hover { opacity: 0.9; }
+        .ios-settings-steps {
+            margin-top: 0.75rem;
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 0.35rem 0.75rem;
+        }
+        .ios-settings-step {
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+            font-size: 0.83rem;
+            color: var(--navy);
+        }
+        .ios-settings-step-num {
+            background: var(--orange);
+            color: white;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+        .ios-settings-share-svg {
+            display: inline-flex;
+            align-items: center;
+            vertical-align: -3px;
+            width: 15px;
+            height: 15px;
+            color: var(--orange);
+        }
+        .ios-settings-arrow {
+            color: var(--text-muted);
+            font-size: 0.75rem;
+        }
+        /* Hide install section on desktop (mobile feature) */
+        @media (min-width: 769px) {
+            #installAppSection {
+                display: none !important;
+            }
+        }
+
+    </style>
+<link rel="stylesheet" href="/css/design-system.css">
+    <link rel="stylesheet" href="/shared-nav.css">
+</head>
+<body>
+<noscript><p style="padding:2rem;text-align:center;font-family:'DM Sans',sans-serif;color:#374151">FocusLedger requires JavaScript.</p></noscript>
+
+    <!-- NAV -->
+    <div class="settings-nav">
+        <div class="settings-nav-inner">
+            <a href="/home" class="logo">
+                <div class="logo-dot"></div>
+                FocusLedger
+            </a>
+            <a href="/app/tasks" class="back-link">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="19" y1="12" x2="5" y2="12"></line>
+                    <polyline points="12 19 5 12 12 5"></polyline>
+                </svg>
+                Back to app
+            </a>
+        </div>
+    </div>
+
+    <!-- TOAST -->
+    <div id="settingsToast" style="position:fixed;top:60px;left:50%;transform:translateX(-50%);background:var(--navy,#011e5c);color:white;padding:0.6rem 1.25rem;border-radius:10px;font-size:0.85rem;font-weight:500;z-index:9999;display:none;box-shadow:0 4px 12px rgba(0,0,0,0.15);max-width:calc(100vw - 2rem);text-align:center;"></div>
+
+    <!-- MAIN -->
+    <div class="settings-main">
+        <h1>Settings</h1>
+
+        <!-- SUBSCRIPTION SECTION -->
+        <div class="settings-section" id="subscriptionSection">
+            <h2>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>
+                Subscription
+            </h2>
+            <div class="loading-state" id="subLoading">Loading subscription info...</div>
+            <div id="subContent" style="display: none;">
+                <!-- Filled by JS -->
+            </div>
+        </div>
+
+        <!-- PROMO CODE SECTION -->
+        <div class="settings-section" id="promoSection">
+            <h2>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg>
+                Have a promo code?
+            </h2>
+            <div id="promoContent">
+                <p style="font-size:0.88rem;color:var(--text-muted);margin:0 0 1rem;">Enter a promo code to get free Autopilot access.</p>
+                <div style="display:flex;gap:0.6rem;align-items:center;">
+                    <input type="text" id="promoCodeInput" placeholder="e.g. MEGADHD"
+                        style="padding:0.55rem 0.85rem;border:1.5px solid var(--border);border-radius:8px;font-size:0.9rem;font-family:'DM Sans',sans-serif;outline:none;transition:border-color 0.2s;min-width:0;flex:1;"
+                        onfocus="this.style.borderColor='var(--orange-light)'"
+                        onblur="this.style.borderColor='var(--border)'"
+                        onkeydown="if(event.key==='Enter') applyPromoCode()">
+                    <button id="promoApplyBtn"
+                        onclick="applyPromoCode()"
+                        style="padding:0.55rem 1.25rem;background:var(--orange);color:white;border:none;border-radius:8px;font-size:0.85rem;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;white-space:nowrap;transition:background 0.15s;"
+                        onmouseover="this.style.background='var(--orange-light)'"
+                        onmouseout="this.style.background='var(--orange)'">Apply</button>
+                </div>
+                <div id="promoMessage" style="margin-top:0.65rem;font-size:0.85rem;display:none;"></div>
+                <div id="promoSuccessBanner" style="display:none;margin-top:0.75rem;padding:0.85rem 1rem;background:linear-gradient(135deg,#f0fdf4,#dcfce7);border:1.5px solid #22c55e;border-radius:10px;">
+                    <p style="margin:0;font-weight:700;color:#166534;font-size:0.95rem;">🎉 Autopilot unlocked!</p>
+                    <p id="promoSuccessDetail" style="margin:0.3rem 0 0;font-size:0.83rem;color:#166534;"></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- TANDEM: ACCOUNTABILITY PARTNER SECTION -->
+        <div class="settings-section" id="tandemSection">
+            <h2>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                Accountability Partner
+            </h2>
+            <div id="tandemLoading" style="font-size:0.88rem;color:var(--text-muted);">Loading…</div>
+            <div id="tandemContent" style="display:none;"></div>
+        </div>
+
+        <!-- USAGE SECTION -->
+        <div class="settings-section" id="usageSection">
+            <h2>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></svg>
+                Usage
+            </h2>
+            <div class="loading-state" id="usageLoading">Loading usage data...</div>
+            <div id="usageContent" style="display: none;">
+                <!-- Filled by JS -->
+            </div>
+        </div>
+
+        <!-- DISPLAY NAME SECTION -->
+        <div class="settings-section" id="displayNameSection">
+            <h2>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--navy)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                Profile
+            </h2>
+            <div style="display:flex;flex-direction:column;gap:0.75rem">
+                <div>
+                    <label style="font-size:0.8rem;font-weight:600;color:var(--navy);display:block;margin-bottom:0.3rem">Display Name</label>
+                    <input type="text" id="displayNameInput" placeholder="Your name" maxlength="100" style="width:100%;padding:0.55rem 0.75rem;border:1.5px solid var(--border);border-radius:8px;font-size:0.88rem;font-family:'DM Sans',sans-serif;outline:none;transition:border-color 0.2s;min-height:40px" onfocus="this.style.borderColor='var(--orange-light)'" onblur="this.style.borderColor='var(--border)'">
+                </div>
+                <div>
+                    <label style="font-size:0.8rem;font-weight:600;color:var(--navy);display:block;margin-bottom:0.3rem">Email</label>
+                    <input type="email" id="emailDisplay" disabled style="width:100%;padding:0.55rem 0.75rem;border:1.5px solid var(--border);border-radius:8px;font-size:0.88rem;font-family:'DM Sans',sans-serif;outline:none;background:var(--cream-dark);color:var(--text-muted);min-height:40px">
+                </div>
+                <div style="display:flex;align-items:center;gap:0.75rem">
+                    <button id="saveDisplayNameBtn" style="padding:0.55rem 1.25rem;background:var(--orange);color:white;border:none;border-radius:8px;font-size:0.85rem;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;transition:background 0.15s" onmouseover="this.style.background='var(--orange-light)'" onmouseout="this.style.background='var(--orange)'">Save</button>
+                    <span id="displayNameSaveMsg" style="display:none;font-size:0.82rem;color:var(--green)">Saved!</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ACCOUNT SECURITY SECTION (Google-auth users can set a password) -->
+        <div class="settings-section" id="passwordSection" style="display: none;">
+            <h2>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--navy)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                Account Security
+            </h2>
+            <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 1rem;">
+                You've signed up with Google. Set a password to also log in with your email and password.
+            </p>
+            <form id="setPasswordForm" onsubmit="return false;">
+                <div class="form-group" style="margin-bottom: 0.75rem;">
+                    <label for="newPassword">New Password</label>
+                    <input type="password" id="newPassword" placeholder="At least 6 characters" minlength="6" autocomplete="new-password" style="padding: 0.7rem 1rem; border: 2px solid #E8E5E0; border-radius: 12px; font-family: 'DM Sans', sans-serif; font-size: 0.95rem; width: 100%; outline: none; transition: border-color 0.2s;" onfocus="this.style.borderColor='var(--orange-light)'" onblur="this.style.borderColor='#E8E5E0'">
+                </div>
+                <button type="submit" class="btn-primary" id="setPasswordBtn" style="padding: 0.75rem 1.5rem; background: var(--orange); color: white; border: none; border-radius: 12px; font-family: 'DM Sans', sans-serif; font-size: 0.95rem; font-weight: 600; cursor: pointer;">Set Password</button>
+                <div id="passwordStatus" style="margin-top: 0.75rem; font-size: 0.88rem;"></div>
+            </form>
+        </div>
+
+        <!-- FACE ID / TOUCH ID SECTION (iOS native only — hidden in browser) -->
+        <div class="settings-section" id="biometricSection" style="display:none;">
+            <h2>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--navy)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/><circle cx="12" cy="16" r="1" fill="var(--navy)"/></svg>
+                Face ID / Touch ID
+            </h2>
+            <div class="notif-row" style="margin-bottom:0;">
+                <div class="notif-label">
+                    <strong>Quick login with Face ID</strong>
+                    <p>Log in instantly without typing your password. Credentials stay private in iOS Keychain.</p>
+                </div>
+                <div class="notif-toggle-wrap">
+                    <span class="notif-toggle-label" id="biometricToggleLabel">Off</span>
+                    <button class="toggle-track" id="biometricToggle" role="switch" aria-checked="false"
+                        aria-label="Enable Face ID login" style="min-height:44px;">
+                        <div class="toggle-knob"></div>
+                    </button>
+                </div>
+            </div>
+            <div id="biometricStatusMsg" style="display:none;margin-top:0.75rem;font-size:0.82rem;"></div>
+            <!-- Credential re-entry prompt — shown when enabling with no stored credentials -->
+            <div id="biometricCredForm" style="display:none;margin-top:1rem;background:var(--cream-dark);border-radius:10px;padding:1rem;">
+                <p style="font-size:0.83rem;color:var(--text-muted);margin-bottom:0.75rem;">Enter your password to set up Face ID:</p>
+                <input type="password" id="biometricPassword" placeholder="Your password"
+                    style="width:100%;padding:0.6rem 0.85rem;border:1.5px solid var(--border);border-radius:8px;font-size:0.9rem;font-family:'DM Sans',sans-serif;outline:none;transition:border-color 0.2s;margin-bottom:0.6rem;"
+                    onfocus="this.style.borderColor='var(--orange-light)'" onblur="this.style.borderColor='var(--border)'">
+                <button id="biometricSaveBtn"
+                    style="padding:0.55rem 1.25rem;background:var(--orange);color:white;border:none;border-radius:8px;font-size:0.85rem;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">
+                    Save
+                </button>
+            </div>
+        </div>
+
+        <!-- CONNECTED ACCOUNTS SECTION (Pro) -->
+        <div class="settings-section" id="connectedAccountsSection">
+            <h2>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+                Connected Accounts
+            </h2>
+            <div id="connectedAccountsContent">
+                <!-- Filled by JS -->
+            </div>
+        </div>
+
+        <!-- BANK SYNC SECTION -->
+        <div class="settings-section" id="bankSyncSection">
+            <h2>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+                Bank Sync
+            </h2>
+            <div id="bankStatus">
+                <!-- Filled by JS -->
+            </div>
+        </div>
+
+        <!-- TIMEZONE SECTION -->
+        <div class="settings-section" id="timezoneSection">
+            <h2>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                Timezone
+            </h2>
+            <p style="font-size:0.875rem;color:var(--text-muted);margin-bottom:1rem">Controls when "today" starts, notification timing, and all date-based features.</p>
+            <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">
+                <select id="timezonePicker" aria-label="Your timezone" style="flex:1;min-width:200px;font-size:0.9rem;padding:0.5rem 0.75rem;border:1px solid var(--border);border-radius:8px;font-family:system-ui,sans-serif;background:white;cursor:pointer;min-height:44px;color:var(--navy);"></select>
+                <span id="tzStatus" style="font-size:0.82rem;color:var(--text-muted);"></span>
+            </div>
+            <p id="tzDetected" style="font-size:0.78rem;color:var(--text-muted);margin-top:0.5rem;"></p>
+        </div>
+
+        <!-- NOTIFICATIONS SECTION -->
+        <div class="settings-section" id="notificationsSection">
+            <h2>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+                Notifications
+            </h2>
+
+            <div id="notifUnsupported" class="notif-not-supported" style="display:none;">
+                Push notifications aren't supported in this browser.
+                <span id="notifIosNote" style="display:none;"> On iPhone, add FocusLedger to your Home Screen first: tap <strong>Share → Add to Home Screen</strong>, then reopen the app.</span>
+                <span id="notifDesktopNote" style="display:none;"> Try Chrome, Edge, or Firefox on desktop or Android Chrome.</span>
+            </div>
+
+            <div id="notifContent" style="display:none;">
+                <!-- Master push toggle — enable/disable push permission entirely -->
+                <div class="notif-row" style="margin-bottom:1rem;padding-bottom:1rem;border-bottom:1px solid #F0EEE9;">
+                    <div class="notif-label">
+                        <strong>Push notifications</strong>
+                        <p>Allow FocusLedger to send you daily nudges. Tap to turn on or off all notifications.</p>
+                    </div>
+                    <div class="notif-toggle-wrap">
+                        <span class="notif-toggle-label" id="notifToggleLabel">Off</span>
+                        <button class="toggle-track" id="notifToggle" role="switch" aria-checked="false" aria-label="Enable push notifications" title="Toggle push notifications">
+                            <div class="toggle-knob"></div>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Per-notification controls — only shown when subscribed -->
+                <div id="notifPrefsPanel" style="display:none;">
+                    <!-- Morning notification row -->
+                    <div class="notif-row" style="margin-bottom:1rem;">
+                        <div class="notif-label">
+                            <strong>Morning — "What's on tap for today?"</strong>
+                            <p>Opens your command center. Good for planning your day.</p>
+                        </div>
+                        <div class="notif-toggle-wrap" style="flex-direction:column;align-items:flex-end;gap:0.35rem;">
+                            <div style="display:flex;align-items:center;gap:0.5rem;">
+                                <span class="notif-toggle-label" id="morningToggleLabel">On</span>
+                                <button class="toggle-track active" id="morningToggle" role="switch" aria-checked="true" aria-label="Enable morning notification" title="Toggle morning notification" style="min-height:44px;">
+                                    <div class="toggle-knob"></div>
+                                </button>
+                            </div>
+                            <div id="morningTimeWrap" style="display:flex;align-items:center;gap:0.4rem;margin-top:0.25rem;">
+                                <label for="morningTimePicker" style="font-size:0.78rem;color:var(--text-muted);">Time</label>
+                                <select id="morningTimePicker" aria-label="Morning notification time" style="font-size:0.82rem;padding:0.3rem 0.5rem;border:1px solid var(--border);border-radius:6px;font-family:system-ui,sans-serif;background:white;cursor:pointer;min-height:36px;color:var(--navy);"></select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Evening notification row -->
+                    <div class="notif-row" style="margin-bottom:0.5rem;">
+                        <div class="notif-label">
+                            <strong>Evening — "How did today go?"</strong>
+                            <p>A gentle reflection prompt. No guilt, no stats — just a quiet check-in.</p>
+                        </div>
+                        <div class="notif-toggle-wrap" style="flex-direction:column;align-items:flex-end;gap:0.35rem;">
+                            <div style="display:flex;align-items:center;gap:0.5rem;">
+                                <span class="notif-toggle-label" id="eveningToggleLabel">On</span>
+                                <button class="toggle-track active" id="eveningToggle" role="switch" aria-checked="true" aria-label="Enable evening notification" title="Toggle evening notification" style="min-height:44px;">
+                                    <div class="toggle-knob"></div>
+                                </button>
+                            </div>
+                            <div id="eveningTimeWrap" style="display:flex;align-items:center;gap:0.4rem;margin-top:0.25rem;">
+                                <label for="eveningTimePicker" style="font-size:0.78rem;color:var(--text-muted);">Time</label>
+                                <select id="eveningTimePicker" aria-label="Evening notification time" style="font-size:0.82rem;padding:0.3rem 0.5rem;border:1px solid var(--border);border-radius:6px;font-family:system-ui,sans-serif;background:white;cursor:pointer;min-height:36px;color:var(--navy);"></select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="notif-status-msg" id="notifStatusMsg"></div>
+            </div>
+
+            <div id="notifLoading" class="loading-state">Checking notification support...</div>
+        </div>
+
+        <!-- NUDGE DELIVERY SECTION -->
+        <div class="settings-section" id="nudgeDeliverySection">
+            <h2>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                How we nudge you
+            </h2>
+            <p style="font-size:0.875rem;color:var(--text-muted);margin-bottom:1.25rem">FocusLedger checks your documents for upcoming expiry and coverage gaps. Choose how you want to hear about them.</p>
+            <div id="nudgePrefsLoading" style="font-size:0.85rem;color:var(--text-muted)">Loading...</div>
+            <div id="nudgePrefsContent" style="display:none;">
+                <div class="notif-row" style="margin-bottom:0.75rem;">
+                    <div class="notif-label">
+                        <strong>Buddy check-in</strong>
+                        <p>Nudges appear in your Evening Recap in the Buddy tab.</p>
+                    </div>
+                    <div class="notif-toggle-wrap">
+                        <span class="notif-toggle-label" id="nudgeBuddyLabel">On</span>
+                        <button class="toggle-track active" id="nudgeBuddyToggle" role="switch" aria-checked="true" aria-label="Enable buddy nudges" style="min-height:44px;">
+                            <div class="toggle-knob"></div>
+                        </button>
+                    </div>
+                </div>
+                <div class="notif-row" style="margin-bottom:0.75rem;">
+                    <div class="notif-label">
+                        <strong>Push notifications</strong>
+                        <p>Get a push notification when something needs your attention.</p>
+                    </div>
+                    <div class="notif-toggle-wrap">
+                        <span class="notif-toggle-label" id="nudgePushLabel">On</span>
+                        <button class="toggle-track active" id="nudgePushToggle" role="switch" aria-checked="true" aria-label="Enable push nudges" style="min-height:44px;">
+                            <div class="toggle-knob"></div>
+                        </button>
+                    </div>
+                </div>
+                <div class="notif-row" style="margin-bottom:0.75rem;">
+                    <div class="notif-label">
+                        <strong>In-app banner</strong>
+                        <p>Show a dismissible banner at the top of the Life section.</p>
+                    </div>
+                    <div class="notif-toggle-wrap">
+                        <span class="notif-toggle-label" id="nudgeBannerLabel">Off</span>
+                        <button class="toggle-track" id="nudgeBannerToggle" role="switch" aria-checked="false" aria-label="Enable banner nudges" style="min-height:44px;">
+                            <div class="toggle-knob"></div>
+                        </button>
+                    </div>
+                </div>
+                <div class="notif-row" style="margin-bottom:0;">
+                    <div class="notif-label">
+                        <strong>Email</strong>
+                        <p>Occasional email summaries of upcoming expiry and gaps. (Coming soon)</p>
+                    </div>
+                    <div class="notif-toggle-wrap">
+                        <span class="notif-toggle-label" id="nudgeEmailLabel">Off</span>
+                        <button class="toggle-track" id="nudgeEmailToggle" role="switch" aria-checked="false" aria-label="Enable email nudges" style="min-height:44px;">
+                            <div class="toggle-knob"></div>
+                        </button>
+                    </div>
+                </div>
+                <div id="nudgePrefsSaveMsg" style="display:none;margin-top:0.75rem;font-size:0.8rem;color:var(--green-muted)">✓ Saved</div>
+            </div>
+        </div>
+
+        <!-- BUDDY WIDGET SECTION -->
+        <div class="settings-section" id="buddyWidgetSection">
+            <h2>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                Buddy Widget
+            </h2>
+            <p style="font-size:0.875rem;color:var(--text-muted);margin-bottom:1rem">The floating Buddy bubble appears on most pages. Turn it off if you prefer to use the full Buddy tab instead.</p>
+            <div class="notif-row">
+                <div class="notif-label">
+                    <strong>Show Buddy bubble</strong>
+                    <p>Persistent floating button in the bottom-right corner.</p>
+                </div>
+                <div class="notif-toggle-wrap">
+                    <span class="notif-toggle-label" id="buddyWidgetLabel">On</span>
+                    <button class="toggle-track active" id="buddyWidgetToggle" role="switch" aria-checked="true" aria-label="Show Buddy bubble" style="min-height:44px;">
+                        <div class="toggle-knob"></div>
+                    </button>
+                </div>
+            </div>
+            <div id="buddyWidgetSaveMsg" style="display:none;margin-top:0.75rem;font-size:0.8rem;color:var(--green-muted)">✓ Saved</div>
+        </div>
+
+        <!-- TIME ESTIMATES SECTION -->
+        <div class="settings-section" id="timeEstimatesSection">
+            <h2>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                Time Estimates
+            </h2>
+            <p style="font-size:0.875rem;color:var(--text-muted);margin-bottom:0.5rem">See how your time estimates compare to reality. This helps you calibrate and plan better.</p>
+            <div id="timeEstCalibrationSummary" style="margin-bottom:1rem;padding:0.75rem;background:var(--cream-dark);border-radius:8px;font-size:0.85rem;display:none;">
+                <strong id="timeEstCalibrationText"></strong>
+                <p id="timeEstCalibrationDetail" style="color:var(--text-muted);font-size:0.8rem;margin-top:0.25rem;"></p>
+            </div>
+            <div id="timeEstHistoryLoading" style="font-size:0.875rem;color:var(--text-muted);">Loading...</div>
+            <div id="timeEstHistoryEmpty" style="display:none;font-size:0.875rem;color:var(--text-muted);">No time estimates yet. Add a time estimate when creating a task to start tracking.</div>
+            <div id="timeEstHistoryList" style="display:none;"></div>
+        </div>
+
+        <!-- LOCATION SECTION (for local news + weather) -->
+        <div class="settings-section" id="locationSection">
+            <h2>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                Location
+            </h2>
+            <p style="font-size:0.875rem;color:var(--text-muted);margin-bottom:1rem">Used for local news and weather. Not shared with third parties.</p>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:0.75rem">
+                <div>
+                    <label style="font-size:0.8rem;font-weight:600;color:var(--navy);display:block;margin-bottom:0.3rem">City</label>
+                    <input type="text" id="locCity" placeholder="e.g. Chicago" style="width:100%;padding:0.55rem 0.75rem;border:1px solid var(--border);border-radius:4px;font-size:0.875rem;font-family:system-ui,sans-serif;outline:none;min-height:40px" maxlength="100">
+                </div>
+                <div>
+                    <label style="font-size:0.8rem;font-weight:600;color:var(--navy);display:block;margin-bottom:0.3rem">State / Region</label>
+                    <input type="text" id="locState" placeholder="e.g. IL" style="width:100%;padding:0.55rem 0.75rem;border:1px solid var(--border);border-radius:4px;font-size:0.875rem;font-family:system-ui,sans-serif;outline:none;min-height:40px" maxlength="100">
+                </div>
+                <div>
+                    <label style="font-size:0.8rem;font-weight:600;color:var(--navy);display:block;margin-bottom:0.3rem">ZIP Code</label>
+                    <input type="text" id="locZip" placeholder="e.g. 60601" style="width:100%;padding:0.55rem 0.75rem;border:1px solid var(--border);border-radius:4px;font-size:0.875rem;font-family:system-ui,sans-serif;outline:none;min-height:40px" maxlength="20">
+                </div>
+                <div>
+                    <label style="font-size:0.8rem;font-weight:600;color:var(--navy);display:block;margin-bottom:0.3rem">Country</label>
+                    <select id="locCountry" style="width:100%;padding:0.55rem 0.75rem;border:1px solid var(--border);border-radius:4px;font-size:0.875rem;font-family:system-ui,sans-serif;outline:none;min-height:40px;background:white">
+                        <option value="US">United States</option>
+                        <option value="CA">Canada</option>
+                        <option value="GB">United Kingdom</option>
+                        <option value="AU">Australia</option>
+                        <option value="OTHER">Other</option>
+                    </select>
+                </div>
+            </div>
+            <button id="saveLocationBtn" style="padding:0.55rem 1.5rem;background:var(--navy);color:white;border:none;border-radius:4px;font-size:0.875rem;font-weight:600;cursor:pointer;font-family:system-ui,sans-serif;min-height:40px">Save Location</button>
+            <span id="locationSaveMsg" style="display:none;margin-left:0.75rem;font-size:0.8rem;color:var(--green-muted)">✓ Saved</span>
+        </div>
+
+        <!-- EMAIL PREFERENCES SECTION -->
+        <div class="settings-section" id="emailPrefsSection">
+            <h2>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+                Email Preferences
+            </h2>
+            <p style="font-size:0.875rem;color:var(--text-muted);margin-bottom:1.25rem;">Welcome emails are always sent. Toggle the others below.</p>
+
+            <div id="email-prefs-loading" style="font-size:0.875rem;color:var(--text-muted);">Loading...</div>
+            <div id="email-prefs-body" style="display:none;">
+                <!-- Weekly Nudge row -->
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:0.875rem 0;border-bottom:1px solid var(--border,#E8E5E0);">
+                    <div>
+                        <div style="font-weight:600;font-size:0.9rem;color:#2D2A26;">Weekly Nudge</div>
+                        <div style="font-size:0.8rem;color:#6B6560;margin-top:2px;">Monday morning task summary. Short and useful.</div>
+                    </div>
+                    <label style="position:relative;display:inline-block;width:48px;height:26px;flex-shrink:0;min-height:44px;display:flex;align-items:center;">
+                        <input type="checkbox" id="emailPrefWeeklyNudge" style="opacity:0;width:0;height:0;position:absolute;">
+                        <span id="emailPrefWeeklyNudgeSlider" style="position:absolute;cursor:pointer;top:50%;left:0;right:0;width:48px;height:26px;transform:translateY(-50%);background:#ccc;border-radius:26px;transition:background 0.2s;"></span>
+                        <span id="emailPrefWeeklyNudgeThumb" style="position:absolute;content:'';height:20px;width:20px;left:3px;top:50%;transform:translateY(-50%);background:#fff;border-radius:50%;transition:transform 0.2s,left 0.2s;box-shadow:0 1px 3px rgba(0,0,0,0.2);"></span>
+                    </label>
+                </div>
+                <!-- Re-engagement row -->
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:0.875rem 0;">
+                    <div>
+                        <div style="font-weight:600;font-size:0.9rem;color:#2D2A26;">Re-engagement</div>
+                        <div style="font-size:0.8rem;color:#6B6560;margin-top:2px;">Gentle nudge after 7 days away. No guilt, no stats dump.</div>
+                    </div>
+                    <label style="position:relative;display:inline-block;width:48px;height:26px;flex-shrink:0;min-height:44px;display:flex;align-items:center;">
+                        <input type="checkbox" id="emailPrefReEngagement" style="opacity:0;width:0;height:0;position:absolute;">
+                        <span id="emailPrefReEngagementSlider" style="position:absolute;cursor:pointer;top:50%;left:0;right:0;width:48px;height:26px;transform:translateY(-50%);background:#ccc;border-radius:26px;transition:background 0.2s;"></span>
+                        <span id="emailPrefReEngagementThumb" style="position:absolute;content:'';height:20px;width:20px;left:3px;top:50%;transform:translateY(-50%);background:#fff;border-radius:50%;transition:transform 0.2s,left 0.2s;box-shadow:0 1px 3px rgba(0,0,0,0.2);"></span>
+                    </label>
+                </div>
+                <div id="email-prefs-save-msg" style="display:none;font-size:0.8rem;color:#5BA4A4;margin-top:0.75rem;">✓ Preferences saved</div>
+            </div>
+            <div id="email-prefs-error" style="display:none;font-size:0.875rem;color:#E07A5F;">Failed to load email preferences.</div>
+        </div>
+
+        <!-- INSTALL APP SECTION -->
+        <div class="settings-section" id="installAppSection" style="display:none;">
+            <h2>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+                Install App
+            </h2>
+
+            <!-- Android: native install button -->
+            <div id="androidInstallRow" class="install-row" style="display:none;">
+                <div class="install-row-label">
+                    <strong>Add to Home Screen</strong>
+                    <p>Install FocusLedger to share tasks from any app — offline, faster loading.</p>
+                </div>
+                <button class="install-cta-btn" id="settingsInstallBtn">Install</button>
+            </div>
+
+            <!-- iOS: step-by-step instructions -->
+            <div id="iosInstallRow" style="display:none;">
+                <div class="install-row-label">
+                    <strong>Add to Home Screen</strong>
+                    <p>Install FocusLedger to share tasks from any app — offline, faster loading.</p>
+                </div>
+                <div class="ios-settings-steps">
+                    <div class="ios-settings-step">
+                        <span class="ios-settings-step-num">1</span>
+                        <span>Tap</span>
+                        <svg class="ios-settings-share-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-label="Safari Share button"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+                        <strong>Share</strong>
+                    </div>
+                    <span class="ios-settings-arrow">→</span>
+                    <div class="ios-settings-step">
+                        <span class="ios-settings-step-num">2</span>
+                        <span>Tap <strong>Add to Home Screen</strong></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Already installed -->
+            <div id="alreadyInstalledMsg" class="notif-not-supported" style="display:none;">
+                ✓ FocusLedger is already installed on your device.
+            </div>
+        </div>
+
+        <!-- WORK HOURS SECTION -->
+        <div class="settings-section" id="workHoursSection">
+            <h2>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--navy)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                Work Hours
+            </h2>
+            <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:1rem;">Tell FocusLedger when you're at your day job so personal tasks don't get scheduled during that time.</p>
+
+            <!-- Existing blocks list -->
+            <div id="workBlocksList" style="margin-bottom:1rem;display:flex;flex-direction:column;gap:0.5rem;"></div>
+
+            <!-- Add a block form -->
+            <div style="background:var(--cream-dark);border:1px solid var(--border);border-radius:10px;padding:1rem;">
+                <p style="font-size:0.8rem;font-weight:600;color:var(--navy);margin-bottom:0.75rem;">Add a block</p>
+                <div style="display:flex;flex-wrap:wrap;gap:0.5rem;align-items:center;margin-bottom:0.5rem;">
+                    <select id="wh-day" style="padding:0.45rem 0.6rem;border:1.5px solid var(--border);border-radius:6px;font-size:0.85rem;font-family:'DM Sans',sans-serif;outline:none;min-height:40px;" onfocus="this.style.borderColor='var(--orange-light)'" onblur="this.style.borderColor='var(--border)'">
+                        <option value="1">Monday</option>
+                        <option value="2">Tuesday</option>
+                        <option value="3">Wednesday</option>
+                        <option value="4">Thursday</option>
+                        <option value="5">Friday</option>
+                        <option value="6">Saturday</option>
+                        <option value="0">Sunday</option>
+                    </select>
+                    <input type="time" id="wh-start" value="09:00" style="padding:0.45rem 0.6rem;border:1.5px solid var(--border);border-radius:6px;font-size:0.85rem;font-family:'DM Sans',sans-serif;outline:none;min-height:40px;" onfocus="this.style.borderColor='var(--orange-light)'" onblur="this.style.borderColor='var(--border)'">
+                    <span style="font-size:0.8rem;color:var(--text-muted)">to</span>
+                    <input type="time" id="wh-end" value="17:00" style="padding:0.45rem 0.6rem;border:1.5px solid var(--border);border-radius:6px;font-size:0.85rem;font-family:'DM Sans',sans-serif;outline:none;min-height:40px;" onfocus="this.style.borderColor='var(--orange-light)'" onblur="this.style.borderColor='var(--border)'">
+                    <input type="text" id="wh-label" placeholder="Label (e.g. Day job)" maxlength="60" style="flex:1;min-width:120px;padding:0.45rem 0.6rem;border:1.5px solid var(--border);border-radius:6px;font-size:0.85rem;font-family:'DM Sans',sans-serif;outline:none;min-height:40px;" onfocus="this.style.borderColor='var(--orange-light)'" onblur="this.style.borderColor='var(--border)'">
+                </div>
+                <div style="display:flex;align-items:center;gap:0.75rem;margin-top:0.25rem;">
+                    <button id="whAddBlockBtn" style="padding:0.55rem 1.25rem;background:var(--orange);color:white;border:none;border-radius:8px;font-size:0.85rem;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;transition:background 0.15s" onmouseover="this.style.background='var(--orange-light)'" onmouseout="this.style.background='var(--orange)'">Add block</button>
+                    <span id="whSaveMsg" style="display:none;font-size:0.82rem;color:var(--green)">Saved!</span>
+                    <span id="whErrMsg" style="display:none;font-size:0.82rem;color:var(--error)"></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- VALUES SECTION -->
+        <div class="settings-section" id="valuesSettingsSection">
+            <h2>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--navy)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                My Values
+            </h2>
+            <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 1rem;">Define what matters most. FocusLedger uses your values to rank tasks, detect spending drift, and surface alignment nudges — the core of the ADHD prioritization system.</p>
+            <a href="/values" style="display: inline-flex; align-items: center; gap: 0.5rem; background: var(--navy); color: white; padding: 0.65rem 1.25rem; border-radius: 8px; text-decoration: none; font-size: 0.9rem; font-weight: 500;">Manage values &rarr;</a>
+        </div>
+
+        <!-- YOUR DATA & PRIVACY SECTION -->
+        <div class='settings-section'>
+            <h2>
+                <svg width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='var(--navy)' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z'/></svg>
+                Your Data &amp; Privacy
+            </h2>
+            <p style='font-size: 0.88rem; color: var(--text-muted); margin-bottom: 1rem; line-height: 1.5;'>Your data is encrypted, never sold, and you're in control. Financial data (if you connect a bank) uses AES-256 encryption at rest and is never shared with third parties.</p>
+            <div style='display:flex; flex-direction:column; gap:0.5rem; margin-bottom:1.1rem;'>
+                <div style='display:flex; align-items:center; gap:0.6rem; font-size:0.85rem; color:var(--text-dark);'>
+                    <svg width='15' height='15' viewBox='0 0 24 24' fill='none' stroke='var(--green)' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><polyline points='20 6 9 17 4 12'/></svg>
+                    Bank access tokens encrypted with AES-256-GCM
+                </div>
+                <div style='display:flex; align-items:center; gap:0.6rem; font-size:0.85rem; color:var(--text-dark);'>
+                    <svg width='15' height='15' viewBox='0 0 24 24' fill='none' stroke='var(--green)' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><polyline points='20 6 9 17 4 12'/></svg>
+                    Your data is never sold or shared with advertisers
+                </div>
+                <div style='display:flex; align-items:center; gap:0.6rem; font-size:0.85rem; color:var(--text-dark);'>
+                    <svg width='15' height='15' viewBox='0 0 24 24' fill='none' stroke='var(--green)' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><polyline points='20 6 9 17 4 12'/></svg>
+                    Disconnect your bank or delete your account anytime
+                </div>
+            </div>
+            <a href='/privacy' style='display: inline-flex; align-items: center; gap: 0.5rem; color: var(--navy); font-size: 0.85rem; font-weight: 500; text-decoration: none; border-bottom: 1px solid var(--navy); padding-bottom: 1px;'>Read our Privacy Policy &rarr;</a>
+        </div>
+
+        <!-- DANGER ZONE: DELETE ACCOUNT -->
+        <div class='settings-section' id='danger-zone-section' style='border-color: #f5c6cb;'>
+            <h2 style='color: #C0392B;'>
+                <svg width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='#C0392B' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='3 6 5 6 21 6'/><path d='M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6'/><path d='M10 11v6'/><path d='M14 11v6'/><path d='M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2'/></svg>
+                Delete Account
+            </h2>
+            <p style='font-size: 0.88rem; color: var(--text-muted); margin-bottom: 1rem; line-height: 1.5;'>
+                Permanently deletes your account and all your data — tasks, expenses, documents, bank connections, and subscription. This cannot be undone.
+            </p>
+            <p style='font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1.25rem; line-height: 1.5;'>
+                We'll send a confirmation email to verify it's really you before anything is deleted.
+            </p>
+            <div id='delete-account-feedback' style='display:none; padding: 10px 14px; border-radius: 8px; font-size: 0.88rem; margin-bottom: 1rem;'></div>
+            <button id='btn-request-deletion' style='
+                display: inline-flex; align-items: center; gap: 0.5rem;
+                background: #fff; color: #C0392B;
+                border: 1.5px solid #C0392B;
+                padding: 0.65rem 1.25rem; border-radius: 8px;
+                font-size: 0.9rem; font-weight: 600;
+                cursor: pointer; font-family: inherit;
+                transition: background 0.15s;
+            '>Delete my account</button>
+        </div>
+
+        <!-- HELP & SUPPORT SECTION -->
+        <div class='settings-section'>
+            <h2>
+                <svg width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='var(--navy)' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='12' cy='12' r='10'/><path d='M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3'/><line x1='12' y1='17' x2='12.01' y2='17'/></svg>
+                Help &amp; Support
+            </h2>
+            <p style='font-size: 0.88rem; color: var(--text-muted); margin-bottom: 1rem;'>Something not working or have a question?</p>
+            <a href='/contact' style='display: inline-flex; align-items: center; gap: 0.5rem; background: var(--navy); color: white; padding: 0.65rem 1.25rem; border-radius: 8px; text-decoration: none; font-size: 0.9rem; font-weight: 500;'>Contact us &rarr;</a>
+        </div>
+    </div>
+
+    <!-- UPGRADE SUCCESS TOAST -->
+    <div class="upgrade-success-toast" id="upgradeSuccessToast">
+        🎉 Welcome to Autopilot! All features are now unlocked.
+    </div>
+
+    <!-- UPGRADE MODAL -->
+    <div class="upgrade-modal-overlay" id="upgradeModal">
+        <div class="upgrade-modal-card">
+            <button class="upgrade-modal-close" id="upgradeModalClose" aria-label="Close">✕</button>
+            <div class="upgrade-modal-badge">FocusLedger Autopilot</div>
+            <h3>Unlock the full experience</h3>
+            <p class="sub-copy">Bank sync, unlimited tasks, impulse spending detection, and everything we ship next.</p>
+
+            <div class="billing-toggle-row">
+                <span class="toggle-label active" id="um-monthlyLabel">Monthly</span>
+                <div class="billing-switch-sm" id="um-billingSwitch">
+                    <div class="switch-knob"></div>
+                </div>
+                <span class="toggle-label" id="um-annualLabel">Annual</span>
+                <span class="save-badge-sm">Save ~$20/yr</span>
+            </div>
+
+            <div class="upgrade-price-display">
+                <div class="price-amount"><sup>$</sup><span id="um-priceNum">9.99</span></div>
+                <div class="price-period" id="um-pricePeriod">per month, billed monthly</div>
+            </div>
+
+            <ul class="upgrade-features-mini">
+                <li>
+                    <span class="check-icon"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></span>
+                    <strong>Unlimited</strong> tasks &amp; recurring items
+                </li>
+                <li>
+                    <span class="check-icon"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></span>
+                    Bank sync via Plaid (checking, savings, credit)
+                </li>
+                <li>
+                    <span class="check-icon"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></span>
+                    AI impulse spending &amp; values nudges
+                </li>
+                <li>
+                    <span class="check-icon"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></span>
+                    Everything we ship next — included automatically
+                </li>
+            </ul>
+
+            <a href="https://buy.stripe.com/eVq28re6pbAA0VBgWlbsc0a" class="btn-upgrade-modal" id="um-checkoutBtn" target="_self">
+                Switch to Autopilot — $9.99/mo
+            </a>
+            <button class="upgrade-dismiss-link" id="upgradeModalDismiss">Maybe later</button>
+        </div>
+    </div>
+
+    <!-- CANCEL MODAL -->
+    <div class="modal-overlay" id="cancelModal">
+        <div class="modal-card">
+            <h3>Cancel Autopilot subscription?</h3>
+            <p>You'll keep Autopilot features until the end of your current billing period. After that, you'll move to the Free plan (10 active tasks).</p>
+            <div class="modal-actions">
+                <button class="btn-keep" id="keepProBtn">Keep Autopilot</button>
+                <button class="btn-confirm-cancel" id="confirmCancelBtn">Cancel Autopilot</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- FOOTER -->
+    <div class="settings-footer">
+        <p>FocusLedger &mdash; Built by <a href="https://polsia.com">Polsia</a> &middot; <a href="/terms">Terms of Service</a> &middot; <a href="/privacy">Privacy Policy</a></p>
+    </div>
+
+    <script>
+    (function() {
+        'use strict';
+
+        // Auth check
+        var token = localStorage.getItem('fl_token');
+        if (!token) {
+            window.location.href = '/login';
+            return;
+        }
+
+        function authHeaders() {
+            return { 'Authorization': 'Bearer ' + (localStorage.getItem('fl_token') || ''), 'Content-Type': 'application/json' };
+        }
+
+        var MONTHLY_LINK = 'https://buy.stripe.com/eVq28re6pbAA0VBgWlbsc0a';
+        var ANNUAL_LINK = 'https://buy.stripe.com/3cI14n0fzawwfQv21rbsc0b';
+
+        function loadSubscriptionData() {
+            fetch('/api/subscription/status', { headers: authHeaders() })
+                .then(function(r) {
+                    if (r.status === 401) { localStorage.removeItem('fl_token'); window.location.href = '/login'; return; }
+                    return r.json();
+                })
+                .then(function(data) {
+                    if (!data || !data.success) throw new Error((data && data.message) || 'Error');
+                    renderSubscription(data.subscription, data.limits, data.stripe_links);
+                    renderUsage(data.subscription, data.limits);
+                })
+                .catch(function(err) {
+                    document.getElementById('subLoading').textContent = 'Failed to load subscription data.';
+                    document.getElementById('usageLoading').textContent = 'Failed to load usage data.';
+                });
+        }
+
+        function renderSubscription(sub, limits, links) {
+            var content = document.getElementById('subContent');
+            var loading = document.getElementById('subLoading');
+            loading.style.display = 'none';
+            content.style.display = 'block';
+
+            if (sub.is_pro || sub.is_tandem) {
+                var planLabel = (sub.plan_label || (sub.is_tandem ? 'Tandem' : 'Autopilot')).toUpperCase();
+                var planFullName = sub.is_tandem ? 'FocusLedger Tandem' : 'FocusLedger Autopilot';
+                var html = '';
+                html += '<div class="plan-status">';
+                html += '<div class="plan-info"><span class="plan-badge pro">' + planLabel + '</span><span class="plan-name-label">' + planFullName + '</span></div>';
+                html += '</div>';
+
+                if (sub.admin_pro_override) {
+                    // Admin-granted Pro — show grant details + expiry, no Stripe billing
+                    html += '<div class="plan-details">';
+                    html += '<div class="detail-row"><span class="detail-label">Access</span><span class="detail-value">Complimentary Autopilot</span></div>';
+                    html += '<div class="detail-row"><span class="detail-label">Active tasks</span><span class="detail-value">' + limits.active_tasks + ' (unlimited)</span></div>';
+                    if (sub.pro_granted_until) {
+                        var expiryDate = new Date(sub.pro_granted_until).toLocaleDateString();
+                        html += '<div class="detail-row"><span class="detail-label">Autopilot until</span><span class="detail-value">' + expiryDate + '</span></div>';
+                    }
+                    html += '</div>';
+                } else {
+                    var cycleText = sub.billing_cycle === 'annual' ? '$100/year' : '$9.99/month';
+                    var periodEnd = sub.current_period_end ? new Date(sub.current_period_end).toLocaleDateString() : 'N/A';
+                    var activatedDate = sub.activated_at ? new Date(sub.activated_at).toLocaleDateString() : 'N/A';
+
+                    html += '<div class="plan-details">';
+                    html += '<div class="detail-row"><span class="detail-label">Active tasks</span><span class="detail-value">' + limits.active_tasks + ' (unlimited)</span></div>';
+                    html += '<div class="detail-row"><span class="detail-label">Billing</span><span class="detail-value">' + cycleText + '</span></div>';
+                    html += '<div class="detail-row"><span class="detail-label">Activated</span><span class="detail-value">' + activatedDate + '</span></div>';
+                    if (sub.current_period_end) {
+                        html += '<div class="detail-row"><span class="detail-label">Next renewal</span><span class="detail-value">' + periodEnd + '</span></div>';
+                    }
+                    html += '</div>';
+
+                    if (sub.status === 'cancelled') {
+                        html += '<div style="margin-top: 1rem; padding: 0.75rem 1rem; background: #FFF5F0; border-radius: 10px; font-size: 0.88rem; color: var(--orange);">Subscription cancelled. Autopilot features active until ' + periodEnd + '.</div>';
+                        html += '<button class="btn-upgrade" onclick="reactivate()" style="background: var(--green);">Reactivate Autopilot</button>';
+                    } else {
+                        html += '<button class="btn-cancel" onclick="showCancelModal()">Cancel subscription</button>';
+                    }
+                }
+
+                content.innerHTML = html;
+            } else {
+                var html = '';
+                html += '<div class="plan-status">';
+                html += '<div class="plan-info"><span class="plan-badge free">FREE</span><span class="plan-name-label">Free Plan</span></div>';
+                html += '</div>';
+                html += '<div class="plan-details">';
+                html += '<div class="detail-row"><span class="detail-label">Active tasks</span><span class="detail-value">' + limits.active_tasks + ' / ' + limits.max_tasks + '</span></div>';
+                html += '<div class="detail-row"><span class="detail-label">Price</span><span class="detail-value">Free forever</span></div>';
+                html += '</div>';
+                html += '<button class="btn-upgrade" onclick="openUpgradeModal()">Switch to Autopilot &mdash; from $8.33/mo</button>';
+
+                content.innerHTML = html;
+            }
+        }
+
+        function renderUsage(sub, limits) {
+            var content = document.getElementById('usageContent');
+            var loading = document.getElementById('usageLoading');
+            loading.style.display = 'none';
+            content.style.display = 'block';
+
+            var html = '<div class="usage-section">';
+            html += '<div class="usage-header">';
+            html += '<span class="usage-label">Active tasks</span>';
+
+            if (sub.is_pro) {
+                html += '<span class="usage-count">' + limits.active_tasks + ' (unlimited)</span>';
+            } else {
+                html += '<span class="usage-count">' + limits.active_tasks + ' / ' + limits.max_tasks + '</span>';
+            }
+
+            html += '</div>';
+
+            if (!sub.is_pro) {
+                var pct = Math.min(100, Math.round((limits.active_tasks / limits.max_tasks) * 100));
+                var fillClass = 'usage-bar-fill';
+                if (pct >= 100) fillClass += ' full';
+                else if (pct >= 70) fillClass += ' warning';
+
+                html += '<div class="usage-bar-track"><div class="' + fillClass + '" style="width: ' + pct + '%"></div></div>';
+
+                // De Botton: state the constraint plainly, without drama or shame
+                if (limits.tasks_remaining <= 2 && limits.tasks_remaining > 0) {
+                    html += '<div style="margin-top: 0.5rem; font-size: 0.82rem; color: var(--orange);">' + limits.tasks_remaining + ' slot' + (limits.tasks_remaining === 1 ? '' : 's') + ' remaining.</div>';
+                } else if (limits.tasks_remaining === 0) {
+                    html += '<div style="margin-top: 0.5rem; font-size: 0.82rem; color: var(--orange); font-weight: 600;">Ten active tasks — the free plan cap. <a href="#" onclick="event.preventDefault();openUpgradeModal();" style="color:var(--orange);">Open it up with Autopilot.</a></div>';
+                }
+            }
+
+            html += '</div>';
+            content.innerHTML = html;
+        }
+
+        // Cancel flow
+        window.showCancelModal = function() {
+            document.getElementById('cancelModal').classList.add('visible');
+        };
+
+        document.getElementById('keepProBtn').addEventListener('click', function() {
+            document.getElementById('cancelModal').classList.remove('visible');
+        });
+
+        document.getElementById('confirmCancelBtn').addEventListener('click', function() {
+            document.getElementById('cancelModal').classList.remove('visible');
+            fetch('/api/subscription/cancel', { method: 'POST', headers: authHeaders() })
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (data.success) {
+                        loadSubscriptionData();
+                    }
+                })
+                .catch(function() {
+                    alert('Failed to cancel subscription. Please try again.');
+                });
+        });
+
+        // Reactivate
+        window.reactivate = function() {
+            fetch('/api/subscription/reactivate', { method: 'POST', headers: authHeaders() })
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (data.success) {
+                        loadSubscriptionData();
+                    }
+                })
+                .catch(function() {
+                    alert('Failed to reactivate. Please try again.');
+                });
+        };
+
+        // Close modal on backdrop click
+        document.getElementById('cancelModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                this.classList.remove('visible');
+            }
+        });
+
+        // ── Connected Accounts (Email)
+        function escHtml(s) {
+            return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        }
+
+        function connectGmail() {
+            var btn = document.getElementById('connectGmailBtn');
+            var statusEl = document.getElementById('gmailStatusMsg');
+            if (btn) { btn.disabled = true; btn.textContent = 'Connecting…'; }
+            fetch('/api/email/auth/start', { headers: authHeaders() })
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (data.success && data.url) {
+                        window.location.href = data.url;
+                    } else {
+                        var msg = data.message || 'Could not start Gmail connection.';
+                        if (msg === 'Pro required') {
+                            msg = 'Gmail integration is an Autopilot feature. Switch to Autopilot to connect your inbox.';
+                        }
+                        if (btn) { btn.disabled = false; btn.textContent = 'Connect Gmail'; }
+                        if (statusEl) { statusEl.textContent = msg; statusEl.style.display = 'block'; }
+                    }
+                })
+                .catch(function() {
+                    if (btn) { btn.disabled = false; btn.textContent = 'Connect Gmail'; }
+                    if (statusEl) { statusEl.textContent = 'Network error — please try again.'; statusEl.style.display = 'block'; }
+                });
+        }
+
+        function disconnectGmail() {
+            if (!confirm('Disconnect Gmail? This will stop syncing your inbox.')) return;
+            fetch('/api/email/disconnect', { method: 'DELETE', headers: authHeaders() })
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (data.success) loadConnectedAccounts();
+                })
+                .catch(function() {
+                    alert('Failed to disconnect. Please try again.');
+                });
+        }
+
+        function loadConnectedAccounts() {
+            var container = document.getElementById('connectedAccountsContent');
+            fetch('/api/email/status', { headers: authHeaders() })
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    var html = '';
+                    // Gmail row
+                    html += '<div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;padding-bottom:0.5rem;">';
+                    html += '<div style="display:flex;align-items:center;gap:0.75rem;">';
+                    html += '<div style="width:36px;height:36px;border-radius:8px;background:#FFF5F0;display:flex;align-items:center;justify-content:center;font-size:1.1rem;">📧</div>';
+                    html += '<div>';
+                    html += '<div style="font-weight:600;font-size:0.92rem;">Gmail</div>';
+                    if (data.connected) {
+                        html += '<div style="font-size:0.8rem;color:var(--text-muted);">' + escHtml(data.email_address || 'Connected') + '</div>';
+                    } else {
+                        html += '<div style="font-size:0.8rem;color:var(--text-muted);">Connect to flag emails as tasks</div>';
+                    }
+                    html += '</div>';
+                    html += '</div>';
+                    if (data.connected) {
+                        html += '<div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">';
+                        html += '<span style="font-size:0.78rem;font-weight:600;color:var(--green-muted,#4A9292);background:rgba(91,164,164,0.1);border-radius:20px;padding:2px 10px;">● Connected</span>';
+                        html += '<a href="/email" style="font-size:0.85rem;color:var(--orange);font-weight:600;text-decoration:none;">Open inbox →</a>';
+                        html += '<button id="disconnectGmailBtn" style="font-size:0.78rem;color:var(--text-muted);background:none;border:none;cursor:pointer;text-decoration:underline;text-underline-offset:2px;font-family:inherit;padding:0;min-height:44px;min-width:44px;">Disconnect</button>';
+                        html += '</div>';
+                    } else {
+                        if (data.google_configured) {
+                            html += '<button id="connectGmailBtn" style="background:var(--orange);color:white;border:none;padding:0.5rem 1.1rem;border-radius:8px;font-size:0.875rem;font-weight:600;cursor:pointer;min-height:44px;min-width:44px;font-family:\'DM Sans\',sans-serif;transition:opacity 0.15s;white-space:nowrap;-webkit-tap-highlight-color:rgba(201,168,76,0.3);touch-action:manipulation;">Connect Gmail</button>';
+                        } else {
+                            html += '<span style="font-size:0.82rem;color:var(--text-muted);">Coming soon</span>';
+                        }
+                    }
+                    html += '</div>';
+                    html += '<div id="gmailStatusMsg" style="display:none;margin-top:0.75rem;font-size:0.82rem;color:#E05252;padding:0.6rem 0.9rem;background:#FFF0EE;border-radius:8px;"></div>';
+                    if (!data.connected && data.google_configured) {
+                        html += '<p style="margin-top:0.75rem;font-size:0.82rem;color:var(--text-muted);line-height:1.5;">Flag emails as tasks directly from your inbox. Autopilot feature — reads email subjects only.</p>';
+                    }
+                    container.innerHTML = html;
+
+                    // Wire up event listeners AFTER innerHTML (not inline onclick)
+                    // Using both click + touchend with guard to handle all mobile browsers
+                    var _gmailTouchFired = false;
+                    var connectBtn = document.getElementById('connectGmailBtn');
+                    if (connectBtn) {
+                        connectBtn.addEventListener('touchend', function(e) {
+                            e.preventDefault();
+                            _gmailTouchFired = true;
+                            connectGmail();
+                        });
+                        connectBtn.addEventListener('click', function() {
+                            if (_gmailTouchFired) { _gmailTouchFired = false; return; }
+                            connectGmail();
+                        });
+                    }
+                    var _disconnectTouchFired = false;
+                    var disconnectBtn = document.getElementById('disconnectGmailBtn');
+                    if (disconnectBtn) {
+                        disconnectBtn.addEventListener('touchend', function(e) {
+                            e.preventDefault();
+                            _disconnectTouchFired = true;
+                            disconnectGmail();
+                        });
+                        disconnectBtn.addEventListener('click', function() {
+                            if (_disconnectTouchFired) { _disconnectTouchFired = false; return; }
+                            disconnectGmail();
+                        });
+                    }
+                })
+                .catch(function(err) {
+                    console.error('[settings] Failed to load connected accounts:', err);
+                    container.innerHTML = '<p style="font-size:0.85rem;color:var(--text-muted);">Could not load account connections. <button id="retryAccountsBtn" style="color:var(--orange);background:none;border:none;cursor:pointer;font-family:inherit;font-size:inherit;text-decoration:underline;min-height:44px;">Retry</button></p>';
+                    var retryBtn = document.getElementById('retryAccountsBtn');
+                    if (retryBtn) {
+                        retryBtn.addEventListener('click', loadConnectedAccounts);
+                    }
+                });
+        }
+
+        // ── Bank Sync ───────────────────────────────────────────────────────────
+        function showToastMsg(msg) {
+            var toast = document.getElementById('settingsToast');
+            if (!toast) return;
+            toast.textContent = msg;
+            toast.style.display = 'block';
+            clearTimeout(toast._timer);
+            toast._timer = setTimeout(function() { toast.style.display = 'none'; }, 4000);
+        }
+
+        // Bank Sync — delegated to shared plaid-service.js
+        function onBankSyncStatusChanged() { PlaidService.loadBankSyncStatus('bankStatus', { showUpgradeButton: true }); }
+        PlaidService.loadBankSyncStatus('bankStatus', { showUpgradeButton: true });
+
+        // ── Upgrade Modal ────────────────────────────────────────────────────────
+        var MONTHLY_LINK_MODAL = 'https://buy.stripe.com/eVq28re6pbAA0VBgWlbsc0a';
+        var ANNUAL_LINK_MODAL = 'https://buy.stripe.com/3cI14n0fzawwfQv21rbsc0b';
+        var umIsAnnual = false;
+
+        function updateUpgradeModalPricing() {
+            var priceNum = document.getElementById('um-priceNum');
+            var pricePeriod = document.getElementById('um-pricePeriod');
+            var checkoutBtn = document.getElementById('um-checkoutBtn');
+            var monthlyLabel = document.getElementById('um-monthlyLabel');
+            var annualLabel = document.getElementById('um-annualLabel');
+            var switchEl = document.getElementById('um-billingSwitch');
+            if (!priceNum) return;
+            if (umIsAnnual) {
+                priceNum.textContent = '8.33';
+                pricePeriod.textContent = 'per month, billed as $100/year — save ~$20';
+                checkoutBtn.href = ANNUAL_LINK_MODAL;
+                checkoutBtn.textContent = 'Switch to Autopilot — $100/year';
+                monthlyLabel.classList.remove('active');
+                annualLabel.classList.add('active');
+                switchEl.classList.add('annual');
+            } else {
+                priceNum.textContent = '9.99';
+                pricePeriod.textContent = 'per month, billed monthly — cancel anytime';
+                checkoutBtn.href = MONTHLY_LINK_MODAL;
+                checkoutBtn.textContent = 'Switch to Autopilot — $9.99/mo';
+                monthlyLabel.classList.add('active');
+                annualLabel.classList.remove('active');
+                switchEl.classList.remove('annual');
+            }
+        }
+
+        window.openUpgradeModal = function() {
+            document.getElementById('upgradeModal').classList.add('visible');
+            document.body.style.overflow = 'hidden';
+        };
+
+        function closeUpgradeModal() {
+            document.getElementById('upgradeModal').classList.remove('visible');
+            document.body.style.overflow = '';
+        }
+
+        var umSwitch = document.getElementById('um-billingSwitch');
+        var umMonthly = document.getElementById('um-monthlyLabel');
+        var umAnnual = document.getElementById('um-annualLabel');
+        var umClose = document.getElementById('upgradeModalClose');
+        var umDismiss = document.getElementById('upgradeModalDismiss');
+        var umOverlay = document.getElementById('upgradeModal');
+
+        if (umSwitch) umSwitch.addEventListener('click', function() { umIsAnnual = !umIsAnnual; updateUpgradeModalPricing(); });
+        if (umMonthly) umMonthly.addEventListener('click', function() { umIsAnnual = false; updateUpgradeModalPricing(); });
+        if (umAnnual) umAnnual.addEventListener('click', function() { umIsAnnual = true; updateUpgradeModalPricing(); });
+        if (umClose) umClose.addEventListener('click', closeUpgradeModal);
+        if (umDismiss) umDismiss.addEventListener('click', closeUpgradeModal);
+        if (umOverlay) umOverlay.addEventListener('click', function(e) { if (e.target === this) closeUpgradeModal(); });
+
+        updateUpgradeModalPricing();
+
+        // ── ?upgraded=true success toast ─────────────────────────────────────────
+        (function() {
+            var params = new URLSearchParams(window.location.search);
+            if (params.get('upgraded') === 'true' || params.get('upgraded') === '1') {
+                var toast = document.getElementById('upgradeSuccessToast');
+                if (toast) {
+                    toast.classList.add('visible');
+                    setTimeout(function() { toast.classList.remove('visible'); }, 6000);
+                }
+                // Clean URL
+                try { history.replaceState({}, '', window.location.pathname); } catch(e) {}
+            }
+        })();
+
+        // Init
+        loadSubscriptionData();
+        loadConnectedAccounts();
+        loadBankSync();
+
+        // Handle ?focus=bank — scroll to bank section
+        (function() {
+            var params = new URLSearchParams(window.location.search);
+            if (params.get('focus') === 'bank') {
+                var section = document.getElementById('bankSyncSection');
+                if (section) section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        })();
+
+        // ── Account Security: show "Set Password" for Google-auth users ──────────
+        var passwordSection = document.getElementById('passwordSection');
+        var setPasswordForm = document.getElementById('setPasswordForm');
+        var setPasswordBtn = document.getElementById('setPasswordBtn');
+        var passwordStatus = document.getElementById('passwordStatus');
+
+        if (setPasswordForm) {
+            setPasswordForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                var password = document.getElementById('newPassword').value;
+                if (!password || password.length < 6) {
+                    passwordStatus.textContent = 'Password must be at least 6 characters.';
+                    passwordStatus.style.color = '#E05252';
+                    return;
+                }
+
+                setPasswordBtn.disabled = true;
+                setPasswordBtn.textContent = 'Setting password...';
+
+                fetch('/api/auth/google/link-password', {
+                    method: 'POST',
+                    headers: authHeaders(),
+                    body: JSON.stringify({ password: password })
+                })
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (data.success) {
+                        passwordStatus.textContent = 'Password set! You can now log in with your email and password.';
+                        passwordStatus.style.color = '#2E7D32';
+                        setPasswordBtn.textContent = 'Done';
+                        setPasswordBtn.style.background = '#4A9292';
+                        document.getElementById('newPassword').disabled = true;
+                    } else {
+                        passwordStatus.textContent = data.message || 'Failed to set password.';
+                        passwordStatus.style.color = '#E05252';
+                        setPasswordBtn.disabled = false;
+                        setPasswordBtn.textContent = 'Set Password';
+                    }
+                })
+                .catch(function() {
+                    passwordStatus.textContent = 'Couldn\'t reach the server. Check your connection.';
+                    passwordStatus.style.color = '#E05252';
+                    setPasswordBtn.disabled = false;
+                    setPasswordBtn.textContent = 'Set Password';
+                });
+            });
+        }
+
+        // Check auth_method from /api/auth/me — show "Set Password" section if 'google'
+        // Also populate display name and email
+        fetch('/api/auth/me', { headers: authHeaders() })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (data.success && data.user) {
+                    if (data.user.auth_method === 'google') {
+                        passwordSection.style.display = 'block';
+                    }
+                    // Populate display name and email
+                    var nameInput = document.getElementById('displayNameInput');
+                    var emailInput = document.getElementById('emailDisplay');
+                    if (nameInput && data.user.name) nameInput.value = data.user.name;
+                    if (emailInput && data.user.email) emailInput.value = data.user.email;
+                }
+            })
+            .catch(function() {
+                // Silently fail — just don't show the password section
+            });
+
+        // Save display name handler
+        (function() {
+            var saveBtn = document.getElementById('saveDisplayNameBtn');
+            if (!saveBtn) return;
+            saveBtn.addEventListener('click', function() {
+                var name = document.getElementById('displayNameInput').value.trim();
+                if (!name) return;
+                saveBtn.disabled = true;
+                saveBtn.textContent = 'Saving...';
+                fetch('/api/auth/profile', {
+                    method: 'PATCH',
+                    headers: authHeaders(),
+                    body: JSON.stringify({ name: name })
+                }).then(function(r) { return r.json(); }).then(function(data) {
+                    saveBtn.disabled = false;
+                    saveBtn.textContent = 'Save';
+                    if (data.success) {
+                        // Update localStorage user name
+                        try {
+                            var u = JSON.parse(localStorage.getItem('fl_user') || '{}');
+                            u.name = name;
+                            localStorage.setItem('fl_user', JSON.stringify(u));
+                        } catch(e) {}
+                        var msg = document.getElementById('displayNameSaveMsg');
+                        if (msg) { msg.style.display = 'inline'; setTimeout(function() { msg.style.display = 'none'; }, 2500); }
+                    }
+                }).catch(function() {
+                    saveBtn.disabled = false;
+                    saveBtn.textContent = 'Save';
+                    var msg = document.getElementById('displayNameSaveMsg');
+                    if (msg) { msg.style.display = 'inline'; msg.style.color = '#E07A5F'; msg.textContent = 'Save failed — please try again.'; setTimeout(function() { msg.style.display = 'none'; msg.style.color = ''; msg.textContent = 'Saved!'; }, 3000); }
+                });
+            });
+        })();
+    })();
+    </script>
+
+    <!-- PWA: Service Worker + Notifications -->
+    <script>
+        // ── Service Worker ──────────────────────────────────────────────────
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' })
+                    .then(function(reg) { console.log('[PWA] SW registered:', reg.scope); })
+                    .catch(function(err) { console.warn('[PWA] SW registration failed:', err); });
+            });
+            navigator.serviceWorker.addEventListener('message', function(e) {
+                if (e.data && e.data.type === 'SW_UPDATED') window.location.reload();
+            });
+        }
+
+        // ── Timezone Picker ──────────────────────────────────────────────────
+        (function() {
+            var picker   = document.getElementById('timezonePicker');
+            var statusEl = document.getElementById('tzStatus');
+            var detectedEl = document.getElementById('tzDetected');
+            if (!picker) return;
+
+            function authH() {
+                var t = localStorage.getItem('fl_token');
+                return t ? { 'Authorization': 'Bearer ' + t, 'Content-Type': 'application/json' } : {};
+            }
+
+            // Common IANA timezones — covers >95% of users
+            var zones = [
+                'Pacific/Honolulu', 'America/Anchorage', 'America/Los_Angeles',
+                'America/Denver', 'America/Phoenix', 'America/Chicago',
+                'America/New_York', 'America/Halifax', 'America/St_Johns',
+                'America/Sao_Paulo', 'Atlantic/Reykjavik', 'Europe/London',
+                'Europe/Paris', 'Europe/Berlin', 'Europe/Helsinki',
+                'Europe/Moscow', 'Asia/Dubai', 'Asia/Kolkata',
+                'Asia/Bangkok', 'Asia/Shanghai', 'Asia/Tokyo',
+                'Asia/Seoul', 'Australia/Perth', 'Australia/Sydney',
+                'Pacific/Auckland', 'Pacific/Fiji'
+            ];
+
+            // Build readable label: "America/New_York (EST, UTC-5)"
+            function tzLabel(tz) {
+                try {
+                    var now = new Date();
+                    var short = now.toLocaleString('en-US', { timeZone: tz, timeZoneName: 'short' }).split(' ').pop();
+                    var offset = new Intl.DateTimeFormat('en-GB', { timeZone: tz, timeZoneName: 'longOffset' })
+                        .formatToParts(now).find(function(p) { return p.type === 'timeZoneName'; });
+                    var utc = offset ? offset.value : '';
+                    return tz.replace(/_/g, ' ') + ' (' + short + (utc ? ', ' + utc : '') + ')';
+                } catch(e) { return tz; }
+            }
+
+            // Also try to include the user's detected timezone if it's not in the list
+            var detected = '';
+            try { detected = Intl.DateTimeFormat().resolvedOptions().timeZone; } catch(e) {}
+            if (detected && zones.indexOf(detected) === -1) {
+                zones.unshift(detected);
+            }
+
+            zones.forEach(function(tz) {
+                var opt = document.createElement('option');
+                opt.value = tz;
+                opt.textContent = tzLabel(tz);
+                picker.appendChild(opt);
+            });
+
+            if (detected) {
+                detectedEl.textContent = 'Detected: ' + detected.replace(/_/g, ' ');
+            }
+
+            // Load current timezone from server
+            fetch('/api/notifications/status', { headers: authH() })
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    var current = (data.prefs && data.prefs.timezone) || detected || 'America/New_York';
+                    picker.value = current;
+                    // If the stored TZ isn't in our list, add it
+                    if (!picker.value) {
+                        var opt = document.createElement('option');
+                        opt.value = current;
+                        opt.textContent = tzLabel(current);
+                        picker.insertBefore(opt, picker.firstChild);
+                        picker.value = current;
+                    }
+                })
+                .catch(function() {
+                    picker.value = detected || 'America/New_York';
+                });
+
+            // On change — save to server
+            picker.addEventListener('change', function() {
+                var tz = picker.value;
+                statusEl.textContent = 'Saving...';
+                statusEl.style.color = 'var(--text-muted)';
+                fetch('/api/notifications/timezone', {
+                    method: 'PUT',
+                    headers: authH(),
+                    body: JSON.stringify({ timezone: tz })
+                })
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (data.success) {
+                        statusEl.textContent = 'Saved';
+                        statusEl.style.color = 'var(--green, #22c55e)';
+                    } else {
+                        statusEl.textContent = 'Error saving';
+                        statusEl.style.color = 'var(--red, #ef4444)';
+                    }
+                    setTimeout(function() { statusEl.textContent = ''; }, 3000);
+                })
+                .catch(function() {
+                    statusEl.textContent = 'Failed to save';
+                    statusEl.style.color = 'var(--red, #ef4444)';
+                    setTimeout(function() { statusEl.textContent = ''; }, 3000);
+                });
+            });
+        })();
+
+        // ── Push Notifications Settings ─────────────────────────────────────
+        (function() {
+            var loadingEl       = document.getElementById('notifLoading');
+            var contentEl       = document.getElementById('notifContent');
+            var unsupportedEl   = document.getElementById('notifUnsupported');
+            var prefsPanel      = document.getElementById('notifPrefsPanel');
+            var toggleBtn       = document.getElementById('notifToggle');
+            var toggleLabel     = document.getElementById('notifToggleLabel');
+            var statusMsg       = document.getElementById('notifStatusMsg');
+            var morningToggle   = document.getElementById('morningToggle');
+            var morningLabel    = document.getElementById('morningToggleLabel');
+            var eveningToggle   = document.getElementById('eveningToggle');
+            var eveningLabel    = document.getElementById('eveningToggleLabel');
+            var morningPicker   = document.getElementById('morningTimePicker');
+            var eveningPicker   = document.getElementById('eveningTimePicker');
+
+            var vapidKey = null;
+            var _prefSaveTimer = null;
+
+            function authHeaders() {
+                var token = localStorage.getItem('fl_token');
+                return token ? { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' } : {};
+            }
+
+            function showStatus(msg, type) {
+                statusMsg.textContent = msg;
+                statusMsg.className = 'notif-status-msg ' + type;
+                setTimeout(function() { statusMsg.className = 'notif-status-msg'; }, 5000);
+            }
+
+            // ── Helper: format 24h hour → "8:00 AM" etc.
+            function formatHour(h) {
+                var ampm = h < 12 ? 'AM' : 'PM';
+                var h12 = h % 12 === 0 ? 12 : h % 12;
+                return h12 + ':00 ' + ampm;
+            }
+
+            // ── Populate a <select> with hours 0-23
+            function populateTimePicker(select, selectedHour) {
+                select.innerHTML = '';
+                for (var h = 0; h <= 23; h++) {
+                    var opt = document.createElement('option');
+                    opt.value = h;
+                    opt.textContent = formatHour(h);
+                    if (h === selectedHour) opt.selected = true;
+                    select.appendChild(opt);
+                }
+            }
+
+            // ── Master toggle state
+            function setMasterToggle(isOn) {
+                if (isOn) {
+                    toggleBtn.classList.add('active');
+                    toggleBtn.setAttribute('aria-checked', 'true');
+                    toggleLabel.textContent = 'On';
+                    prefsPanel.style.display = 'block';
+                } else {
+                    toggleBtn.classList.remove('active');
+                    toggleBtn.setAttribute('aria-checked', 'false');
+                    toggleLabel.textContent = 'Off';
+                    prefsPanel.style.display = 'none';
+                }
+            }
+
+            // ── Per-notification toggles
+            function setSubToggle(btn, lbl, isOn) {
+                if (isOn) {
+                    btn.classList.add('active');
+                    btn.setAttribute('aria-checked', 'true');
+                    lbl.textContent = 'On';
+                } else {
+                    btn.classList.remove('active');
+                    btn.setAttribute('aria-checked', 'false');
+                    lbl.textContent = 'Off';
+                }
+            }
+
+            // ── Convert VAPID key from base64url to Uint8Array
+            function urlBase64ToUint8Array(base64String) {
+                var padding = '='.repeat((4 - base64String.length % 4) % 4);
+                var base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+                var rawData = window.atob(base64);
+                var outputArray = new Uint8Array(rawData.length);
+                for (var i = 0; i < rawData.length; i++) { outputArray[i] = rawData.charCodeAt(i); }
+                return outputArray;
+            }
+
+            // ── Save prefs to server (debounced 600ms)
+            function savePrefsSoon() {
+                clearTimeout(_prefSaveTimer);
+                _prefSaveTimer = setTimeout(savePrefsNow, 600);
+            }
+
+            function savePrefsNow() {
+                var morningEnabled = morningToggle.classList.contains('active');
+                var eveningEnabled = eveningToggle.classList.contains('active');
+                var morningHour   = parseInt(morningPicker.value, 10);
+                var eveningHour   = parseInt(eveningPicker.value, 10);
+                fetch('/api/notifications/preferences', {
+                    method: 'PUT',
+                    headers: authHeaders(),
+                    body: JSON.stringify({ morningEnabled: morningEnabled, eveningEnabled: eveningEnabled, morningHour: morningHour, eveningHour: eveningHour })
+                }).catch(function() {}); // Non-fatal, fire-and-forget
+            }
+
+            async function initNotifications() {
+                var isIos = /ipad|iphone|ipod/i.test(navigator.userAgent);
+                var isStandalone = window.navigator.standalone === true;
+
+                // Check browser support
+                if (!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) {
+                    loadingEl.style.display = 'none';
+                    unsupportedEl.style.display = 'block';
+                    var iosNote = document.getElementById('notifIosNote');
+                    var desktopNote = document.getElementById('notifDesktopNote');
+                    if (isIos && !isStandalone) {
+                        if (iosNote) iosNote.style.display = 'inline';
+                    } else {
+                        if (desktopNote) desktopNote.style.display = 'inline';
+                    }
+                    return;
+                }
+
+                // Fetch VAPID key + current status (including prefs)
+                try {
+                    var [vapidRes, statusRes] = await Promise.all([
+                        fetch('/api/notifications/vapid-public-key'),
+                        fetch('/api/notifications/status', { headers: authHeaders() })
+                    ]);
+                    var vapidData  = await vapidRes.json();
+                    var statusData = statusRes.ok ? await statusRes.json() : { subscribed: false, prefs: null };
+
+                    loadingEl.style.display = 'none';
+
+                    if (!vapidData.enabled) {
+                        contentEl.style.display = 'block';
+                        setMasterToggle(false);
+                        showStatus('Push notifications need VAPID keys — contact support to enable.', 'info');
+                        toggleBtn.disabled = true;
+                        toggleBtn.style.opacity = '0.5';
+                        toggleBtn.style.cursor = 'not-allowed';
+                        return;
+                    }
+
+                    vapidKey = vapidData.key;
+                    contentEl.style.display = 'block';
+
+                    var permissionState = Notification.permission;
+                    var isSubscribed = statusData.subscribed && permissionState === 'granted';
+                    var prefs = statusData.prefs || { morningEnabled: true, eveningEnabled: true, morningHour: 8, eveningHour: 20 };
+
+                    // Init time pickers
+                    populateTimePicker(morningPicker, prefs.morningHour || 8);
+                    populateTimePicker(eveningPicker, prefs.eveningHour || 20);
+
+                    setMasterToggle(isSubscribed);
+                    setSubToggle(morningToggle, morningLabel, prefs.morningEnabled !== false);
+                    setSubToggle(eveningToggle, eveningLabel, prefs.eveningEnabled !== false);
+
+                    // ── Master toggle: enable/disable push entirely ──
+                    toggleBtn.addEventListener('click', async function() {
+                        if (toggleBtn.disabled) return;
+
+                        if (toggleBtn.classList.contains('active')) {
+                            // Turn OFF
+                            try {
+                                toggleBtn.disabled = true;
+                                var swReg = await navigator.serviceWorker.ready;
+                                var sub = await swReg.pushManager.getSubscription();
+                                if (sub) await sub.unsubscribe();
+                                await fetch('/api/notifications/unsubscribe', { method: 'DELETE', headers: authHeaders() });
+                                setMasterToggle(false);
+                                showStatus('Notifications turned off.', 'info');
+                            } catch (e) {
+                                showStatus("Couldn't turn those off. Try again?", 'error');
+                            } finally {
+                                toggleBtn.disabled = false;
+                            }
+                        } else {
+                            // Turn ON
+                            try {
+                                toggleBtn.disabled = true;
+                                var permission = await Notification.requestPermission();
+                                if (permission !== 'granted') {
+                                    showStatus('Notifications need your permission — check your browser settings to enable them.', 'error');
+                                    setMasterToggle(false);
+                                    return;
+                                }
+                                var swReg = await navigator.serviceWorker.ready;
+                                var subscription = await swReg.pushManager.subscribe({
+                                    userVisibleOnly: true,
+                                    applicationServerKey: urlBase64ToUint8Array(vapidKey)
+                                });
+                                var tz = 'America/New_York';
+                                try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone || tz; } catch(e2) {}
+                                await fetch('/api/notifications/subscribe', {
+                                    method: 'POST',
+                                    headers: authHeaders(),
+                                    body: JSON.stringify({ subscription: subscription.toJSON(), timezone: tz })
+                                });
+                                setMasterToggle(true);
+                                showStatus('Notifications on. Morning at ' + formatHour(parseInt(morningPicker.value,10)) + ', evening at ' + formatHour(parseInt(eveningPicker.value,10)) + '.', 'success');
+                            } catch (e) {
+                                showStatus("Couldn't enable notifications. Try again?", 'error');
+                                setMasterToggle(false);
+                            } finally {
+                                toggleBtn.disabled = false;
+                            }
+                        }
+                    });
+
+                    // ── Morning toggle ──
+                    morningToggle.addEventListener('click', function() {
+                        var nowOn = !morningToggle.classList.contains('active');
+                        setSubToggle(morningToggle, morningLabel, nowOn);
+                        savePrefsSoon();
+                    });
+
+                    // ── Evening toggle ──
+                    eveningToggle.addEventListener('click', function() {
+                        var nowOn = !eveningToggle.classList.contains('active');
+                        setSubToggle(eveningToggle, eveningLabel, nowOn);
+                        savePrefsSoon();
+                    });
+
+                    // ── Time pickers ──
+                    morningPicker.addEventListener('change', function() { savePrefsSoon(); });
+                    eveningPicker.addEventListener('change', function() { savePrefsSoon(); });
+
+                    // Update timezone on load (so newly subscribed devices are always in sync)
+                    if (isSubscribed) {
+                        var tz2 = '';
+                        try { tz2 = Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch(e3) {}
+                        if (tz2 && tz2 !== prefs.timezone) {
+                            fetch('/api/notifications/timezone', {
+                                method: 'PUT',
+                                headers: authHeaders(),
+                                body: JSON.stringify({ timezone: tz2 })
+                            }).catch(function() {});
+                        }
+                    }
+
+                } catch (err) {
+                    loadingEl.style.display = 'none';
+                    contentEl.style.display = 'block';
+                    showStatus('Could not load notification settings.', 'error');
+                }
+            }
+
+            initNotifications();
+        })();
+    </script>
+
+    <!-- Install App Section Logic -->
+    <script>
+        (function() {
+            var section = document.getElementById('installAppSection');
+            var androidRow = document.getElementById('androidInstallRow');
+            var iosRow = document.getElementById('iosInstallRow');
+            var alreadyMsg = document.getElementById('alreadyInstalledMsg');
+            var settingsInstallBtn = document.getElementById('settingsInstallBtn');
+
+            // Check if running as installed PWA
+            var isStandalone = window.matchMedia('(display-mode: standalone)').matches ||
+                               window.navigator.standalone === true;
+
+            // Show section (CSS hides on desktop already)
+            section.style.display = '';
+
+            if (isStandalone) {
+                // Already installed
+                alreadyMsg.style.display = 'block';
+                return;
+            }
+
+            // Detect iOS Safari
+            var isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream;
+            var isSafari = /safari/i.test(navigator.userAgent) && !/chrome|crios|fxios/i.test(navigator.userAgent);
+            var isIOSSafari = isIOS && isSafari;
+
+            if (isIOSSafari) {
+                iosRow.style.display = 'block';
+            } else {
+                // Android/Chrome — wire up native install if prompt is available
+                androidRow.style.display = 'flex';
+
+                // Listen for deferred prompt (may have already fired on app.html, won't fire again here)
+                // The button is still useful as a cue — even without deferredPrompt
+                window.addEventListener('beforeinstallprompt', function(e) {
+                    e.preventDefault();
+                    window._fl_settings_deferred_prompt = e;
+                });
+
+                if (settingsInstallBtn) {
+                    settingsInstallBtn.addEventListener('click', function() {
+                        var prompt = window._fl_settings_deferred_prompt;
+                        if (prompt) {
+                            prompt.prompt();
+                            prompt.userChoice.then(function(choice) {
+                                if (choice.outcome === 'accepted') {
+                                    alreadyMsg.style.display = 'block';
+                                    androidRow.style.display = 'none';
+                                    localStorage.setItem('fl_install_dismissed', '1');
+                                }
+                                window._fl_settings_deferred_prompt = null;
+                            });
+                        } else {
+                            // No prompt available (already installed or not supported) — show guidance
+                            settingsInstallBtn.textContent = 'Use Chrome to install';
+                            settingsInstallBtn.disabled = true;
+                            settingsInstallBtn.style.opacity = '0.6';
+                        }
+                    });
+                }
+            }
+
+            // If installed via app event
+            window.addEventListener('appinstalled', function() {
+                androidRow.style.display = 'none';
+                iosRow.style.display = 'none';
+                alreadyMsg.style.display = 'block';
+            });
+        })();
+    </script>
+    <!-- Location Save -->
+    <script>
+    (function() {
+      var saveBtn = document.getElementById('saveLocationBtn');
+      if (!saveBtn) return;
+      saveBtn.addEventListener('click', function() {
+        var token = localStorage.getItem('fl_token');
+        if (!token) return;
+        var city = (document.getElementById('locCity').value || '').trim();
+        var state = (document.getElementById('locState').value || '').trim();
+        var zip = (document.getElementById('locZip').value || '').trim();
+        var country = document.getElementById('locCountry').value || 'US';
+        saveBtn.disabled = true;
+        fetch('/api/news/location', {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ city: city, state_region: state, zip_code: zip, country: country })
+        }).then(function(r) { return r.json(); }).then(function(data) {
+          saveBtn.disabled = false;
+          if (data.success) {
+            // Clear weather cache so portal picks up the new location immediately
+            try { localStorage.removeItem('fl_weather_v1'); } catch(e) {}
+            var msg = document.getElementById('locationSaveMsg');
+            if (msg) { msg.style.display = 'inline'; setTimeout(function() { msg.style.display = 'none'; }, 2500); }
+          }
+        }).catch(function() { saveBtn.disabled = false; });
+      });
+    })();
+    </script>
+    <!-- Email Preferences Script -->
+    <script>
+    (function() {
+        var token = localStorage.getItem('fl_token');
+        if (!token) return;
+
+        var loadingEl = document.getElementById('email-prefs-loading');
+        var bodyEl    = document.getElementById('email-prefs-body');
+        var errorEl   = document.getElementById('email-prefs-error');
+        var saveMsg   = document.getElementById('email-prefs-save-msg');
+        var wnCb      = document.getElementById('emailPrefWeeklyNudge');
+        var reCb      = document.getElementById('emailPrefReEngagement');
+
+        function authHeaders() {
+            return { 'Authorization': 'Bearer ' + (localStorage.getItem('fl_token') || ''), 'Content-Type': 'application/json' };
+        }
+
+        // Update toggle visual state
+        function updateToggleVisual(checkbox, sliderId, thumbId) {
+            var slider = document.getElementById(sliderId);
+            var thumb  = document.getElementById(thumbId);
+            if (!slider || !thumb) return;
+            if (checkbox.checked) {
+                slider.style.background = '#E8913A';
+                thumb.style.left = '25px';
+            } else {
+                slider.style.background = '#ccc';
+                thumb.style.left = '3px';
+            }
+        }
+
+        function updateAllToggles() {
+            updateToggleVisual(wnCb, 'emailPrefWeeklyNudgeSlider', 'emailPrefWeeklyNudgeThumb');
+            updateToggleVisual(reCb, 'emailPrefReEngagementSlider', 'emailPrefReEngagementThumb');
+        }
+
+        // Load preferences
+        fetch('/api/outbound-email/preferences', { headers: authHeaders() })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                loadingEl.style.display = 'none';
+                if (!data.success) { errorEl.style.display = 'block'; return; }
+                var prefs = data.preferences || {};
+                wnCb.checked = prefs.weekly_nudge !== false;
+                reCb.checked = prefs.re_engagement !== false;
+                updateAllToggles();
+                bodyEl.style.display = 'block';
+            })
+            .catch(function() {
+                loadingEl.style.display = 'none';
+                errorEl.style.display = 'block';
+            });
+
+        // Save on toggle change
+        function savePrefs() {
+            updateAllToggles();
+            var prefs = { weekly_nudge: wnCb.checked, re_engagement: reCb.checked };
+            fetch('/api/outbound-email/preferences', {
+                method: 'PUT',
+                headers: authHeaders(),
+                body: JSON.stringify(prefs)
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (data.success) {
+                    saveMsg.style.display = 'block';
+                    setTimeout(function() { saveMsg.style.display = 'none'; }, 2500);
+                }
+            })
+            .catch(function() {});
+        }
+
+        if (wnCb) wnCb.addEventListener('change', savePrefs);
+        if (reCb) reCb.addEventListener('change', savePrefs);
+    })();
+    </script>
+    <!-- Nudge delivery preferences -->
+    <script>
+    (function() {
+        var token = localStorage.getItem('fl_token');
+        if (!token) return;
+
+        var authHdr = { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' };
+
+        var loading  = document.getElementById('nudgePrefsLoading');
+        var content  = document.getElementById('nudgePrefsContent');
+        var saveMsg  = document.getElementById('nudgePrefsSaveMsg');
+
+        var buddyBtn  = document.getElementById('nudgeBuddyToggle');
+        var pushBtn   = document.getElementById('nudgePushToggle');
+        var bannerBtn = document.getElementById('nudgeBannerToggle');
+        var emailBtn  = document.getElementById('nudgeEmailToggle');
+
+        var buddyLbl  = document.getElementById('nudgeBuddyLabel');
+        var pushLbl   = document.getElementById('nudgePushLabel');
+        var bannerLbl = document.getElementById('nudgeBannerLabel');
+        var emailLbl  = document.getElementById('nudgeEmailLabel');
+
+        function syncToggle(btn, lbl, checked) {
+            if (!btn || !lbl) return;
+            btn.setAttribute('aria-checked', checked ? 'true' : 'false');
+            if (checked) {
+                btn.classList.add('active');
+                lbl.textContent = 'On';
+            } else {
+                btn.classList.remove('active');
+                lbl.textContent = 'Off';
+            }
+        }
+
+        function getState(btn) {
+            return btn && btn.getAttribute('aria-checked') === 'true';
+        }
+
+        function saveNudgePrefs() {
+            var prefs = {
+                buddy_enabled:  getState(buddyBtn),
+                push_enabled:   getState(pushBtn),
+                banner_enabled: getState(bannerBtn),
+                email_enabled:  getState(emailBtn)
+            };
+            fetch('/api/nudge-system/preferences', {
+                method: 'PUT',
+                headers: authHdr,
+                body: JSON.stringify(prefs)
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (data.success && saveMsg) {
+                    saveMsg.style.display = 'block';
+                    setTimeout(function() { saveMsg.style.display = 'none'; }, 2000);
+                }
+            })
+            .catch(function() {});
+        }
+
+        function wireToggle(btn, lbl) {
+            if (!btn) return;
+            btn.addEventListener('click', function() {
+                var isOn = btn.getAttribute('aria-checked') === 'true';
+                syncToggle(btn, lbl, !isOn);
+                saveNudgePrefs();
+            });
+        }
+
+        wireToggle(buddyBtn, buddyLbl);
+        wireToggle(pushBtn, pushLbl);
+        wireToggle(bannerBtn, bannerLbl);
+        wireToggle(emailBtn, emailLbl);
+
+        // Load current prefs
+        fetch('/api/nudge-system/preferences', { headers: authHdr })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (loading) loading.style.display = 'none';
+                if (!data.success) return;
+                var p = data.preferences || {};
+                syncToggle(buddyBtn,  buddyLbl,  p.buddy_enabled  !== false);
+                syncToggle(pushBtn,   pushLbl,   p.push_enabled   !== false);
+                syncToggle(bannerBtn, bannerLbl, p.banner_enabled === true);
+                syncToggle(emailBtn,  emailLbl,  p.email_enabled  === true);
+                if (content) content.style.display = '';
+            })
+            .catch(function() {
+                if (loading) loading.style.display = 'none';
+                if (content) content.style.display = '';
+            });
+    })();
+    </script>
+
+    <!-- WORK HOURS SECTION LOGIC -->
+    <script>
+    (function() {
+        'use strict';
+        var token = localStorage.getItem('fl_token');
+        if (!token) return;
+
+        function authHdr() {
+            return { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' };
+        }
+
+        var DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+        function fmt12(t) {
+            // Convert "HH:MM" to "h:MMam/pm"
+            if (!t) return '';
+            var parts = t.split(':');
+            var h = parseInt(parts[0]), m = parts[1];
+            var suffix = h >= 12 ? 'pm' : 'am';
+            h = h % 12 || 12;
+            return h + ':' + m + suffix;
+        }
+
+        function renderBlocks(blocks) {
+            var list = document.getElementById('workBlocksList');
+            if (!list) return;
+            if (!blocks || blocks.length === 0) {
+                list.innerHTML = '<p style="font-size:0.84rem;color:var(--text-muted);">No work hour blocks set. Add one below.</p>';
+                return;
+            }
+            list.innerHTML = blocks.map(function(b) {
+                return '<div style="display:flex;align-items:center;justify-content:space-between;background:white;border:1px solid var(--border);border-radius:8px;padding:0.6rem 0.9rem;">' +
+                    '<div>' +
+                    '<span style="font-weight:600;font-size:0.88rem;color:var(--navy)">' + DAY_NAMES[b.day_of_week] + '</span>' +
+                    '<span style="color:var(--text-muted);font-size:0.84rem;margin-left:0.5rem">' + fmt12(b.start_time) + ' – ' + fmt12(b.end_time) + '</span>' +
+                    (b.label ? '<span style="font-size:0.78rem;color:var(--text-muted);margin-left:0.4rem;font-style:italic">· ' + b.label + '</span>' : '') +
+                    '</div>' +
+                    '<button data-whid="' + b.id + '" style="background:none;border:none;cursor:pointer;font-size:1.1rem;color:#ccc;padding:0.15rem 0.3rem;border-radius:4px;" title="Delete" onmouseover="this.style.color=\'#e07a5f\'" onmouseout="this.style.color=\'#ccc\'">&times;</button>' +
+                    '</div>';
+            }).join('');
+
+            // Wire up delete buttons
+            list.querySelectorAll('[data-whid]').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    var id = this.getAttribute('data-whid');
+                    fetch('/api/work-hours/' + id, { method: 'DELETE', headers: authHdr() })
+                        .then(function(r) { return r.json(); })
+                        .then(function(d) { if (d.success) loadBlocks(); })
+                        .catch(function() {});
+                });
+            });
+        }
+
+        function loadBlocks() {
+            fetch('/api/work-hours', { headers: authHdr() })
+                .then(function(r) { return r.json(); })
+                .then(function(d) { if (d.success) renderBlocks(d.blocks); })
+                .catch(function() {});
+        }
+
+        var addBtn = document.getElementById('whAddBlockBtn');
+        if (addBtn) {
+            addBtn.addEventListener('click', function() {
+                var day = document.getElementById('wh-day');
+                var start = document.getElementById('wh-start');
+                var end = document.getElementById('wh-end');
+                var label = document.getElementById('wh-label');
+                var saveMsg = document.getElementById('whSaveMsg');
+                var errMsg = document.getElementById('whErrMsg');
+
+                if (saveMsg) saveMsg.style.display = 'none';
+                if (errMsg) errMsg.style.display = 'none';
+
+                if (!start.value || !end.value) {
+                    if (errMsg) { errMsg.textContent = 'Start and end time required.'; errMsg.style.display = ''; }
+                    return;
+                }
+                if (start.value >= end.value) {
+                    if (errMsg) { errMsg.textContent = 'End time must be after start time.'; errMsg.style.display = ''; }
+                    return;
+                }
+
+                var payload = {
+                    day_of_week: parseInt(day.value),
+                    start_time: start.value,
+                    end_time: end.value,
+                    label: label.value.trim() || null
+                };
+
+                addBtn.disabled = true;
+                fetch('/api/work-hours', {
+                    method: 'POST',
+                    headers: authHdr(),
+                    body: JSON.stringify(payload)
+                })
+                    .then(function(r) { return r.json(); })
+                    .then(function(d) {
+                        addBtn.disabled = false;
+                        if (d.success) {
+                            label.value = '';
+                            if (saveMsg) { saveMsg.style.display = ''; setTimeout(function() { saveMsg.style.display = 'none'; }, 2000); }
+                            loadBlocks();
+                        } else {
+                            if (errMsg) { errMsg.textContent = d.message || 'Failed to save.'; errMsg.style.display = ''; }
+                        }
+                    })
+                    .catch(function() {
+                        addBtn.disabled = false;
+                        if (errMsg) { errMsg.textContent = 'Network error — please try again.'; errMsg.style.display = ''; }
+                    });
+            });
+        }
+
+        loadBlocks();
+    })();
+    </script>
+
+    <!-- Account deletion request flow -->
+    <script>
+    (function() {
+        var btn = document.getElementById('btn-request-deletion');
+        var feedback = document.getElementById('delete-account-feedback');
+        if (!btn || !feedback) return;
+
+        function showFeedback(msg, type) {
+            feedback.textContent = msg;
+            feedback.style.display = 'block';
+            feedback.style.background = type === 'success' ? '#d4edda' : '#f8d7da';
+            feedback.style.color = type === 'success' ? '#155724' : '#721c24';
+            feedback.style.border = type === 'success' ? '1px solid #c3e6cb' : '1px solid #f5c6cb';
+        }
+
+        btn.addEventListener('click', function() {
+            var confirmed = window.confirm(
+                'Are you sure you want to delete your account?\n\nWe\'ll send a confirmation email to verify. You\'ll need to click the link in that email to complete deletion.\n\nThis action cannot be undone.'
+            );
+            if (!confirmed) return;
+
+            btn.disabled = true;
+            btn.textContent = 'Sending confirmation email…';
+
+            try {
+                var token = localStorage.getItem('fl_token') || '';
+                fetch('/api/account-deletion/request', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer ' + token,
+                        'Content-Type': 'application/json'
+                    }
+                })
+                .then(function(res) { return res.json(); })
+                .then(function(data) {
+                    if (data.success) {
+                        btn.style.display = 'none';
+                        showFeedback('✓ ' + data.message, 'success');
+                    } else {
+                        throw new Error(data.message || 'Failed to send confirmation email');
+                    }
+                })
+                .catch(function(err) {
+                    btn.disabled = false;
+                    btn.textContent = 'Delete my account';
+                    showFeedback('Error: ' + err.message, 'error');
+                });
+            } catch (e) {
+                btn.disabled = false;
+                btn.textContent = 'Delete my account';
+                showFeedback('Something went wrong. Please try again.', 'error');
+            }
+        });
+    })();
+    // ── PROMO CODE REDEMPTION ────────────────────────────────────────────
+
+    async function applyPromoCode() {
+        var input = document.getElementById('promoCodeInput');
+        var btn = document.getElementById('promoApplyBtn');
+        var msg = document.getElementById('promoMessage');
+        var successBanner = document.getElementById('promoSuccessBanner');
+        var code = input.value.trim();
+
+        if (!code) {
+            msg.textContent = 'Please enter a promo code.';
+            msg.style.color = 'var(--error)';
+            msg.style.display = '';
+            return;
+        }
+
+        btn.disabled = true;
+        btn.textContent = 'Applying...';
+        msg.style.display = 'none';
+        successBanner.style.display = 'none';
+
+        try {
+            var resp = await fetch('/api/promo/redeem', {
+                method: 'POST',
+                headers: {
+                    'Authorization': 'Bearer ' + (localStorage.getItem('fl_token') || ''),
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ code })
+            });
+            var data = await resp.json();
+
+            if (data.success) {
+                var expiry = new Date(data.autopilot_expires_at);
+                var expiryStr = expiry.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+                document.getElementById('promoSuccessDetail').textContent =
+                    data.days_granted + ' days of Autopilot added. Access through ' + expiryStr + '.';
+                successBanner.style.display = '';
+                input.value = '';
+                msg.style.display = 'none';
+                // Refresh subscription section so is_pro badge updates
+                if (typeof loadSubscriptionStatus === 'function') loadSubscriptionStatus();
+            } else {
+                msg.textContent = data.message || 'Invalid code.';
+                msg.style.color = 'var(--error)';
+                msg.style.display = '';
+            }
+        } catch (err) {
+            msg.textContent = 'Something went wrong. Please try again.';
+            msg.style.color = 'var(--error)';
+            msg.style.display = '';
+        }
+
+        btn.disabled = false;
+        btn.textContent = 'Apply';
+    }
+
+    // ── Tandem: Accountability Partner ───────────────────────────────────────
+
+    async function loadTandemStatus() {
+        var loading = document.getElementById('tandemLoading');
+        var content = document.getElementById('tandemContent');
+        var token = localStorage.getItem('fl_token');
+        if (!token) { loading.textContent = 'Log in to manage your partner.'; return; }
+
+        try {
+            // Fetch partnership status and Tandem subscription access in parallel
+            var [resp, accessResp] = await Promise.all([
+                fetch('/api/partnerships/status', { headers: { 'Authorization': 'Bearer ' + token } }),
+                fetch('/api/partnerships/tandem-access', { headers: { 'Authorization': 'Bearer ' + token } }),
+            ]);
+            var data = await resp.json();
+            var accessData = accessResp.ok ? await accessResp.json() : { hasTandem: false, reason: 'none' };
+
+            loading.style.display = 'none';
+            content.style.display = '';
+            content.innerHTML = renderTandemState(data, accessData);
+
+            // Handle tandem_success redirect from Stripe checkout (settings?tandem_success=1&session_id=...)
+            var params = new URLSearchParams(window.location.search);
+            if (params.get('tandem_success') === '1') {
+                var sessionId = params.get('session_id');
+                if (sessionId) {
+                    fetch('/api/partnerships/tandem-activate', {
+                        method: 'POST',
+                        headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ session_id: sessionId }),
+                    }).catch(() => {});
+                }
+                window.history.replaceState({}, '', window.location.pathname);
+                setTimeout(loadTandemStatus, 1500); // Refresh to show updated status
+            }
+        } catch (err) {
+            loading.textContent = 'Failed to load partner status.';
+        }
+    }
+
+    function renderTandemSubscriptionBlock(access) {
+        // Shows Tandem subscription status + upsell below the partnership card.
+        // Only shown when a partnership is active (trial or upsell makes sense in context).
+        var statusHtml = '';
+        if (access.hasTandem) {
+            var reasonLabel = access.reason === 'trial' ? '14-day free trial'
+                : access.reason === 'partner_paid' ? 'via partner\'s subscription'
+                : 'active';
+            var expiryLabel = access.expiresAt
+                ? ' · expires ' + new Date(access.expiresAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+                : '';
+            statusHtml = '<div style="display:flex;align-items:center;gap:6px;background:#edfcf0;color:#166534;border:1px solid #7DB87D;border-radius:20px;padding:4px 12px;font-size:0.79rem;font-weight:600;margin-bottom:1rem;">'
+                + '✓ Tandem active — ' + reasonLabel + expiryLabel + '</div>';
+
+            // If on trial, show upsell to convert before it expires
+            if (access.reason === 'trial') {
+                statusHtml += '<div style="background:#fffbeb;border:1px solid #f59e0b;border-radius:10px;padding:12px 14px;margin-bottom:0.75rem;">'
+                    + '<p style="font-size:0.83rem;color:#78350f;margin:0 0 10px;line-height:1.5;">'
+                    + '🤝 Your 14-day free trial includes Buddy-mediated accountability + partner visibility. Subscribe to keep it after the trial.'
+                    + '</p>'
+                    + '<div style="display:flex;gap:8px;flex-wrap:wrap;">'
+                    + '<a href="https://buy.stripe.com/aFa8wP3rLgUUbAfdK9bsc0d" target="_blank" style="padding:8px 14px;background:var(--navy);color:#fff;border-radius:8px;font-size:0.83rem;font-weight:600;text-decoration:none;">$14.99/mo</a>'
+                    + '<a href="https://buy.stripe.com/cNi4gz6DX3445bR49zbsc0e" target="_blank" style="padding:8px 14px;background:transparent;color:var(--navy);border:1.5px solid var(--navy);border-radius:8px;font-size:0.83rem;font-weight:600;text-decoration:none;">$149/yr — save 17%</a>'
+                    + '</div></div>';
+            }
+        } else {
+            // No Tandem access — show upsell
+            statusHtml = '<div style="background:linear-gradient(135deg,#011e5c 0%,#02287a 100%);border-radius:10px;padding:16px;margin-bottom:0.75rem;color:#fff;">'
+                + '<p style="font-weight:700;font-size:0.95rem;margin:0 0 6px;">🤝 Unlock Tandem</p>'
+                + '<p style="font-size:0.82rem;color:rgba(255,255,255,0.75);margin:0 0 12px;line-height:1.5;">'
+                + 'Buddy-mediated accountability, partner dashboard, shared task visibility, and the "Tell Buddy" concern feature.'
+                + '</p>'
+                + '<div style="display:flex;gap:8px;flex-wrap:wrap;">'
+                + '<a href="https://buy.stripe.com/aFa8wP3rLgUUbAfdK9bsc0d" target="_blank" style="padding:8px 16px;background:var(--orange,#c9a84c);color:#011e5c;border-radius:8px;font-size:0.83rem;font-weight:700;text-decoration:none;">$14.99/mo</a>'
+                + '<a href="https://buy.stripe.com/cNi4gz6DX3445bR49zbsc0e" target="_blank" style="padding:8px 16px;background:rgba(255,255,255,0.12);color:#fff;border:1px solid rgba(255,255,255,0.25);border-radius:8px;font-size:0.83rem;font-weight:600;text-decoration:none;">$149/yr</a>'
+                + '</div>'
+                + '<p style="margin-top:10px;font-size:0.75rem;color:rgba(255,255,255,0.5);">If one partner subscribes, both get access.</p>'
+                + '</div>';
+        }
+        return statusHtml;
+    }
+
+    function renderTandemState(data, access) {
+        access = access || { hasTandem: false, reason: 'none' };
+        if (!data.success) {
+            return '<p style="font-size:0.88rem;color:var(--text-muted);">Unable to load partner status.</p>';
+        }
+
+        if (data.state === 'active') {
+            var p = data.partnership;
+            var avatarHtml = p.partner_avatar
+                ? '<img src="' + p.partner_avatar + '" alt="" style="width:40px;height:40px;border-radius:50%;object-fit:cover;border:2px solid var(--border);flex-shrink:0;" onerror="this.outerHTML=\'<div style=&quot;width:40px;height:40px;border-radius:50%;background:var(--navy);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:18px;flex-shrink:0;&quot;>\' + (p.partner_name||\'?\').charAt(0).toUpperCase() + \'</div>\'">'
+                : '<div style="width:40px;height:40px;border-radius:50%;background:var(--navy);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:18px;flex-shrink:0;">' + ((p.partner_name||'?').charAt(0).toUpperCase()) + '</div>';
+
+            return '<div style="display:flex;align-items:center;gap:0.9rem;margin-bottom:1rem;">'
+                + avatarHtml
+                + '<div><div style="font-weight:600;font-size:0.95rem;">' + escHtml(p.partner_name || 'Partner') + '</div>'
+                + '<div style="font-size:0.8rem;color:var(--text-muted);">' + escHtml(p.partner_email || '') + '</div></div></div>'
+                + '<div style="display:inline-flex;align-items:center;gap:6px;background:#edfcf0;color:#166534;border:1px solid #7DB87D;border-radius:20px;padding:4px 12px;font-size:0.8rem;font-weight:600;margin-bottom:1rem;">🤝 Linked</div>'
+                + '<div style="margin-bottom:0.75rem;"><a href="/partner-dashboard" style="display:inline-flex;align-items:center;gap:6px;padding:0.5rem 1rem;background:var(--navy);color:#fff;border-radius:8px;font-size:0.83rem;font-weight:600;text-decoration:none;font-family:\'DM Sans\',sans-serif;">👀 View ' + escHtml((p.partner_name||'Partner').split(' ')[0]) + '\'s shared tasks</a></div>'
+                + renderTandemSubscriptionBlock(access)
+                + '<div><button onclick="endPartnership(' + p.id + ')" style="padding:0.45rem 1rem;background:transparent;color:var(--error);border:1.5px solid var(--error);border-radius:8px;font-size:0.83rem;font-weight:600;cursor:pointer;font-family:\'DM Sans\',sans-serif;">End Partnership</button></div>';
+        }
+
+        if (data.state === 'pending_sent') {
+            var inv = data.invite;
+            return '<p style="font-size:0.88rem;color:var(--text-muted);margin:0 0 1rem;">Share this link with the person you want to partner with. It expires in 7 days.</p>'
+                + '<div style="display:flex;gap:0.5rem;align-items:center;">'
+                + '<input id="tandemInviteUrl" type="text" readonly value="' + escHtml(inv.invite_url) + '" style="flex:1;padding:0.55rem 0.75rem;border:1.5px solid var(--border);border-radius:8px;font-size:0.8rem;font-family:\'DM Sans\',sans-serif;background:var(--cream);color:var(--text-dark);min-width:0;">'
+                + '<button onclick="copyInviteUrl()" style="padding:0.55rem 1rem;background:var(--navy);color:#fff;border:none;border-radius:8px;font-size:0.83rem;font-weight:600;cursor:pointer;font-family:\'DM Sans\',sans-serif;white-space:nowrap;">Copy</button></div>'
+                + '<p style="font-size:0.78rem;color:var(--text-muted);margin:0.6rem 0 0;">Waiting for them to accept… <button onclick="cancelInvite()" style="background:none;border:none;color:var(--error);font-size:0.78rem;cursor:pointer;padding:0;font-family:\'DM Sans\',sans-serif;">Cancel invite</button></p>'
+                + '<p style="font-size:0.78rem;color:var(--text-muted);margin:0.5rem 0 0;">🎁 Both partners get a <strong>14-day free Tandem trial</strong> when linked.</p>';
+        }
+
+        // state === 'none'
+        return '<p style="font-size:0.88rem;color:var(--text-muted);margin:0 0 0.6rem;">An accountability partner can see your focus and keep you on track — and you do the same for them.</p>'
+            + '<p style="font-size:0.82rem;color:var(--text-muted);margin:0 0 1rem;">🎁 Both partners get a <strong>14-day free Tandem trial</strong> when you link.</p>'
+            + '<button onclick="generateInvite()" id="tandemInviteBtn" style="padding:0.6rem 1.4rem;background:var(--navy);color:#fff;border:none;border-radius:8px;font-size:0.88rem;font-weight:600;cursor:pointer;font-family:\'DM Sans\',sans-serif;">Invite a Partner</button>';
+    }
+
+    async function generateInvite() {
+        var btn = document.getElementById('tandemInviteBtn');
+        if (btn) { btn.disabled = true; btn.textContent = 'Generating…'; }
+        var token = localStorage.getItem('fl_token');
+        try {
+            var resp = await fetch('/api/partnerships/invite', {
+                method: 'POST',
+                headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' }
+            });
+            var data = await resp.json();
+            if (!resp.ok || !data.success) {
+                alert(data.message || 'Failed to create invite.');
+                if (btn) { btn.disabled = false; btn.textContent = 'Invite a Partner'; }
+                return;
+            }
+            loadTandemStatus();
+        } catch {
+            alert('Network error. Please try again.');
+            if (btn) { btn.disabled = false; btn.textContent = 'Invite a Partner'; }
+        }
+    }
+
+    function copyInviteUrl() {
+        var input = document.getElementById('tandemInviteUrl');
+        if (!input) return;
+        input.select();
+        try {
+            navigator.clipboard.writeText(input.value).catch(() => document.execCommand('copy'));
+        } catch { document.execCommand('copy'); }
+        // Quick visual feedback
+        var btns = document.querySelectorAll('#tandemContent button');
+        btns.forEach(function(b) { if (b.textContent === 'Copy') { b.textContent = 'Copied!'; setTimeout(() => b.textContent = 'Copy', 2000); }});
+    }
+
+    async function cancelInvite() {
+        if (!confirm('Cancel your pending invite?')) return;
+        var token = localStorage.getItem('fl_token');
+        try {
+            await fetch('/api/partnerships/invite/cancel', {
+                method: 'DELETE',
+                headers: { 'Authorization': 'Bearer ' + token }
+            });
+            loadTandemStatus();
+        } catch { alert('Network error. Please try again.'); }
+    }
+
+    async function endPartnership(id) {
+        if (!confirm('End your accountability partnership? This cannot be undone.')) return;
+        var token = localStorage.getItem('fl_token');
+        try {
+            var resp = await fetch('/api/partnerships/' + id, {
+                method: 'DELETE',
+                headers: { 'Authorization': 'Bearer ' + token }
+            });
+            var data = await resp.json();
+            if (resp.ok && data.success) {
+                loadTandemStatus();
+            } else {
+                alert(data.message || 'Failed to end partnership.');
+            }
+        } catch { alert('Network error. Please try again.'); }
+    }
+
+    function escHtml(str) {
+        return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    // Load Tandem status on page load.
+    // WHY: wrapped in DOMContentLoaded as a safe guard — the script block is
+    // near the bottom of the file so DOM is ready, but defensive is better.
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', loadTandemStatus);
+    } else {
+        loadTandemStatus();
+    }
+
+    </script>
+
+    <!-- Bottom tabs navigation (shared component) -->
+    <script src="/shared-nav.js"></script>
+    <script src="/buddy-widget.js"></script>
+    <!-- Biometric: Face ID / Touch ID settings — iOS native only -->
+    <script src="/js/biometric.js"></script>
+    <script>
+    // Biometric toggle wiring. Section stays hidden in browser (non-native context).
+    (function() {
+        if (typeof FLBiometric === 'undefined') return;
+        FLBiometric.isAvailable().then(function(available) {
+            if (!available) return;
+            // Show the section — only visible when native biometrics exist
+            var section = document.getElementById('biometricSection');
+            if (section) section.style.display = '';
+
+            var toggle = document.getElementById('biometricToggle');
+            var label = document.getElementById('biometricToggleLabel');
+            var statusMsg = document.getElementById('biometricStatusMsg');
+            var credForm = document.getElementById('biometricCredForm');
+            var pwdInput = document.getElementById('biometricPassword');
+            var saveBtn = document.getElementById('biometricSaveBtn');
+            if (!toggle) return;
+
+            function setToggleState(enabled) {
+                if (enabled) {
+                    toggle.classList.add('active');
+                    toggle.setAttribute('aria-checked', 'true');
+                    label.textContent = 'On';
+                } else {
+                    toggle.classList.remove('active');
+                    toggle.setAttribute('aria-checked', 'false');
+                    label.textContent = 'Off';
+                }
+            }
+
+            function showStatus(msg, isError) {
+                statusMsg.textContent = msg;
+                statusMsg.style.color = isError ? 'var(--error)' : 'var(--green)';
+                statusMsg.style.display = 'block';
+                setTimeout(function() { statusMsg.style.display = 'none'; }, 3000);
+            }
+
+            // Reflect current state on load
+            setToggleState(FLBiometric.isEnabled());
+
+            toggle.addEventListener('click', function() {
+                var currentlyEnabled = FLBiometric.isEnabled();
+                if (window.FLHaptics) FLHaptics.toggle();
+
+                if (currentlyEnabled) {
+                    // Disable: clear credentials from Keychain
+                    FLBiometric.disable().then(function() {
+                        setToggleState(false);
+                        if (credForm) credForm.style.display = 'none';
+                        showStatus('Face ID disabled.', false);
+                    });
+                } else {
+                    // Enable: need to verify and store credentials
+                    var userEmail = '';
+                    try {
+                        var u = JSON.parse(localStorage.getItem('fl_user') || '{}');
+                        userEmail = u.email || '';
+                    } catch(e) {}
+
+                    if (!userEmail) {
+                        showStatus('Could not find your email. Try logging out and back in.', true);
+                        return;
+                    }
+
+                    // Show password entry form
+                    if (credForm) credForm.style.display = 'block';
+                    if (pwdInput) pwdInput.focus();
+                }
+            });
+
+            if (saveBtn) {
+                saveBtn.addEventListener('click', function() {
+                    var pwd = pwdInput ? pwdInput.value : '';
+                    if (!pwd) { showStatus('Enter your password to set up Face ID.', true); return; }
+
+                    var userEmail = '';
+                    try {
+                        var u = JSON.parse(localStorage.getItem('fl_user') || '{}');
+                        userEmail = u.email || '';
+                    } catch(e) {}
+
+                    saveBtn.disabled = true;
+                    saveBtn.textContent = 'Saving\u2026';
+
+                    // Verify credentials before storing in Keychain
+                    fetch('/api/auth/login', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email: userEmail, password: pwd, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone })
+                    })
+                    .then(function(r) { return r.json(); })
+                    .then(function(data) {
+                        saveBtn.disabled = false;
+                        saveBtn.textContent = 'Save';
+                        if (!data.success) {
+                            showStatus('Incorrect password. Try again.', true);
+                            return;
+                        }
+                        return FLBiometric.enable(userEmail, pwd).then(function(ok) {
+                            if (ok) {
+                                setToggleState(true);
+                                if (credForm) credForm.style.display = 'none';
+                                if (pwdInput) pwdInput.value = '';
+                                showStatus("Face ID enabled. You're set!", false);
+                                if (window.FLHaptics) FLHaptics.checkinSubmit();
+                            } else {
+                                showStatus('Could not enable Face ID. Check your device settings.', true);
+                            }
+                        });
+                    })
+                    .catch(function() {
+                        saveBtn.disabled = false;
+                        saveBtn.textContent = 'Save';
+                        showStatus('Network error. Check your connection.', true);
+                    });
+                });
+            }
+        });
+    })();
+    </script>
+    <!-- Buddy Widget toggle wiring -->
+    <script>
+    (function() {
+        var toggle = document.getElementById('buddyWidgetToggle');
+        var label = document.getElementById('buddyWidgetLabel');
+        var saveMsg = document.getElementById('buddyWidgetSaveMsg');
+        if (!toggle) return;
+
+        function authH() {
+            var t = localStorage.getItem('fl_token');
+            return { 'Authorization': 'Bearer ' + t };
+        }
+
+        function setState(on) {
+            if (on) {
+                toggle.classList.add('active');
+                toggle.setAttribute('aria-checked', 'true');
+                label.textContent = 'On';
+            } else {
+                toggle.classList.remove('active');
+                toggle.setAttribute('aria-checked', 'false');
+                label.textContent = 'Off';
+            }
+        }
+
+        function showSave() {
+            saveMsg.style.display = 'block';
+            setTimeout(function() { saveMsg.style.display = 'none'; }, 2000);
+        }
+
+        // Load current state on page load
+        fetch('/api/buddy-widget', { headers: authH() })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (data.success) setState(data.visible !== false);
+            })
+            .catch(function() {});
+
+        toggle.addEventListener('click', function() {
+            var isOn = toggle.classList.contains('active');
+            var newVal = !isOn;
+            setState(newVal);
+            showSave();
+            // Notify the widget to show/hide
+            if (window.__bwSetVisible) window.__bwSetVisible(newVal);
+            // Persist to server
+            fetch('/api/buddy-widget', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', ...authH() },
+                body: JSON.stringify({ visible: newVal })
+            }).catch(function() {});
+        });
+    })();
+    </script>
+    <!-- Time Estimates: calibration history -->
+    <script>
+    (function() {
+        var TOKEN = localStorage.getItem('fl_token');
+        if (!TOKEN) return;
+
+        function authH() { return { 'Authorization': 'Bearer ' + TOKEN, 'Content-Type': 'application/json' }; }
+
+        // Load calibration summary
+        fetch('/api/v1/time-estimates/calibration', { headers: authH() })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (!data || !data.success || !data.calibration) return;
+                var cal = data.calibration;
+                var summaryEl = document.getElementById('timeEstCalibrationSummary');
+                var textEl = document.getElementById('timeEstCalibrationText');
+                var detailEl = document.getElementById('timeEstCalibrationDetail');
+                if (cal.total_tasks === 0) return;
+
+                summaryEl.style.display = 'block';
+                if (cal.avg_ratio !== null) {
+                    var pct = Math.round(Math.abs(1 - cal.avg_ratio) * 100);
+                    if (cal.avg_ratio > 1.15) {
+                        textEl.textContent = 'Your estimates run ~' + pct + '% short';
+                        textEl.style.color = '#E07A5F';
+                    } else if (cal.avg_ratio < 0.85) {
+                        textEl.textContent = 'Your estimates run ~' + pct + '% long';
+                        textEl.style.color = '#5BA4A4';
+                    } else {
+                        textEl.textContent = 'Your estimates are pretty accurate!';
+                        textEl.style.color = '#5BA4A4';
+                    }
+                }
+                detailEl.textContent = cal.total_tasks + ' tracked: ' + cal.accurate_count + ' accurate, ' + cal.underestimated_count + ' underestimated, ' + cal.overestimated_count + ' overestimated';
+            })
+            .catch(function() {});
+
+        // Load history
+        fetch('/api/v1/time-estimates/history', { headers: authH() })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                var loadingEl = document.getElementById('timeEstHistoryLoading');
+                var emptyEl = document.getElementById('timeEstHistoryEmpty');
+                var listEl = document.getElementById('timeEstHistoryList');
+                if (loadingEl) loadingEl.style.display = 'none';
+
+                if (!data || !data.success || !data.estimates || data.estimates.length === 0) {
+                    if (emptyEl) emptyEl.style.display = 'block';
+                    return;
+                }
+
+                listEl.style.display = 'block';
+                var html = '<div style="display:flex;flex-direction:column;gap:0.5rem;">';
+                data.estimates.forEach(function(est) {
+                    var color = '#6b6b6b';
+                    var label = '';
+                    if (est.actual_minutes && est.calibration_score !== null) {
+                        var score = est.calibration_score;
+                        if (score >= 0.8 && score <= 1.2) { color = '#5BA4A4'; label = 'Accurate'; }
+                        else if (score > 1.2 && score <= 1.5) { color = '#c9a84c'; label = 'Under by ' + Math.round((score - 1) * 100) + '%'; }
+                        else if (score > 1.5) { color = '#E07A5F'; label = 'Under by ' + Math.round((score - 1) * 100) + '%'; }
+                        else if (score < 0.8 && score >= 0.5) { color = '#c9a84c'; label = 'Over by ' + Math.round((1 - score) * 100) + '%'; }
+                        else if (score < 0.5) { color = '#E07A5F'; label = 'Over by ' + Math.round((1 - score) * 100) + '%'; }
+                    }
+                    html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:0.5rem 0.65rem;background:var(--surface);border:1px solid var(--border);border-radius:8px;font-size:0.82rem;">';
+                    html += '<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-right:0.5rem;">' + (est.task_title || 'Untitled') + '</span>';
+                    html += '<span style="white-space:nowrap;color:var(--text-muted);">' + est.estimated_minutes + ' min est';
+                    if (est.actual_minutes) {
+                        html += ' &rarr; ' + est.actual_minutes + ' min actual';
+                    } else {
+                        html += ' <span style="color:var(--text-muted);font-style:italic">(pending)</span>';
+                    }
+                    html += '</span>';
+                    if (label) {
+                        html += '<span style="margin-left:0.5rem;font-size:0.72rem;font-weight:600;color:' + color + ';white-space:nowrap;">' + label + '</span>';
+                    }
+                    html += '</div>';
+                });
+                html += '</div>';
+                listEl.innerHTML = html;
+            })
+            .catch(function() {
+                var loadingEl = document.getElementById('timeEstHistoryLoading');
+                if (loadingEl) loadingEl.textContent = 'Failed to load.';
+            });
+    })();
+    </script>
+    <!-- Shared Plaid Link service -->
+    <script src="/js/services/plaid-service.js"></script>
+    <!-- Haptics: settings page toggle feedback -->
+    <script src="/js/haptics.js"></script>
+    <!-- Analytics -->
+    <script src="/js/analytics.js"></script>
+    <script>(function(){try{var u=JSON.parse(localStorage.getItem('fl_user')||'{}');if(u.id)FLA.setUser(u.id);}catch(e){}FLA.trackPage('settings');})()</script>
+</body>
+</html>

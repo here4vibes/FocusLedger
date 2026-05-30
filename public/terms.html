@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#E8913A">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="FocusLedger">
+<link rel="icon" type="image/png" sizes="32x32" href="/icons/fl-icon.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/icons/fl-icon.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/fl-icon.png">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Terms of Service - FocusLedger</title>
+    <meta name="description" content="FocusLedger Terms of Service. Account terms, subscription billing, acceptable use, and legal information for the FocusLedger ADHD productivity and finance app.">
+    <link rel="canonical" href="https://focusledger.net/terms">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --orange: #E8913A;
+            --orange-light: #F0A855;
+            --navy: #2D2A26;
+            --cream: #FAF9F6;
+            --cream-dark: #F0EEE9;
+            --text-dark: #2D2A26;
+            --text-muted: #6B6560;
+            --green: #5BA4A4;
+        
+            --success: #7DB87D;
+            --warning: #E07A5F;
+            --error: #E07A5F;
+            --error-light: #FAEAE5;
+            --border: #E8E5E0;
+            --surface: #FFFFFF;
+        }
+        body {
+            font-family: 'DM Sans', sans-serif;
+            color: var(--text-dark);
+            background: var(--cream);
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+        h1, h2, h3 { font-family: 'Space Grotesk', sans-serif; }
+
+        /* NAV */
+        .legal-nav {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: rgba(250, 249, 246, 0.92);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(0,0,0,0.04);
+        }
+        .legal-nav-inner {
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        .logo {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--navy);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            text-decoration: none;
+        }
+        .logo-dot {
+            width: 12px;
+            height: 12px;
+            background: var(--orange);
+            border-radius: 3px;
+            transform: rotate(45deg);
+        }
+        .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+        .nav-links a {
+            font-size: 0.88rem;
+            color: var(--text-muted);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+        .nav-links a:hover { color: var(--orange); }
+        .nav-links a.active { color: var(--navy); font-weight: 600; }
+
+        /* LAYOUT */
+        .legal-wrap {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 2.5rem 2rem 4rem;
+            display: grid;
+            grid-template-columns: 200px 1fr;
+            gap: 3rem;
+        }
+
+        @media (max-width: 700px) {
+            .legal-wrap {
+                grid-template-columns: 1fr;
+                gap: 1.5rem;
+                padding: 1.5rem 1.25rem 3rem;
+            }
+        }
+
+        /* TABLE OF CONTENTS */
+        .toc {
+            position: sticky;
+            top: 5.5rem;
+            align-self: start;
+        }
+        @media (max-width: 700px) {
+            .toc { position: static; border-bottom: 1px solid #E8E5E0; padding-bottom: 1.5rem; }
+        }
+        .toc-title {
+            font-size: 0.72rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-muted);
+            margin-bottom: 0.75rem;
+        }
+        .toc ol {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 0.1rem;
+        }
+        .toc li a {
+            display: block;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            text-decoration: none;
+            padding: 0.3rem 0;
+            border-left: 2px solid transparent;
+            padding-left: 0.75rem;
+            transition: color 0.15s, border-color 0.15s;
+            line-height: 1.3;
+        }
+        .toc li a:hover, .toc li a.active {
+            color: var(--orange);
+            border-left-color: var(--orange);
+        }
+        .toc ol ol {
+            margin-left: 0.5rem;
+            margin-top: 0.15rem;
+        }
+        .toc ol ol a {
+            font-size: 0.8rem;
+            padding-left: 1.25rem;
+        }
+
+        /* CONTENT */
+        .legal-content h1 {
+            font-size: 2.25rem;
+            color: var(--navy);
+            margin-bottom: 0.5rem;
+            line-height: 1.2;
+        }
+        .legal-content .last-updated {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 2.5rem;
+            font-style: italic;
+        }
+        .legal-content h2 {
+            font-size: 1.3rem;
+            color: var(--navy);
+            margin-top: 2.25rem;
+            margin-bottom: 0.75rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #E8E5E0;
+        }
+        .legal-content h3 {
+            font-size: 1rem;
+            color: var(--navy);
+            margin-top: 1.25rem;
+            margin-bottom: 0.5rem;
+        }
+        .legal-content p {
+            font-size: 0.92rem;
+            color: #3D3D5C;
+            margin-bottom: 1rem;
+            line-height: 1.7;
+        }
+        .legal-content ul, .legal-content ol {
+            margin-bottom: 1rem;
+            padding-left: 1.5rem;
+        }
+        .legal-content li {
+            font-size: 0.92rem;
+            color: #3D3D5C;
+            margin-bottom: 0.4rem;
+            line-height: 1.6;
+        }
+        .legal-content strong {
+            color: var(--navy);
+            font-weight: 600;
+        }
+        .legal-content .note-box {
+            background: white;
+            border: 1px solid #E8E5E0;
+            border-left: 3px solid var(--orange);
+            border-radius: 8px;
+            padding: 1rem 1.25rem;
+            margin: 1.5rem 0;
+        }
+        .legal-content .note-box p {
+            margin: 0;
+            font-size: 0.88rem;
+        }
+        .legal-content a {
+            color: var(--orange);
+            text-decoration: none;
+        }
+        .legal-content a:hover { text-decoration: underline; }
+
+        /* FOOTER */
+        .legal-footer {
+            text-align: center;
+            padding: 2rem;
+            border-top: 1px solid #E8E5E0;
+            margin-top: 2rem;
+        }
+        .legal-footer p {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+        }
+        .legal-footer a {
+            color: var(--orange);
+            text-decoration: none;
+        }
+        .legal-footer a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+
+    <!-- NAV -->
+    <div class="legal-nav">
+        <div class="legal-nav-inner">
+            <a href="/" class="logo">
+                <div class="logo-dot"></div>
+                FocusLedger
+            </a>
+            <div class="nav-links">
+                <a href="/privacy">Privacy Policy</a>
+                <a href="/app">Open App</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="legal-wrap">
+        <!-- TABLE OF CONTENTS -->
+        <nav class="toc">
+            <div class="toc-title">Contents</div>
+            <ol>
+                <li><a href="#acceptance">Acceptance</a></li>
+                <li><a href="#accounts">Account Creation</a></li>
+                <li><a href="#tiers">Subscription Tiers</a></li>
+                <li><a href="#billing">Billing & Payments</a></li>
+                <li><a href="#usage">Acceptable Use</a></li>
+                <li><a href="#ip">Intellectual Property</a></li>
+                <li><a href="#third-party">Third-Party Services</a></li>
+                <li><a href="#availability">Service Availability</a></li>
+                <li><a href="#termination">Termination</a></li>
+                <li><a href="#liability">Limitation of Liability</a></li>
+                <li><a href="#governing">Governing Law</a></li>
+                <li><a href="#changes">Changes to Terms</a></li>
+                <li><a href="#contact">Contact</a></li>
+            </ol>
+        </nav>
+
+        <!-- MAIN CONTENT -->
+        <article class="legal-content">
+            <h1>Terms of Service</h1>
+            <p class="last-updated">Last updated: April 22, 2026</p>
+
+            <h2 id="acceptance">1. Acceptance</h2>
+            <p>By creating a FocusLedger account or using any FocusLedger service, you agree to these Terms of Service ("Terms"). If you do not agree, do not use FocusLedger. These Terms form a binding agreement between you ("you", "your") and Polsia, Inc. ("we", "us", "FocusLedger", "our").</p>
+            <p>We may update these Terms from time to time. Continued use after changes constitutes acceptance of the updated Terms.</p>
+
+            <h2 id="accounts">2. Account Creation &amp; Responsibilities</h2>
+            <p>You must provide accurate, current information when creating an account. You are responsible for:</p>
+            <ul>
+                <li>Keeping your password secure and confidential</li>
+                <li>All activity that occurs under your account</li>
+                <li>Notifying us immediately of any unauthorized use</li>
+                <li>Ensuring your email address remains accessible (we communicate via email)</li>
+            </ul>
+            <p>You must be at least 13 years old to create an account. FocusLedger is not designed for or directed at children under 13, and we do not knowingly collect information from children under 13.</p>
+
+            <h2 id="tiers">3. Subscription Tiers</h2>
+
+            <h3>Free Tier</h3>
+            <p>The Free tier provides access to core FocusLedger functionality including up to 10 active tasks, manual expense tracking, and the weekly budget view. This tier is provided indefinitely without a time limit, subject to these Terms.</p>
+
+            <h3>Autopilot Tier</h3>
+            <p>The Autopilot tier ($9.99/month or $100/year via Stripe) provides unlimited active tasks, financial dashboard features, bank and credit card sync via Plaid, and email-to-task linking. Autopilot features may be added or modified over time at our discretion.</p>
+
+            <h2 id="billing">4. Billing &amp; Payments</h2>
+            <p>Autopilot subscription billing is handled by Stripe. By subscribing to Autopilot you authorize Stripe to charge your payment method on a recurring basis:</p>
+            <ul>
+                <li><strong>Monthly:</strong> $9.99 charged every 30 days</li>
+                <li><strong>Annual:</strong> $100.00 charged every 365 days (~$8.33/month effective rate)</li>
+            </ul>
+            <p>All payments are final. You may cancel your Autopilot subscription at any time from Settings. Cancellation takes effect at the end of your current billing period. No refunds are provided for partial periods.</p>
+            <p>Failed payments may result in suspension of Autopilot features. We will attempt to retry billing before suspension.</p>
+
+            <h2 id="usage">5. Acceptable Use</h2>
+            <p>You agree not to:</p>
+            <ul>
+                <li>Use FocusLedger for any illegal purpose</li>
+                <li>Attempt to gain unauthorized access to any account, system, or network</li>
+                <li>Use automated tools (bots, scrapers, etc.) to access FocusLedger without authorization</li>
+                <li>Reverse engineer, decompile, or disassemble any part of FocusLedger</li>
+                <li>Resell or exploit FocusLedger's services for commercial gain without our written consent</li>
+                <li>Upload malicious code, viruses, or any content designed to disrupt services</li>
+                <li>Impersonate any person or entity, or falsely represent your affiliation</li>
+            </ul>
+            <p>Violations may result in immediate account suspension or termination without notice.</p>
+
+            <h2 id="ip">6. Intellectual Property</h2>
+            <p><strong>Your Data:</strong> You own all data, content, and information you submit to FocusLedger. You grant us a limited license to store, process, and display your data to provide the service.</p>
+            <p><strong>FocusLedger Platform:</strong> We own the FocusLedger platform, including its design, code, trademarks, and all intellectual property. You may not copy, reproduce, or exploit our branding, logo, or platform design without written permission.</p>
+            <p>Feedback, suggestions, or ideas you provide about FocusLedger become our property and may be used without compensation.</p>
+
+            <h2 id="third-party">7. Third-Party Services &amp; Disclaimers</h2>
+            <p>FocusLedger integrates with third-party services. We are not responsible for their performance, accuracy, or availability:</p>
+            <ul>
+                <li><strong>Plaid, Inc.</strong> (bank account linking): Plaid's <a href="https://plaid.com/legal/" target="_blank" rel="noopener">Privacy Notice</a> and terms govern their data handling. We use Plaid solely to retrieve your transaction data; we do not control Plaid's data practices.</li>
+                <li><strong>Stripe, Inc.</strong> (payment processing): Stripe's <a href="https://stripe.com/privacy" target="_blank" rel="noopener">Privacy Policy</a> governs payment processing. We do not store your full card details.</li>
+                <li><strong>Google, Microsoft, Yahoo</strong> (email OAuth): When you connect your email account via OAuth, you authorize those providers to share specified data with FocusLedger. Their privacy policies govern their data handling.</li>
+            </ul>
+            <p>We do not guarantee continuous uptime or availability of any third-party integration.</p>
+
+            <div class="note-box">
+                <p><strong>Financial Data Disclaimer:</strong> Transaction data and account information retrieved from bank sync via Plaid is provided as-is from your financial institution. FocusLedger does not verify, audit, or guarantee the accuracy of this data. Nothing in FocusLedger constitutes financial advice, investment advice, or a substitute for professional accounting services. Always verify financial decisions with your bank statements and a qualified financial professional.</p>
+            </div>
+
+            <h2 id="availability">8. Service Availability</h2>
+            <p>FocusLedger is provided "as is." We do not make SLA guarantees. There may be downtime for maintenance, updates, or reasons beyond our control. We are a startup building in public: expect rough edges.</p>
+            <p>We will make reasonable efforts to notify you of planned maintenance via email or the app.</p>
+
+            <h2 id="termination">9. Termination</h2>
+            <p>You may delete your account and all associated data at any time from Settings. Account deletion is irreversible and removes all personal data per our data retention policy.</p>
+            <p>We may suspend or terminate your account without notice if you violate these Terms or engage in conduct we deem harmful to other users or the platform. Termination does not entitle you to any refund.</p>
+            <p>Upon termination for any reason, your right to access FocusLedger ceases immediately.</p>
+
+            <h2 id="liability">10. Limitation of Liability</h2>
+            <p>TO THE MAXIMUM EXTENT PERMITTED BY LAW, FOCUSLEDGER AND POLSIA, INC. ARE NOT LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES, INCLUDING BUT NOT LIMITED TO LOSS OF PROFITS, DATA, USE, GOODWILL, OR OTHER INTANGIBLE LOSSES, RESULTING FROM:</p>
+            <ul>
+                <li>Your use of or inability to use FocusLedger</li>
+                <li>Any unauthorized access to your account or data</li>
+                <li>Any errors, bugs, or inaccuracies in service functionality</li>
+                <li>Any third-party conduct or content on FocusLedger</li>
+                <li>Any financial decisions made based on data shown in FocusLedger</li>
+            </ul>
+            <p>Our total liability for any claim arising from your use of FocusLedger shall not exceed the amount you paid us in the 12 months preceding the claim (or $0 if you used only the Free tier).</p>
+
+            <h2 id="governing">11. Governing Law</h2>
+            <p>These Terms are governed by the laws of the State of Delaware, USA, without regard to conflict of law principles. Any dispute arising from these Terms shall be resolved in the state or federal courts located in Delaware. You consent to the exclusive jurisdiction of those courts.</p>
+
+            <h2 id="changes">12. Changes to Terms</h2>
+            <p>We may update these Terms at any time. When we make material changes, we will:</p>
+            <ul>
+                <li>Update the "Last updated" date at the top of this page</li>
+                <li>Send an email notification to the address associated with your account (for significant changes)</li>
+                <li>Post a notice in the app dashboard</li>
+            </ul>
+            <p>Continued use after changes constitutes your acceptance of the new Terms. If you do not agree to changes, your only remedy is to delete your account.</p>
+
+            <h2 id="contact">13. Contact</h2>
+            <p>Questions about these Terms? Reach us at:</p>
+            <p><strong>Email:</strong> <a href="mailto:privacy@focusledger.app">privacy@focusledger.app</a><br>
+            <strong>Company:</strong> Polsia, Inc.<br>
+            <strong>Website:</strong> <a href="https://focusledger.net">https://focusledger.net</a></p>
+
+        </article>
+    </div>
+
+    <!-- FOOTER -->
+    <div class="legal-footer">
+        <p>FocusLedger &mdash; Built by <a href="https://polsia.com">Polsia</a> &middot; <a href="/privacy">Privacy Policy</a></p>
+    </div>
+
+    <script>
+    (function() {
+        // Active link highlighting in ToC based on scroll
+        var headings = document.querySelectorAll('.legal-content h2[id]');
+        var tocLinks = document.querySelectorAll('.toc a');
+
+        function onScroll() {
+            var scrollPos = window.scrollY + 80;
+            var activeId = null;
+            headings.forEach(function(h) {
+                if (h.offsetTop <= scrollPos) activeId = h.id;
+            });
+            tocLinks.forEach(function(a) {
+                a.classList.remove('active');
+                if (a.getAttribute('href') === '#' + activeId) a.classList.add('active');
+            });
+        }
+        window.addEventListener('scroll', onScroll, { passive: true });
+        onScroll();
+    })();
+    </script>
+
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' })
+                    .catch(function() {});
+            });
+            navigator.serviceWorker.addEventListener('message', function(e) {
+                if (e.data && e.data.type === 'SW_UPDATED') window.location.reload();
+            });
+        }
+    </script>
+    <!-- Analytics -->
+    <script src="/js/analytics.js"></script>
+    <script>FLA.trackPage('terms');</script>
+</body>
+</html>

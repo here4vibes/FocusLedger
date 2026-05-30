@@ -1,0 +1,888 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#011e5c">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="FocusLedger">
+  <link rel="icon" type="image/png" sizes="32x32" href="/icons/fl-icon.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/icons/fl-icon.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Insurance — FocusLedger</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --orange: #c9a84c;
+      --navy: #011e5c;
+      --cream: #faf9f7;
+      --cream-dark: #f5f3ef;
+      --text-dark: #1a1a1a;
+      --text-muted: #6b6b6b;
+      --border: #e8e5e0;
+      --surface: #fff;
+      --sage: #DCFCE7;
+      --sage-border: #A7F3D0;
+      --teal: #0891B2;
+      --teal-light: #22D3EE;
+      --teal-dark: #0E7490;
+      --yellow-bg: #FFFBEB;
+      --yellow-border: #FDE68A;
+      --yellow-text: #92400E;
+    }
+    body {
+      font-family: 'DM Sans', sans-serif;
+      color: var(--text-dark);
+      background: var(--cream);
+      min-height: 100vh;
+      overflow-x: hidden;
+      padding-bottom: calc(60px + env(safe-area-inset-bottom));
+    }
+    h1, h2, h3, h4 { font-family: 'Space Grotesk', sans-serif; }
+
+    /* NAV */
+    .portal-nav {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 1.25rem; height: 56px; background: var(--navy);
+      position: sticky; top: 0; z-index: 200; width: 100%;
+    }
+    .portal-logo {
+      font-family: system-ui, sans-serif; font-size: 1.25rem; font-weight: 700;
+      color: white; display: flex; align-items: center; gap: 0.5rem; text-decoration: none;
+    }
+    .logo-dot { width: 10px; height: 10px; background: var(--orange); border-radius: 2px; transform: rotate(45deg); }
+    .nav-links { display: flex; gap: 0.15rem; flex-wrap: wrap; }
+    .nav-link {
+      padding: 0.4rem 0.75rem; font-size: 0.875rem; font-weight: 500;
+      color: rgba(255,255,255,0.75); transition: all 0.15s; white-space: nowrap; text-decoration: none;
+    }
+    .nav-link:hover { background: rgba(255,255,255,0.1); color: white; }
+    .nav-link.active { color: white; border-bottom: 2px solid var(--orange); }
+    .nav-right { display: flex; align-items: center; gap: 0.5rem; }
+    .logout-btn {
+      font-size: 0.8rem; color: rgba(255,255,255,0.65); background: none;
+      border: none; cursor: pointer; padding: 0.35rem 0.6rem; border-radius: 4px;
+      transition: all 0.15s; font-family: system-ui, sans-serif;
+    }
+    .logout-btn:hover { color: var(--orange); background: rgba(255,255,255,0.08); }
+    @media (max-width: 900px) { .nav-links { display: none; } }
+
+    /* BREADCRUMB */
+    .breadcrumb {
+      display: flex; align-items: center; gap: 0.5rem;
+      font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1.25rem;
+    }
+    .breadcrumb a { color: var(--teal); text-decoration: none; }
+    .breadcrumb a:hover { text-decoration: underline; }
+    .breadcrumb-sep { color: var(--border); }
+
+    /* PAGE */
+    .page-wrap { max-width: 900px; margin: 0 auto; padding: 2rem 1.25rem; }
+
+    /* HEADER */
+    .page-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 1.75rem; flex-wrap: wrap; gap: 1rem;
+    }
+    .page-header-left { display: flex; align-items: center; gap: 1rem; }
+    .page-icon {
+      width: 48px; height: 48px; border-radius: 13px;
+      background: var(--sage); display: flex; align-items: center;
+      justify-content: center; font-size: 1.5rem; flex-shrink: 0;
+    }
+    .page-header h1 { font-size: 1.6rem; color: var(--navy); margin-bottom: 0.1rem; }
+    .page-header p { font-size: 0.875rem; color: var(--text-muted); }
+    .btn-primary {
+      display: inline-flex; align-items: center; gap: 0.4rem;
+      background: var(--teal); color: white; border: none; cursor: pointer;
+      padding: 0.6rem 1.1rem; border-radius: 8px;
+      font-family: 'Space Grotesk', sans-serif; font-size: 0.875rem; font-weight: 600;
+      transition: background 0.15s; white-space: nowrap; touch-action: manipulation;
+      min-height: 44px;
+    }
+    .btn-primary:hover { background: var(--teal-dark); }
+    .btn-secondary {
+      display: inline-flex; align-items: center; gap: 0.4rem;
+      background: var(--surface); color: var(--text-dark); border: 1px solid var(--border);
+      cursor: pointer; padding: 0.55rem 1rem; border-radius: 8px;
+      font-family: 'Space Grotesk', sans-serif; font-size: 0.875rem; font-weight: 500;
+      transition: border-color 0.15s; white-space: nowrap; touch-action: manipulation;
+      min-height: 44px;
+    }
+    .btn-secondary:hover { border-color: var(--teal); color: var(--teal); }
+    .btn-ghost {
+      background: none; border: none; cursor: pointer; color: var(--text-muted);
+      font-size: 0.82rem; padding: 0.4rem 0.6rem; border-radius: 6px;
+      transition: all 0.15s; font-family: 'DM Sans', sans-serif;
+      touch-action: manipulation; min-height: 36px;
+    }
+    .btn-ghost:hover { color: var(--text-dark); background: var(--cream-dark); }
+    .btn-danger-ghost {
+      background: none; border: none; cursor: pointer; color: #dc2626;
+      font-size: 0.82rem; padding: 0.4rem 0.6rem; border-radius: 6px;
+      transition: all 0.15s; font-family: 'DM Sans', sans-serif;
+      touch-action: manipulation; min-height: 36px;
+    }
+    .btn-danger-ghost:hover { background: #fee2e2; }
+
+    /* COVERAGE GRID */
+    .section-label {
+      font-family: 'Space Grotesk', sans-serif; font-size: 0.75rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.06em;
+      color: var(--text-muted); margin-bottom: 0.75rem;
+    }
+    .coverage-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+      gap: 0.75rem; margin-bottom: 2rem;
+    }
+    .coverage-chip {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; padding: 0.9rem 1rem;
+      display: flex; align-items: center; gap: 0.75rem;
+    }
+    .coverage-chip.covered { border-color: var(--sage-border); background: var(--sage); }
+    .coverage-chip.gap { border-color: var(--yellow-border); background: var(--yellow-bg); }
+    .coverage-chip-icon { font-size: 1.4rem; line-height: 1; flex-shrink: 0; }
+    .coverage-chip-body { flex: 1; min-width: 0; }
+    .coverage-chip-title { font-family: 'Space Grotesk', sans-serif; font-size: 0.875rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .coverage-chip.covered .coverage-chip-title { color: #065F46; }
+    .coverage-chip.gap .coverage-chip-title { color: var(--yellow-text); }
+    .coverage-chip-check { font-size: 1rem; flex-shrink: 0; }
+
+    /* POLICY LIST */
+    .policy-list { display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 2rem; }
+    .policy-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 14px; padding: 1.1rem 1.25rem;
+      display: flex; align-items: flex-start; gap: 1rem;
+    }
+    .policy-card-icon {
+      width: 42px; height: 42px; border-radius: 10px; background: var(--sage);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.3rem; flex-shrink: 0; margin-top: 1px;
+    }
+    .policy-card-body { flex: 1; min-width: 0; }
+    .policy-card-header { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.35rem; flex-wrap: wrap; }
+    .policy-card-title { font-family: 'Space Grotesk', sans-serif; font-size: 0.975rem; font-weight: 600; color: var(--navy); }
+    .policy-type-badge {
+      font-size: 0.7rem; font-weight: 600; padding: 0.18rem 0.55rem; border-radius: 50px;
+      background: var(--sage); color: #065F46; flex-shrink: 0;
+    }
+    .policy-meta { display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; font-size: 0.82rem; color: var(--text-muted); margin-bottom: 0.3rem; }
+    .policy-meta-item { display: flex; align-items: center; gap: 0.3rem; }
+    .policy-expiry-warn { color: #c9a84c; font-weight: 500; }
+    .policy-expiry-danger { color: #dc2626; font-weight: 600; }
+    .policy-inferred-tag {
+      display: inline-flex; align-items: center; gap: 0.3rem;
+      font-size: 0.7rem; color: var(--teal); background: #E0F7FA;
+      border-radius: 50px; padding: 0.15rem 0.55rem; margin-top: 0.25rem;
+    }
+    .policy-card-actions { display: flex; align-items: center; gap: 0.25rem; flex-shrink: 0; }
+    .policy-doc-link { font-size: 0.75rem; color: var(--teal); text-decoration: none; margin-top: 0.25rem; display: inline-block; }
+    .policy-doc-link:hover { text-decoration: underline; }
+
+    /* EMPTY STATE */
+    .empty-state {
+      text-align: center; padding: 3rem 2rem;
+      background: var(--surface); border: 1px dashed var(--border);
+      border-radius: 16px; margin-bottom: 2rem;
+    }
+    .empty-state-icon { font-size: 2.5rem; margin-bottom: 0.75rem; }
+    .empty-state h3 { font-size: 1.05rem; color: var(--navy); margin-bottom: 0.4rem; }
+    .empty-state p { font-size: 0.875rem; color: var(--text-muted); line-height: 1.5; max-width: 360px; margin: 0 auto 1.25rem; }
+
+    /* INFER BANNER */
+    .infer-banner {
+      background: #EFF6FF; border: 1px solid #BFDBFE;
+      border-left: 4px solid var(--teal); border-radius: 12px;
+      padding: 1rem 1.1rem; margin-bottom: 1.75rem;
+    }
+    .infer-banner h4 { font-size: 0.9rem; color: #1E40AF; margin-bottom: 0.3rem; }
+    .infer-banner p { font-size: 0.82rem; color: #3B82F6; margin-bottom: 0.75rem; line-height: 1.4; }
+    .infer-suggestion-list { display: flex; flex-direction: column; gap: 0.6rem; }
+    .infer-suggestion {
+      background: white; border: 1px solid #BFDBFE; border-radius: 10px;
+      padding: 0.75rem 1rem; display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;
+    }
+    .infer-suggestion-text { flex: 1; font-size: 0.85rem; }
+    .infer-suggestion-text strong { color: var(--navy); }
+    .infer-suggestion-text .infer-amount { color: var(--text-muted); font-size: 0.78rem; }
+    .btn-infer-confirm {
+      background: var(--teal); color: white; border: none; cursor: pointer;
+      padding: 0.45rem 0.9rem; border-radius: 6px; font-size: 0.8rem; font-weight: 600;
+      font-family: 'Space Grotesk', sans-serif; transition: background 0.15s;
+      touch-action: manipulation; min-height: 36px;
+    }
+    .btn-infer-confirm:hover { background: var(--teal-dark); }
+    .btn-infer-dismiss {
+      background: none; border: none; cursor: pointer; color: var(--text-muted);
+      font-size: 0.8rem; padding: 0.4rem 0.6rem; border-radius: 6px;
+      transition: all 0.15s; font-family: 'DM Sans', sans-serif;
+      touch-action: manipulation; min-height: 36px;
+    }
+    .btn-infer-dismiss:hover { color: var(--text-dark); background: #E0F2FE; }
+
+    /* MODAL */
+    .modal-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.45); z-index: 500;
+      align-items: flex-end; justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    @media (min-width: 640px) { .modal-overlay { align-items: center; } }
+    .modal {
+      background: var(--surface); width: 100%; max-width: 540px;
+      border-radius: 20px 20px 0 0; padding: 1.5rem 1.5rem 2rem;
+      max-height: 92vh; overflow-y: auto;
+    }
+    @media (min-width: 640px) { .modal { border-radius: 16px; } }
+    .modal-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 1.25rem;
+    }
+    .modal-title { font-family: 'Space Grotesk', sans-serif; font-size: 1.05rem; font-weight: 700; color: var(--navy); }
+    .modal-close {
+      background: none; border: none; cursor: pointer; color: var(--text-muted);
+      font-size: 1.2rem; padding: 0.25rem; border-radius: 4px; line-height: 1;
+      touch-action: manipulation; min-width: 36px; min-height: 36px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .modal-close:hover { color: var(--text-dark); background: var(--cream-dark); }
+    .form-group { margin-bottom: 1rem; }
+    .form-label {
+      display: block; font-size: 0.8rem; font-weight: 600;
+      color: var(--text-muted); margin-bottom: 0.4rem;
+      font-family: 'Space Grotesk', sans-serif; text-transform: uppercase; letter-spacing: 0.04em;
+    }
+    .form-input, .form-select, .form-textarea {
+      width: 100%; padding: 0.6rem 0.85rem;
+      border: 1px solid var(--border); border-radius: 8px;
+      font-family: 'DM Sans', sans-serif; font-size: 0.9rem; color: var(--text-dark);
+      background: var(--surface); transition: border-color 0.15s;
+      -webkit-appearance: none; min-height: 44px;
+    }
+    .form-input:focus, .form-select:focus, .form-textarea:focus {
+      outline: none; border-color: var(--teal);
+    }
+    .form-textarea { resize: vertical; min-height: 80px; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+    .form-hint { font-size: 0.75rem; color: var(--text-muted); margin-top: 0.3rem; }
+    .modal-footer { display: flex; gap: 0.75rem; margin-top: 1.5rem; flex-wrap: wrap; }
+    .modal-footer .btn-primary { flex: 1; justify-content: center; }
+    .modal-footer .btn-secondary { min-width: 100px; justify-content: center; }
+
+    /* TOAST */
+    .toast {
+      position: fixed; bottom: calc(60px + env(safe-area-inset-bottom) + 0.5rem);
+      left: 50%; transform: translateX(-50%) translateY(100px);
+      background: #1a1a1a; color: white; padding: 0.65rem 1.25rem;
+      border-radius: 50px; font-size: 0.875rem; font-weight: 500;
+      z-index: 600; transition: transform 0.25s; white-space: nowrap;
+      max-width: calc(100vw - 2rem); text-align: center;
+    }
+    .toast.show { transform: translateX(-50%) translateY(0); }
+    .toast.success { background: #065F46; }
+    .toast.error { background: #9B1C1C; }
+
+    /* BOTTOM TABS */
+    .bottom-tabs {
+      display: none; position: fixed; bottom: 0; left: 0; right: 0;
+      background: var(--navy); z-index: 200;
+      padding: 0.5rem 0;
+      padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+    }
+    .bottom-tabs-inner { display: flex; justify-content: space-around; max-width: 600px; margin: 0 auto; }
+    .tab-btn {
+      display: flex; flex-direction: column; align-items: center; gap: 0.2rem;
+      padding: 0.4rem 0.75rem; border: none; background: none; cursor: pointer;
+      font-size: 0.65rem; color: rgba(255,255,255,0.6);
+      font-family: system-ui, sans-serif; transition: color 0.15s;
+      min-width: 44px; min-height: 44px; justify-content: center;
+    }
+    .tab-btn.active { color: var(--orange); }
+    .tab-btn-icon { font-size: 1.1rem; line-height: 1; }
+    @media (max-width: 900px) { .bottom-tabs { display: block; } }
+    @media (min-width: 901px) { .bottom-tabs { display: none !important; } }
+  </style>
+  <link rel="stylesheet" href="/css/design-system.css">
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="portal-nav">
+  <a href="/home" class="portal-logo"><span class="logo-dot"></span>FocusLedger</a>
+  <div class="nav-links">
+    <a href="/home" class="nav-link">Home</a>
+    <a href="/app/tasks" class="nav-link">Tasks</a>
+    <a href="/app/money" class="nav-link">Money</a>
+    <a href="/app/life" class="nav-link active">Life</a>
+    <a href="/news" class="nav-link">News</a>
+    <a href="/app/vault" class="nav-link">Vault</a>
+    <a href="/ideas" class="nav-link">Ideas</a>
+    <a href="/journal" class="nav-link">Journal</a>
+    <a href="/settings" class="nav-link">Settings</a>
+  </div>
+  <div class="nav-right">
+    <button class="logout-btn" id="logoutBtn">Logout</button>
+  </div>
+</nav>
+
+<!-- PAGE -->
+<div class="page-wrap">
+
+  <!-- BREADCRUMB -->
+  <div class="breadcrumb">
+    <a href="/app/life">Life</a>
+    <span class="breadcrumb-sep">/</span>
+    <span>Insurance</span>
+  </div>
+
+  <!-- HEADER -->
+  <div class="page-header">
+    <div class="page-header-left">
+      <div class="page-icon">🏥</div>
+      <div>
+        <h1>Insurance Coverage</h1>
+        <p>Track your policies and spot coverage gaps before they cost you.</p>
+      </div>
+    </div>
+    <button class="btn-primary" id="addPolicyBtn">+ Add Policy</button>
+  </div>
+
+  <!-- LOADING -->
+  <div id="loadingState" style="text-align:center;padding:3rem;color:var(--text-muted);font-size:0.9rem;">Loading your coverage…</div>
+
+  <!-- MAIN CONTENT (hidden until loaded) -->
+  <div id="mainContent" style="display:none;">
+
+    <!-- BANK FEED INFER BANNER -->
+    <div id="inferBanner" style="display:none;"></div>
+
+    <!-- COVERAGE CHECK -->
+    <div class="section-label">Coverage Check</div>
+    <div class="coverage-grid" id="coverageGrid"></div>
+
+    <!-- POLICIES -->
+    <div class="section-label">Your Policies</div>
+    <div id="policyList"></div>
+
+  </div>
+</div>
+
+<!-- ADD/EDIT POLICY MODAL -->
+<div class="modal-overlay" id="policyModal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+  <div class="modal" id="policyModalInner">
+    <div class="modal-header">
+      <span class="modal-title" id="modalTitle">Add Insurance Policy</span>
+      <button class="modal-close" id="modalClose" aria-label="Close">✕</button>
+    </div>
+
+    <form id="policyForm" novalidate>
+      <input type="hidden" id="editPolicyId">
+
+      <div class="form-group">
+        <label class="form-label" for="fieldType">Insurance Type *</label>
+        <select class="form-select" id="fieldType" required>
+          <option value="">Choose type…</option>
+          <option value="auto">Auto</option>
+          <option value="renters">Renters</option>
+          <option value="homeowners">Homeowners</option>
+          <option value="health">Health</option>
+          <option value="life">Life</option>
+          <option value="umbrella">Umbrella</option>
+          <option value="dental">Dental</option>
+          <option value="vision">Vision</option>
+          <option value="disability">Disability</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="fieldProvider">Insurance Company</label>
+          <input class="form-input" type="text" id="fieldProvider" placeholder="e.g. State Farm">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="fieldPolicyNumber">Policy Number</label>
+          <input class="form-input" type="text" id="fieldPolicyNumber" placeholder="e.g. AB-12345" autocorrect="off">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="fieldCoverage">Coverage Amount ($)</label>
+          <input class="form-input" type="number" id="fieldCoverage" placeholder="e.g. 100000" min="0" step="1000">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="fieldPremium">Monthly Premium ($)</label>
+          <input class="form-input" type="number" id="fieldPremium" placeholder="e.g. 147" min="0" step="0.01">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="fieldExpiry">Renewal / Expiry Date</label>
+        <input class="form-input" type="date" id="fieldExpiry">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="fieldDocumentId">Link Policy Document</label>
+        <select class="form-select" id="fieldDocumentId">
+          <option value="">No document linked</option>
+        </select>
+        <p class="form-hint">Optionally attach an uploaded PDF from your vault.</p>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="fieldNotes">Notes</label>
+        <textarea class="form-textarea" id="fieldNotes" placeholder="Deductible, coverage details, contact info…"></textarea>
+      </div>
+    </form>
+
+    <div class="modal-footer">
+      <button class="btn-primary" id="saveBtn">Save Policy</button>
+      <button class="btn-secondary" id="cancelBtn">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- Shared navigation (bottom bar mobile, left sidebar desktop) -->
+
+<script>
+(function () {
+  'use strict';
+
+  var token = localStorage.getItem('fl_token');
+  if (!token) { window.location.href = '/login'; return; }
+
+  var authHdr = { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' };
+
+  var state = {
+    policies: [],
+    coverage: [],
+    documents: [],
+    editingId: null,
+  };
+
+  // ── Helpers ────────────────────────────────────────────────────────────────
+
+  function esc(s) {
+    return String(s || '')
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  function fmt(n, prefix) {
+    if (n === null || n === undefined || n === '') return '—';
+    var num = parseFloat(n);
+    if (isNaN(num)) return '—';
+    return (prefix || '') + num.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+  }
+
+  function fmtDate(d) {
+    if (!d) return '—';
+    try {
+      return new Date(d + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    } catch (e) { return d; }
+  }
+
+  function daysUntil(d) {
+    if (!d) return null;
+    var diff = new Date(d + 'T00:00:00') - new Date();
+    return Math.floor(diff / 86400000);
+  }
+
+  var _toast;
+  function showToast(msg, type) {
+    clearTimeout(_toast);
+    var el = document.getElementById('toast');
+    el.textContent = msg;
+    el.className = 'toast show' + (type ? ' ' + type : '');
+    _toast = setTimeout(function () { el.className = 'toast'; }, 3000);
+  }
+
+  var TYPE_ICONS = {
+    auto: '🚗', renters: '🏠', homeowners: '🏡', health: '🏥',
+    life: '🛡️', umbrella: '☂️', dental: '😁', vision: '👁️',
+    disability: '🦾', other: '📋',
+  };
+
+  var TYPE_LABELS = {
+    auto: 'Auto', renters: 'Renters', homeowners: 'Homeowners',
+    health: 'Health', life: 'Life', umbrella: 'Umbrella',
+    dental: 'Dental', vision: 'Vision', disability: 'Disability', other: 'Other',
+  };
+
+  // ── API calls ──────────────────────────────────────────────────────────────
+
+  function loadAll() {
+    document.getElementById('loadingState').style.display = '';
+    document.getElementById('mainContent').style.display = 'none';
+
+    Promise.all([
+      fetch('/api/insurance', { headers: authHdr }).then(function (r) { return r.json(); }),
+      fetch('/api/documents', { headers: authHdr }).then(function (r) { return r.json(); }),
+    ]).then(function (results) {
+      var insData = results[0];
+      var docData = results[1];
+
+      if (insData.success) {
+        state.policies = insData.policies || [];
+        state.coverage = insData.coverage || [];
+      }
+      if (docData.success) {
+        state.documents = docData.documents || [];
+      }
+
+      document.getElementById('loadingState').style.display = 'none';
+      document.getElementById('mainContent').style.display = '';
+      renderAll();
+
+      // Load Plaid infer suggestions (non-blocking)
+      loadInferSuggestions();
+    }).catch(function () {
+      document.getElementById('loadingState').textContent = 'Could not load policies. Please refresh.';
+    });
+  }
+
+  function loadInferSuggestions() {
+    fetch('/api/insurance/infer', { headers: authHdr })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (data.success && data.has_plaid && data.suggestions && data.suggestions.length > 0) {
+          renderInferBanner(data.suggestions);
+        }
+      })
+      .catch(function () {}); // non-fatal
+  }
+
+  // ── Render ─────────────────────────────────────────────────────────────────
+
+  function renderAll() {
+    renderCoverageGrid();
+    renderPolicyList();
+  }
+
+  function renderCoverageGrid() {
+    var grid = document.getElementById('coverageGrid');
+    var html = '';
+    state.coverage.forEach(function (c) {
+      var cls = c.covered ? 'covered' : 'gap';
+      var check = c.covered ? '✅' : '⚠️';
+      html += '<div class="coverage-chip ' + cls + '">';
+      html += '  <div class="coverage-chip-icon">' + esc(c.icon) + '</div>';
+      html += '  <div class="coverage-chip-body">';
+      html += '    <div class="coverage-chip-title">' + esc(c.title) + '</div>';
+      html += '  </div>';
+      html += '  <div class="coverage-chip-check">' + check + '</div>';
+      html += '</div>';
+    });
+    grid.innerHTML = html;
+  }
+
+  function renderPolicyList() {
+    var el = document.getElementById('policyList');
+    if (!state.policies.length) {
+      el.innerHTML = '<div class="empty-state">' +
+        '<div class="empty-state-icon">🏥</div>' +
+        '<h3>No policies on file yet</h3>' +
+        '<p>Add your first insurance policy. We\'ll track coverage gaps and expiry dates for you.</p>' +
+        '<button class="btn-primary" id="emptyAddBtn">+ Add First Policy</button>' +
+        '</div>';
+      var emptyBtn = document.getElementById('emptyAddBtn');
+      if (emptyBtn) emptyBtn.addEventListener('click', openAddModal);
+      return;
+    }
+
+    var html = '<div class="policy-list">';
+    state.policies.forEach(function (p) {
+      var icon = TYPE_ICONS[p.type] || '📋';
+      var label = TYPE_LABELS[p.type] || p.type;
+      var days = daysUntil(p.expiry_date);
+      var expiryHtml = '';
+      if (p.expiry_date) {
+        if (days < 0) {
+          expiryHtml = '<span class="policy-expiry-danger">Expired ' + fmtDate(p.expiry_date) + '</span>';
+        } else if (days <= 30) {
+          expiryHtml = '<span class="policy-expiry-warn">Expires in ' + days + ' days</span>';
+        } else {
+          expiryHtml = 'Renews ' + fmtDate(p.expiry_date);
+        }
+      }
+
+      html += '<div class="policy-card" data-id="' + p.id + '">';
+      html += '  <div class="policy-card-icon">' + icon + '</div>';
+      html += '  <div class="policy-card-body">';
+      html += '    <div class="policy-card-header">';
+      html += '      <span class="policy-card-title">' + esc(p.provider || label + ' Insurance') + '</span>';
+      html += '      <span class="policy-type-badge">' + esc(label) + '</span>';
+      html += '    </div>';
+      html += '    <div class="policy-meta">';
+      if (p.premium_monthly) {
+        html += '      <span class="policy-meta-item">💵 ' + fmt(p.premium_monthly, '$') + '/mo</span>';
+      }
+      if (p.coverage_amount) {
+        html += '      <span class="policy-meta-item">🛡️ ' + fmt(p.coverage_amount, '$') + ' coverage</span>';
+      }
+      if (p.policy_number) {
+        html += '      <span class="policy-meta-item">🔑 ' + esc(p.policy_number) + '</span>';
+      }
+      if (expiryHtml) {
+        html += '      <span class="policy-meta-item">📅 ' + expiryHtml + '</span>';
+      }
+      html += '    </div>';
+      if (p.inferred_from_plaid) {
+        html += '    <div class="policy-inferred-tag">🔗 Detected from bank account</div>';
+      }
+      if (p.document_name) {
+        html += '    <a href="/app/vault" class="policy-doc-link">📎 ' + esc(p.document_name) + '</a>';
+      }
+      if (p.notes) {
+        html += '    <div style="font-size:0.8rem;color:var(--text-muted);margin-top:0.3rem;">' + esc(p.notes) + '</div>';
+      }
+      html += '  </div>';
+      html += '  <div class="policy-card-actions">';
+      html += '    <button class="btn-ghost" data-edit="' + p.id + '" aria-label="Edit">✏️</button>';
+      html += '    <button class="btn-danger-ghost" data-delete="' + p.id + '" aria-label="Delete">🗑️</button>';
+      html += '  </div>';
+      html += '</div>';
+    });
+    html += '</div>';
+    el.innerHTML = html;
+
+    // Event delegation for edit/delete
+    el.addEventListener('click', function (e) {
+      var editBtn = e.target.closest('[data-edit]');
+      var deleteBtn = e.target.closest('[data-delete]');
+      if (editBtn) openEditModal(parseInt(editBtn.dataset.edit, 10));
+      if (deleteBtn) confirmDelete(parseInt(deleteBtn.dataset.delete, 10));
+    });
+  }
+
+  function renderInferBanner(suggestions) {
+    var banner = document.getElementById('inferBanner');
+    var html = '<div class="infer-banner">';
+    html += '<h4>🔗 We found insurance payments in your bank account</h4>';
+    html += '<p>Confirm any that match your policies and we\'ll add them automatically.</p>';
+    html += '<div class="infer-suggestion-list">';
+    suggestions.forEach(function (s, i) {
+      html += '<div class="infer-suggestion" data-idx="' + i + '">';
+      html += '  <div class="infer-suggestion-text">';
+      html += '    <strong>' + esc(s.inferred_provider) + '</strong> — looks like <strong>' + esc(s.inferred_type) + ' insurance</strong>';
+      html += '    <div class="infer-amount">$' + parseFloat(s.amount || 0).toFixed(2) + '/mo from ' + esc(s.merchant_name) + '</div>';
+      html += '  </div>';
+      html += '  <button class="btn-infer-confirm" data-confirm-idx="' + i + '">Yes, add it</button>';
+      html += '  <button class="btn-infer-dismiss" data-dismiss-idx="' + i + '">Skip</button>';
+      html += '</div>';
+    });
+    html += '</div></div>';
+    banner.innerHTML = html;
+    banner.style.display = '';
+
+    // Store suggestions for reference
+    banner._suggestions = suggestions;
+
+    banner.addEventListener('click', function (e) {
+      var confirmBtn = e.target.closest('[data-confirm-idx]');
+      var dismissBtn = e.target.closest('[data-dismiss-idx]');
+      if (confirmBtn) {
+        var idx = parseInt(confirmBtn.dataset.confirmIdx, 10);
+        var s = banner._suggestions[idx];
+        confirmInferSuggestion(s, confirmBtn.closest('.infer-suggestion'));
+      }
+      if (dismissBtn) {
+        var dismissRow = dismissBtn.closest('.infer-suggestion');
+        dismissRow.style.display = 'none';
+        // Hide banner if all dismissed
+        var remaining = banner.querySelectorAll('.infer-suggestion:not([style*="none"])');
+        if (!remaining.length) banner.style.display = 'none';
+      }
+    });
+  }
+
+  function confirmInferSuggestion(suggestion, rowEl) {
+    fetch('/api/insurance/infer/confirm', {
+      method: 'POST',
+      headers: authHdr,
+      body: JSON.stringify({
+        type: suggestion.inferred_type,
+        provider: suggestion.inferred_provider,
+        premium_monthly: suggestion.monthly_estimate,
+        merchant_name: suggestion.merchant_name,
+      }),
+    }).then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (data.success) {
+          rowEl.style.display = 'none';
+          showToast('Policy added!', 'success');
+          loadAll();
+        } else {
+          showToast(data.message || 'Could not add policy.', 'error');
+        }
+      })
+      .catch(function () { showToast('Request failed. Try again.', 'error'); });
+  }
+
+  // ── Modal ──────────────────────────────────────────────────────────────────
+
+  function populateDocumentSelect(selectedId) {
+    var sel = document.getElementById('fieldDocumentId');
+    sel.innerHTML = '<option value="">No document linked</option>';
+    // Filter to insurance-relevant documents
+    state.documents.forEach(function (d) {
+      var opt = document.createElement('option');
+      opt.value = d.id;
+      opt.textContent = d.name + (d.category ? ' [' + d.category + ']' : '');
+      if (selectedId && d.id === selectedId) opt.selected = true;
+      sel.appendChild(opt);
+    });
+  }
+
+  function openAddModal() {
+    state.editingId = null;
+    document.getElementById('modalTitle').textContent = 'Add Insurance Policy';
+    document.getElementById('policyForm').reset();
+    document.getElementById('editPolicyId').value = '';
+    populateDocumentSelect(null);
+    document.getElementById('policyModal').classList.add('open');
+    document.getElementById('fieldType').focus();
+  }
+
+  function openEditModal(id) {
+    var policy = state.policies.find(function (p) { return p.id === id; });
+    if (!policy) return;
+    state.editingId = id;
+    document.getElementById('modalTitle').textContent = 'Edit Policy';
+    document.getElementById('editPolicyId').value = id;
+    document.getElementById('fieldType').value = policy.type || '';
+    document.getElementById('fieldProvider').value = policy.provider || '';
+    document.getElementById('fieldPolicyNumber').value = policy.policy_number || '';
+    document.getElementById('fieldCoverage').value = policy.coverage_amount || '';
+    document.getElementById('fieldPremium').value = policy.premium_monthly || '';
+    document.getElementById('fieldExpiry').value = policy.expiry_date ? policy.expiry_date.slice(0, 10) : '';
+    document.getElementById('fieldNotes').value = policy.notes || '';
+    populateDocumentSelect(policy.document_id);
+    document.getElementById('policyModal').classList.add('open');
+  }
+
+  function closeModal() {
+    document.getElementById('policyModal').classList.remove('open');
+    state.editingId = null;
+  }
+
+  function savePolicy() {
+    var type = document.getElementById('fieldType').value.trim();
+    if (!type) { showToast('Please select an insurance type.', 'error'); return; }
+
+    var payload = {
+      type: type,
+      provider: document.getElementById('fieldProvider').value.trim() || null,
+      policy_number: document.getElementById('fieldPolicyNumber').value.trim() || null,
+      coverage_amount: parseFloat(document.getElementById('fieldCoverage').value) || null,
+      premium_monthly: parseFloat(document.getElementById('fieldPremium').value) || null,
+      expiry_date: document.getElementById('fieldExpiry').value || null,
+      document_id: parseInt(document.getElementById('fieldDocumentId').value, 10) || null,
+      notes: document.getElementById('fieldNotes').value.trim() || null,
+    };
+
+    var saveBtn = document.getElementById('saveBtn');
+    saveBtn.textContent = 'Saving…';
+    saveBtn.disabled = true;
+
+    var url = state.editingId ? '/api/insurance/' + state.editingId : '/api/insurance';
+    var method = state.editingId ? 'PATCH' : 'POST';
+
+    try {
+      fetch(url, { method: method, headers: authHdr, body: JSON.stringify(payload) })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          if (data.success) {
+            closeModal();
+            showToast(state.editingId ? 'Policy updated.' : 'Policy added!', 'success');
+            loadAll();
+          } else {
+            showToast(data.message || 'Could not save policy.', 'error');
+          }
+        })
+        .catch(function () {
+          showToast('Request failed. Try again.', 'error');
+        });
+    } finally {
+      saveBtn.textContent = 'Save Policy';
+      saveBtn.disabled = false;
+    }
+  }
+
+  function confirmDelete(id) {
+    var policy = state.policies.find(function (p) { return p.id === id; });
+    var name = policy ? (policy.provider || policy.type) : 'this policy';
+    if (!confirm('Delete ' + name + '? This cannot be undone.')) return;
+
+    fetch('/api/insurance/' + id, { method: 'DELETE', headers: authHdr })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (data.success) {
+          showToast('Policy deleted.', 'success');
+          loadAll();
+        } else {
+          showToast(data.message || 'Could not delete.', 'error');
+        }
+      })
+      .catch(function () { showToast('Request failed. Try again.', 'error'); });
+  }
+
+  // ── Event listeners ────────────────────────────────────────────────────────
+
+  document.getElementById('logoutBtn').addEventListener('click', function () {
+    localStorage.removeItem('fl_token');
+    window.location.href = '/login';
+  });
+
+  document.getElementById('addPolicyBtn').addEventListener('click', openAddModal);
+  document.getElementById('modalClose').addEventListener('click', closeModal);
+  document.getElementById('cancelBtn').addEventListener('click', closeModal);
+  document.getElementById('saveBtn').addEventListener('click', savePolicy);
+
+  // Close modal on overlay click (but not inner modal click)
+  document.getElementById('policyModal').addEventListener('click', function (e) {
+    if (e.target === this) closeModal();
+  });
+
+  // Close modal on Escape
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') closeModal();
+  });
+
+  // ── Boot ───────────────────────────────────────────────────────────────────
+  loadAll();
+})();
+</script>
+<link rel="stylesheet" href="/shared-nav.css">
+<script src="/shared-nav.js"></script>
+<script src="/buddy-widget.js"></script>
+<script src="/js/analytics.js"></script>
+<script>(function(){try{var u=JSON.parse(localStorage.getItem('fl_user')||'{}');if(u.id)FLA.setUser(u.id);}catch(e){}FLA.trackPage('insurance');})()</script>
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' })
+    .then(function(reg) {
+      reg.addEventListener('updatefound', function() {
+        var newWorker = reg.installing;
+        newWorker.addEventListener('statechange', function() {
+          if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+            window.dispatchEvent(new Event('SW_UPDATED'));
+          }
+        });
+      });
+    });
+  window.addEventListener('SW_UPDATED', function() { window.location.reload(); });
+}
+</script>
+</body>
+</html>
