@@ -16,7 +16,6 @@
  */
 async function getWeeklySpendingStats(pool, userId, localDate) {
   const ref = localDate || new Date().toISOString().split('T')[0];
-  const [y, m, d] = ref.split('-');
   const dateObj = new Date(ref + 'T12:00:00Z');
   const dayOfWeek = dateObj.getUTCDay(); // 0=Sun
   const diff = dateObj.getUTCDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
@@ -27,7 +26,7 @@ async function getWeeklySpendingStats(pool, userId, localDate) {
   sunday.setUTCDate(sunday.getUTCDate() + 6);
   const weekEnd = sunday.toISOString().split('T')[0];
 
-  const [row] = await pool.query(`
+  const result = await pool.query(`
     SELECT
       COALESCE(SUM(amount), 0)                                                  AS total_spent,
       COALESCE(SUM(amount) FILTER (WHERE is_impulse = true), 0)                 AS impulse_total,
@@ -39,6 +38,7 @@ async function getWeeklySpendingStats(pool, userId, localDate) {
     FROM expenses
     WHERE user_id = $1 AND expense_date >= $2 AND expense_date <= $3
   `, [userId, weekStart, weekEnd]);
+  const row = result.rows[0];
 
   return {
     total_spent:     parseFloat(row.total_spent),
