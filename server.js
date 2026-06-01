@@ -142,15 +142,22 @@ app.use('/api', (req, res, next) => {
   next();
 });
 
-// =============================================================================
-// 4a. SESSION AUTH (HttpOnly cookies — Phase 2 migration)
-// Mount before routes so all API endpoints have session access.
+// 4a. SESSION
 app.use(buildSessionMiddleware(pool));
 
-// =============================================================================
-// 4. HEALTH CHECK (before auth, before other routes)
-// =============================================================================
-app.get('/health', (req, res) => res.json({ status: 'healthy' }));
+// 4b. HEALTH CHECK — must respond even when DB is slow (Neon cold-start)
+app.get('/health', async (req, res) => {
+  const start = Date.now();
+  try {
+    await Promise.race([
+      pool.query('SELECT 1'),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('DB timeout')), 4000)),
+    ]);
+    res.json({ status: 'ok', db: 'ok', latency_ms: Date.now() - start });
+  } catch (err) {
+    res.status(503).json({ status: 'degraded', db: 'error', error: err.message, latency_ms: Date.now() - start });
+  }
+});
 
 // =============================================================================
 // 5. API ROUTES
