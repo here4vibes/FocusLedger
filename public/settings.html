@@ -1758,8 +1758,11 @@
         }
 
         // Bank Sync — delegated to shared plaid-service.js
-        function onBankSyncStatusChanged() { PlaidService.loadBankSyncStatus('bankStatus', { showUpgradeButton: true }); }
-        PlaidService.loadBankSyncStatus('bankStatus', { showUpgradeButton: true });
+        // WHY window.addEventListener: plaid-service.js loads at the bottom of the document,
+        // after this inline script block runs. Calling PlaidService here directly throws
+        // ReferenceError and prevents loadSubscriptionData() from ever being reached.
+        function onBankSyncStatusChanged() { if (typeof PlaidService !== 'undefined') PlaidService.loadBankSyncStatus('bankStatus', { showUpgradeButton: true }); }
+        window.addEventListener('load', function() { if (typeof PlaidService !== 'undefined') PlaidService.loadBankSyncStatus('bankStatus', { showUpgradeButton: true }); });
 
         // ── Upgrade Modal ────────────────────────────────────────────────────────
         var MONTHLY_LINK_MODAL = 'https://buy.stripe.com/8x200i6m784y4bS0KZcs800';
