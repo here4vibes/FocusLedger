@@ -12,8 +12,8 @@
 (function(global) {
   'use strict';
 
-  var MONTHLY_LINK = 'https://buy.stripe.com/eVq28re6pbAA0VBgWlbsc0a';
-  var ANNUAL_LINK  = 'https://buy.stripe.com/3cI14n0fzawwfQv21rbsc0b';
+  var MONTHLY_LINK = 'https://buy.stripe.com/8x200i6m784y4bS0KZcs800';
+  var ANNUAL_LINK  = 'https://buy.stripe.com/4gM14m7qb0C60ZGbpDcs801';
 
   var _modalEl = null;
   var _isAnnual = false;

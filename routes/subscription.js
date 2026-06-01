@@ -14,8 +14,8 @@ const FREE_TASK_LIMIT = 10;
 // WHY new links (2026-05-16): old links created Stripe products named "Pro"; these create
 // products named "Autopilot" so Stripe receipts, invoices, and customer portal match the rebrand.
 const STRIPE_LINKS = {
-  monthly: 'https://buy.stripe.com/eVq28re6pbAA0VBgWlbsc0a',
-  annual: 'https://buy.stripe.com/3cI14n0fzawwfQv21rbsc0b'
+  monthly: 'https://buy.stripe.com/8x200i6m784y4bS0KZcs800',
+  annual: 'https://buy.stripe.com/4gM14m7qb0C60ZGbpDcs801'
 };
 
 module.exports = function(pool) {

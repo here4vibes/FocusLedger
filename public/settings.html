@@ -1425,7 +1425,7 @@
                 </li>
             </ul>
 
-            <a href="https://buy.stripe.com/eVq28re6pbAA0VBgWlbsc0a" class="btn-upgrade-modal" id="um-checkoutBtn" target="_self">
+            <a href="https://buy.stripe.com/8x200i6m784y4bS0KZcs800" class="btn-upgrade-modal" id="um-checkoutBtn" target="_self">
                 Switch to Autopilot — $9.99/mo
             </a>
             <button class="upgrade-dismiss-link" id="upgradeModalDismiss">Maybe later</button>
@@ -1464,8 +1464,8 @@
             return { 'Authorization': 'Bearer ' + (localStorage.getItem('fl_token') || ''), 'Content-Type': 'application/json' };
         }
 
-        var MONTHLY_LINK = 'https://buy.stripe.com/eVq28re6pbAA0VBgWlbsc0a';
-        var ANNUAL_LINK = 'https://buy.stripe.com/3cI14n0fzawwfQv21rbsc0b';
+        var MONTHLY_LINK = 'https://buy.stripe.com/8x200i6m784y4bS0KZcs800';
+        var ANNUAL_LINK = 'https://buy.stripe.com/4gM14m7qb0C60ZGbpDcs801';
 
         function loadSubscriptionData() {
             fetch('/api/subscription/status', { headers: authHeaders() })
@@ -1762,8 +1762,8 @@
         PlaidService.loadBankSyncStatus('bankStatus', { showUpgradeButton: true });
 
         // ── Upgrade Modal ────────────────────────────────────────────────────────
-        var MONTHLY_LINK_MODAL = 'https://buy.stripe.com/eVq28re6pbAA0VBgWlbsc0a';
-        var ANNUAL_LINK_MODAL = 'https://buy.stripe.com/3cI14n0fzawwfQv21rbsc0b';
+        var MONTHLY_LINK_MODAL = 'https://buy.stripe.com/8x200i6m784y4bS0KZcs800';
+        var ANNUAL_LINK_MODAL = 'https://buy.stripe.com/4gM14m7qb0C60ZGbpDcs801';
         var umIsAnnual = false;
 
         function updateUpgradeModalPricing() {
@@ -2881,8 +2881,8 @@
                     + '🤝 Your 14-day free trial includes Buddy-mediated accountability + partner visibility. Subscribe to keep it after the trial.'
                     + '</p>'
                     + '<div style="display:flex;gap:8px;flex-wrap:wrap;">'
-                    + '<a href="https://buy.stripe.com/aFa8wP3rLgUUbAfdK9bsc0d" target="_blank" style="padding:8px 14px;background:var(--navy);color:#fff;border-radius:8px;font-size:0.83rem;font-weight:600;text-decoration:none;">$14.99/mo</a>'
-                    + '<a href="https://buy.stripe.com/cNi4gz6DX3445bR49zbsc0e" target="_blank" style="padding:8px 14px;background:transparent;color:var(--navy);border:1.5px solid var(--navy);border-radius:8px;font-size:0.83rem;font-weight:600;text-decoration:none;">$149/yr — save 17%</a>'
+                    + '<a href="https://buy.stripe.com/5kQ3cudOzfx07o43Xbcs802" target="_blank" style="padding:8px 14px;background:var(--navy);color:#fff;border-radius:8px;font-size:0.83rem;font-weight:600;text-decoration:none;">$14.99/mo</a>'
+                    + '<a href="https://buy.stripe.com/4gM8wOaCnesW37OctHcs803" target="_blank" style="padding:8px 14px;background:transparent;color:var(--navy);border:1.5px solid var(--navy);border-radius:8px;font-size:0.83rem;font-weight:600;text-decoration:none;">$149/yr — save 17%</a>'
                     + '</div></div>';
             }
         } else {
@@ -2893,8 +2893,8 @@
                 + 'Buddy-mediated accountability, partner dashboard, shared task visibility, and the "Tell Buddy" concern feature.'
                 + '</p>'
                 + '<div style="display:flex;gap:8px;flex-wrap:wrap;">'
-                + '<a href="https://buy.stripe.com/aFa8wP3rLgUUbAfdK9bsc0d" target="_blank" style="padding:8px 16px;background:var(--orange,#c9a84c);color:#011e5c;border-radius:8px;font-size:0.83rem;font-weight:700;text-decoration:none;">$14.99/mo</a>'
-                + '<a href="https://buy.stripe.com/cNi4gz6DX3445bR49zbsc0e" target="_blank" style="padding:8px 16px;background:rgba(255,255,255,0.12);color:#fff;border:1px solid rgba(255,255,255,0.25);border-radius:8px;font-size:0.83rem;font-weight:600;text-decoration:none;">$149/yr</a>'
+                + '<a href="https://buy.stripe.com/5kQ3cudOzfx07o43Xbcs802" target="_blank" style="padding:8px 16px;background:var(--orange,#c9a84c);color:#011e5c;border-radius:8px;font-size:0.83rem;font-weight:700;text-decoration:none;">$14.99/mo</a>'
+                + '<a href="https://buy.stripe.com/4gM8wOaCnesW37OctHcs803" target="_blank" style="padding:8px 16px;background:rgba(255,255,255,0.12);color:#fff;border:1px solid rgba(255,255,255,0.25);border-radius:8px;font-size:0.83rem;font-weight:600;text-decoration:none;">$149/yr</a>'
                 + '</div>'
                 + '<p style="margin-top:10px;font-size:0.75rem;color:rgba(255,255,255,0.5);">If one partner subscribes, both get access.</p>'
                 + '</div>';
