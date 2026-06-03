@@ -1893,6 +1893,17 @@
             70%  { opacity: 1; }
             100% { opacity: 0; transform: translate(-50%, -50%) scale(0.85); }
         }
+        @keyframes cardComplete {
+            0%   { background: var(--surface); }
+            25%  { background: rgba(201,168,76,0.10); box-shadow: 0 0 0 2px rgba(201,168,76,0.22); }
+            100% { background: var(--surface); box-shadow: none; }
+        }
+        .task-card.completing {
+            animation: cardComplete 0.55s ease-out forwards;
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .task-card.completing { animation: none; }
+        }
 
         /* PWA INSTALL BANNER */
         .install-banner {
@@ -7158,18 +7169,24 @@
                 state.summary.today_total = Math.max(state.summary.today_total || 0, state.summary.completed);
 
                 // ── Haptic feedback ──────────────────────────────────────
-                // iOS native via Capacitor Haptics
                 if (window.FLHaptics) FLHaptics.taskComplete();
-                // Web / Android via Vibration API (single crisp tap, ~50ms)
                 if (navigator.vibrate) {
                     var reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
                     if (!reducedMotion) navigator.vibrate(50);
                 }
 
-                // ── Apply animation class + spring after renderTasks rebuilds DOM ─
-                // renderTasks() replaces innerHTML, so we need to find the
-                // card in the freshly rendered DOM via setTimeout.
+                // ── Celebration ──────────────────────────────────────────
                 var prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+                if (!prefersReduced) {
+                    var remainingActive = state.tasks.filter(function(t) { return !t.is_completed; }).length;
+                    if (remainingActive === 0) {
+                        showNiceFlash('All done today! 🎉');
+                        showConfetti(evt);
+                    } else {
+                        showNiceFlash();
+                    }
+                }
+
                 renderTasks();
                 if (!prefersReduced) {
                     setTimeout(function() {
@@ -7178,9 +7195,7 @@
                             card.classList.add('completing');
                             var cb = card.querySelector('.task-checkbox');
                             if (cb) {
-                                // Trigger spring scale via CSS animation
                                 cb.classList.add('checkbox-spring');
-                                // Clean up after animation completes so re-toggling works
                                 cb.addEventListener('animationend', function handler() {
                                     cb.classList.remove('checkbox-spring');
                                     cb.removeEventListener('animationend', handler);
@@ -8074,14 +8089,14 @@
         // ========================================
         // NICE FLASH — brief positive text on task completion
         // ========================================
-        var _niceFlashes = ['Nice!', 'Well done.', 'Got it.', 'Onward.'];
-        function showNiceFlash() {
+        var _niceFlashes = ['Nice!', 'Done.', 'Got it.', 'Onward.', 'Yes!', 'Check!', 'Done ✓'];
+        function showNiceFlash(msg) {
             var el = document.getElementById('niceFlash');
             if (el) el.remove();
             var flash = document.createElement('div');
             flash.id = 'niceFlash';
             flash.className = 'nice-flash';
-            flash.textContent = _niceFlashes[Math.floor(Math.random() * _niceFlashes.length)];
+            flash.textContent = msg || _niceFlashes[Math.floor(Math.random() * _niceFlashes.length)];
             document.body.appendChild(flash);
             setTimeout(function() {
                 if (flash.parentNode) flash.remove();
