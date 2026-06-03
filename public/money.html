@@ -282,6 +282,27 @@
     .btn-skip-all{width:100%;margin-top:0.75rem;padding:0.55rem;background:transparent;border:1.5px solid var(--border);border-radius:10px;font-size:0.82rem;color:var(--text-muted);cursor:pointer;font-family:'DM Sans',sans-serif}
     .btn-skip-all:hover{border-color:var(--text-muted)}
 
+    /* Swipe card */
+    .triage-card-wrap{position:relative;touch-action:none}
+    .triage-card{cursor:grab;transform-origin:bottom center;user-select:none;will-change:transform}
+    .triage-card.dragging{cursor:grabbing;transition:none!important}
+    .swipe-label{position:absolute;top:1rem;font-family:'Space Grotesk',sans-serif;font-size:1rem;font-weight:800;border-radius:8px;padding:0.28rem 0.75rem;opacity:0;pointer-events:none;border:2.5px solid;letter-spacing:0.06em;text-transform:uppercase}
+    .swipe-label-planned{left:1rem;color:#2a9d5a;border-color:#2a9d5a;transform:rotate(-14deg)}
+    .swipe-label-impulse{right:1rem;color:var(--impulse);border-color:var(--impulse);transform:rotate(14deg)}
+    .swipe-hint{display:flex;justify-content:space-between;font-size:0.7rem;color:var(--text-muted);margin-bottom:0.85rem;padding:0 0.1rem}
+    /* Session complete */
+    .triage-complete{text-align:center;padding:1.25rem 0.5rem}
+    .triage-complete-icon{font-size:2.5rem;margin-bottom:0.65rem}
+    .triage-complete-title{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:1.1rem;color:var(--navy);margin-bottom:0.3rem}
+    .triage-complete-sub{font-size:0.8rem;color:var(--text-muted);margin-bottom:1.25rem}
+    .triage-complete-stats{display:flex;gap:1.5rem;justify-content:center;margin-bottom:1rem}
+    .triage-complete-stat{text-align:center}
+    .triage-complete-val{font-family:'Space Grotesk',sans-serif;font-size:1.8rem;font-weight:700;line-height:1}
+    .triage-complete-val.planned{color:#2a9d5a}
+    .triage-complete-val.impulse{color:var(--impulse)}
+    .triage-complete-lbl{font-size:0.68rem;color:var(--text-muted);margin-top:0.2rem;text-transform:uppercase;letter-spacing:0.05em}
+    .triage-complete-footer{font-size:0.82rem;color:var(--text-muted)}
+
     /* SPENDING ALERT BANNER */
     .spending-alert-banner{display:none;background:linear-gradient(135deg,#fff8f0,#fef3e2);border:1.5px solid #f0c070;border-radius:14px;padding:1rem 1.25rem;margin-bottom:1rem}
     .spending-alert-banner.visible{display:block}
@@ -575,6 +596,7 @@ let untriagedList = [];
 let triageIndex = 0;
 let triageCatSelected = null;
 let nudgeConfig = { delayThreshold: 75, reflectionMin: 25 };
+let swipePlanned = 0, swipeImpulse = 0, swipeImpulseAmount = 0;
 let reflectionShown = false;
 let delayCountdownInterval = null;
 let delayRemainingSeconds = 0;
@@ -1424,6 +1446,8 @@ function openTriageModal() {
   if (untriagedList.length === 0) return;
   triageIndex = 0;
   triageCatSelected = null;
+  swipePlanned = 0; swipeImpulse = 0; swipeImpulseAmount = 0;
+  document.querySelector('.btn-skip-all').style.display = '';
   document.getElementById('triageModal').classList.add('open');
   renderTriageCard();
 }
@@ -1449,14 +1473,29 @@ function renderTriageCard() {
   document.getElementById('progressText').textContent = `${done} / ${total}`;
 
   if (remaining.length === 0) {
+    const impulseFooter = swipeImpulse > 0
+      ? `<div class="triage-complete-footer"><strong style="color:var(--impulse)">$${swipeImpulseAmount.toFixed(2)}</strong> tagged as impulse — awareness is the first step.</div>`
+      : `<div class="triage-complete-footer">Zero impulse spend today. That's a win. 🎯</div>`;
     document.getElementById('triageCardContainer').innerHTML = `
-      <div style="text-align:center;padding:2rem 1rem">
-        <div style="font-size:2rem;margin-bottom:0.75rem">✅</div>
-        <div style="font-family:'Space Grotesk',sans-serif;font-weight:700;color:var(--navy);margin-bottom:0.4rem">All caught up!</div>
-        <div style="font-size:0.82rem;color:var(--text-muted)">Your spending picture is complete for now.</div>
+      <div class="triage-complete">
+        <div class="triage-complete-icon">✅</div>
+        <div class="triage-complete-title">Check-in complete</div>
+        <div class="triage-complete-sub">Here's how today looked:</div>
+        <div class="triage-complete-stats">
+          <div class="triage-complete-stat">
+            <div class="triage-complete-val planned">${swipePlanned}</div>
+            <div class="triage-complete-lbl">Planned</div>
+          </div>
+          <div class="triage-complete-stat">
+            <div class="triage-complete-val impulse">${swipeImpulse}</div>
+            <div class="triage-complete-lbl">Impulse</div>
+          </div>
+        </div>
+        ${impulseFooter}
       </div>`;
     document.querySelector('.btn-skip-all').style.display = 'none';
-    setTimeout(closeTriageModal, 1800);
+    localStorage.setItem('fl_evening_swipe_done', 'true');
+    setTimeout(closeTriageModal, 3000);
     return;
   }
 
@@ -1476,20 +1515,29 @@ function renderTriageCard() {
     </span>`).join('');
 
   document.getElementById('triageCardContainer').innerHTML = `
-    <div class="triage-card">
-      <div class="triage-card-top">
-        <div class="triage-merchant">
-          <div class="name">${exp.description || '—'}</div>
-          <div class="meta">${exp.expense_date}${exp.category_name ? ' · ' + exp.category_name : ''}</div>
+    <div class="swipe-hint">
+      <span>⬅ Impulse</span>
+      <span>Planned ➡</span>
+    </div>
+    <div class="triage-card-wrap">
+      <span class="swipe-label swipe-label-planned">Planned ✓</span>
+      <span class="swipe-label swipe-label-impulse">Impulse ⚡</span>
+      <div class="triage-card" id="swipeCard">
+        <div class="triage-card-top">
+          <div class="triage-merchant">
+            <div class="name">${exp.description || '—'}</div>
+            <div class="meta">${exp.expense_date}${exp.category_name ? ' · ' + exp.category_name : ''}</div>
+          </div>
+          <div class="triage-amount">${fmt(exp.amount)}</div>
         </div>
-        <div class="triage-amount">${fmt(exp.amount)}</div>
-      </div>
-      <div class="triage-cats" id="triageCats">${catChips}</div>
-      <div class="triage-btns">
-        <button class="btn-planned" onclick="triageExpense(${exp.id}, false)">✓ Planned</button>
-        <button class="btn-impulse" onclick="triageExpense(${exp.id}, true)">⚡ Impulse</button>
+        <div class="triage-cats" id="triageCats">${catChips}</div>
+        <div class="triage-btns">
+          <button class="btn-planned" onclick="triageExpense(${exp.id}, false)">✓ Planned</button>
+          <button class="btn-impulse" onclick="triageExpense(${exp.id}, true)">⚡ Impulse</button>
+        </div>
       </div>
     </div>`;
+  attachSwipeToCard(document.getElementById('swipeCard'), exp.id, parseFloat(exp.amount) || 0);
 }
 
 function guessSlugFromCategory(catName) {
@@ -1514,7 +1562,9 @@ function selectTriageCat(slug) {
   });
 }
 
-async function triageExpense(expenseId, isImpulse) {
+async function triageExpense(expenseId, isImpulse, amount) {
+  if (isImpulse) { swipeImpulse++; swipeImpulseAmount += (amount || 0); }
+  else swipePlanned++;
   try {
     await api(`/api/money/expenses/${expenseId}/triage`, {
       method: 'PATCH',
@@ -1532,6 +1582,63 @@ async function triageExpense(expenseId, isImpulse) {
 
 async function skipAllTriage() {
   closeTriageModal();
+}
+
+function flyOut(card, isImpulse, expenseId, amount) {
+  const dir = isImpulse ? -1 : 1;
+  card.style.transition = 'transform 0.32s cubic-bezier(0.4,0,1,1), opacity 0.32s';
+  card.style.transform = `translateX(${dir * 110}%) rotate(${dir * 22}deg)`;
+  card.style.opacity = '0';
+  setTimeout(() => triageExpense(expenseId, isImpulse, amount), 300);
+}
+
+function attachSwipeToCard(card, expenseId, amount) {
+  if (!card) return;
+  const THRESHOLD = 80;
+  let startX = 0, dragging = false;
+  const plannedLabel = card.parentElement.querySelector('.swipe-label-planned');
+  const impulseLabel = card.parentElement.querySelector('.swipe-label-impulse');
+
+  card.addEventListener('pointerdown', e => {
+    startX = e.clientX;
+    dragging = true;
+    card.setPointerCapture(e.pointerId);
+    card.classList.add('dragging');
+  });
+
+  card.addEventListener('pointermove', e => {
+    if (!dragging) return;
+    const dx = e.clientX - startX;
+    card.style.transform = `translateX(${dx}px) rotate(${dx * 0.07}deg)`;
+    const progress = Math.min(Math.abs(dx) / THRESHOLD, 1);
+    if (dx > 8)       { plannedLabel.style.opacity = progress; impulseLabel.style.opacity = 0; }
+    else if (dx < -8) { impulseLabel.style.opacity = progress; plannedLabel.style.opacity = 0; }
+    else              { plannedLabel.style.opacity = 0;        impulseLabel.style.opacity = 0; }
+  });
+
+  card.addEventListener('pointerup', e => {
+    if (!dragging) return;
+    dragging = false;
+    card.classList.remove('dragging');
+    const dx = e.clientX - startX;
+    if (Math.abs(dx) >= THRESHOLD) {
+      flyOut(card, dx < 0, expenseId, amount);
+    } else {
+      card.style.transition = 'transform 0.3s cubic-bezier(0.34,1.56,0.64,1)';
+      card.style.transform = 'translateX(0) rotate(0deg)';
+      plannedLabel.style.opacity = 0;
+      impulseLabel.style.opacity = 0;
+      setTimeout(() => { card.style.transition = ''; }, 300);
+    }
+  });
+
+  card.addEventListener('pointercancel', () => {
+    dragging = false;
+    card.classList.remove('dragging');
+    card.style.transform = '';
+    plannedLabel.style.opacity = 0;
+    impulseLabel.style.opacity = 0;
+  });
 }
 
 </script>
