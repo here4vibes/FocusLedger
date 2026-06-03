@@ -191,6 +191,7 @@ app.use('/api/adhd-tax',        require('./routes/adhd-tax')(pool));
 app.use('/api/analytics',       require('./routes/analytics')(pool));
 app.use('/api/news',            newsRouteFactory(pool));
 app.use('/api/alignment-score', require('./routes/alignment-score')(pool));
+app.use('/api/momentum-score',  require('./routes/momentum-score')(pool));
 app.use('/api/outbound-email',  require('./routes/outbound-email')(pool));
 app.use('/api/journal',         require('./routes/journal')(pool));
 app.use('/api/buddy',           require('./routes/buddy')(pool));
@@ -213,7 +214,6 @@ app.use('/api/auto-routines',    require('./routes/autoRoutines')(pool));
 app.use('/api/followup-emails',   require('./routes/followupEmails')(pool));
 // v1 API: Plaid connect/disconnect + Transaction endpoints
 app.use('/api/v1',                 require('./routes/v1')(pool));
-
 app.use('/api/v1/insights',       require('./routes/insights')(pool));
 app.use('/api/v1/check-in',       require('./routes/check-in')(pool));
 

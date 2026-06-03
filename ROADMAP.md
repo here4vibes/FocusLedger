@@ -9,7 +9,7 @@ Last updated: 2026-06-03
 | # | Feature | Est. |
 |---|---------|------|
 | #2080559 | Refactor bottom nav bar (mobile) | 4h |
-| #1837228 | Rolling Discipline Score (0–100) | 3h |
+| #1837228 | Momentum Score (0–100) — salutogenic, no shame copy | 3h |
 | #1837227 | Implementation Intentions Builder | 4h |
 | #1810936 | Fresh Start — one-tap day reset | 2h |
 | #1810949 | Buddy personality modes (Gentle/Direct/Hype) | 2h |

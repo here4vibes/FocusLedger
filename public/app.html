@@ -4190,6 +4190,50 @@
         }
         .adulting-score-setup a { color: #0891B2; text-decoration: none; font-weight: 500; }
 
+        /* ── Momentum Score Card ──────────────────────────────────────────────── */
+        .momentum-score-card {
+            display: none;
+            align-items: center;
+            gap: 1.1rem;
+            background: var(--surface-raised, #faf8f4);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 0.9rem 1.2rem;
+            margin-bottom: 1rem;
+            transition: box-shadow 0.2s;
+        }
+        .momentum-score-card.msw-visible { display: flex; }
+        .msw-number {
+            font-size: 2rem; font-weight: 700;
+            font-family: 'Space Grotesk', sans-serif;
+            line-height: 1; min-width: 2.8ch;
+            color: #D97706;
+            transition: color 0.4s;
+        }
+        .msw-number.msw-mid  { color: #059669; }
+        .msw-number.msw-high { color: #047857; }
+        .msw-body { flex: 1; min-width: 0; }
+        .msw-eyebrow {
+            font-size: 0.7rem; font-weight: 600;
+            text-transform: uppercase; letter-spacing: 0.07em;
+            color: var(--text-muted); margin-bottom: 0.2rem;
+        }
+        .msw-message { font-size: 0.85rem; color: var(--text-body); line-height: 1.45; }
+        .msw-pillars {
+            display: flex; gap: 0.35rem; align-items: center; flex-shrink: 0;
+        }
+        .msw-pip {
+            width: 9px; height: 9px; border-radius: 50%;
+            background: var(--border, #e2ddd6);
+            transition: background 0.35s;
+            flex-shrink: 0;
+        }
+        .msw-pip.msw-lit      { background: #10B981; }
+        .msw-pip.msw-partial  { background: #F59E0B; }
+        @media (max-width: 900px) {
+            .momentum-score-card { margin: 0 1rem 1rem; }
+        }
+
         /* ── Task Notes ─────────────────────────────────────────────────────── */
         .task-notes-section { margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px dashed var(--border); }
 
@@ -4519,6 +4563,21 @@
     <!-- Shown for new users with no score yet -->
     <div class="adulting-score-setup" id="adultingScoreSetup">
         🌿 <a href="/app/life">Set up your Life section</a> to see your Adulting Score
+    </div>
+
+    <!-- MOMENTUM SCORE CARD — salutogenic: measures what's working today -->
+    <div class="momentum-score-card" id="momentumScoreCard" role="status" aria-label="Today's momentum score">
+        <div class="msw-number" id="mswNumber">—</div>
+        <div class="msw-body">
+            <div class="msw-eyebrow">Today's Momentum</div>
+            <div class="msw-message" id="mswMessage">Loading…</div>
+        </div>
+        <div class="msw-pillars" id="mswPillars" title="Tasks · Routines · Check-in · Spending review">
+            <div class="msw-pip" id="mswPip0" title="Task traction"></div>
+            <div class="msw-pip" id="mswPip1" title="Routine rhythm"></div>
+            <div class="msw-pip" id="mswPip2" title="Buddy check-in"></div>
+            <div class="msw-pip" id="mswPip3" title="Spending review"></div>
+        </div>
     </div>
 
     <!-- WEEKLY REPORT MODAL -->
@@ -7215,6 +7274,8 @@
                 .then(function() {
                     fetchTasks();
                     fetchTaskSummary();
+                    // Update momentum score when task status changes
+                    window.dispatchEvent(new CustomEvent('fl-task-toggled'));
                     // Time-Blindness: show "how long did this take?" if task had an estimate
                     if (!wasCompleted) {
                         showTimeCompletionPrompt(taskId, task.title);
@@ -10566,6 +10627,77 @@
         // ───── Kick off initial fetch ─────
         // Wait a bit for auth state to settle
         setTimeout(fetchAlignmentScore, 1200);
+
+        // ───── Momentum Score widget ──────────────────────────────────────
+        // Salutogenic framing: shows what's working today (tasks, routines,
+        // check-in, spending awareness). No shaming copy at any score level.
+        (function loadMomentumScore() {
+            var card   = document.getElementById('momentumScoreCard');
+            var num    = document.getElementById('mswNumber');
+            var msg    = document.getElementById('mswMessage');
+            var pips   = [0,1,2,3].map(function(i){ return document.getElementById('mswPip'+i); });
+            if (!card) return;
+
+            function pipClass(score) {
+                if (score >= 75) return 'msw-lit';
+                if (score >= 25) return 'msw-partial';
+                return '';
+            }
+
+            api('GET', '/momentum-score').then(function(data) {
+                if (!data.success) return;
+                var score = data.score;
+
+                // Number + color
+                num.textContent = score;
+                num.classList.remove('msw-mid', 'msw-high');
+                if (score >= 70) num.classList.add('msw-high');
+                else if (score >= 40) num.classList.add('msw-mid');
+                // below 40 stays amber (default)
+
+                // Pillars → pip dots
+                var keys = ['traction','rhythm','connection','awareness'];
+                keys.forEach(function(k, i) {
+                    var p = data.pillars && data.pillars[k];
+                    var cls = p ? pipClass(p.score) : '';
+                    pips[i].className = 'msw-pip' + (cls ? ' ' + cls : '');
+                    if (p) pips[i].setAttribute('title', p.label + ': ' + p.note);
+                });
+
+                // Message
+                msg.textContent = data.message || '';
+
+                // Show card
+                card.classList.add('msw-visible');
+            }).catch(function() {
+                // Non-blocking — keep card hidden on error
+            });
+        })();
+
+        // Re-fetch momentum score when a task is toggled (fire-and-forget)
+        window.addEventListener('fl-task-toggled', function() {
+            var card = document.getElementById('momentumScoreCard');
+            if (!card || !card.classList.contains('msw-visible')) return;
+            api('GET', '/momentum-score').then(function(data) {
+                if (!data.success) return;
+                var num = document.getElementById('mswNumber');
+                var msg = document.getElementById('mswMessage');
+                if (!num) return;
+                num.textContent = data.score;
+                num.classList.remove('msw-mid', 'msw-high');
+                if (data.score >= 70) num.classList.add('msw-high');
+                else if (data.score >= 40) num.classList.add('msw-mid');
+                if (msg) msg.textContent = data.message || '';
+                var keys = ['traction','rhythm','connection','awareness'];
+                keys.forEach(function(k, i) {
+                    var pip = document.getElementById('mswPip'+i);
+                    var p = data.pillars && data.pillars[k];
+                    if (!pip || !p) return;
+                    pip.className = 'msw-pip' + (p.score >= 75 ? ' msw-lit' : p.score >= 25 ? ' msw-partial' : '');
+                    pip.setAttribute('title', p.label + ': ' + p.note);
+                });
+            }).catch(function(){});
+        });
 
         // ───── Adulting Score home widget ─────────────────────────────────
         // Fetches today's health score and animates the small ring widget above the dashboard.
