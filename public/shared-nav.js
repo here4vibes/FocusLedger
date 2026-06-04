@@ -124,7 +124,10 @@
     // Brand header
     var brand = document.createElement('div');
     brand.className = 'shared-sidebar-brand';
-    brand.textContent = APP_NAME;
+    brand.innerHTML = '<img src="/icons/fl-icon.svg" style="height:28px;width:auto;display:block;flex-shrink:0;filter:brightness(0) invert(1) sepia(1) saturate(3) hue-rotate(10deg)" alt=""> <span style="font-weight:700;color:rgba(255,255,255,0.95)">Focus</span><span style="font-weight:400;color:#f0b429">Ledger</span>';
+    brand.style.display = 'flex';
+    brand.style.alignItems = 'center';
+    brand.style.gap = '0.5rem';
     nav.appendChild(brand);
 
     // Primary tab items (same links as mobile bottom nav)
@@ -227,7 +230,10 @@
 
     var logo = document.createElement('span');
     logo.className = 'shared-menu-logo';
-    logo.textContent = APP_NAME;
+    logo.innerHTML = '<img src="/icons/fl-icon.svg" style="height:26px;width:auto;display:block;flex-shrink:0" alt=""> <span style="font-weight:700">Focus</span><span style="font-weight:400;color:#f0b429">Ledger</span>';
+    logo.style.display = 'flex';
+    logo.style.alignItems = 'center';
+    logo.style.gap = '0.4rem';
 
     // PRO badge — hidden by default, shown for Autopilot/Tandem users
     var proBadge = document.createElement('span');

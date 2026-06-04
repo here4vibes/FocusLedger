@@ -62,9 +62,9 @@
             --text-main: #141416;
             --text-body: #44444a;
             --text-muted: #8a8a95;
-            --teal: #4a9292;
-            --teal-light: #5ba4a4;
-            --teal-dark: #3a7a7a;
+            --teal: #38d9c0;
+            --teal-light: #6ee4d2;
+            --teal-dark: #22b8a4;
             --border: #e8e3d9;
             --shadow-sm: 0 1px 3px rgba(0,0,0,0.05), 0 4px 16px rgba(0,0,0,0.04);
             --shadow-md: 0 4px 12px rgba(0,0,0,0.06), 0 16px 40px rgba(0,0,0,0.06);
@@ -73,8 +73,8 @@
             --radius-sm: 10px;
             --radius-md: 16px;
             --radius-lg: 22px;
-            --gold: #F26B3A;
-            --gold-light: #F5895A;
+            --gold: #f0b429;
+            --gold-light: #f7c948;
         }
 
         html { scroll-behavior: smooth; }
@@ -116,17 +116,25 @@
             margin: 0 auto;
         }
         .logo {
-            font-family: var(--font-display);
-            font-size: 1.2rem;
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.15rem;
             font-weight: 700;
-            color: var(--navy);
             display: flex;
             align-items: center;
             gap: 0.5rem;
             text-decoration: none;
             letter-spacing: -0.02em;
+            line-height: 1;
         }
-        .logo-icon { height: 26px; width: auto; display: block; flex-shrink: 0; }
+        .logo-icon { height: 30px; width: auto; display: block; flex-shrink: 0; }
+        .logo-focus {
+            color: var(--navy);
+            font-weight: 700;
+        }
+        .logo-ledger {
+            color: var(--gold);
+            font-weight: 400;
+        }
         .nav-links { display: flex; align-items: center; gap: 0.25rem; }
         .nav-links-pages { display: contents; }
         .nav-links a {
@@ -1227,7 +1235,7 @@
             gap: 0.5rem;
             font-size: 0.9rem;
             font-weight: 600;
-            color: rgba(255,255,255,0.78);
+            color: rgba(255,255,255,0.88);
         }
         .footer-logo img { height: 20px; opacity: 0.7; }
         .footer-nav {
@@ -2110,8 +2118,8 @@
 <nav>
     <div class="nav-inner">
         <a href="/" class="logo">
-            <img src="/icons/fl-icon.png" class="logo-icon" alt="FocusLedger">
-            FocusLedger
+            <img src="/icons/fl-icon.svg" class="logo-icon" alt="FocusLedger logo">
+            <span class="logo-focus">Focus</span><span class="logo-ledger">Ledger</span>
         </a>
         <div class="nav-links">
             <span class="nav-links-pages">
@@ -3152,7 +3160,7 @@
 <footer>
     <div class="footer-inner">
         <div class="footer-logo">
-            <img src="/icons/fl-icon.png" alt="FocusLedger">
+            <img src="/icons/fl-icon.svg" alt="FocusLedger">
             FocusLedger
         </div>
         <nav class="footer-nav">
