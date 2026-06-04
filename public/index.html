@@ -94,22 +94,19 @@
 
         /* ── NAV ── */
         nav {
-            background: transparent;
+            background: rgba(250,248,244,0.97);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            box-shadow: 0 1px 0 rgba(1,30,92,0.08);
             position: sticky;
             top: 0;
             z-index: 200;
-            transition: background 0.3s, backdrop-filter 0.3s, box-shadow 0.3s;
-        }
-        nav.nav-scrolled {
-            background: rgba(250,248,244,0.88);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            box-shadow: 0 1px 0 var(--border);
         }
         .nav-inner {
             padding: 0 2rem;
             height: 64px;
             display: flex;
+            justify-content: space-between;
             align-items: center;
             max-width: 1200px;
             margin: 0 auto;
@@ -129,11 +126,15 @@
         .logo-icon { height: 30px; width: auto; display: block; flex-shrink: 0; }
         .logo-focus { color: var(--navy); font-weight: 700; }
         .logo-ledger { color: var(--gold); font-weight: 400; }
+        .nav-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
         .nav-links-pages {
             display: flex;
             align-items: center;
             gap: 0;
-            margin-left: 0.5rem;
         }
         .nav-links-pages a {
             color: var(--text-body);
@@ -145,12 +146,6 @@
             transition: all 0.15s;
         }
         .nav-links-pages a:hover { color: var(--navy); background: rgba(1,30,92,0.05); }
-        .nav-actions {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            margin-left: auto;
-        }
         .nav-cta {
             background: var(--navy) !important;
             color: white !important;
@@ -2128,14 +2123,14 @@
             <img src="/icons/fl-icon.svg" class="logo-icon" alt="FocusLedger logo">
             <span class="logo-focus">Focus</span><span class="logo-ledger">Ledger</span>
         </a>
-        <span class="nav-links-pages">
-            <a href="/adhd-tax">ADHD Tax Calc</a>
-            <a href="/science">The Science</a>
-            <a href="/pricing">Pricing</a>
-            <a href="#try-buddy">Try Buddy</a>
-            <a href="/login" id="navAuthLink">Log In</a>
-        </span>
         <div class="nav-actions">
+            <span class="nav-links-pages">
+                <a href="/adhd-tax">ADHD Tax Calc</a>
+                <a href="/science">The Science</a>
+                <a href="/pricing">Pricing</a>
+                <a href="#try-buddy">Try Buddy</a>
+                <a href="/login" id="navAuthLink">Log In</a>
+            </span>
             <a href="/signup" id="navCtaLink" class="nav-cta">Start Free</a>
             <button class="nav-hamburger" id="navHamburger" aria-label="Open menu">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
