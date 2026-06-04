@@ -13,7 +13,7 @@
  * when offline. The ~50ms latency cost is invisible on modern connections.
  */
 
-const CACHE_VERSION = 'fl-v36';
+const CACHE_VERSION = 'fl-v37';
 const OFFLINE_URL = '/offline.html';
 
 // Assets to precache on install (app shell)
