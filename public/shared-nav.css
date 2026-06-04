@@ -4,14 +4,14 @@
 :root {
   --nav-brand: #011e5c;
   --nav-brand-light: rgba(1,30,92,0.08);
-  --nav-brand-active: #c9a84c;
-  --nav-bg: #011e5c;
-  --nav-border: rgba(255,255,255,0.1);
-  --nav-text: rgba(255,255,255,0.62);
-  --nav-text-active: #c9a84c;
-  --nav-text-hover: #ffffff;
-  --nav-height: 60px;
-  --nav-sidebar-width: 200px;
+  --nav-brand-active: #F26B3A;
+  --nav-bg: rgba(250,248,244,0.92);
+  --nav-border: rgba(0,0,0,0.06);
+  --nav-text: rgba(1,30,92,0.45);
+  --nav-text-active: #011e5c;
+  --nav-text-hover: #011e5c;
+  --nav-height: 68px;
+  --nav-sidebar-width: 210px;
   --nav-z: 1000;
   --menu-z: 1100;
   --overlay-z: 1050;
@@ -144,11 +144,13 @@ body[data-nav-shell="desktop"] #shared-bottom-nav {
   right: 0;
   height: var(--nav-height);
   background: var(--nav-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   border-top: 1px solid var(--nav-border);
   z-index: var(--nav-z);
   display: flex;
   align-items: stretch;
-  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.18);
+  box-shadow: 0 -1px 0 rgba(0,0,0,0.05), 0 -4px 20px rgba(0,0,0,0.06);
   /* safe area inset for iOS home indicator */
   padding-bottom: env(safe-area-inset-bottom, 0);
 }
@@ -159,57 +161,57 @@ body[data-nav-shell="desktop"] #shared-bottom-nav {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 3px;
+  gap: 4px;
   text-decoration: none;
   color: var(--nav-text);
   font-size: 10px;
   font-weight: 500;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.01em;
   cursor: pointer;
   border: none;
   background: none;
   padding: 0;
   -webkit-tap-highlight-color: transparent;
-  transition: color var(--transition-speed) ease,
-              background var(--transition-speed) ease;
-  /* Spring ease for active-state transitions — snappy, physical feel */
+  transition: color var(--transition-speed) ease;
   --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .shared-nav-item.active {
   color: var(--nav-text-active);
-  /* Spring slide: icon pill slides in with bounce when this becomes active */
-  transition: color 0.3s var(--spring),
-              background 0.3s var(--spring);
+  font-weight: 600;
 }
 
 .shared-nav-item:hover,
 .shared-nav-item:focus-visible {
   color: var(--nav-text-hover);
   outline: none;
-  transition: color 0.15s ease,
-              background 0.15s ease;
 }
 
 .shared-nav-item.active .shared-nav-icon {
-  background: rgba(201,168,76,0.15);
+  background: rgba(1,30,92,0.08);
 }
 
 .shared-nav-icon {
-  width: 36px;
-  height: 24px;
+  width: 40px;
+  height: 26px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 12px;
-  font-size: 18px;
+  border-radius: 13px;
+  font-size: 19px;
   line-height: 1;
-  transition: background var(--transition-speed) ease;
+  transition: background 0.2s ease, transform 0.2s var(--spring);
+}
+
+.shared-nav-item.active .shared-nav-icon {
+  transform: scale(1.08);
 }
 
 .shared-nav-label {
   font-size: 10px;
   white-space: nowrap;
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  font-weight: 500;
 }
 
 /* ── Hamburger Button ─────────────────────────────────────── */
@@ -349,7 +351,7 @@ body[data-nav-shell="desktop"] #shared-bottom-nav {
 /* Shown in menu header for Autopilot/Tandem users */
 .shared-pro-badge {
   display: none;
-  background: linear-gradient(135deg, #c9a84c, #e0c06a);
+  background: linear-gradient(135deg, #F26B3A, #F5895A);
   color: #1a1a1a;
   font-family: 'Space Grotesk', system-ui, sans-serif;
   font-size: 0.65rem;
@@ -592,7 +594,7 @@ body.shared-nav-active {
   }
 
   .shared-nav-item.active {
-    background: rgba(201,168,76,0.12);
+    background: rgba(242,107,58,0.10);
     color: var(--nav-text-active);
     font-weight: 600;
   }

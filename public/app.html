@@ -31,28 +31,30 @@
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
         :root {
-            --orange: #c9a84c;
-            --orange-light: #d4b56a;
+            --orange: #F26B3A;
+            --orange-light: #F5895A;
             --navy: #011e5c;
             --navy-mid: #02287a;
             --navy-light: #033099;
             --cream: #faf9f7;
             --cream-dark: #f5f3ef;
             --warm-white: #fafaf8;
-            --text-dark: #1a1a1a;
+            --text-dark: #141416;
             --text-muted: #6b6b6b;
             --green: #5BA4A4;
             --green-muted: #4A9292;
-        
             --success: #7DB87D;
             --warning: #E07A5F;
             --error: #E07A5F;
             --error-light: #FAEAE5;
-            --border: #e8e5e0;
+            --border: #e8e3d9;
             --surface: #FFFFFF;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.05), 0 4px 16px rgba(0,0,0,0.04);
+            --shadow-md: 0 4px 12px rgba(0,0,0,0.06), 0 16px 40px rgba(0,0,0,0.06);
+            --radius-card: 18px;
 
             /* App navigation height — used for dashboard min-height calc */
-            --nav-height: 60px;
+            --nav-height: 68px;
 
             /* Skeleton loader colors */
             --skeleton-base: #f0f0f0;
@@ -198,10 +200,10 @@
         /* CARD SHARED */
         .card {
             background: white;
-            border-radius: 16px;
+            border-radius: var(--radius-card, 18px);
             padding: 1.5rem;
-            border: 1px solid #E8E5E0;
-            box-shadow: 0 4px 20px rgba(45, 42, 38, 0.04);
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow-sm);
         }
 
         /* ADD TASK FORM */
@@ -233,16 +235,19 @@
             color: white;
             border: none;
             padding: 0.75rem 1.25rem;
-            border-radius: 10px;
-            font-family: 'DM Sans', sans-serif;
+            border-radius: 12px;
+            font-family: 'Space Grotesk', sans-serif;
             font-size: 0.9rem;
-            font-weight: 500;
+            font-weight: 600;
             cursor: pointer;
-            transition: background 0.2s, transform 0.1s;
+            transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
             white-space: nowrap;
+            box-shadow: 0 2px 8px rgba(242,107,58,0.25);
+            letter-spacing: -0.01em;
         }
         .btn-orange:hover {
             background: var(--orange-light);
+            box-shadow: 0 4px 14px rgba(242,107,58,0.3);
         }
         .btn-orange:active {
             transform: scale(0.97);
@@ -370,20 +375,20 @@
         /* FILTER TABS */
         .filter-tabs {
             display: flex;
-            gap: 0.25rem;
+            gap: 0.2rem;
             margin-bottom: 1rem;
-            background: var(--cream);
-            border-radius: 10px;
-            padding: 0.25rem;
+            background: rgba(0,0,0,0.04);
+            border-radius: 12px;
+            padding: 0.2rem;
         }
         .filter-tab {
             flex: 1;
             padding: 0.5rem 0.75rem;
             border: none;
             background: none;
-            border-radius: 8px;
-            font-family: 'DM Sans', sans-serif;
-            font-size: 0.82rem;
+            border-radius: 10px;
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 0.8rem;
             font-weight: 500;
             color: var(--text-muted);
             cursor: pointer;
@@ -393,7 +398,8 @@
         .filter-tab.active {
             background: white;
             color: var(--navy);
-            box-shadow: 0 2px 8px rgba(45, 42, 38, 0.06);
+            font-weight: 600;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.08), 0 2px 8px rgba(0,0,0,0.04);
         }
         .filter-tab:hover:not(.active) {
             color: var(--navy);
