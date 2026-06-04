@@ -110,8 +110,8 @@
             padding: 0 2rem;
             height: 64px;
             display: flex;
-            justify-content: space-between;
             align-items: center;
+            gap: 1.5rem;
             max-width: 1200px;
             margin: 0 auto;
         }
@@ -135,8 +135,8 @@
             color: var(--gold);
             font-weight: 400;
         }
-        .nav-links { display: flex; align-items: center; gap: 0.25rem; }
-        .nav-links-pages { display: contents; }
+        .nav-links { display: flex; align-items: center; gap: 0.25rem; flex: 1; }
+        .nav-links-pages { display: flex; align-items: center; gap: 0.25rem; }
         .nav-links a {
             color: var(--text-body);
             text-decoration: none;
@@ -148,6 +148,7 @@
         }
         .nav-links a:hover { color: var(--navy); background: rgba(1,30,92,0.05); }
         .nav-cta {
+            margin-left: auto;
             background: var(--navy) !important;
             color: white !important;
             font-weight: 600 !important;
