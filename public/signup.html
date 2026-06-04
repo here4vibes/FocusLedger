@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#011e5c">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="FocusLedger">
+<link rel="icon" type="image/png" sizes="32x32" href="/icons/fl-icon.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/icons/fl-icon.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/fl-icon.png">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign Up Free — FocusLedger ADHD Productivity App</title>
+    <meta name="description" content="Create your free FocusLedger account. Tasks, money tracking, and impulse spending detection — executive functioning on autopilot for ADHD brains.">
+    <meta name="robots" content="noindex">
+    <link rel="canonical" href="https://focusledger.net/signup">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+    <!-- Meta Pixel base + PageView -->
+    <script>
+    !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+    n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
+    n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
+    t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,
+    document,'script','https://connect.facebook.net/en_US/fbevents.js');
+    fbq('init','1597499061553078');
+    fbq('track','PageView');
+    </script>
+    <noscript><img height="1" width="1" style="display:none"
+    src="https://www.facebook.com/tr?id=1597499061553078&ev=PageView&noscript=1"/></noscript>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --orange: #c9a84c;
+            --orange-light: #d4b56a;
+            --navy: #011e5c;
+            --cream: #faf9f7;
+            --cream-dark: #f5f3ef;
+            --text-dark: #1a1a1a;
+            --text-muted: #6b6b6b;
+            --green: #5BA4A4;
+        
+            --success: #7DB87D;
+            --warning: #E07A5F;
+            --error: #E07A5F;
+            --error-light: #FAEAE5;
+            --border: #e8e5e0;
+            --surface: #FFFFFF;
+        }
+        body {
+            font-family: 'DM Sans', sans-serif;
+            color: var(--text-dark);
+            background: var(--cream);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        h1, h2, h3 { font-family: 'Space Grotesk', sans-serif; }
+
+        .auth-nav {
+            padding: 1.25rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1200px;
+            margin: 0 auto;
+            width: 100%;
+        }
+        .logo {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--navy);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            text-decoration: none;
+        }
+        .logo-dot {
+            width: 12px;
+            height: 12px;
+            background: var(--orange);
+            border-radius: 3px;
+            transform: rotate(45deg);
+        }
+
+        .auth-container {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+        .auth-card {
+            background: white;
+            border-radius: 20px;
+            padding: 2.5rem;
+            width: 100%;
+            max-width: 420px;
+            box-shadow: 0 8px 40px rgba(45, 42, 38, 0.06);
+            border: 1px solid #E8E5E0;
+        }
+        .auth-card h1 {
+            font-size: 1.75rem;
+            color: var(--navy);
+            margin-bottom: 0.5rem;
+            text-align: center;
+        }
+        .auth-card .subtitle {
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            margin-bottom: 2rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.25rem;
+        }
+        .form-group label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--navy);
+            margin-bottom: 0.4rem;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 0.8rem 1rem;
+            border: 2px solid #E8E5E0;
+            border-radius: 12px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.95rem;
+            color: var(--text-dark);
+            background: white;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .form-group input:focus {
+            border-color: var(--orange-light);
+        }
+        .form-group input::placeholder {
+            color: #B0ADA8;
+        }
+        .form-hint {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            margin-top: 0.3rem;
+        }
+        .btn-submit {
+            width: 100%;
+            padding: 0.9rem;
+            background: var(--orange);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.1s;
+            margin-top: 0.5rem;
+        }
+        .btn-submit:hover { background: var(--orange-light); }
+        .btn-submit:active { transform: scale(0.98); }
+        .btn-submit:disabled { opacity: 0.6; cursor: not-allowed; }
+
+        .btn-google {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+            padding: 0.8rem 1rem;
+            background: #ffffff;
+            color: #3c4043;
+            border: 1.5px solid #dadce0;
+            border-radius: 12px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.95rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.2s, box-shadow 0.2s, border-color 0.2s;
+            margin-bottom: 0.5rem;
+        }
+        .btn-google:hover {
+            background: #f8f9fa;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border-color: #c6c6c6;
+        }
+        .btn-google:active { transform: scale(0.98); }
+        .btn-google:disabled { opacity: 0.6; cursor: not-allowed; }
+        .btn-google svg { flex-shrink: 0; }
+
+        .btn-google.loading {
+            pointer-events: none;
+            opacity: 0.7;
+        }
+
+        .or-divider {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin: 1.25rem 0;
+            color: #9aa0a6;
+            font-size: 0.82rem;
+        }
+        .or-divider::before,
+        .or-divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: #e8e5e0;
+        }
+
+        .error-msg {
+            display: none;
+            background: #FFF5F0;
+            color: var(--orange);
+            padding: 0.75rem 1rem;
+            border-radius: 10px;
+            font-size: 0.88rem;
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+        .error-msg.visible { display: block; }
+
+        .auth-footer {
+            text-align: center;
+            margin-top: 1.5rem;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+        .auth-footer a {
+            color: var(--orange);
+            text-decoration: none;
+            font-weight: 500;
+        }
+        .auth-footer a:hover { text-decoration: underline; }
+
+        .page-footer {
+            text-align: center;
+            padding: 1.5rem;
+        }
+        .page-footer p {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+        }
+        .page-footer a {
+            color: var(--orange);
+            text-decoration: none;
+        }
+
+        .benefits {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            margin-bottom: 1.75rem;
+            padding: 1rem 1.25rem;
+            background: var(--cream);
+            border-radius: 12px;
+        }
+        .benefit-item {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            font-size: 0.88rem;
+            color: var(--text-muted);
+        }
+        .benefit-check {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #D4EDEC;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 0.7rem;
+            color: var(--green);
+        }
+
+        @media (max-width: 480px) {
+            .auth-card { padding: 2rem 1.5rem; }
+            .auth-nav { padding: 1rem 1.25rem; }
+        }
+    </style>
+<link rel="stylesheet" href="/css/design-system.css">
+</head>
+<body>
+<noscript><p style="padding:2rem;text-align:center;font-family:'DM Sans',sans-serif;color:#374151">FocusLedger requires JavaScript.</p></noscript>
+
+    <div class="auth-nav">
+        <a href="/" class="logo">
+            <div class="logo-dot"></div>
+            FocusLedger
+        </a>
+    </div>
+
+    <div class="auth-container">
+        <div class="auth-card">
+            <!-- No-guilt accountability framing — the first interaction sets the cognitive pattern. -->
+            <h3>Keep the promises that matter to you.</h3>
+            <p class="subtitle">No guilt. No pressure. Just a system that holds your place when your brain moves on.</p>
+
+            <!-- Benefit bullets: what you get, not what you should do -->
+            <div class="benefits">
+                <div class="benefit-item">
+                    <div class="benefit-check">&#10003;</div>
+                    <span>Nudges that show up when you need them — not when you don't</span>
+                </div>
+                <div class="benefit-item">
+                    <div class="benefit-check">&#10003;</div>
+                    <span>Spending awareness without shame — patterns, not lectures</span>
+                </div>
+                <div class="benefit-item">
+                    <div class="benefit-check">&#10003;</div>
+                    <span>Free to start — no credit card, no time limit</span>
+                </div>
+            </div>
+
+            <div class="error-msg" id="errorMsg"></div>
+
+            <!-- Social proof: quick trust signal before primary action -->
+            <div style="text-align:center;font-size:0.78rem;color:var(--text-muted);margin-bottom:0.85rem;display:flex;align-items:center;justify-content:center;gap:0.5rem;">
+                <span style="color:#5BA4A4;font-size:0.9rem;">★★★★★</span>
+                <span>Loved by ADHD brains tired of juggling apps</span>
+            </div>
+
+            <!-- Google Sign-In button — shown first to reduce friction -->
+            <button type="button" class="btn-google" id="googleBtn" style="border-color:#4285F4;border-width:1.5px;font-weight:600;padding:0.9rem 1rem;font-size:1rem;">
+                <svg width="20" height="20" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                    <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                    <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+                    <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                </svg>
+                Sign up with Google
+            </button>
+
+            <div class="or-divider">or</div>
+
+            <form id="signupForm" onsubmit="return false;">
+                <div class="form-group">
+                    <label for="name">Name (optional)</label>
+                    <input type="text" id="name" placeholder="Your name" autocomplete="name">
+                </div>
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <input type="email" id="email" placeholder="you@example.com" required autocomplete="email">
+                </div>
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" placeholder="At least 6 characters" required autocomplete="new-password" minlength="6">
+                    <div class="form-hint">Minimum 6 characters</div>
+                </div>
+                <button type="submit" class="btn-submit" id="submitBtn">Create Account</button>
+            </form>
+
+            <div class="auth-footer">
+                Already have an account? <a href="/login">Log in</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="page-footer">
+        <p>FocusLedger &mdash; Built by <a href="https://polsia.com">Polsia</a> &middot; <a href="/terms">Terms of Service</a> &middot; <a href="/privacy">Privacy Policy</a></p>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════
+         Add to Home Screen Modal (shown after successful signup, before app)
+         ══════════════════════════════════════════════════════════════════════ -->
+    <div id="athsModal" role="dialog" aria-modal="true" aria-label="Add FocusLedger to Home Screen"
+         style="display:none;position:fixed;inset:0;z-index:99999;background:rgba(1,30,92,0.94);padding:20px;box-sizing:border-box;overflow-y:auto;-webkit-overflow-scrolling:touch;">
+      <div style="background:#fff;border-radius:20px;max-width:400px;margin:0 auto;padding:36px 24px 28px;text-align:center;position:relative;margin-top:max(20px,calc(50svh - 280px));">
+        <div id="athsEmoji" style="font-size:3rem;margin-bottom:16px;line-height:1;">📱</div>
+        <h2 id="athsTitle" style="font-family:Georgia,serif;font-size:1.45rem;color:#011e5c;margin:0 0 8px;line-height:1.3;"></h2>
+        <p id="athsSubtitle" style="color:#6b6560;font-size:0.875rem;margin:0 0 20px;line-height:1.55;"></p>
+        <div id="athsSteps"></div>
+        <div id="athsBtns" style="margin-top:20px;display:flex;flex-direction:column;gap:10px;"></div>
+        <button id="athsSkip" style="display:block;background:none;border:none;color:#9e9994;font-size:0.8rem;cursor:pointer;margin:16px auto 0;padding:4px 8px;font-family:inherit;text-decoration:underline;text-underline-offset:3px;">Maybe later</button>
+      </div>
+    </div>
+
+    <script>
+    (function() {
+        'use strict';
+
+        // ── UTM attribution capture ────────────────────────────────────────────
+        // Persist UTMs from URL on direct /signup landings (covers campaigns that
+        // link directly here rather than via the landing page).
+        (function captureUtm() {
+            try {
+                var params = new URLSearchParams(window.location.search);
+                var keys = ['utm_source','utm_medium','utm_campaign','utm_content','utm_term'];
+                var hasUtm = keys.some(function(k) { return params.get(k); });
+                if (hasUtm) {
+                    var data = {};
+                    keys.forEach(function(k) { if (params.get(k)) data[k] = params.get(k); });
+                    data.signup_referrer = document.referrer || '';
+                    localStorage.setItem('fl_attribution', JSON.stringify(data));
+                } else if (!localStorage.getItem('fl_attribution') && document.referrer) {
+                    localStorage.setItem('fl_attribution', JSON.stringify({ signup_referrer: document.referrer }));
+                }
+            } catch(e) {}
+        })();
+
+        // ── Capture native install prompt ASAP ────────────────────────────────
+        var _athsDeferredPrompt = null;
+        window.addEventListener('beforeinstallprompt', function(e) {
+            e.preventDefault();
+            _athsDeferredPrompt = e;
+        });
+
+        // Determine post-auth destination (support share redirect)
+        // New signups go through the check-in flow (handles once-per-day gating itself).
+        var redirectParam = new URLSearchParams(window.location.search).get('redirect');
+        var hasPendingShare = !!localStorage.getItem('fl_pending_share');
+        var postAuthDest = (redirectParam === 'share' || hasPendingShare) ? '/share' : '/app/checkin';
+
+        // ── Handle Google OAuth callback ────────────────────────────────────────
+        // After Google redirects back with google_token=..., store token and go to app
+        var googleToken   = new URLSearchParams(window.location.search).get('google_token');
+        var googleLinked  = new URLSearchParams(window.location.search).get('google_linked');
+        var googleError   = new URLSearchParams(window.location.search).get('google_error');
+
+        if (googleToken) {
+            // Capture google_email BEFORE replaceState wipes the query string
+            var googleEmail = new URLSearchParams(window.location.search).get('google_email');
+            // Clean URL immediately (remove token from history)
+            history.replaceState(null, '', '/signup');
+            localStorage.setItem('fl_token', googleToken);
+            localStorage.setItem('fl_user', JSON.stringify({ email: googleEmail }));
+            localStorage.setItem('fl_just_signed_up', '1');
+            if (typeof fbq === 'function') fbq('track', 'Lead');
+            // FLA loads at end of page — defer funnel event if not yet available
+            if (typeof FLA !== 'undefined') {
+                FLA.trackEvent('funnel_signup_start');
+                FLA.trackEvent('funnel_signup_complete');
+                FLA.trackEvent('signup_google');
+            } else {
+                window._flDeferSignupComplete = true;
+            }
+            // Flush UTM attribution to server now that we have the token
+            // (UTMs survived the OAuth full-page redirect in localStorage)
+            try {
+                var attr = JSON.parse(localStorage.getItem('fl_attribution') || 'null');
+                if (attr) {
+                    fetch('/api/auth/attribution', {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + googleToken },
+                        body: JSON.stringify(attr)
+                    }).then(function() { localStorage.removeItem('fl_attribution'); }).catch(function() {});
+                }
+            } catch(e) {}
+            // Migrate demo session if the user came from the landing page demo
+            // fl_demo_session_token survives the OAuth redirect because it's in localStorage (same origin)
+            migrateDemoSession(googleToken);
+            showATHSModal(postAuthDest);
+            return;
+        }
+
+        if (googleError) {
+            // Graceful fallback with user-friendly messages
+            var errorMessages = {
+                'access_denied':    'Sign-in was cancelled. You can try again or use your email.',
+                'invalid_callback': 'Something went wrong with Google. Please try again.',
+                'invalid_state':    'Session expired. Please try again.',
+                'userinfo_failed':  'Couldn\'t get your info from Google. Please try again.',
+                'server_error':     'Server error. Please try again in a moment.',
+                'email_taken':      'An account with that Google email already exists. Try logging in.'
+            };
+            var msg = errorMessages[googleError] || 'Google sign-in failed. Please try again or use your email.';
+            var errorMsgEl = document.getElementById('errorMsg');
+            if (googleLinked === '1') {
+                // Account linked successfully — show positive message
+                errorMsgEl.textContent = 'Welcome back! We\'ve linked your Google account.';
+                errorMsgEl.style.background = '#EAFAF0';
+                errorMsgEl.style.color = '#2E7D32';
+            } else {
+                errorMsgEl.textContent = msg;
+            }
+            errorMsgEl.classList.add('visible');
+        }
+
+        // If already logged in, redirect to destination
+        if (localStorage.getItem('fl_token')) {
+            window.location.href = postAuthDest;
+            return;
+        }
+
+        var form = document.getElementById('signupForm');
+        var nameInput = document.getElementById('name');
+        var emailInput = document.getElementById('email');
+        var passwordInput = document.getElementById('password');
+        var submitBtn = document.getElementById('submitBtn');
+        var errorMsg = document.getElementById('errorMsg');
+
+        // ── Google Sign-In button ───────────────────────────────────────────────
+        var googleBtn = document.getElementById('googleBtn');
+
+        googleBtn.addEventListener('click', function() {
+            // Count Google OAuth as a signup start — user initiated the flow
+            // Without this, OAuth signups show as "completed" without ever "starting"
+            if (typeof FLA !== 'undefined') FLA.trackEvent('funnel_signup_start');
+            googleBtn.disabled = true;
+            googleBtn.classList.add('loading');
+            googleBtn.textContent = 'Connecting to Google...';
+
+            fetch('/api/auth/google/start?return_to=signup')
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (data.success && data.url) {
+                        window.location.href = data.url;
+                    } else {
+                        showError(data.message || 'Google sign-in is not available. Please use your email to sign up.');
+                        googleBtn.disabled = false;
+                        googleBtn.classList.remove('loading');
+                        // Restore original button content with SVG
+                        googleBtn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg> Sign up with Google';
+                    }
+                })
+                .catch(function() {
+                    showError('Couldn\'t reach the server. Check your connection.');
+                    googleBtn.disabled = false;
+                    googleBtn.classList.remove('loading');
+                    googleBtn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg> Sign up with Google';
+                });
+        });
+
+        function showError(msg) {
+            errorMsg.textContent = msg;
+            errorMsg.classList.add('visible');
+        }
+
+        function hideError() {
+            errorMsg.classList.remove('visible');
+        }
+
+        // ── Add to Home Screen modal ──────────────────────────────────────────
+        function showATHSModal(dest) {
+            // Already installed as PWA — skip modal entirely
+            if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true) {
+                window.location.href = dest;
+                return;
+            }
+
+            var modal    = document.getElementById('athsModal');
+            var titleEl  = document.getElementById('athsTitle');
+            var subtitleEl = document.getElementById('athsSubtitle');
+            var stepsEl  = document.getElementById('athsSteps');
+            var btnsEl   = document.getElementById('athsBtns');
+            var skipBtn  = document.getElementById('athsSkip');
+
+            var ua         = navigator.userAgent;
+            var isIOS      = /iPhone|iPad|iPod/.test(ua) && !window.MSStream;
+            var isIOSSafari = isIOS && /Safari/.test(ua) && !/CriOS|FxiOS|OPiOS|mercury/.test(ua);
+            var isAndroid  = /Android/.test(ua);
+            var platform   = isIOSSafari ? 'ios' : (isAndroid ? 'android' : 'desktop');
+
+            // Analytics: shown
+            if (typeof FLA !== 'undefined') FLA.trackEvent('add_to_homescreen_shown', { platform: platform });
+
+            function doComplete() {
+                if (typeof FLA !== 'undefined') FLA.trackEvent('add_to_homescreen_completed', { platform: platform });
+                document.body.style.overflow = '';
+                window.location.href = dest;
+            }
+            function doSkip() {
+                if (typeof FLA !== 'undefined') FLA.trackEvent('add_to_homescreen_skipped', { platform: platform });
+                document.body.style.overflow = '';
+                window.location.href = dest;
+            }
+
+            skipBtn.addEventListener('click', doSkip);
+
+            var stepStyle = 'background:#f7f6f3;border-radius:12px;padding:16px 18px;text-align:left;';
+            var rowStyle  = 'display:flex;gap:12px;align-items:flex-start;';
+            var numStyle  = 'width:28px;height:28px;border-radius:50%;background:#011e5c;color:#fff;display:flex;align-items:center;justify-content:center;font-size:0.72rem;font-weight:700;flex-shrink:0;';
+            var txtStyle  = 'font-size:0.875rem;color:#2d2a26;line-height:1.45;padding-top:5px;';
+
+            function makeRow(num, html) {
+                return '<div style="' + rowStyle + (num < 99 ? 'margin-bottom:12px;' : '') + '">' +
+                    '<div style="' + numStyle + '">' + num + '</div>' +
+                    '<div style="' + txtStyle + '">' + html + '</div>' +
+                    '</div>';
+            }
+            function makePrimaryBtn(label, handler) {
+                var btn = document.createElement('button');
+                btn.textContent = label;
+                btn.style.cssText = 'width:100%;padding:14px;background:#c9a84c;color:#fff;border:none;border-radius:8px;font-size:1rem;font-weight:600;cursor:pointer;font-family:inherit;letter-spacing:0.01em;';
+                btn.addEventListener('click', handler);
+                btnsEl.appendChild(btn);
+            }
+
+            titleEl.textContent    = 'Add to your Home Screen';
+            subtitleEl.textContent = 'Your life. One tab. — always one tap away.';
+
+            if (isIOSSafari) {
+                stepsEl.innerHTML = '<div style="' + stepStyle + '">' +
+                    makeRow(1, 'Tap the <strong>Share</strong> button ⬆️ at the bottom of Safari') +
+                    makeRow(2, 'Scroll down and tap <strong>"Add to Home Screen"</strong> ➕') +
+                    makeRow(99, 'Tap <strong>"Add"</strong> to confirm') +
+                    '</div>';
+                makePrimaryBtn('✓  Done, I added it!', doComplete);
+
+            } else if (isAndroid && _athsDeferredPrompt) {
+                subtitleEl.textContent = 'Get instant access from your home screen — no app store needed.';
+                stepsEl.innerHTML = '';
+                makePrimaryBtn('📲  Add to Home Screen', function() {
+                    _athsDeferredPrompt.prompt();
+                    _athsDeferredPrompt.userChoice.then(function(choice) {
+                        if (choice.outcome === 'accepted') { doComplete(); }
+                        else { doSkip(); }
+                    });
+                });
+
+            } else if (isAndroid) {
+                stepsEl.innerHTML = '<div style="' + stepStyle + '">' +
+                    makeRow(1, 'Tap <strong>⋮</strong> (menu) in the top-right corner of Chrome') +
+                    makeRow(2, 'Tap <strong>"Add to Home Screen"</strong>') +
+                    makeRow(99, 'Tap <strong>"Add"</strong> to confirm') +
+                    '</div>';
+                makePrimaryBtn('✓  Done, I added it!', doComplete);
+
+            } else {
+                // Desktop
+                titleEl.textContent    = 'Install FocusLedger';
+                subtitleEl.textContent = 'Pin it to your taskbar — your life, always one click away.';
+                if (_athsDeferredPrompt) {
+                    stepsEl.innerHTML = '';
+                    makePrimaryBtn('⊕  Install FocusLedger', function() {
+                        _athsDeferredPrompt.prompt();
+                        _athsDeferredPrompt.userChoice.then(function(choice) {
+                            if (choice.outcome === 'accepted') { doComplete(); }
+                            else { doSkip(); }
+                        });
+                    });
+                } else {
+                    stepsEl.innerHTML = '<div style="' + stepStyle + '">' +
+                        makeRow('⊕', 'Look for the <strong>install icon ⊕</strong> in your browser\'s address bar, then click <strong>"Install"</strong>.') +
+                        '</div>';
+                    makePrimaryBtn('✓  Got it!', doComplete);
+                }
+            }
+
+            // Show modal, lock scroll
+            modal.style.display = 'block';
+            document.body.style.overflow = 'hidden';
+        }
+
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            hideError();
+
+            var name = nameInput.value.trim();
+            var email = emailInput.value.trim();
+            var password = passwordInput.value;
+
+            if (!email || !password) {
+                // De Botton: plain, no blame
+                showError('Email and password are both needed.');
+                return;
+            }
+
+            if (password.length < 6) {
+                showError('Password needs at least 6 characters.');
+                return;
+            }
+
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Creating account...';
+
+            var signupBody = { name: name || undefined, email: email, password: password, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone };
+            try { var attr = JSON.parse(localStorage.getItem('fl_attribution') || 'null'); if (attr) signupBody.attribution = attr; } catch(e) {}
+
+            fetch('/api/auth/signup', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(signupBody)
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (data.success && data.token) {
+                    localStorage.removeItem('fl_attribution');
+                    localStorage.setItem('fl_token', data.token);
+                    if (data.user) {
+                        localStorage.setItem('fl_user', JSON.stringify(data.user));
+                    }
+                    // Signal app.html to show install prompt after signup
+                    localStorage.setItem('fl_just_signed_up', '1');
+                    // Fire Meta Pixel Lead event + analytics funnel completion
+                    if (typeof fbq === 'function') fbq('track', 'Lead');
+                    if (typeof FLA !== 'undefined') FLA.trackEvent('funnel_signup_complete');
+                    // Migrate demo session (fire-and-forget — never blocks signup)
+                    migrateDemoSession(data.token);
+                    showATHSModal(postAuthDest);
+                } else {
+                    showError(data.message || 'Couldn\'t create your account. Try again?');
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Create Account';
+                }
+            })
+            .catch(function() {
+                showError('Couldn\'t reach the server. Check your connection.');
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Create Account';
+            });
+        });
+
+        // ── Demo session migration ─────────────────────────────────────────────────
+        // After signup/login, if a Buddy demo session token is in localStorage,
+        // migrate its tasks + values + conversation into the new account.
+        // Fire-and-forget: never blocks the auth flow or the redirect.
+        function migrateDemoSession(authToken) {
+            try {
+                var demoToken = localStorage.getItem('fl_demo_session_token');
+                if (!demoToken) return;
+                fetch('/api/auth/migrate-demo-session', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + authToken },
+                    body: JSON.stringify({ session_token: demoToken })
+                })
+                .then(function(r) { return r.json(); })
+                .then(function(result) {
+                    if (result.migrated) {
+                        // Signal app.html to show the "your tasks are ready" banner
+                        try {
+                            localStorage.setItem('fl_demo_migrated', JSON.stringify({
+                                taskCount: result.imported && result.imported.taskCount || 0
+                            }));
+                        } catch(e) {}
+                        // Clear demo token — session has been consumed
+                        localStorage.removeItem('fl_demo_session_token');
+                    }
+                })
+                .catch(function() {
+                    // Non-fatal — user lands in app normally if this fails
+                });
+            } catch(e) {}
+        }
+
+    })();
+    </script>
+
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' })
+                    .then(function(reg) { console.log('[PWA] SW registered:', reg.scope); })
+                    .catch(function(err) { console.warn('[PWA] SW registration failed:', err); });
+            });
+            navigator.serviceWorker.addEventListener('message', function(e) {
+                if (e.data && e.data.type === 'SW_UPDATED') window.location.reload();
+            });
+        }
+    </script>
+    <!-- Analytics: shared library + funnel tracking -->
+    <script src="/js/analytics.js"></script>
+    <script>
+    (function() {
+        FLA.trackPage('signup');
+        FLA.trackEvent('funnel_signup_visit');
+
+        // Fire deferred signup events — Google OAuth callback runs before FLA loads
+        if (window._flDeferSignupComplete) {
+            FLA.trackEvent('funnel_signup_start');
+            FLA.trackEvent('funnel_signup_complete');
+            FLA.trackEvent('signup_google');
+            window._flDeferSignupComplete = false;
+        }
+
+        // Track first field interaction (signup funnel start)
+        var startFired = false;
+        function onFirstInteraction() {
+            if (startFired) return;
+            startFired = true;
+            FLA.trackEvent('funnel_signup_start');
+        }
+        ['name', 'email', 'password'].forEach(function(id) {
+            var el = document.getElementById(id);
+            if (el) el.addEventListener('focus', onFirstInteraction, { once: true });
+        });
+    })();
+    </script>
+</body>
+</html>

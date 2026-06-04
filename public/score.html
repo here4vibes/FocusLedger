@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#011e5c">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="FocusLedger">
+  <link rel="icon" type="image/png" sizes="32x32" href="/icons/fl-icon.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/icons/fl-icon.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Adulting Score — FocusLedger</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --orange: #c9a84c;
+      --navy: #011e5c;
+      --cream: #faf9f7;
+      --cream-dark: #f5f3ef;
+      --text-dark: #1a1a1a;
+      --text-muted: #6b6b6b;
+      --border: #e8e5e0;
+      --surface: #fff;
+      --sage: #DCFCE7;
+      --sage-border: #A7F3D0;
+      --teal: #0891B2;
+      --teal-dark: #0E7490;
+      /* Component colors */
+      --docs-color: #3B82F6;
+      --ins-color: #22C55E;
+      --tasks-color: #F59E0B;
+      --bills-color: #A855F7;
+    }
+    body {
+      font-family: 'DM Sans', sans-serif;
+      color: var(--text-dark);
+      background: var(--cream);
+      min-height: 100vh;
+      padding-bottom: calc(60px + env(safe-area-inset-bottom));
+    }
+    h1, h2, h3 { font-family: 'Space Grotesk', sans-serif; }
+
+    /* ── NAV ─────────────────────────────────────────────────────────── */
+    .portal-nav {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 1.25rem; height: 56px; background: var(--navy);
+      position: sticky; top: 0; z-index: 200;
+    }
+    .portal-logo {
+      font-family: system-ui, sans-serif; font-size: 1.25rem; font-weight: 700;
+      color: white; display: flex; align-items: center; gap: 0.5rem; text-decoration: none;
+    }
+    .logo-dot { width: 10px; height: 10px; background: var(--orange); border-radius: 2px; transform: rotate(45deg); }
+    .back-link {
+      font-size: 0.85rem; color: rgba(255,255,255,0.75);
+      text-decoration: none; display: flex; align-items: center; gap: 0.35rem;
+      padding: 0.4rem 0.6rem; border-radius: 6px; transition: all 0.15s;
+    }
+    .back-link:hover { color: white; background: rgba(255,255,255,0.1); }
+    .logout-btn {
+      font-size: 0.8rem; color: rgba(255,255,255,0.65); background: none;
+      border: none; cursor: pointer; padding: 0.35rem 0.6rem;
+      font-family: system-ui, sans-serif;
+    }
+
+    /* ── PAGE ─────────────────────────────────────────────────────────── */
+    .page-wrap { max-width: 720px; margin: 0 auto; padding: 2rem 1.25rem; }
+
+    /* ── HERO RING ────────────────────────────────────────────────────── */
+    .score-hero {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 20px; padding: 2rem 1.5rem;
+      display: flex; flex-direction: column; align-items: center;
+      gap: 1rem; margin-bottom: 1.5rem; text-align: center;
+    }
+    .hero-ring-wrap { position: relative; width: 140px; height: 140px; }
+    .hero-ring-svg { width: 140px; height: 140px; transform: rotate(-90deg); }
+    .hero-ring-bg { fill: none; stroke: var(--sage); stroke-width: 12; }
+    .hero-ring-fill {
+      fill: none; stroke: var(--teal); stroke-width: 12;
+      stroke-linecap: round;
+      stroke-dasharray: 339.3; /* 2π×54 */
+      stroke-dashoffset: 339.3; /* will be set by JS */
+      transition: stroke-dashoffset 1s ease;
+    }
+    .hero-ring-label {
+      position: absolute; inset: 0;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+    }
+    .hero-score {
+      font-family: 'Space Grotesk', sans-serif; font-size: 2.25rem;
+      font-weight: 700; color: var(--navy); line-height: 1;
+    }
+    .hero-score-max { font-size: 0.85rem; color: var(--text-muted); margin-top: 3px; }
+    .hero-title { font-size: 1.25rem; font-weight: 700; color: var(--navy); }
+    .hero-status {
+      font-size: 0.9rem; color: var(--text-muted); line-height: 1.5;
+      max-width: 380px;
+    }
+    .hero-status strong { color: var(--teal-dark); }
+
+    /* ── COMPONENTS ──────────────────────────────────────────────────── */
+    .section-label {
+      font-family: 'Space Grotesk', sans-serif; font-size: 0.8rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.06em;
+      color: var(--text-muted); margin-bottom: 0.85rem;
+    }
+    .components-grid { display: flex; flex-direction: column; gap: 0.85rem; margin-bottom: 1.75rem; }
+    .component-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 14px; padding: 1.1rem 1.25rem;
+      cursor: pointer; transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .component-card:hover { border-color: var(--teal); box-shadow: 0 3px 12px rgba(8,145,178,0.08); }
+    .component-card.expanded { border-color: var(--sage-border); }
+    .component-header { display: flex; align-items: center; gap: 1rem; }
+    .comp-icon {
+      width: 36px; height: 36px; border-radius: 9px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center; font-size: 1rem;
+    }
+    .comp-icon.docs  { background: #EFF6FF; }
+    .comp-icon.ins   { background: #F0FDF4; }
+    .comp-icon.tasks { background: #FFFBEB; }
+    .comp-icon.bills { background: #FAF5FF; }
+    .comp-label {
+      flex: 1; font-family: 'Space Grotesk', sans-serif;
+      font-size: 0.95rem; font-weight: 600; color: var(--navy);
+    }
+    .comp-sub { font-size: 0.8rem; color: var(--text-muted); margin-top: 0.15rem; }
+    .comp-score-wrap { text-align: right; flex-shrink: 0; }
+    .comp-score {
+      font-family: 'Space Grotesk', sans-serif; font-size: 1.25rem;
+      font-weight: 700; line-height: 1;
+    }
+    .comp-score.docs  { color: var(--docs-color); }
+    .comp-score.ins   { color: var(--ins-color); }
+    .comp-score.tasks { color: var(--tasks-color); }
+    .comp-score.bills { color: var(--bills-color); }
+    .comp-weight { font-size: 0.72rem; color: var(--text-muted); margin-top: 2px; }
+    /* Bar */
+    .comp-bar-wrap { margin-top: 0.75rem; }
+    .comp-bar-track {
+      height: 7px; background: var(--cream-dark); border-radius: 99px; overflow: hidden;
+    }
+    .comp-bar-fill {
+      height: 100%; border-radius: 99px; transition: width 0.8s ease;
+      width: 0%;
+    }
+    .comp-bar-fill.docs  { background: var(--docs-color); }
+    .comp-bar-fill.ins   { background: var(--ins-color); }
+    .comp-bar-fill.tasks { background: var(--tasks-color); }
+    .comp-bar-fill.bills { background: var(--bills-color); }
+    /* Factors dropdown */
+    .comp-factors {
+      display: none; margin-top: 0.85rem; padding-top: 0.75rem;
+      border-top: 1px solid var(--border);
+    }
+    .component-card.expanded .comp-factors { display: block; }
+    .factor-item {
+      display: flex; align-items: flex-start; gap: 0.5rem;
+      font-size: 0.83rem; color: var(--text-muted); line-height: 1.4;
+      padding: 0.2rem 0;
+    }
+    .factor-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; margin-top: 5px; }
+    .factor-dot.docs  { background: var(--docs-color); }
+    .factor-dot.ins   { background: var(--ins-color); }
+    .factor-dot.tasks { background: var(--tasks-color); }
+    .factor-dot.bills { background: var(--bills-color); }
+
+    /* ── TREND CHART ──────────────────────────────────────────────────── */
+    .trend-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 14px; padding: 1.25rem; margin-bottom: 1.5rem;
+    }
+    .trend-card h3 { font-size: 1rem; color: var(--navy); margin-bottom: 1rem; }
+    .trend-chart-wrap {
+      height: 100px; position: relative;
+    }
+    .trend-canvas { width: 100%; height: 100px; display: block; }
+    .trend-empty {
+      text-align: center; font-size: 0.85rem; color: var(--text-muted);
+      padding: 1.5rem; line-height: 1.5;
+    }
+
+    /* ── WEIGHTS ──────────────────────────────────────────────────────── */
+    .weights-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 14px; padding: 1.25rem; margin-bottom: 1.5rem;
+    }
+    .weights-card h3 { font-size: 1rem; color: var(--navy); margin-bottom: 0.35rem; }
+    .weights-card p { font-size: 0.83rem; color: var(--text-muted); margin-bottom: 1rem; }
+    .weights-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem; }
+    .weight-row { display: flex; flex-direction: column; gap: 0.3rem; }
+    .weight-label {
+      font-size: 0.8rem; font-weight: 600;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .weight-val { font-size: 0.85rem; color: var(--teal-dark); font-weight: 700; }
+    .weight-slider {
+      width: 100%; -webkit-appearance: none; appearance: none;
+      height: 4px; border-radius: 2px; background: var(--border); outline: none; cursor: pointer;
+    }
+    .weight-slider::-webkit-slider-thumb {
+      -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%;
+      background: var(--teal); cursor: pointer; border: 2px solid white;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+    }
+    .weights-sum {
+      margin-top: 0.85rem; font-size: 0.83rem;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .weights-sum-val { font-weight: 700; color: var(--teal-dark); }
+    .weights-sum-val.over { color: #E07A5F; }
+    .btn-save-weights {
+      margin-top: 0.85rem; width: 100%; padding: 0.65rem;
+      background: var(--teal); color: white; border: none; border-radius: 8px;
+      font-size: 0.9rem; font-weight: 600; cursor: pointer;
+      font-family: 'Space Grotesk', sans-serif; transition: background 0.15s;
+    }
+    .btn-save-weights:hover { background: var(--teal-dark); }
+    .btn-save-weights:disabled { background: var(--border); color: var(--text-muted); cursor: default; }
+    .weights-saved-msg { font-size: 0.8rem; color: #22C55E; text-align: center; margin-top: 0.5rem; display: none; }
+
+    /* ── BOTTOM TABS ──────────────────────────────────────────────────── */
+    .bottom-tabs {
+      display: none; position: fixed; bottom: 0; left: 0; right: 0;
+      background: var(--navy); z-index: 200;
+      padding: 0.5rem 0;
+      padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+    }
+    .bottom-tabs-inner {
+      display: flex; justify-content: space-around;
+      max-width: 600px; margin: 0 auto;
+    }
+    .tab-btn {
+      display: flex; flex-direction: column; align-items: center; gap: 0.2rem;
+      padding: 0.4rem 0.75rem; border: none; background: none; cursor: pointer;
+      font-size: 0.65rem; color: rgba(255,255,255,0.6);
+      font-family: system-ui, sans-serif; transition: color 0.15s;
+      min-width: 44px; min-height: 44px; justify-content: center;
+    }
+    .tab-btn.active { color: var(--orange); }
+    .tab-btn-icon { font-size: 1.1rem; line-height: 1; }
+    @media (max-width: 900px) { .bottom-tabs { display: block; } }
+    @media (min-width: 901px) { .bottom-tabs { display: none !important; } }
+
+    /* ── Loading state ─────────────────────────────────────────────── */
+    .shimmer {
+      background: linear-gradient(90deg, #f0ede9 25%, #e8e5e0 50%, #f0ede9 75%);
+      background-size: 200% 100%; animation: shimmer 1.4s infinite; border-radius: 8px;
+    }
+    @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+  </style>
+  <link rel="stylesheet" href="/css/design-system.css">
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="portal-nav">
+  <a href="/app/life" class="back-link">← Life</a>
+  <a href="/home" class="portal-logo"><span class="logo-dot"></span>FocusLedger</a>
+  <button class="logout-btn" id="logoutBtn">Logout</button>
+</nav>
+
+<div class="page-wrap">
+
+  <!-- HERO RING -->
+  <div class="score-hero" id="scoreHero">
+    <div class="hero-ring-wrap">
+      <svg class="hero-ring-svg" viewBox="0 0 120 120">
+        <circle class="hero-ring-bg" cx="60" cy="60" r="54"/>
+        <circle class="hero-ring-fill" id="heroRingFill" cx="60" cy="60" r="54"/>
+      </svg>
+      <div class="hero-ring-label">
+        <div class="hero-score" id="heroScore">—</div>
+        <div class="hero-score-max">/ 100</div>
+      </div>
+    </div>
+    <div class="hero-title">Your Adulting Score</div>
+    <div class="hero-status" id="heroStatus">Calculating your score…</div>
+  </div>
+
+  <!-- COMPONENT BREAKDOWN -->
+  <div class="section-label">Score Breakdown</div>
+  <div class="components-grid" id="componentsGrid">
+    <!-- Documents -->
+    <div class="component-card" id="cardDocs">
+      <div class="component-header">
+        <div class="comp-icon docs">📁</div>
+        <div>
+          <div class="comp-label">Documents</div>
+          <div class="comp-sub">Vault populated, nothing expired</div>
+        </div>
+        <div class="comp-score-wrap">
+          <div class="comp-score docs" id="scoreDocs">—</div>
+          <div class="comp-weight" id="weightDocs">/ 25</div>
+        </div>
+      </div>
+      <div class="comp-bar-wrap">
+        <div class="comp-bar-track">
+          <div class="comp-bar-fill docs" id="barDocs"></div>
+        </div>
+      </div>
+      <div class="comp-factors" id="factorsDocs"></div>
+    </div>
+
+    <!-- Insurance -->
+    <div class="component-card" id="cardIns">
+      <div class="component-header">
+        <div class="comp-icon ins">🏥</div>
+        <div>
+          <div class="comp-label">Insurance</div>
+          <div class="comp-sub">Coverage on file, no gaps</div>
+        </div>
+        <div class="comp-score-wrap">
+          <div class="comp-score ins" id="scoreIns">—</div>
+          <div class="comp-weight" id="weightIns">/ 25</div>
+        </div>
+      </div>
+      <div class="comp-bar-wrap">
+        <div class="comp-bar-track">
+          <div class="comp-bar-fill ins" id="barIns"></div>
+        </div>
+      </div>
+      <div class="comp-factors" id="factorsIns"></div>
+    </div>
+
+    <!-- Tasks -->
+    <div class="component-card" id="cardTasks">
+      <div class="component-header">
+        <div class="comp-icon tasks">✅</div>
+        <div>
+          <div class="comp-label">Tasks</div>
+          <div class="comp-sub">Weekly completion rate</div>
+        </div>
+        <div class="comp-score-wrap">
+          <div class="comp-score tasks" id="scoreTasks">—</div>
+          <div class="comp-weight" id="weightTasks">/ 25</div>
+        </div>
+      </div>
+      <div class="comp-bar-wrap">
+        <div class="comp-bar-track">
+          <div class="comp-bar-fill tasks" id="barTasks"></div>
+        </div>
+      </div>
+      <div class="comp-factors" id="factorsTasks"></div>
+    </div>
+
+    <!-- Bills -->
+    <div class="component-card" id="cardBills">
+      <div class="component-header">
+        <div class="comp-icon bills">💳</div>
+        <div>
+          <div class="comp-label">Bills</div>
+          <div class="comp-sub">On-time payments via bank sync</div>
+        </div>
+        <div class="comp-score-wrap">
+          <div class="comp-score bills" id="scoreBills">—</div>
+          <div class="comp-weight" id="weightBills">/ 25</div>
+        </div>
+      </div>
+      <div class="comp-bar-wrap">
+        <div class="comp-bar-track">
+          <div class="comp-bar-fill bills" id="barBills"></div>
+        </div>
+      </div>
+      <div class="comp-factors" id="factorsBills"></div>
+    </div>
+  </div>
+
+  <!-- 30-DAY TREND -->
+  <div class="trend-card">
+    <h3>Last 30 days</h3>
+    <div class="trend-chart-wrap">
+      <canvas class="trend-canvas" id="trendCanvas"></canvas>
+      <div class="trend-empty" id="trendEmpty" style="display:none;">
+        Score history builds up over time. Check back tomorrow for your first trend line.
+      </div>
+    </div>
+  </div>
+
+  <!-- WEIGHT EDITOR -->
+  <div class="weights-card">
+    <h3>What matters most to you?</h3>
+    <p>Adjust how each area affects your score. Weights must add up to 100.</p>
+    <div class="weights-grid">
+      <div class="weight-row">
+        <div class="weight-label">
+          <span>📁 Documents</span>
+          <span class="weight-val" id="wValDocs">25</span>
+        </div>
+        <input type="range" class="weight-slider" id="wSliderDocs" min="0" max="100" value="25" data-key="documents">
+      </div>
+      <div class="weight-row">
+        <div class="weight-label">
+          <span>🏥 Insurance</span>
+          <span class="weight-val" id="wValIns">25</span>
+        </div>
+        <input type="range" class="weight-slider" id="wSliderIns" min="0" max="100" value="25" data-key="insurance">
+      </div>
+      <div class="weight-row">
+        <div class="weight-label">
+          <span>✅ Tasks</span>
+          <span class="weight-val" id="wValTasks">25</span>
+        </div>
+        <input type="range" class="weight-slider" id="wSliderTasks" min="0" max="100" value="25" data-key="tasks">
+      </div>
+      <div class="weight-row">
+        <div class="weight-label">
+          <span>💳 Bills</span>
+          <span class="weight-val" id="wValBills">25</span>
+        </div>
+        <input type="range" class="weight-slider" id="wSliderBills" min="0" max="100" value="25" data-key="bills">
+      </div>
+    </div>
+    <div class="weights-sum">
+      <span>Total: <span class="weights-sum-val" id="weightsTotal">100</span> / 100</span>
+      <span id="weightsHint" style="font-size:0.8rem;color:var(--text-muted);">Adjust to redistribute</span>
+    </div>
+    <button class="btn-save-weights" id="btnSaveWeights">Save weights</button>
+    <div class="weights-saved-msg" id="weightsSavedMsg">Weights saved — score will recalculate</div>
+  </div>
+
+</div>
+
+<!-- Shared navigation (bottom bar mobile, left sidebar desktop) -->
+<link rel="stylesheet" href="/shared-nav.css">
+<script src="/shared-nav.js"></script>
+<script src="/buddy-widget.js"></script>
+
+<script>
+(function() {
+  var token = localStorage.getItem('fl_token');
+  if (!token) { window.location.href = '/login'; return; }
+  var auth = { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' };
+
+  document.getElementById('logoutBtn').addEventListener('click', function() {
+    localStorage.removeItem('fl_token');
+    window.location.href = '/login';
+  });
+
+  // ── Tap to expand component cards ─────────────────────────────────────
+  ['cardDocs','cardIns','cardTasks','cardBills'].forEach(function(id) {
+    document.getElementById(id).addEventListener('click', function() {
+      this.classList.toggle('expanded');
+    });
+  });
+
+  // ── Helpers ────────────────────────────────────────────────────────────
+  function setRingProgress(el, score, max) {
+    // stroke-dasharray = circumference of r=54 circle = 2π×54 ≈ 339.3
+    var circ = 339.3;
+    var pct = max > 0 ? score / max : 0;
+    el.style.strokeDashoffset = circ - pct * circ;
+  }
+
+  function setBarWidth(el, score, max) {
+    var pct = max > 0 ? Math.round((score / max) * 100) : 0;
+    el.style.width = pct + '%';
+  }
+
+  function scoreToStatus(score) {
+    if (score >= 85) return 'You\'re crushing adulting. Everything\'s in order.';
+    if (score >= 70) return 'You\'re at <strong>' + score + '</strong> — solid foundation. A few things to tighten up.';
+    if (score >= 50) return 'You\'re at <strong>' + score + '</strong> — making progress. A few gaps to close.';
+    if (score >= 30) return 'You\'re at <strong>' + score + '</strong> — some areas need attention. Tap a card to see what.';
+    return 'You\'re at <strong>' + score + '</strong> — good news: small actions here move the number fast.';
+  }
+
+  function renderFactors(containerId, factors, colorClass) {
+    var el = document.getElementById(containerId);
+    if (!el || !factors || factors.length === 0) return;
+    el.innerHTML = factors.map(function(f) {
+      return '<div class="factor-item"><div class="factor-dot ' + colorClass + '"></div><span>' + escHtml(f) + '</span></div>';
+    }).join('');
+  }
+
+  function escHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  // ── Load score ─────────────────────────────────────────────────────────
+  function renderScore(data) {
+    var s = data.score;
+    var w = s.weights;
+
+    // Hero ring
+    document.getElementById('heroScore').textContent = s.overall_score;
+    setRingProgress(document.getElementById('heroRingFill'), s.overall_score, 100);
+    document.getElementById('heroStatus').innerHTML = scoreToStatus(s.overall_score);
+
+    // Component scores
+    document.getElementById('scoreDocs').textContent = s.documents_score;
+    document.getElementById('weightDocs').textContent = '/ ' + w.documents;
+    document.getElementById('scoreIns').textContent = s.insurance_score;
+    document.getElementById('weightIns').textContent = '/ ' + w.insurance;
+    document.getElementById('scoreTasks').textContent = s.tasks_score;
+    document.getElementById('weightTasks').textContent = '/ ' + w.tasks;
+    document.getElementById('scoreBills').textContent = s.bills_score;
+    document.getElementById('weightBills').textContent = '/ ' + w.bills;
+
+    // Bars
+    setBarWidth(document.getElementById('barDocs'), s.documents_score, w.documents);
+    setBarWidth(document.getElementById('barIns'), s.insurance_score, w.insurance);
+    setBarWidth(document.getElementById('barTasks'), s.tasks_score, w.tasks);
+    setBarWidth(document.getElementById('barBills'), s.bills_score, w.bills);
+
+    // Factors
+    if (s.factors) {
+      renderFactors('factorsDocs', s.factors.documents, 'docs');
+      renderFactors('factorsIns', s.factors.insurance, 'ins');
+      renderFactors('factorsTasks', s.factors.tasks, 'tasks');
+      renderFactors('factorsBills', s.factors.bills, 'bills');
+    }
+
+    // Weights sliders sync
+    syncSliderValues(w);
+  }
+
+  fetch('/api/health-score/today', { headers: auth })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.success) renderScore(data);
+      else document.getElementById('heroStatus').textContent = 'Unable to calculate score right now.';
+    })
+    .catch(function() {
+      document.getElementById('heroStatus').textContent = 'Unable to load score.';
+    });
+
+  // ── Trend chart ────────────────────────────────────────────────────────
+  fetch('/api/health-score/history', { headers: auth })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (!data.success || !data.history || data.history.length < 2) {
+        document.getElementById('trendEmpty').style.display = '';
+        document.getElementById('trendCanvas').style.display = 'none';
+        return;
+      }
+      drawTrend(data.history);
+    })
+    .catch(function() {
+      document.getElementById('trendEmpty').style.display = '';
+      document.getElementById('trendCanvas').style.display = 'none';
+    });
+
+  function drawTrend(history) {
+    var canvas = document.getElementById('trendCanvas');
+    var ctx = canvas.getContext('2d');
+    // Responsive sizing
+    var dpr = window.devicePixelRatio || 1;
+    var rect = canvas.getBoundingClientRect();
+    var w = rect.width || canvas.parentElement.offsetWidth || 600;
+    var h = 100;
+    canvas.width = w * dpr;
+    canvas.height = h * dpr;
+    canvas.style.width = w + 'px';
+    canvas.style.height = h + 'px';
+    ctx.scale(dpr, dpr);
+
+    var pad = { top: 8, right: 12, bottom: 20, left: 28 };
+    var plotW = w - pad.left - pad.right;
+    var plotH = h - pad.top - pad.bottom;
+
+    var scores = history.map(function(r) { return parseInt(r.overall_score, 10); });
+    var minScore = Math.max(0, Math.min.apply(null, scores) - 5);
+    var maxScore = Math.min(100, Math.max.apply(null, scores) + 5);
+    var range = maxScore - minScore || 1;
+
+    function xPos(i) { return pad.left + (i / (scores.length - 1)) * plotW; }
+    function yPos(v) { return pad.top + plotH - ((v - minScore) / range) * plotH; }
+
+    // Fill gradient
+    ctx.beginPath();
+    ctx.moveTo(xPos(0), yPos(scores[0]));
+    for (var i = 1; i < scores.length; i++) ctx.lineTo(xPos(i), yPos(scores[i]));
+    ctx.lineTo(xPos(scores.length - 1), pad.top + plotH);
+    ctx.lineTo(xPos(0), pad.top + plotH);
+    ctx.closePath();
+    var grad = ctx.createLinearGradient(0, pad.top, 0, pad.top + plotH);
+    grad.addColorStop(0, 'rgba(8,145,178,0.18)');
+    grad.addColorStop(1, 'rgba(8,145,178,0.01)');
+    ctx.fillStyle = grad;
+    ctx.fill();
+
+    // Line
+    ctx.beginPath();
+    ctx.moveTo(xPos(0), yPos(scores[0]));
+    for (var j = 1; j < scores.length; j++) ctx.lineTo(xPos(j), yPos(scores[j]));
+    ctx.strokeStyle = '#0891B2';
+    ctx.lineWidth = 2;
+    ctx.lineJoin = 'round';
+    ctx.stroke();
+
+    // Dots at endpoints
+    [0, scores.length - 1].forEach(function(idx) {
+      ctx.beginPath();
+      ctx.arc(xPos(idx), yPos(scores[idx]), 3.5, 0, Math.PI * 2);
+      ctx.fillStyle = '#0891B2';
+      ctx.fill();
+    });
+
+    // Score labels
+    ctx.fillStyle = '#6b6b6b';
+    ctx.font = '10px DM Sans, sans-serif';
+    ctx.textAlign = 'right';
+    ctx.fillText(maxScore, pad.left - 4, pad.top + 4);
+    ctx.fillText(minScore, pad.left - 4, pad.top + plotH + 2);
+  }
+
+  // ── Weight sliders ─────────────────────────────────────────────────────
+  var sliders = ['Docs','Ins','Tasks','Bills'];
+  var sliderKeys = ['documents','insurance','tasks','bills'];
+  var sliderIds = ['wSliderDocs','wSliderIns','wSliderTasks','wSliderBills'];
+  var valIds    = ['wValDocs','wValIns','wValTasks','wValBills'];
+
+  function syncSliderValues(weights) {
+    var keys = ['documents','insurance','tasks','bills'];
+    var map = { documents: 0, insurance: 1, tasks: 2, bills: 3 };
+    keys.forEach(function(k) {
+      var idx = map[k];
+      var v = weights[k] !== undefined ? weights[k] : 25;
+      document.getElementById(sliderIds[idx]).value = v;
+      document.getElementById(valIds[idx]).textContent = v;
+    });
+    updateWeightsSum();
+  }
+
+  function updateWeightsSum() {
+    var total = sliderIds.reduce(function(sum, id) {
+      return sum + parseInt(document.getElementById(id).value, 10);
+    }, 0);
+    var el = document.getElementById('weightsTotal');
+    el.textContent = total;
+    el.className = 'weights-sum-val' + (total !== 100 ? ' over' : '');
+    document.getElementById('btnSaveWeights').disabled = total !== 100;
+    document.getElementById('weightsHint').textContent = total === 100 ? 'Ready to save' : 'Must equal 100';
+  }
+
+  sliderIds.forEach(function(id, idx) {
+    document.getElementById(id).addEventListener('input', function() {
+      document.getElementById(valIds[idx]).textContent = this.value;
+      updateWeightsSum();
+    });
+  });
+
+  // Load current weights
+  fetch('/api/health-score/weights', { headers: auth })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.success) syncSliderValues(data.weights);
+    })
+    .catch(function() {});
+
+  document.getElementById('btnSaveWeights').addEventListener('click', function() {
+    var payload = {
+      documents: parseInt(document.getElementById(sliderIds[0]).value, 10),
+      insurance: parseInt(document.getElementById(sliderIds[1]).value, 10),
+      tasks:     parseInt(document.getElementById(sliderIds[2]).value, 10),
+      bills:     parseInt(document.getElementById(sliderIds[3]).value, 10),
+    };
+    fetch('/api/health-score/weights', {
+      method: 'PUT', headers: auth, body: JSON.stringify(payload)
+    })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.success) {
+          var msg = document.getElementById('weightsSavedMsg');
+          msg.style.display = 'block';
+          setTimeout(function() {
+            msg.style.display = 'none';
+            // Reload score with new weights
+            window.location.reload();
+          }, 1600);
+        }
+      })
+      .catch(function() {});
+  });
+
+})();
+</script>
+<script src="/js/analytics.js"></script>
+<script>(function(){try{var u=JSON.parse(localStorage.getItem('fl_user')||'{}');if(u.id)FLA.setUser(u.id);}catch(e){}FLA.trackPage('life_score');})()</script>
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' })
+    .then(function(reg) {
+      reg.addEventListener('updatefound', function() {
+        var newWorker = reg.installing;
+        newWorker.addEventListener('statechange', function() {
+          if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+            window.dispatchEvent(new Event('SW_UPDATED'));
+          }
+        });
+      });
+    });
+  window.addEventListener('SW_UPDATED', function() { window.location.reload(); });
+}
+</script>
+</body>
+</html>

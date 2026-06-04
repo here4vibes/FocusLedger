@@ -142,15 +142,22 @@ app.use('/api', (req, res, next) => {
   next();
 });
 
-// =============================================================================
-// 4a. SESSION AUTH (HttpOnly cookies — Phase 2 migration)
-// Mount before routes so all API endpoints have session access.
+// 4a. SESSION
 app.use(buildSessionMiddleware(pool));
 
-// =============================================================================
-// 4. HEALTH CHECK (before auth, before other routes)
-// =============================================================================
-app.get('/health', (req, res) => res.json({ status: 'healthy' }));
+// 4b. HEALTH CHECK — must respond even when DB is slow (Neon cold-start)
+app.get('/health', async (req, res) => {
+  const start = Date.now();
+  try {
+    await Promise.race([
+      pool.query('SELECT 1'),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('DB timeout')), 4000)),
+    ]);
+    res.json({ status: 'ok', db: 'ok', latency_ms: Date.now() - start, commit: process.env.RENDER_GIT_COMMIT || 'unknown' });
+  } catch (err) {
+    res.status(503).json({ status: 'degraded', db: 'error', error: err.message, latency_ms: Date.now() - start });
+  }
+});
 
 // =============================================================================
 // 5. API ROUTES
@@ -184,6 +191,7 @@ app.use('/api/adhd-tax',        require('./routes/adhd-tax')(pool));
 app.use('/api/analytics',       require('./routes/analytics')(pool));
 app.use('/api/news',            newsRouteFactory(pool));
 app.use('/api/alignment-score', require('./routes/alignment-score')(pool));
+app.use('/api/momentum-score',  require('./routes/momentum-score')(pool));
 app.use('/api/outbound-email',  require('./routes/outbound-email')(pool));
 app.use('/api/journal',         require('./routes/journal')(pool));
 app.use('/api/buddy',           require('./routes/buddy')(pool));
@@ -206,7 +214,6 @@ app.use('/api/auto-routines',    require('./routes/autoRoutines')(pool));
 app.use('/api/followup-emails',   require('./routes/followupEmails')(pool));
 // v1 API: Plaid connect/disconnect + Transaction endpoints
 app.use('/api/v1',                 require('./routes/v1')(pool));
-
 app.use('/api/v1/insights',       require('./routes/insights')(pool));
 app.use('/api/v1/check-in',       require('./routes/check-in')(pool));
 

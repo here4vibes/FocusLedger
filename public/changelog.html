@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Changelog — FocusLedger</title>
+    <meta name="description" content="What's been shipped in FocusLedger. Recurring tasks, Google OAuth, journal AI, landing page redesign, and more.">
+    <!-- Open Graph -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://focusledger.net/changelog">
+    <meta property="og:title" content="Changelog — FocusLedger">
+    <meta property="og:description" content="What's been shipped in FocusLedger. Recurring tasks, Google OAuth, journal AI, landing page redesign, and more.">
+    <meta property="og:image" content="https://focusledger.net/icons/og-home.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:site_name" content="FocusLedger">
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Changelog — FocusLedger">
+    <meta name="twitter:description" content="What's been shipped in FocusLedger. Recurring tasks, Google OAuth, journal AI, and more.">
+    <meta name="twitter:image" content="https://focusledger.net/icons/og-home.png">
+    <!-- Canonical -->
+    <link rel="canonical" href="https://focusledger.net/changelog">
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" sizes="32x32" href="/icons/fl-icon.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/icons/fl-icon.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/fl-icon.png">
+    <!-- Shared pages stylesheet -->
+    <link rel="stylesheet" href="/css/pages.css">
+    <!-- JSON-LD -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebPage",
+      "name": "FocusLedger Changelog",
+      "description": "What's been shipped in FocusLedger",
+      "url": "https://focusledger.net/changelog"
+    }
+    </script>
+    <!-- Meta Pixel PageView -->
+    <script>
+    !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+    n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
+    n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
+    t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,
+    document,'script','https://connect.facebook.net/en_US/fbevents.js');
+    fbq('init','1597499061553078');
+    fbq('track','PageView');
+    </script>
+    <noscript><img height="1" width="1" style="display:none"
+    src="https://www.facebook.com/tr?id=1597499061553078&ev=PageView&noscript=1"/></noscript>
+    <style>
+        /* ── Design Tokens ────────────────────────────────────────── */
+        :root {
+            --trust-blue: #011e5c;
+            --trust-blue-mid: #02287a;
+            --gold: #c9a84c;
+            --gold-dark: #b8962f;
+            --warm-white: #faf9f7;
+            --alt-bg: #f5f3ef;
+            --surface: #ffffff;
+            --text-primary: #1a1a1a;
+            --text-muted: #6b6b6b;
+            --border: #e8e5e0;
+            --font-serif: Georgia, "Times New Roman", serif;
+            --font-sans: Inter, system-ui, -apple-system, sans-serif;
+            --card-radius: 4px;
+            --btn-radius: 4px;
+        }
+
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: var(--font-sans);
+            background: var(--warm-white);
+            color: var(--text-primary);
+            line-height: 1.7;
+            overflow-x: hidden;
+        }
+
+        /* ── Navigation ──────────────────────────────────────────── */
+        nav {
+            background: var(--trust-blue);
+            position: sticky;
+            top: 0;
+            z-index: 200;
+            height: 64px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 2rem;
+        }
+        .nav-logo {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            text-decoration: none;
+            color: white;
+            font-size: 1.05rem;
+            font-weight: 600;
+            letter-spacing: -0.01em;
+        }
+        .nav-logo .logo-dot {
+            width: 8px; height: 8px;
+            background: var(--gold);
+            border-radius: 50%;
+            display: inline-block;
+        }
+        .logo-icon {
+            height: 26px;
+            width: auto;
+            display: block;
+            flex-shrink: 0;
+        }
+        .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+        .nav-links a {
+            color: rgba(255,255,255,0.82);
+            text-decoration: none;
+            font-size: 0.88rem;
+            transition: color 0.2s;
+        }
+        .nav-links a:hover { color: white; }
+        .nav-cta {
+            background: var(--gold);
+            color: #1a1a1a !important;
+            font-weight: 600;
+            padding: 0.5rem 1.25rem;
+            border-radius: var(--btn-radius);
+            text-decoration: none;
+            font-size: 0.88rem;
+            transition: opacity 0.2s;
+        }
+        .nav-cta:hover { opacity: 0.88; color: #1a1a1a; }
+
+        /* ── Page Header ─────────────────────────────────────────── */
+        .page-header {
+            background: var(--trust-blue);
+            padding: 4rem 2rem 3rem;
+            text-align: center;
+        }
+        .page-header .tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            background: rgba(201,168,76,0.2);
+            color: var(--gold);
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            padding: 0.3rem 0.75rem;
+            border-radius: 3px;
+            margin-bottom: 1.25rem;
+        }
+        .page-header .tag svg { width: 12px; height: 12px; }
+        .page-header h1 {
+            font-family: var(--font-serif);
+            font-size: clamp(2rem, 4.5vw, 3rem);
+            color: white;
+            letter-spacing: -0.02em;
+            line-height: 1.15;
+            margin-bottom: 0.75rem;
+        }
+        .page-header p {
+            color: rgba(255,255,255,0.65);
+            font-size: 1rem;
+            max-width: 520px;
+            margin: 0 auto;
+        }
+
+        /* ── Content Wrapper ──────────────────────────────────────── */
+        .content-wrap {
+            max-width: 760px;
+            margin: 0 auto;
+            padding: 3rem 2rem 6rem;
+        }
+
+        /* ── Month Groups ────────────────────────────────────────── */
+        .month-group {
+            margin-bottom: 3rem;
+        }
+        .month-label {
+            font-family: var(--font-serif);
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--trust-blue);
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid var(--gold);
+            letter-spacing: -0.01em;
+        }
+
+        /* ── Changelog Entries ───────────────────────────────────── */
+        .changelog-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+        }
+
+        .entry {
+            display: flex;
+            gap: 1.25rem;
+            padding: 1.25rem 1.5rem;
+            background: white;
+            border: 1.5px solid var(--border);
+            border-radius: 8px;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .entry:hover {
+            border-color: rgba(201,168,76,0.4);
+            box-shadow: 0 2px 12px rgba(45,42,38,0.06);
+        }
+
+        .entry-date {
+            flex-shrink: 0;
+            width: 72px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding-top: 0.15rem;
+        }
+        .entry-day {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--trust-blue);
+            line-height: 1;
+        }
+        .entry-month {
+            font-size: 0.68rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            margin-top: 0.15rem;
+        }
+
+        .entry-body { flex: 1; min-width: 0; }
+        .entry-title {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 0.35rem;
+            line-height: 1.4;
+        }
+        .entry-desc {
+            font-size: 0.88rem;
+            color: var(--text-muted);
+            line-height: 1.6;
+        }
+
+        /* ── Feature badges ──────────────────────────────────────── */
+        .entry-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            font-size: 0.68rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            padding: 2px 7px;
+            border-radius: 3px;
+            margin-top: 0.5rem;
+        }
+        .entry-badge.improvement {
+            background: rgba(91,164,164,0.12);
+            color: #4A9292;
+        }
+        .entry-badge.new {
+            background: rgba(1,30,92,0.08);
+            color: var(--trust-blue);
+        }
+        .entry-badge.fix {
+            background: rgba(201,168,76,0.15);
+            color: #a88a2a;
+        }
+        .entry-badge.design {
+            background: rgba(224,122,95,0.1);
+            color: #C4623B;
+        }
+        .entry-badge svg { width: 10px; height: 10px; }
+
+        /* ── Divider with date marker ─────────────────────────────── */
+        .date-marker {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin: 2rem 0 1.25rem;
+        }
+        .date-marker-line {
+            flex: 1;
+            height: 1px;
+            background: var(--border);
+        }
+        .date-marker-text {
+            font-size: 0.72rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            white-space: nowrap;
+        }
+
+        /* ── No more entries card ─────────────────────────────────── */
+        .no-more-card {
+            text-align: center;
+            padding: 2.5rem;
+            color: var(--text-muted);
+        }
+        .no-more-card p {
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+        }
+        .no-more-card a {
+            color: var(--gold);
+            font-weight: 600;
+            text-decoration: none;
+        }
+        .no-more-card a:hover { text-decoration: underline; }
+
+        /* ── Footer ──────────────────────────────────────────────── */
+        .page-footer {
+            background: var(--trust-blue);
+            padding: 2rem;
+            text-align: center;
+        }
+        .page-footer p {
+            color: rgba(255,255,255,0.6);
+            font-size: 0.82rem;
+        }
+        .page-footer a {
+            color: rgba(255,255,255,0.7);
+            text-decoration: none;
+        }
+        .page-footer a:hover { color: white; }
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-bottom: 0.75rem;
+        }
+
+        /* ── Responsive ──────────────────────────────────────────── */
+        @media (max-width: 600px) {
+            nav { padding: 0 1rem; }
+            .nav-links a:not(.nav-cta) { display: none; }
+            .page-header { padding: 3rem 1.25rem 2.5rem; }
+            .content-wrap { padding: 2rem 1.25rem 5rem; }
+            .entry { padding: 1rem 1rem; gap: 1rem; }
+            .entry-date { width: 52px; }
+            .entry-day { font-size: 1.1rem; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- Navigation -->
+<nav>
+    <a href="/" class="nav-logo">
+        <img src="/icons/fl-icon.png" class="logo-icon" alt="">FocusLedger
+    </a>
+    <div class="nav-links">
+        <a href="/story">About</a>
+        <a href="/changelog">Changelog</a>
+        <a href="/pricing">Pricing</a>
+        <a href="/app">App</a>
+        <a href="/signup" class="nav-cta">Try free</a>
+    </div>
+    
+<!-- Page Header -->
+<header class="page-header">
+    <div class="tag">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+        Shipped
+    </div>
+    <h1>What's been built</h1>
+    <p>Every feature that ships. No marketing spin — just what changed and why it matters.</p>
+</header>
+
+<!-- Changelog Content -->
+<main class="content-wrap">
+
+    <!-- May 2026 -->
+    <div class="month-group">
+        <div class="month-label">May 2026</div>
+        <div class="changelog-list">
+
+            <div class="entry">
+                <div class="entry-date">
+                    <span class="entry-day">01</span>
+                    <span class="entry-month">May</span>
+                </div>
+                <div class="entry-body">
+                    <div class="entry-title">SEO + AI discoverability overhaul</div>
+                    <div class="entry-desc">Added OG/Twitter Card meta tags to all public pages, canonical URLs, JSON-LD structured data (SoftwareApplication + Organization + FAQ schemas), sitemap.xml, robots.txt, and llms.txt for AI assistants. Landing page and pricing page now fully indexable and shareable.</div>
+                    <div class="entry-badge design">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                        Design &amp; SEO
+                    </div>
+                </div>
+            </div>
+
+            <div class="entry">
+                <div class="entry-date">
+                    <span class="entry-day">01</span>
+                    <span class="entry-month">May</span>
+                </div>
+                <div class="entry-body">
+                    <div class="entry-title">Contact form + bug report system</div>
+                    <div class="entry-desc">Built a full contact page with name/email/message/category fields and an in-app bug report modal that auto-captures page URL and browser info. Submissions land in the admin Support tab with category and status filters, resolve/reopen actions, and email notifications to the team.</div>
+                    <div class="entry-badge new">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                        New Feature
+                    </div>
+                </div>
+            </div>
+
+            <div class="entry">
+                <div class="entry-date">
+                    <span class="entry-day">01</span>
+                    <span class="entry-month">May</span>
+                </div>
+                <div class="entry-body">
+                    <div class="entry-title">Password reset flow</div>
+                    <div class="entry-desc">Added /forgot-password and /reset-password pages with email-based reset flow. Tokens stored as SHA256 hashes, expire after 1 hour, are single-use. Users who signed up via Google OAuth get a dedicated email explaining to use Google sign-in instead.</div>
+                    <div class="entry-badge improvement">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+                        Improvement
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- April 2026 -->
+    <div class="month-group">
+        <div class="month-label">April 2026</div>
+        <div class="changelog-list">
+
+            <div class="entry">
+                <div class="entry-date">
+                    <span class="entry-day">30</span>
+                    <span class="entry-month">Apr</span>
+                </div>
+                <div class="entry-body">
+                    <div class="entry-title">Landing page rewrite — ADHD positioning</div>
+                    <div class="entry-desc">Complete landing page overhaul with ADHD-native messaging: executive functioning on autopilot, scroll-calm effect via IntersectionObserver, navy+gold palette, emotional copy that reflects how ADHD brains actually feel. Removed all fake social proof.</div>
+                    <div class="entry-badge design">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                        Design
+                    </div>
+                </div>
+            </div>
+
+            <div class="entry">
+                <div class="entry-date">
+                    <span class="entry-day">30</span>
+                    <span class="entry-month">Apr</span>
+                </div>
+                <div class="entry-body">
+                    <div class="entry-title">Founder credibility pass</div>
+                    <div class="entry-desc">Removed the fake avatar credibility bar entirely. Added a founder badge to the hero section, re-framed the copy around personal experience and expertise rather than manufactured social proof. The page now reflects what actually builds trust in the ADHD community.</div>
+                    <div class="entry-badge design">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                        Design
+                    </div>
+                </div>
+            </div>
+
+            <div class="entry">
+                <div class="entry-date">
+                    <span class="entry-day">28</span>
+                    <span class="entry-month">Apr</span>
+                </div>
+                <div class="entry-body">
+                    <div class="entry-title">ADHD Tax Calculator — lead magnet landing page</div>
+                    <div class="entry-desc">Launched /adhd-tax as a standalone lead magnet page. Funnel: landing page CTA → ADHD tax calculator → email capture. Email capture goes to adhd_tax_leads table, triggers welcome email via Polsia email proxy. Separate traffic path from main product funnel.</div>
+                    <div class="entry-badge new">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                        New Feature
+                    </div>
+                </div>
+            </div>
+
+            <div class="entry">
+                <div class="entry-date">
+                    <span class="entry-day">25</span>
+                    <span class="entry-month">Apr</span>
+                </div>
+                <div class="entry-body">
+                    <div class="entry-title">Recurring tasks fix</div>
+                    <div class="entry-desc">Fixed recurring tasks that weren't generating correctly when a task was marked complete. The fix ensures recurring instances spawn immediately on completion rather than waiting for the next scheduled run — no lost recurring tasks from now on.</div>
+                    <div class="entry-badge fix">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+                        Bug Fix
+                    </div>
+                </div>
+            </div>
+
+            <div class="entry">
+                <div class="entry-date">
+                    <span class="entry-day">18</span>
+                    <span class="entry-month">Apr</span>
+                </div>
+                <div class="entry-body">
+                    <div class="entry-title">Google OAuth — signup and login</div>
+                    <div class="entry-desc">Google OAuth is now the primary authentication method. Users can sign up or log in with their Google account in one click. Password-based accounts still work, but Google is the fastest path. OAuth callback handled via /auth/google-auth/callback route.</div>
+                    <div class="entry-badge improvement">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+                        Improvement
+                    </div>
+                </div>
+            </div>
+
+            <div class="entry">
+                <div class="entry-date">
+                    <span class="entry-day">12</span>
+                    <span class="entry-month">Apr</span>
+                </div>
+                <div class="entry-body">
+                    <div class="entry-title">Voice input for tasks</div>
+                    <div class="entry-desc">Voice input now available when adding tasks. Uses the browser's native Web Speech API — no external services required. Tap the microphone icon, speak your task, and it transcribes directly into the task title. Works on mobile and desktop.</div>
+                    <div class="entry-badge new">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                        New Feature
+                    </div>
+                </div>
+            </div>
+
+            <div class="entry">
+                <div class="entry-date">
+                    <span class="entry-day">05</span>
+                    <span class="entry-month">Apr</span>
+                </div>
+                <div class="entry-body">
+                    <div class="entry-title">Journal with AI-powered task auto-completion</div>
+                    <div class="entry-desc">Launched the evening journal with AI-assisted reflection. Users can capture how their day went, what they learned, and what they want to do tomorrow. AI automatically marks tasks as complete based on what you wrote about accomplishing. Closes the loop between reflection and task tracking.</div>
+                    <div class="entry-badge new">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                        New Feature
+                    </div>
+                </div>
+            </div>
+
+            <div class="entry">
+                <div class="entry-date">
+                    <span class="entry-day">28</span>
+                    <span class="entry-month">Mar</span>
+                </div>
+                <div class="entry-body">
+                    <div class="entry-title">Great Ideas — community feature suggestions</div>
+                    <div class="entry-desc">Launched the Great Ideas board where users can submit, vote on, and track feature suggestions. Three status stages: Submitted, Under Review, Selected. Selected ideas earn a 3-day credit (~$1.50/mo) as a thank-you. Creates a real feedback loop between users and the roadmap.</div>
+                    <div class="entry-badge new">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                        New Feature
+                    </div>
+                </div>
+            </div>
+
+            <div class="entry">
+                <div class="entry-date">
+                    <span class="entry-day">15</span>
+                    <span class="entry-month">Mar</span>
+                </div>
+                <div class="entry-body">
+                    <div class="entry-title">Gmail sync for Autopilot — email-to-task workflow</div>
+                    <div class="entry-desc">Autopilot users can now connect their Gmail account via OAuth. Emails appear in FocusLedger with a "Make Task" action that pre-fills the task title (Re:/Fwd: stripped), smart-deduces the due date from email context, and optionally captures an amount field for financial follow-up.</div>
+                    <div class="entry-badge new">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                        Autopilot Feature
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- More entries divider -->
+    <div class="no-more-card">
+        <p>That's 10 features shipped so far.</p>
+        <p>More on the way. <a href="/signup">Get early access to what's coming next &rarr;</a></p>
+    </div>
+
+</main>
+
+<!-- Footer -->
+<footer class="page-footer">
+    <div class="footer-links">
+        <a href="/">Home</a>
+        <a href="/story">About</a>
+        <a href="/changelog">Changelog</a>
+        <a href="/pricing">Pricing</a>
+        <a href="/contact">Contact</a>
+        <a href="/terms">Terms</a>
+        <a href="/privacy">Privacy</a>
+    </div>
+    <p>FocusLedger &copy; 2026</p>
+</footer>
+
+<!-- Analytics: PostHog PageView -->
+<script>
+(function() {
+    var slug = '__POLSIA_SLUG__' || '';
+    if (slug && window.posthog) {
+        posthog.capture('$pageview', { page: '/changelog', source: 'organic' });
+    }
+})();
+</script>
+
+<!-- Polsia Analytics Beacon -->
+<script src="https://analytics.polsia.com/beacon?slug=__POLSIA_SLUG__&path=/changelog" async defer></script>
+
+</body>
+</html>

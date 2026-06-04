@@ -1,0 +1,1055 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#011e5c">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="FocusLedger">
+    <link rel="icon" type="image/png" sizes="32x32" href="/icons/fl-icon.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/fl-icon.png">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Buddy Check-in — FocusLedger</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --orange: #c9a84c;
+            --navy: #011e5c;
+            --cream: #faf9f7;
+            --text-dark: #1a1a1a;
+            --text-muted: #6b6b6b;
+            --border: #e8e5e0;
+            --surface: #FFFFFF;
+        }
+
+        html, body {
+            height: 100%;
+            font-family: 'DM Sans', sans-serif;
+            background: var(--navy);
+            color: white;
+            overflow: hidden;
+        }
+
+        h1, h2, h3 { font-family: 'Space Grotesk', sans-serif; }
+
+        /* ── Full-screen layout ── */
+        .app-shell {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            height: 100dvh;
+            max-width: 500px;
+            margin: 0 auto;
+            /* Reserve 60px for fixed bottom nav + iOS safe area below home indicator */
+            padding: env(safe-area-inset-top, 0) 0 calc(60px + env(safe-area-inset-bottom, 0));
+        }
+
+        /* ── Top bar ── */
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 1.25rem 0.5rem;
+            flex-shrink: 0;
+        }
+        .logo-small {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: rgba(255,255,255,0.5);
+        }
+        .top-bar-right {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        .skip-btn {
+            background: none;
+            border: none;
+            color: rgba(255,255,255,0.4);
+            font-size: 0.82rem;
+            font-family: 'DM Sans', sans-serif;
+            cursor: pointer;
+            padding: 0.4rem 0;
+            text-decoration: none;
+            transition: color 0.15s;
+        }
+        .skip-btn:hover { color: rgba(255,255,255,0.7); }
+
+        /* Mode switch link */
+        .mode-switch-btn {
+            background: none;
+            border: none;
+            color: rgba(255,255,255,0.3);
+            font-size: 0.78rem;
+            font-family: 'DM Sans', sans-serif;
+            cursor: pointer;
+            padding: 0.4rem 0;
+            text-decoration: underline;
+            transition: color 0.15s;
+        }
+        .mode-switch-btn:hover { color: rgba(255,255,255,0.6); }
+
+        /* ── Loading screen ── */
+        #loadingScreen {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
+            color: rgba(255,255,255,0.55);
+            font-size: 0.9rem;
+        }
+        .spinner {
+            width: 32px; height: 32px;
+            border: 3px solid rgba(255,255,255,0.15);
+            border-top-color: var(--orange);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ── Chat area ── */
+        #chatArea {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0.75rem 1.25rem 0.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.85rem;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        /* ── Message bubbles ── */
+        .msg {
+            display: flex;
+            align-items: flex-end;
+            gap: 0.5rem;
+            animation: fadeUp 0.25s ease;
+        }
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(8px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        .msg.buddy { justify-content: flex-start; }
+        .msg.user  { justify-content: flex-end; }
+
+        .bubble {
+            max-width: 82%;
+            padding: 0.75rem 1rem;
+            border-radius: 18px;
+            font-size: 0.95rem;
+            line-height: 1.45;
+        }
+        .msg.buddy .bubble {
+            background: rgba(255,255,255,0.1);
+            border-radius: 4px 18px 18px 18px;
+            color: rgba(255,255,255,0.92);
+        }
+        .msg.user .bubble {
+            background: var(--orange);
+            border-radius: 18px 18px 4px 18px;
+            color: #fff;
+            font-weight: 500;
+        }
+
+        /* Buddy avatar circle */
+        .buddy-avatar {
+            width: 28px; height: 28px;
+            border-radius: 50%;
+            background: rgba(201,168,76,0.25);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.9rem;
+            flex-shrink: 0;
+            align-self: flex-end;
+        }
+
+        /* Typing indicator */
+        .typing-dots {
+            display: flex; gap: 4px; align-items: center;
+            padding: 0.65rem 0.85rem;
+        }
+        .typing-dots span {
+            width: 6px; height: 6px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.5);
+            animation: bounce 1.1s infinite;
+        }
+        .typing-dots span:nth-child(2) { animation-delay: 0.15s; }
+        .typing-dots span:nth-child(3) { animation-delay: 0.3s; }
+        @keyframes bounce {
+            0%, 60%, 100% { transform: translateY(0); }
+            30% { transform: translateY(-5px); }
+        }
+
+        /* ── Input area ── */
+        .input-wrap {
+            padding: 0.65rem 1.25rem 1rem;
+            flex-shrink: 0;
+            border-top: 1px solid rgba(255,255,255,0.07);
+        }
+        .input-row {
+            display: flex;
+            gap: 0.5rem;
+            align-items: flex-end;
+        }
+        #userInput {
+            flex: 1;
+            background: rgba(255,255,255,0.08);
+            border: 1.5px solid rgba(255,255,255,0.15);
+            border-radius: 14px;
+            padding: 0.7rem 1rem;
+            font-size: 0.95rem;
+            font-family: 'DM Sans', sans-serif;
+            color: white;
+            outline: none;
+            resize: none;
+            min-height: 46px;
+            max-height: 120px;
+            line-height: 1.4;
+            transition: border-color 0.15s;
+        }
+        #userInput::placeholder { color: rgba(255,255,255,0.3); }
+        #userInput:focus { border-color: rgba(201,168,76,0.5); }
+
+        /* Mic button */
+        #micBtn {
+            width: 46px; height: 46px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.08);
+            border: 1.5px solid rgba(255,255,255,0.15);
+            cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.1rem;
+            transition: background 0.15s, border-color 0.15s, transform 0.1s;
+            flex-shrink: 0;
+            color: rgba(255,255,255,0.7);
+        }
+        #micBtn:hover { background: rgba(255,255,255,0.14); }
+        #micBtn.listening {
+            background: rgba(201,168,76,0.25);
+            border-color: var(--orange);
+            animation: micPulse 1.2s ease-in-out infinite;
+        }
+        @keyframes micPulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(201,168,76,0.4); }
+            50% { box-shadow: 0 0 0 8px rgba(201,168,76,0); }
+        }
+
+        #sendBtn {
+            width: 46px; height: 46px;
+            border-radius: 50%;
+            background: var(--orange);
+            border: none;
+            cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.1rem;
+            transition: background 0.15s, transform 0.1s;
+            flex-shrink: 0;
+        }
+        #sendBtn:hover { background: #d4b56a; }
+        #sendBtn:active { transform: scale(0.95); }
+        #sendBtn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+        /* Voice hint */
+        #voiceHint {
+            font-size: 0.78rem;
+            color: rgba(255,255,255,0.35);
+            text-align: center;
+            padding-top: 0.3rem;
+            display: none;
+        }
+        #voiceHint.visible { display: block; }
+
+        /* ── Brain dump task preview ── */
+        #taskPreview {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0.75rem 1.25rem 1rem;
+            display: none;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+        #taskPreview.visible { display: flex; }
+
+        .task-preview-heading {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: rgba(255,255,255,0.9);
+            margin-bottom: 0.25rem;
+        }
+        .task-preview-sub {
+            font-size: 0.85rem;
+            color: rgba(255,255,255,0.5);
+            margin-bottom: 0.5rem;
+            line-height: 1.4;
+        }
+        .task-preview-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        .task-preview-item {
+            display: flex;
+            align-items: center;
+            gap: 0.65rem;
+            background: rgba(255,255,255,0.07);
+            border: 1.5px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 0.65rem 0.85rem;
+            cursor: pointer;
+            transition: border-color 0.15s, background 0.15s;
+        }
+        .task-preview-item.selected {
+            border-color: var(--orange);
+            background: rgba(201,168,76,0.12);
+        }
+        .task-check {
+            width: 22px; height: 22px;
+            border-radius: 50%;
+            border: 2px solid rgba(255,255,255,0.3);
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+            font-size: 0.75rem;
+            transition: border-color 0.15s, background 0.15s;
+        }
+        .task-preview-item.selected .task-check {
+            border-color: var(--orange);
+            background: var(--orange);
+        }
+        .task-info { flex: 1; min-width: 0; }
+        .task-title-text {
+            font-size: 0.92rem;
+            color: rgba(255,255,255,0.9);
+            font-weight: 500;
+            line-height: 1.3;
+        }
+        .task-meta {
+            font-size: 0.75rem;
+            color: rgba(255,255,255,0.4);
+            margin-top: 0.15rem;
+        }
+        .task-preview-actions {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 0.25rem;
+        }
+        .preview-confirm-btn {
+            flex: 1;
+            padding: 0.8rem 1rem;
+            background: var(--orange);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 0.95rem;
+            font-weight: 700;
+            font-family: 'DM Sans', sans-serif;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        .preview-confirm-btn:hover { background: #d4b56a; }
+        .preview-confirm-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .preview-skip-btn {
+            padding: 0.8rem 1rem;
+            background: transparent;
+            color: rgba(255,255,255,0.45);
+            border: 1.5px solid rgba(255,255,255,0.15);
+            border-radius: 12px;
+            font-size: 0.9rem;
+            font-family: 'DM Sans', sans-serif;
+            cursor: pointer;
+            transition: border-color 0.15s, color 0.15s;
+        }
+        .preview-skip-btn:hover { border-color: rgba(255,255,255,0.3); color: rgba(255,255,255,0.65); }
+
+        .task-preview-loading {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+            padding: 2rem 0;
+            color: rgba(255,255,255,0.5);
+            font-size: 0.88rem;
+        }
+
+        /* ── Completion screen ── */
+        #completionScreen {
+            display: none;
+            flex: 1;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 2rem 1.5rem;
+            gap: 1.25rem;
+        }
+        #completionScreen.visible { display: flex; }
+        .completion-icon { font-size: 2.5rem; }
+        .completion-heading {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.6rem;
+            font-weight: 700;
+            line-height: 1.2;
+        }
+        .completion-sub {
+            font-size: 0.95rem;
+            color: rgba(255,255,255,0.6);
+            line-height: 1.5;
+            max-width: 320px;
+        }
+        #insightBox {
+            background: rgba(201,168,76,0.12);
+            border: 1.5px solid rgba(201,168,76,0.3);
+            border-radius: 14px;
+            padding: 1rem 1.1rem;
+            font-size: 0.9rem;
+            color: rgba(255,255,255,0.88);
+            line-height: 1.55;
+            text-align: left;
+            max-width: 340px;
+        }
+        .complete-btn {
+            width: 100%;
+            max-width: 340px;
+            padding: 0.95rem 1rem;
+            background: var(--orange);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 700;
+            font-family: 'DM Sans', sans-serif;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        .complete-btn:hover { background: #d4b56a; }
+        .complete-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    </style>
+    <link rel="stylesheet" href="/shared-nav.css">
+</head>
+<body>
+<div class="app-shell">
+
+    <!-- Top bar (always shown) -->
+    <div class="top-bar">
+        <span class="logo-small">FocusLedger</span>
+        <div class="top-bar-right">
+            <button class="mode-switch-btn" id="modeSwitchBtn" type="button" style="display:none;">Use form instead</button>
+            <button class="skip-btn" id="skipBtn" type="button">Skip →</button>
+        </div>
+    </div>
+
+    <!-- Loading -->
+    <div id="loadingScreen">
+        <div class="spinner"></div>
+        <span>Getting things ready…</span>
+    </div>
+
+    <!-- Chat area (hidden until ready) -->
+    <div id="chatArea" style="display:none;"></div>
+
+    <!-- Input area (hidden until chat starts) -->
+    <div class="input-wrap" id="inputWrap" style="display:none;">
+        <div class="input-row">
+            <button id="micBtn" type="button" aria-label="Voice input" title="Speak your answer" style="display:none;">🎤</button>
+            <textarea
+                id="userInput"
+                placeholder="What's on your mind?"
+                rows="1"
+                maxlength="800"
+                autocomplete="off"
+                autocorrect="off"
+                autocapitalize="sentences"
+            ></textarea>
+            <button id="sendBtn" type="button" aria-label="Send">➤</button>
+        </div>
+        <div id="voiceHint">Listening… tap mic to stop</div>
+    </div>
+
+    <!-- Brain dump task preview (between chat and completion) -->
+    <div id="taskPreview">
+        <div class="task-preview-heading">Tasks I heard</div>
+        <div class="task-preview-sub">Select which ones to add. You can edit them in Tasks.</div>
+        <div class="task-preview-list" id="taskPreviewList">
+            <div class="task-preview-loading">
+                <div class="spinner"></div>
+                <span>Parsing what you shared…</span>
+            </div>
+        </div>
+        <div class="task-preview-actions">
+            <button class="preview-skip-btn" id="skipTasksBtn" type="button">Skip</button>
+            <button class="preview-confirm-btn" id="confirmTasksBtn" type="button" disabled>Add selected</button>
+        </div>
+    </div>
+
+    <!-- Completion screen -->
+    <div id="completionScreen">
+        <div class="completion-icon">🎯</div>
+        <div class="completion-heading">Plan's being built</div>
+        <div class="completion-sub">Based on what you shared, I'm picking your top 3 tasks for today.</div>
+        <div id="insightBox" style="display:none;"></div>
+        <button class="complete-btn" id="completionBtn" type="button" disabled>Building your plan…</button>
+    </div>
+
+</div>
+
+<script>
+(function() {
+    'use strict';
+
+    var token = localStorage.getItem('fl_token');
+    if (!token) { window.location.href = '/login'; return; }
+
+    var TODAY = (function() {
+        var d = new Date();
+        return d.toLocaleDateString('en-CA', {
+            year: 'numeric', month: '2-digit', day: '2-digit',
+            timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
+        });
+    })();
+
+    var state = {
+        turn: 0,
+        isComplete: false,
+        detectedMood: null,
+        sending: false,
+        sessionCount: 0,
+        firstSession: false,
+        greetingInsights: [],  // cross-domain insights from session-status (forwarded to /conversation)
+        allUserMessages: [],   // collected for brain-dump parsing
+        parsedTasks: [],       // tasks returned from NLP endpoint
+        selectedTasks: new Set()
+    };
+
+    // ── Parsed task storage (indexed by position) ─────────────────────────────
+    var parsedTaskData = [];
+
+    function apiFetch(url, opts) {
+        opts = opts || {};
+        opts.headers = Object.assign({ 'Authorization': 'Bearer ' + token }, opts.headers || {});
+        return fetch(url, opts);
+    }
+
+    function el(id) { return document.getElementById(id); }
+
+    // ── Skip / bypass ────────────────────────────────────────────────────────
+    el('skipBtn').addEventListener('click', function() {
+        // Record skip for preference learning
+        recordModeOutcome('conversation', false, true);
+        markDoneAndProceed(null, null);
+    });
+
+    // ── Mode switch ──────────────────────────────────────────────────────────
+    el('modeSwitchBtn').addEventListener('click', function() {
+        // User wants form mode — record manual override and redirect to buddy
+        apiFetch('/api/buddy/mode-preference', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ manual_override: 'form' })
+        }).catch(function() {});
+        window.location.href = '/app/buddy?mode=form';
+    });
+
+    // ── Boot: check session status + mode preference ──────────────────────────
+    Promise.all([
+        apiFetch('/api/buddy/session-status').then(function(r) { return r.json(); }),
+        apiFetch('/api/buddy/mode-preference').then(function(r) { return r.json(); }).catch(function() { return { success: true, mode: 'conversation', totalSessions: 0 }; })
+    ]).then(function(results) {
+        var sessionData = results[0];
+        var modePref = results[1];
+
+        if (!sessionData.success || !sessionData.dueToday) {
+            window.location.href = '/app/buddy';
+            return;
+        }
+
+        state.sessionCount = sessionData.sessionCount || 0;
+        state.firstSession = state.sessionCount === 0;
+        state.greetingInsights = sessionData.greetingInsights || [];
+
+        // Show mode switch button after first session so user can opt into form
+        if (state.sessionCount > 0 && modePref.totalSessions < 10) {
+            el('modeSwitchBtn').style.display = '';
+        }
+
+        // If preference says form mode and we are not being forced here, redirect to form flow
+        // The form flow is embedded in buddy.html — redirect with ?mode=form signal
+        if (modePref.mode === 'form' && !window.location.search.includes('force=conversation')) {
+            window.location.href = '/app/buddy?mode=form';
+            return;
+        }
+
+        // Increment session count (fire-and-forget)
+        apiFetch('/api/buddy/increment-session', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        }).catch(function() {});
+
+        startConversation(sessionData);
+    }).catch(function() {
+        startConversation({ sessionCount: 0 });
+    });
+
+    // ── Start conversation ────────────────────────────────────────────────────
+    function startConversation(sessionData) {
+        el('loadingScreen').style.display = 'none';
+        el('chatArea').style.display = 'flex';
+        el('inputWrap').style.display = '';
+
+        initVoiceInput();
+
+        var sessionCount = sessionData.sessionCount || 0;
+        var prevSummary = sessionData.previousCheckinSummary || null;
+        var greetingInsights = sessionData.greetingInsights || [];
+        var greeting = buildGreeting(sessionCount, prevSummary, greetingInsights);
+
+        appendBuddyMessage(greeting);
+        focusInput();
+    }
+
+    function buildGreeting(sessionCount, prevSummary, greetingInsights) {
+        var hour = new Date().getHours();
+        var timeGreet = hour < 12 ? 'Morning' : hour < 17 ? 'Hey' : 'Evening';
+
+        // Day-2 hook: reference yesterday's check-in
+        if (sessionCount === 1 && prevSummary) {
+            var firstBit = prevSummary.split('|')[0].trim().slice(0, 80);
+            if (firstBit.length > 20) {
+                return timeGreet + '. Yesterday you mentioned: "' + firstBit + (firstBit.length >= 80 ? '…' : '') + '". How\'s that sitting today?';
+            }
+        }
+
+        // Days 3-8: cross-domain pattern insight in opening message
+        if (greetingInsights && greetingInsights.length > 0 && sessionCount >= 2) {
+            // Surface one insight as an opener, then ask the open question
+            return greetingInsights[0] + '\n\nAnyway — what\'s on your mind today?';
+        }
+
+        return timeGreet + '. What\'s on your mind?';
+    }
+
+    // ── Voice input (Web Speech API) ──────────────────────────────────────────
+    var recognition = null;
+    var isListening = false;
+
+    function initVoiceInput() {
+        var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SpeechRecognition) return; // browser doesn't support — hide mic button
+
+        var micBtn = el('micBtn');
+        micBtn.style.display = '';
+
+        recognition = new SpeechRecognition();
+        recognition.continuous = false;
+        recognition.interimResults = true;
+        recognition.lang = 'en-US';
+        recognition.maxAlternatives = 1;
+
+        var interim = '';
+        var priorText = '';
+
+        recognition.onstart = function() {
+            isListening = true;
+            micBtn.classList.add('listening');
+            micBtn.textContent = '⏹';
+            el('voiceHint').classList.add('visible');
+            priorText = el('userInput').value.trim();
+            if (priorText) priorText += ' ';
+        };
+
+        recognition.onresult = function(event) {
+            interim = '';
+            var final = '';
+            for (var i = event.resultIndex; i < event.results.length; i++) {
+                if (event.results[i].isFinal) {
+                    final += event.results[i][0].transcript;
+                } else {
+                    interim += event.results[i][0].transcript;
+                }
+            }
+            var inputEl = el('userInput');
+            inputEl.value = priorText + final + interim;
+            // Trigger auto-resize
+            inputEl.style.height = 'auto';
+            inputEl.style.height = Math.min(inputEl.scrollHeight, 120) + 'px';
+        };
+
+        recognition.onerror = function(event) {
+            if (event.error !== 'no-speech' && event.error !== 'aborted') {
+                console.warn('[voice] recognition error:', event.error);
+            }
+            stopListening();
+        };
+
+        recognition.onend = function() {
+            stopListening();
+        };
+
+        micBtn.addEventListener('click', function() {
+            if (isListening) {
+                recognition.stop();
+            } else {
+                try {
+                    recognition.start();
+                } catch (e) {
+                    console.warn('[voice] could not start recognition:', e.message);
+                }
+            }
+        });
+    }
+
+    function stopListening() {
+        isListening = false;
+        var micBtn = el('micBtn');
+        if (micBtn) {
+            micBtn.classList.remove('listening');
+            micBtn.textContent = '🎤';
+        }
+        var hint = el('voiceHint');
+        if (hint) hint.classList.remove('visible');
+    }
+
+    // ── Message rendering ─────────────────────────────────────────────────────
+    function appendBuddyMessage(text) {
+        var chat = el('chatArea');
+        var row = document.createElement('div');
+        row.className = 'msg buddy';
+        row.innerHTML = '<div class="buddy-avatar">💬</div><div class="bubble">' + escHtml(text) + '</div>';
+        chat.appendChild(row);
+        scrollChat();
+    }
+
+    function appendUserMessage(text) {
+        var chat = el('chatArea');
+        var row = document.createElement('div');
+        row.className = 'msg user';
+        row.innerHTML = '<div class="bubble">' + escHtml(text) + '</div>';
+        chat.appendChild(row);
+        scrollChat();
+    }
+
+    function showTyping() {
+        var chat = el('chatArea');
+        var row = document.createElement('div');
+        row.className = 'msg buddy';
+        row.id = 'typingIndicator';
+        row.innerHTML = '<div class="buddy-avatar">💬</div><div class="bubble"><div class="typing-dots"><span></span><span></span><span></span></div></div>';
+        chat.appendChild(row);
+        scrollChat();
+    }
+
+    function hideTyping() {
+        var t = document.getElementById('typingIndicator');
+        if (t) t.remove();
+    }
+
+    function scrollChat() {
+        var chat = el('chatArea');
+        if (chat) chat.scrollTop = chat.scrollHeight;
+    }
+
+    // ── Send message ──────────────────────────────────────────────────────────
+    var inputEl = el('userInput');
+    var sendBtn = el('sendBtn');
+
+    sendBtn.addEventListener('click', sendMessage);
+    inputEl.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendMessage();
+        }
+    });
+
+    // Auto-resize textarea
+    inputEl.addEventListener('input', function() {
+        this.style.height = 'auto';
+        this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+    });
+
+    function sendMessage() {
+        if (state.sending || state.isComplete) return;
+        var text = inputEl.value.trim();
+        if (!text) return;
+
+        // Stop voice if still listening
+        if (isListening && recognition) recognition.stop();
+
+        appendUserMessage(text);
+        state.allUserMessages.push(text);
+        inputEl.value = '';
+        inputEl.style.height = 'auto';
+        sendBtn.disabled = true;
+        state.sending = true;
+        state.turn++;
+
+        showTyping();
+
+        // Forward greetingInsights on first turn so the AI has cross-domain context
+        var convBody = { message: text, date: TODAY };
+        if (state.turn === 1 && state.greetingInsights.length > 0) {
+            convBody.greetingContext = state.greetingInsights;
+        }
+
+        apiFetch('/api/buddy/conversation', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(convBody)
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            hideTyping();
+            if (data.success) {
+                appendBuddyMessage(data.reply || 'Got it.');
+                if (window.FLHaptics) FLHaptics.buddyMessage();
+                if (data.detectedMood) state.detectedMood = data.detectedMood;
+
+                if (data.isComplete) {
+                    state.isComplete = true;
+                    // Brief pause then show task preview
+                    setTimeout(showTaskPreview, 600);
+                } else {
+                    sendBtn.disabled = false;
+                    state.sending = false;
+                    focusInput();
+                }
+            } else {
+                appendBuddyMessage('Sorry, something went sideways. Try sending that again.');
+                sendBtn.disabled = false;
+                state.sending = false;
+                focusInput();
+            }
+        })
+        .catch(function() {
+            hideTyping();
+            appendBuddyMessage('Hmm, lost connection for a second. Try again.');
+            sendBtn.disabled = false;
+            state.sending = false;
+            focusInput();
+        });
+    }
+
+    function focusInput() {
+        setTimeout(function() {
+            if (inputEl && !state.isComplete) inputEl.focus();
+        }, 100);
+    }
+
+    // ── Brain dump task preview ───────────────────────────────────────────────
+    function showTaskPreview() {
+        el('chatArea').style.display = 'none';
+        el('inputWrap').style.display = 'none';
+        el('modeSwitchBtn').style.display = 'none';
+        var preview = el('taskPreview');
+        preview.classList.add('visible');
+
+        // Parse brain dump from all user messages
+        var combinedText = state.allUserMessages.join(' ');
+
+        apiFetch('/api/buddy/brain-dump-tasks', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text: combinedText, date: TODAY })
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.success && data.tasks && data.tasks.length) {
+                renderTaskPreview(data.tasks);
+            } else {
+                // No tasks parsed — skip straight to completion
+                proceeedToCompletion();
+            }
+        })
+        .catch(function() {
+            // On error, skip task preview
+            proceeedToCompletion();
+        });
+
+        // Set up skip button
+        el('skipTasksBtn').addEventListener('click', function() {
+            proceeedToCompletion();
+        });
+
+        // Set up confirm button
+        el('confirmTasksBtn').addEventListener('click', function() {
+            var selected = parsedTaskData.filter(function(_, i) {
+                return state.selectedTasks.has(i);
+            });
+            if (!selected.length) {
+                proceeedToCompletion();
+                return;
+            }
+
+            var confirmBtn = el('confirmTasksBtn');
+            confirmBtn.disabled = true;
+            confirmBtn.textContent = 'Saving…';
+
+            apiFetch('/api/buddy/confirm-tasks', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ tasks: selected })
+            })
+            .then(function(r) { return r.json(); })
+            .catch(function() { return null; })
+            .then(function() {
+                proceeedToCompletion();
+            });
+        });
+    }
+
+    function renderTaskPreview(tasks) {
+        parsedTaskData = tasks;
+        var list = el('taskPreviewList');
+        list.innerHTML = '';
+
+        tasks.forEach(function(task, i) {
+            // Pre-select all tasks by default
+            state.selectedTasks.add(i);
+
+            var item = document.createElement('div');
+            item.className = 'task-preview-item selected';
+            item.dataset.index = String(i);
+
+            var priorityLabel = task.priority === 'high' ? '🔴 High' : task.priority === 'low' ? '🟢 Low' : '🟡 Medium';
+            var valueMeta = task.value_name ? ' · ' + task.value_name : '';
+
+            item.innerHTML = '<div class="task-check">✓</div>' +
+                '<div class="task-info">' +
+                    '<div class="task-title-text">' + escHtml(task.title) + '</div>' +
+                    '<div class="task-meta">' + escHtml(priorityLabel + valueMeta) + '</div>' +
+                '</div>';
+
+            item.addEventListener('click', function() {
+                var idx = parseInt(this.dataset.index, 10);
+                if (state.selectedTasks.has(idx)) {
+                    state.selectedTasks.delete(idx);
+                    this.classList.remove('selected');
+                    this.querySelector('.task-check').textContent = '';
+                } else {
+                    state.selectedTasks.add(idx);
+                    this.classList.add('selected');
+                    this.querySelector('.task-check').textContent = '✓';
+                }
+                updateConfirmBtn();
+            });
+
+            list.appendChild(item);
+        });
+
+        updateConfirmBtn();
+    }
+
+    function updateConfirmBtn() {
+        var btn = el('confirmTasksBtn');
+        var count = state.selectedTasks.size;
+        btn.disabled = false;
+        btn.textContent = count > 0 ? ('Add ' + count + ' task' + (count === 1 ? '' : 's')) : 'Add selected';
+    }
+
+    // ── Completion flow ───────────────────────────────────────────────────────
+    function proceeedToCompletion() {
+        el('taskPreview').classList.remove('visible');
+        el('taskPreview').style.display = 'none';
+        el('completionScreen').classList.add('visible');
+        if (window.FLHaptics) FLHaptics.checkinSubmit();
+
+        // Record mode completion for preference learning
+        recordModeOutcome('conversation', true, false);
+
+        var mood = state.detectedMood || 'okay';
+
+        apiFetch('/api/buddy/login-checkin-done', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ mood: mood, intention: null })
+        }).catch(function() {});
+
+        var planPromise = apiFetch('/api/buddy/daily-plan?mood=' + encodeURIComponent(mood) + '&date=' + TODAY)
+            .then(function(r) { return r.json(); })
+            .catch(function() { return null; });
+
+        var insightPromise = Promise.resolve(null);
+        if (state.firstSession) {
+            insightPromise = apiFetch('/api/buddy/generate-insights', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ date: TODAY })
+            })
+            .then(function(r) { return r.json(); })
+            .catch(function() { return null; });
+        }
+
+        Promise.all([planPromise, insightPromise]).then(function(results) {
+            var insightData = results[1];
+
+            if (insightData && insightData.insight) {
+                el('insightBox').textContent = insightData.insight;
+                el('insightBox').style.display = '';
+            }
+
+            apiFetch('/api/buddy/daily-plan/accept', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ date: TODAY })
+            }).catch(function() {});
+
+            var btn = el('completionBtn');
+            btn.textContent = 'See my plan →';
+            btn.disabled = false;
+            btn.addEventListener('click', function() {
+                window.location.href = '/app/buddy';
+            });
+        }).catch(function() {
+            var btn = el('completionBtn');
+            btn.textContent = 'Continue →';
+            btn.disabled = false;
+            btn.addEventListener('click', function() {
+                window.location.href = '/app/buddy';
+            });
+        });
+    }
+
+    // ── Mode preference tracking ──────────────────────────────────────────────
+    function recordModeOutcome(mode, completed, skipped) {
+        apiFetch('/api/buddy/mode-preference', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ mode: mode, completed: completed, skipped: skipped })
+        }).catch(function() {});
+    }
+
+    // ── Skip / mark done (legacy path) ────────────────────────────────────────
+    function markDoneAndProceed(mood, intention) {
+        apiFetch('/api/buddy/login-checkin-done', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ mood: mood || null, intention: intention || null })
+        }).catch(function() {}).finally(function() {
+            window.location.href = '/home';
+        });
+    }
+
+    // ── Util ──────────────────────────────────────────────────────────────────
+    /* global FLHaptics */
+    function escHtml(s) {
+        return String(s)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
+
+})();
+</script>
+<!-- Haptics: no-op in browser, native feedback in iOS Capacitor shell -->
+<script src="/js/haptics.js"></script>
+<script src="/shared-nav.js"></script>
+</body>
+</html>

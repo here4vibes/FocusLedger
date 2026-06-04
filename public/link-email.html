@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Connect Email — FocusLedger</title>
+  <link rel="stylesheet" href="/css/design-system.css" />
+  <style>
+    body {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: var(--cream);
+      padding: 24px 16px;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      box-shadow: var(--card-shadow);
+      padding: 40px 36px;
+      max-width: 440px;
+      width: 100%;
+      text-align: center;
+    }
+
+    .logo {
+      font-family: var(--font-serif);
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--trust-blue);
+      margin-bottom: 28px;
+      display: block;
+    }
+
+    .icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+      display: block;
+    }
+
+    h1 {
+      font-family: var(--font-serif);
+      font-size: 22px;
+      color: var(--text-dark);
+      margin: 0 0 12px;
+    }
+
+    .subtitle {
+      font-size: 15px;
+      color: var(--text-muted);
+      margin: 0 0 28px;
+      line-height: 1.6;
+    }
+
+    .btn {
+      display: inline-block;
+      width: 100%;
+      padding: 14px 24px;
+      background: var(--trust-blue);
+      color: #fff;
+      border: none;
+      border-radius: var(--btn-radius);
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      box-sizing: border-box;
+      transition: background 0.15s;
+    }
+
+    .btn:hover { background: var(--trust-blue-mid); }
+    .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    .btn-secondary {
+      background: transparent;
+      color: var(--trust-blue);
+      border: 1px solid var(--border);
+      margin-top: 10px;
+    }
+    .btn-secondary:hover { background: var(--cream-dark); }
+
+    .alert {
+      border-radius: 8px;
+      padding: 14px 16px;
+      font-size: 14px;
+      margin-bottom: 20px;
+      text-align: left;
+      display: none;
+    }
+    .alert-success { background: #edfcf0; border: 1px solid #7DB87D; color: #2a6a2a; }
+    .alert-error   { background: var(--error-light); border: 1px solid var(--error); color: #8a2a2a; }
+    .alert-warn    { background: #fffbeb; border: 1px solid #f59e0b; color: #78350f; }
+
+    .task-preview {
+      background: var(--cream);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 14px;
+      margin: 16px 0;
+      font-size: 14px;
+      color: var(--text-dark);
+      text-align: left;
+    }
+    .task-preview strong { display: block; font-size: 13px; color: var(--text-muted); margin-bottom: 4px; }
+
+    .spinner {
+      width: 20px; height: 20px;
+      border: 2px solid rgba(255,255,255,0.4);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      display: inline-block;
+      vertical-align: middle;
+      margin-right: 8px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .login-prompt { margin-top: 24px; display: none; }
+    .login-prompt p { font-size: 14px; color: var(--text-muted); margin: 0 0 12px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <span class="logo">FocusLedger</span>
+
+    <!-- Loading state -->
+    <div id="state-loading">
+      <span class="icon">🔗</span>
+      <h1>Connecting your email…</h1>
+      <p class="subtitle">Just a moment.</p>
+    </div>
+
+    <!-- Prompt to log in first -->
+    <div id="state-login" style="display:none;">
+      <span class="icon">🔒</span>
+      <h1>Log in to connect this email</h1>
+      <p class="subtitle">
+        Sign in to your FocusLedger account to link this address and create your task automatically.
+      </p>
+      <div id="alert-box" class="alert"></div>
+      <button class="btn" id="btn-login">Log in with Google</button>
+      <a href="/login" class="btn btn-secondary">Log in with email</a>
+    </div>
+
+    <!-- Success state -->
+    <div id="state-success" style="display:none;">
+      <span class="icon">✅</span>
+      <h1>Email linked &amp; task created!</h1>
+      <div id="alert-success" class="alert alert-success" style="display:block;"></div>
+      <div id="task-preview" class="task-preview" style="display:none;">
+        <strong>Task created</strong>
+        <span id="task-title"></span>
+      </div>
+      <a href="/app/tasks" class="btn" style="margin-top:16px;">View my tasks</a>
+    </div>
+
+    <!-- Error state -->
+    <div id="state-error" style="display:none;">
+      <span class="icon">⚠️</span>
+      <h1>Something went wrong</h1>
+      <div id="alert-error" class="alert alert-error" style="display:block;"></div>
+      <a href="/app/tasks" class="btn btn-secondary" style="margin-top:8px;">Go to app</a>
+    </div>
+
+    <!-- Upgrade prompt (free user) -->
+    <div id="state-upgrade" style="display:none;">
+      <span class="icon">🚀</span>
+      <h1>Autopilot required</h1>
+      <p class="subtitle">Email-to-Tasks is an Autopilot feature. Upgrade to start creating tasks by email.</p>
+      <a href="/app/settings" class="btn">Upgrade to Autopilot</a>
+      <a href="/app/tasks" class="btn btn-secondary">Back to app</a>
+    </div>
+  </div>
+
+  <script>
+    const TOKEN_KEY = '__email_to_tasks_token';
+
+    function showState(id) {
+      ['state-loading', 'state-login', 'state-success', 'state-error', 'state-upgrade']
+        .forEach(s => {
+          const el = document.getElementById(s);
+          if (el) el.style.display = s === id ? '' : 'none';
+        });
+    }
+
+    function getToken() {
+      const params = new URLSearchParams(window.location.search);
+      return params.get('token') || '';
+    }
+
+    function getJwt() {
+      try {
+        return localStorage.getItem('token') || sessionStorage.getItem('token') || '';
+      } catch { return ''; }
+    }
+
+    async function attemptClaim(token) {
+      const jwt = getJwt();
+      if (!jwt) {
+        // Not logged in — save token and redirect to login
+        try { sessionStorage.setItem(TOKEN_KEY, token); } catch {}
+        showState('state-login');
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/email-to-tasks/claim?token=${encodeURIComponent(token)}`, {
+          headers: { 'Authorization': `Bearer ${jwt}` },
+        });
+        const data = await res.json();
+
+        if (res.ok && data.success) {
+          document.getElementById('alert-success').textContent =
+            data.message || 'Email linked and task created successfully.';
+          if (data.task) {
+            document.getElementById('task-title').textContent = data.task.title;
+            document.getElementById('task-preview').style.display = '';
+          }
+          showState('state-success');
+          // Clear stored token
+          try { sessionStorage.removeItem(TOKEN_KEY); } catch {}
+        } else if (res.status === 403 && data.code === 'PRO_REQUIRED') {
+          showState('state-upgrade');
+        } else if (res.status === 404) {
+          document.getElementById('alert-error').textContent =
+            'This link has expired or already been used. Please email tasks@focusledger.net again.';
+          showState('state-error');
+        } else {
+          document.getElementById('alert-error').textContent =
+            data.message || 'An unexpected error occurred. Please try again.';
+          showState('state-error');
+        }
+      } catch (err) {
+        document.getElementById('alert-error').textContent =
+          'Network error — please check your connection and try again.';
+        showState('state-error');
+      }
+    }
+
+    async function init() {
+      const token = getToken();
+
+      if (!token) {
+        document.getElementById('alert-error').textContent =
+          'No token found. Please click the link in the email we sent you.';
+        showState('state-error');
+        return;
+      }
+
+      await attemptClaim(token);
+    }
+
+    // Google login button — same flow as login.html
+    document.getElementById('btn-login')?.addEventListener('click', () => {
+      const token = getToken();
+      if (token) {
+        try { sessionStorage.setItem(TOKEN_KEY, token); } catch {}
+      }
+      // Redirect to Google OAuth; on return, app.js will handle the callback
+      // For simplicity, redirect to login page which will bring user back here after auth
+      window.location.href = `/login?redirect=${encodeURIComponent(window.location.href)}`;
+    });
+
+    init();
+
+    // After login, if token is stored in sessionStorage, re-attempt claim
+    // This handles the case where user was redirected to login and came back
+    window.addEventListener('storage', () => {
+      const jwt = getJwt();
+      const storedToken = sessionStorage.getItem(TOKEN_KEY);
+      if (jwt && storedToken) {
+        attemptClaim(storedToken);
+      }
+    });
+  </script>
+</body>
+</html>

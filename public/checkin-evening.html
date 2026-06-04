@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Evening Wrap-Up — FocusLedger</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --navy:      #011e5c;
+            --orange:    #c9a84c;
+            --orange-dk: #a8892e;
+            --cream:     #faf9f7;
+            --surface:   #fff;
+            --text:      #1a1a1a;
+            --muted:     #6b6b6b;
+            --border:    #e8e5e0;
+            --green:     #22c55e;
+            --amber:     #f59e0b;
+            --blue:      #3b82f6;
+        }
+
+        html, body {
+            min-height: 100%;
+            font-family: 'DM Sans', sans-serif;
+            background: var(--navy);
+            color: white;
+            overflow-x: hidden;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        h1, h2, h3 { font-family: 'Space Grotesk', sans-serif; }
+
+        /* ── App shell ── */
+        .shell {
+            display: flex;
+            flex-direction: column;
+            min-height: 100dvh;
+            max-width: 500px;
+            margin: 0 auto;
+            padding: 0 0 calc(80px + env(safe-area-inset-bottom, 0));
+        }
+
+        /* ── Top bar ── */
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.25rem 1.25rem 0.5rem;
+            flex-shrink: 0;
+        }
+        .top-brand {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: rgba(255,255,255,0.45);
+        }
+        .step-label {
+            font-size: 0.8rem;
+            color: rgba(255,255,255,0.5);
+        }
+        .back-btn {
+            background: none;
+            border: none;
+            color: rgba(255,255,255,0.45);
+            font-size: 0.85rem;
+            cursor: pointer;
+            padding: 0.3rem 0;
+            font-family: 'DM Sans', sans-serif;
+        }
+
+        /* ── Header ── */
+        .page-header {
+            padding: 1.5rem 1.25rem 0.5rem;
+            flex-shrink: 0;
+        }
+        .page-title {
+            font-size: 1.8rem;
+            font-weight: 700;
+            line-height: 1.15;
+            margin-bottom: 0.35rem;
+        }
+        .page-sub {
+            font-size: 0.9rem;
+            color: rgba(255,255,255,0.55);
+            line-height: 1.45;
+        }
+
+        /* ── Content area ── */
+        .content {
+            flex: 1;
+            padding: 0.75rem 1.25rem 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.85rem;
+            overflow-y: auto;
+        }
+
+        /* ── Stat cards ── */
+        .stat-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.6rem;
+        }
+        .stat-card {
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 14px;
+            padding: 0.85rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+        .stat-card.full { grid-column: span 2; }
+        .stat-emoji { font-size: 1.4rem; }
+        .stat-num {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: white;
+            line-height: 1;
+        }
+        .stat-lbl {
+            font-size: 0.75rem;
+            font-weight: 600;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: rgba(255,255,255,0.45);
+        }
+        .stat-card.tasks .stat-num { color: #60a5fa; }
+        .stat-card.routines .stat-num { color: #34d399; }
+        .stat-card.docs .stat-num { color: #a78bfa; }
+        .stat-card.money .stat-num { color: #fbbf24; }
+
+        /* ── Section divider ── */
+        .section-label {
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: rgba(255,255,255,0.35);
+            padding-top: 0.25rem;
+        }
+
+        /* ── Energy selector ── */
+        .energy-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 0.5rem;
+        }
+        .energy-btn {
+            background: rgba(255,255,255,0.07);
+            border: 2px solid rgba(255,255,255,0.12);
+            border-radius: 12px;
+            padding: 0.7rem 0.3rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.3rem;
+            cursor: pointer;
+            transition: border-color 0.15s, background 0.15s, transform 0.1s;
+            font-family: 'DM Sans', sans-serif;
+        }
+        .energy-btn:hover { background: rgba(255,255,255,0.12); }
+        .energy-btn:active { transform: scale(0.96); }
+        .energy-btn.selected {
+            border-color: var(--orange);
+            background: rgba(201,168,76,0.18);
+        }
+        .energy-btn .e-emoji { font-size: 1.5rem; }
+        .energy-btn .e-label {
+            font-size: 0.68rem;
+            font-weight: 600;
+            color: rgba(255,255,255,0.6);
+            letter-spacing: 0.03em;
+        }
+        .energy-btn.selected .e-label { color: rgba(255,255,255,0.9); }
+
+        /* ── Blocks textarea ── */
+        .blocks-wrap {
+            background: rgba(255,255,255,0.05);
+            border: 1.5px solid rgba(255,255,255,0.12);
+            border-radius: 14px;
+            padding: 0.15rem;
+            transition: border-color 0.15s;
+        }
+        .blocks-wrap:focus-within { border-color: rgba(201,168,76,0.5); }
+        .blocks-textarea {
+            width: 100%;
+            background: transparent;
+            border: none;
+            padding: 0.85rem 1rem;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.95rem;
+            color: white;
+            resize: none;
+            min-height: 80px;
+            max-height: 160px;
+            line-height: 1.5;
+            outline: none;
+        }
+        .blocks-textarea::placeholder { color: rgba(255,255,255,0.3); }
+        .blocks-hint {
+            font-size: 0.72rem;
+            color: rgba(255,255,255,0.3);
+            padding: 0 1rem 0.6rem;
+            line-height: 1.4;
+        }
+
+        /* ── Step progress ── */
+        .step-progress {
+            display: flex;
+            gap: 0.4rem;
+            padding: 0 1.25rem;
+            flex-shrink: 0;
+        }
+        .step-dot {
+            flex: 1;
+            height: 4px;
+            border-radius: 2px;
+            background: rgba(255,255,255,0.15);
+            transition: background 0.2s;
+        }
+        .step-dot.done { background: var(--orange); }
+
+        /* ── Continue button ── */
+        .bottom-bar {
+            padding: 0.75rem 1.25rem;
+            flex-shrink: 0;
+            display: flex;
+            gap: 0.6rem;
+            align-items: center;
+        }
+        .btn-skip {
+            background: transparent;
+            border: 1.5px solid rgba(255,255,255,0.15);
+            color: rgba(255,255,255,0.5);
+            border-radius: 12px;
+            padding: 0.85rem 1rem;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: border-color 0.15s, color 0.15s;
+        }
+        .btn-skip:hover { border-color: rgba(255,255,255,0.3); color: rgba(255,255,255,0.75); }
+        .btn-next {
+            flex: 1;
+            background: var(--orange);
+            border: none;
+            color: white;
+            border-radius: 12px;
+            padding: 0.85rem 1rem;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background 0.15s, transform 0.1s;
+        }
+        .btn-next:hover { background: #d4b56a; }
+        .btn-next:active { transform: scale(0.98); }
+        .btn-next:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+
+        /* ── Loading ── */
+        #loadingScreen {
+            display: flex;
+            flex: 1;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
+            color: rgba(255,255,255,0.5);
+            font-size: 0.9rem;
+        }
+        .spinner {
+            width: 32px; height: 32px;
+            border: 3px solid rgba(255,255,255,0.12);
+            border-top-color: var(--orange);
+            border-radius: 50%;
+            animation: spin 0.75s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ── Completion screen ── */
+        #completionScreen {
+            display: none;
+            flex: 1;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 2rem 1.5rem;
+            gap: 1.25rem;
+        }
+        #completionScreen.visible { display: flex; }
+        .complete-icon { font-size: 3rem; }
+        .complete-heading {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.7rem;
+            font-weight: 700;
+            line-height: 1.2;
+        }
+        .complete-sub {
+            font-size: 0.9rem;
+            color: rgba(255,255,255,0.55);
+            line-height: 1.55;
+            max-width: 300px;
+        }
+        .done-btn {
+            padding: 0.95rem 2rem;
+            background: var(--orange);
+            color: white;
+            border: none;
+            border-radius: 14px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: background 0.15s;
+            margin-top: 0.25rem;
+        }
+        .done-btn:hover { background: var(--orange-dk); }
+
+        /* ── Fade animations ── */
+        @media (prefers-reduced-motion: no-preference) {
+            @keyframes fadeIn {
+                from { opacity: 0; transform: translateY(6px); }
+                to   { opacity: 1; transform: translateY(0); }
+            }
+            .fade-in { animation: fadeIn 0.25s ease both; }
+        }
+    </style>
+</head>
+<body>
+<div class="shell">
+
+    <!-- Top bar -->
+    <div class="top-bar">
+        <button class="back-btn" id="backBtn" aria-label="Go back">← Back</button>
+        <span class="step-label" id="stepLabel">Step 1 of 2</span>
+        <div style="width:50px;"></div>
+    </div>
+
+    <!-- Step progress dots -->
+    <div class="step-progress">
+        <div class="step-dot" id="dot1"></div>
+        <div class="step-dot" id="dot2"></div>
+    </div>
+
+    <!-- Loading -->
+    <div id="loadingScreen" role="status">
+        <div class="spinner"></div>
+        <span>Putting today together…</span>
+    </div>
+
+    <!-- Step 1: Stats summary -->
+    <div id="step1" style="display:none;">
+        <div class="page-header">
+            <div class="page-title">How'd today go?</div>
+            <div class="page-sub" id="dayLabel">Wrapping up your day</div>
+        </div>
+        <div class="content" id="statsContent">
+            <div class="section-label">Today's activity</div>
+            <div class="stat-grid" id="statGrid">
+                <!-- Filled by JS -->
+            </div>
+        </div>
+        <div class="bottom-bar">
+            <button class="btn-skip" id="skipStep1" type="button">Skip summary</button>
+            <button class="btn-next" id="nextStep1" type="button">Continue →</button>
+        </div>
+    </div>
+
+    <!-- Step 2: Energy + blocks -->
+    <div id="step2" style="display:none;">
+        <div class="page-header">
+            <div class="page-title">One last thing</div>
+            <div class="page-sub">A quick check-in to close out your day.</div>
+        </div>
+        <div class="content">
+            <div class="section-label">How's your energy right now?</div>
+            <div class="energy-grid" id="energyGrid" role="radiogroup" aria-label="Energy level">
+                <button class="energy-btn" data-value="great" type="button">
+                    <span class="e-emoji">⚡</span>
+                    <span class="e-label">Great</span>
+                </button>
+                <button class="energy-btn" data-value="good" type="button">
+                    <span class="e-emoji">😊</span>
+                    <span class="e-label">Good</span>
+                </button>
+                <button class="energy-btn" data-value="okay" type="button">
+                    <span class="e-emoji">😐</span>
+                    <span class="e-label">Okay</span>
+                </button>
+                <button class="energy-btn" data-value="low" type="button">
+                    <span class="e-emoji">😴</span>
+                    <span class="e-label">Low</span>
+                </button>
+                <button class="energy-btn" data-value="drained" type="button">
+                    <span class="e-emoji">🫠</span>
+                    <span class="e-label">Drained</span>
+                </button>
+            </div>
+
+            <div class="section-label" style="padding-top:0.5rem;">Anything in your way today? <span style="opacity:0.4;font-weight:400;text-transform:none;letter-spacing:0;margin-left:0.3rem">(optional)</span></div>
+            <div class="blocks-wrap">
+                <textarea
+                    id="blocksText"
+                    class="blocks-textarea"
+                    placeholder="Distractions, obstacles, tough moments… whatever got in the way."
+                    rows="3"
+                    maxlength="500"
+                ></textarea>
+            </div>
+            <div class="blocks-hint">No wrong answers — this helps you notice patterns over time.</div>
+        </div>
+        <div class="bottom-bar">
+            <button class="btn-skip" id="skipStep2" type="button">Skip</button>
+            <button class="btn-next" id="submitBtn" type="button" disabled>Finish check-in →</button>
+        </div>
+    </div>
+
+    <!-- Completion screen -->
+    <div id="completionScreen" role="status">
+        <div class="complete-icon" aria-hidden="true">🌙</div>
+        <div class="complete-heading">Day's wrapped.</div>
+        <div class="complete-sub" id="completeSub">You've checked in. Rest up — tomorrow's another shot.</div>
+        <a href="/app/tasks" class="done-btn" id="doneBtn">Back to tasks →</a>
+    </div>
+
+</div>
+
+<script src="/js/haptics.js"></script>
+<script>
+(function() {
+    'use strict';
+
+    // ── Auth gate ────────────────────────────────────────────────────────────
+    var token = localStorage.getItem('fl_token');
+    if (!token) { window.location.href = '/login'; return; }
+
+    // ── State ─────────────────────────────────────────────────────────────────
+    var currentStep = 1;
+    var eveningData = null;
+    var selectedEnergy = null;
+    var blocksText = '';
+
+    // ── Helpers ──────────────────────────────────────────────────────────────
+    function apiFetch(url, opts) {
+        opts = opts || {};
+        opts.headers = Object.assign(
+            { Authorization: 'Bearer ' + token },
+            opts.headers || {}
+        );
+        return fetch(url, opts);
+    }
+
+    function el(id) { return document.getElementById(id); }
+
+    function escHtml(s) {
+        return String(s)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
+
+    function fmt(n) {
+        if (n == null) return '0';
+        return String(n);
+    }
+
+    function getDayLabel() {
+        var d = new Date();
+        var days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+        return 'Your ' + days[d.getDay()] + ' summary';
+    }
+
+    // ── Step management ───────────────────────────────────────────────────────
+    function showStep(n) {
+        currentStep = n;
+        el('step1').style.display  = n === 1 ? '' : 'none';
+        el('step2').style.display  = n === 2 ? '' : 'none';
+        el('stepLabel').textContent = 'Step ' + n + ' of 2';
+        el('dot1').className = 'step-dot' + (n > 1 ? ' done' : '');
+        el('dot2').className = 'step-dot' + (n > 2 ? ' done' : '');
+        if (n === 1 && window.FLHaptics) FLHaptics.light();
+    }
+
+    // ── Render stats step ─────────────────────────────────────────────────────
+    function renderStats(data) {
+        var grid = el('statGrid');
+        grid.innerHTML = '';
+
+        var cards = [
+            { key: 'tasks',     emoji: '✓', label: 'Tasks done',      val: data.tasksCompletedToday, cls: 'tasks',   hint: 'of ' + fmt(data.tasksOpen) + ' open' },
+            { key: 'routines',  emoji: '🔁', label: 'Routines kept',   val: data.routinesKeptToday,  cls: 'routines', hint: '' },
+            { key: 'docs',      emoji: '📄', label: 'Docs handled',    val: data.documentsHandled,    cls: 'docs',     hint: '' },
+            { key: 'money',     emoji: '💰', label: 'Money tasks',     val: data.moneyTasksDone,      cls: 'money',    hint: '' }
+        ];
+
+        cards.forEach(function(c, i) {
+            var card = document.createElement('div');
+            card.className = 'stat-card ' + c.cls + ' fade-in';
+            card.style.animationDelay = (i * 50) + 'ms';
+            card.innerHTML =
+                '<span class="stat-emoji" aria-hidden="true">' + c.emoji + '</span>' +
+                '<span class="stat-num">' + fmt(c.val) + '</span>' +
+                '<span class="stat-lbl">' + c.label + '</span>' +
+                (c.hint ? '<span style="font-size:0.7rem;color:rgba(255,255,255,0.35);">' + c.hint + '</span>' : '');
+            grid.appendChild(card);
+        });
+    }
+
+    // ── Energy selector ──────────────────────────────────────────────────────
+    function initEnergyButtons() {
+        var btns = el('energyGrid').querySelectorAll('.energy-btn');
+        btns.forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                btns.forEach(function(b) { b.classList.remove('selected'); });
+                btn.classList.add('selected');
+                selectedEnergy = btn.dataset.value;
+                el('submitBtn').disabled = false;
+                if (window.FLHaptics) FLHaptics.light();
+            });
+        });
+    }
+
+    // ── Blocks textarea ───────────────────────────────────────────────────────
+    function initBlocks() {
+        var ta = el('blocksText');
+        ta.addEventListener('input', function() {
+            blocksText = ta.value;
+        });
+    }
+
+    // ── Submit ───────────────────────────────────────────────────────────────
+    function submit() {
+        var btn = el('submitBtn');
+        btn.disabled = true;
+        btn.textContent = 'Saving…';
+
+        apiFetch('/api/evening/evening', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                energy_level: selectedEnergy,
+                blocks_text: blocksText || null,
+                tasks_completed_today: eveningData ? eveningData.tasksCompletedToday : null,
+                routines_kept_today: eveningData ? eveningData.routinesKeptToday : null,
+                documents_handled: eveningData ? eveningData.documentsHandled : null,
+                money_tasks_done: eveningData ? eveningData.moneyTasksDone : null
+            })
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (!data.success) throw new Error('save failed');
+            showCompletion();
+        })
+        .catch(function(err) {
+            console.warn('[evening-checkin] submit error:', err);
+            // Show completion anyway — user has engaged
+            showCompletion();
+        });
+    }
+
+    function showCompletion() {
+        el('step2').style.display = 'none';
+        el('completionScreen').classList.add('visible');
+        if (window.FLHaptics) FLHaptics.checkinSubmit();
+    }
+
+    // ── Boot ─────────────────────────────────────────────────────────────────
+    function boot() {
+        el('loadingScreen').style.display = '';
+        el('step1').style.display = 'none';
+        el('step2').style.display = 'none';
+
+        apiFetch('/api/evening/evening-data')
+            .then(function(r) { return r.json(); })
+            .catch(function() { return { success: true, tasksCompletedToday: 0, tasksOpen: 0, routinesKeptToday: 0, documentsHandled: 0, moneyTasksDone: 0 }; })
+            .then(function(data) {
+                eveningData = data;
+                el('dayLabel').textContent = getDayLabel();
+                renderStats(data);
+                initEnergyButtons();
+                initBlocks();
+
+                el('loadingScreen').style.display = 'none';
+                showStep(1);
+
+                // Wire buttons
+                el('nextStep1').addEventListener('click', function() {
+                    showStep(2);
+                    setTimeout(function() { el('blocksText').focus(); }, 200);
+                });
+                el('skipStep1').addEventListener('click', function() {
+                    showStep(2);
+                });
+                el('skipStep2').addEventListener('click', function() {
+                    selectedEnergy = null;
+                    el('submitBtn').disabled = false;
+                    submit();
+                });
+                el('submitBtn').addEventListener('click', submit);
+                el('backBtn').addEventListener('click', function() {
+                    if (currentStep === 2) {
+                        showStep(1);
+                    } else {
+                        window.history.back();
+                    }
+                });
+            });
+    }
+
+    boot();
+})();
+</script>
+</body>
+</html>

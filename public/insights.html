@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#011e5c">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="FocusLedger">
+  <link rel="icon" type="image/png" sizes="32x32" href="/icons/fl-icon.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/icons/fl-icon.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Insights — FocusLedger</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/insights.css">
+  <link rel="stylesheet" href="/shared-nav.css">
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="portal-nav">
+  <a href="/home" class="back-link">← Back</a>
+  <a href="/home" class="portal-logo"><span class="logo-dot"></span>FocusLedger</a>
+  <button class="logout-btn" id="logoutBtn">Logout</button>
+</nav>
+
+<div class="page-wrap">
+  <div class="page-header">
+    <h1 class="page-title">Insights</h1>
+    <p class="page-subtitle">Patterns in your week — unlock them by using FocusLedger</p>
+  </div>
+
+  <!-- NEW unlock toast -->
+  <div class="unlock-toast" id="unlockToast" role="alert" aria-live="polite">
+    <span class="toast-icon">🎉</span>
+    <span class="toast-text">New insight unlocked!</span>
+    <a href="#" class="toast-link" onclick="scrollToUnlocked(event)">View →</a>
+  </div>
+
+  <!-- Loading skeletons -->
+  <div id="skeletonGrid">
+    <div class="skeleton-card">
+      <div class="sk-icon"></div>
+      <div class="sk-content">
+        <div class="sk-line sk-title"></div>
+        <div class="sk-line sk-value"></div>
+        <div class="sk-line sk-meta"></div>
+      </div>
+    </div>
+    <div class="skeleton-card">
+      <div class="sk-icon"></div>
+      <div class="sk-content">
+        <div class="sk-line sk-title"></div>
+        <div class="sk-line sk-value"></div>
+        <div class="sk-line sk-meta"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Insights cards grid -->
+  <div class="insights-grid" id="insightsGrid" style="display:none">
+    <!-- spending_this_week -->
+    <div class="insight-card" id="card-spending_this_week" data-key="spending_this_week" onclick="toggleCardExpand(this)">
+      <div class="card-header">
+        <div class="card-icon-wrap">
+          <span class="card-icon" id="icon-spending_this_week">📊</span>
+          <span class="lock-badge" id="lock-spending_this_week" aria-hidden="true">🔒</span>
+        </div>
+        <div class="card-meta">
+          <span class="card-name" id="name-spending_this_week">Spending This Week</span>
+          <span class="card-status" id="status-spending_this_week"></span>
+        </div>
+        <span class="new-badge" id="new-spending_this_week" aria-label="New insight">NEW</span>
+      </div>
+      <div class="card-value-row" id="valueRow-spending_this_week">
+        <div class="card-value" id="value-spending_this_week">—</div>
+        <div class="card-trend" id="trend-spending_this_week"></div>
+      </div>
+      <div class="card-progress" id="progress-spending_this_week">
+        <div class="progress-track">
+          <div class="progress-fill" id="fill-spending_this_week"></div>
+        </div>
+        <span class="progress-label" id="progressLabel-spending_this_week"></span>
+      </div>
+      <div class="card-chart" id="chart-spending_this_week"></div>
+      <div class="expand-hint">Tap to see history</div>
+    </div>
+
+    <!-- spending_trend -->
+    <div class="insight-card" id="card-spending_trend" data-key="spending_trend" onclick="toggleCardExpand(this)">
+      <div class="card-header">
+        <div class="card-icon-wrap">
+          <span class="card-icon" id="icon-spending_trend">📈</span>
+          <span class="lock-badge" id="lock-spending_trend" aria-hidden="true">🔒</span>
+        </div>
+        <div class="card-meta">
+          <span class="card-name" id="name-spending_trend">Spending Trend</span>
+          <span class="card-status" id="status-spending_trend"></span>
+        </div>
+        <span class="new-badge" id="new-spending_trend" aria-label="New insight">NEW</span>
+      </div>
+      <div class="card-value-row" id="valueRow-spending_trend">
+        <div class="card-value" id="value-spending_trend">—</div>
+        <div class="card-trend" id="trend-spending_trend"></div>
+      </div>
+      <div class="card-progress" id="progress-spending_trend">
+        <div class="progress-track">
+          <div class="progress-fill" id="fill-spending_trend"></div>
+        </div>
+        <span class="progress-label" id="progressLabel-spending_trend"></span>
+      </div>
+      <div class="card-chart" id="chart-spending_trend"></div>
+      <div class="expand-hint">Tap to see history</div>
+    </div>
+
+    <!-- task_completion_rate -->
+    <div class="insight-card" id="card-task_completion_rate" data-key="task_completion_rate" onclick="toggleCardExpand(this)">
+      <div class="card-header">
+        <div class="card-icon-wrap">
+          <span class="card-icon" id="icon-task_completion_rate">✅</span>
+          <span class="lock-badge" id="lock-task_completion_rate" aria-hidden="true">🔒</span>
+        </div>
+        <div class="card-meta">
+          <span class="card-name" id="name-task_completion_rate">Task Completion</span>
+          <span class="card-status" id="status-task_completion_rate"></span>
+        </div>
+        <span class="new-badge" id="new-task_completion_rate" aria-label="New insight">NEW</span>
+      </div>
+      <div class="card-value-row" id="valueRow-task_completion_rate">
+        <div class="card-value" id="value-task_completion_rate">—</div>
+        <div class="card-trend" id="trend-task_completion_rate"></div>
+      </div>
+      <div class="card-progress" id="progress-task_completion_rate">
+        <div class="progress-track">
+          <div class="progress-fill" id="fill-task_completion_rate"></div>
+        </div>
+        <span class="progress-label" id="progressLabel-task_completion_rate"></span>
+      </div>
+      <div class="card-chart" id="chart-task_completion_rate"></div>
+      <div class="expand-hint">Tap to see history</div>
+    </div>
+
+    <!-- evening_session_streak -->
+    <div class="insight-card" id="card-evening_session_streak" data-key="evening_session_streak" onclick="toggleCardExpand(this)">
+      <div class="card-header">
+        <div class="card-icon-wrap">
+          <span class="card-icon" id="icon-evening_session_streak">🌙</span>
+          <span class="lock-badge" id="lock-evening_session_streak" aria-hidden="true">🔒</span>
+        </div>
+        <div class="card-meta">
+          <span class="card-name" id="name-evening_session_streak">Evening Check-In Streak</span>
+          <span class="card-status" id="status-evening_session_streak"></span>
+        </div>
+        <span class="new-badge" id="new-evening_session_streak" aria-label="New insight">NEW</span>
+      </div>
+      <div class="card-value-row" id="valueRow-evening_session_streak">
+        <div class="card-value" id="value-evening_session_streak">—</div>
+        <div class="card-trend" id="trend-evening_session_streak"></div>
+      </div>
+      <div class="card-progress" id="progress-evening_session_streak">
+        <div class="progress-track">
+          <div class="progress-fill" id="fill-evening_session_streak"></div>
+        </div>
+        <span class="progress-label" id="progressLabel-evening_session_streak"></span>
+      </div>
+      <div class="card-chart" id="chart-evening_session_streak"></div>
+      <div class="expand-hint">Tap to see history</div>
+    </div>
+
+    <!-- focus_pattern (always locked — focus_sessions table not yet available) -->
+    <div class="insight-card" id="card-focus_pattern" data-key="focus_pattern" onclick="toggleCardExpand(this)">
+      <div class="card-header">
+        <div class="card-icon-wrap">
+          <span class="card-icon" id="icon-focus_pattern">🧠</span>
+          <span class="lock-badge" id="lock-focus_pattern" aria-hidden="true">🔒</span>
+        </div>
+        <div class="card-meta">
+          <span class="card-name" id="name-focus_pattern">Focus Pattern</span>
+          <span class="card-status" id="status-focus_pattern">Focus Mode required</span>
+        </div>
+        <span class="new-badge" id="new-focus_pattern" aria-label="New insight">NEW</span>
+      </div>
+      <div class="card-value-row" id="valueRow-focus_pattern">
+        <div class="card-value" id="value-focus_pattern">—</div>
+        <div class="card-trend" id="trend-focus_pattern"></div>
+      </div>
+      <div class="card-progress" id="progress-focus_pattern">
+        <div class="progress-track">
+          <div class="progress-fill" id="fill-focus_pattern"></div>
+        </div>
+        <span class="progress-label" id="progressLabel-focus_pattern">Start Focus Mode to unlock</span>
+      </div>
+      <div class="card-chart" id="chart-focus_pattern"></div>
+      <div class="expand-hint">Tap to see history</div>
+    </div>
+  </div>
+
+  <!-- Empty state -->
+  <div class="empty-state" id="emptyState" style="display:none">
+    <p>Start using FocusLedger to unlock insights.</p>
+    <a href="/home" class="btn-home-link">Go to Dashboard</a>
+  </div>
+</div>
+
+<script src="/shared-nav.js"></script>
+<script src="/buddy-widget.js"></script>
+<script>
+(function() {
+  var token = localStorage.getItem('fl_token');
+  if (!token) { window.location.href = '/login'; return; }
+  var auth = { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' };
+
+  document.getElementById('logoutBtn').addEventListener('click', function() {
+    localStorage.removeItem('fl_token');
+    window.location.href = '/login';
+  });
+
+  // ── Config ────────────────────────────────────────────────────────────────────
+  var INSIGHT_CONFIG = {
+    spending_this_week: {
+      icon: '💰',
+      name: 'Spending This Week',
+      unlockTip: 'Log transactions to unlock',
+      threshold: 1,
+      unit: '',
+      fmt: function(v) { return '$' + (v / 100).toFixed(2); },
+      describe: function(v, weekly) { return weekly.total_spend_cents > 0 ? '$' + (weekly.total_spend_cents / 100).toFixed(2) + ' spent this week' : 'No spending yet'; },
+    },
+    spending_trend: {
+      icon: '📈',
+      name: 'Spending Trend',
+      unlockTip: 'Track spending across 7+ days',
+      threshold: 7,
+      unit: 'days',
+      fmt: function(v) { return v + ' days'; },
+      describe: function(v) { return 'You have spent on ' + v + ' different days'; },
+    },
+    task_completion_rate: {
+      icon: '✅',
+      name: 'Task Completion',
+      unlockTip: 'Complete 3+ tasks to unlock',
+      threshold: 3,
+      unit: 'tasks',
+      fmt: function(v) { return v + ' tasks'; },
+      describe: function(v, weekly) { return v + ' tasks completed across all time'; },
+    },
+    evening_session_streak: {
+      icon: '🌙',
+      name: 'Evening Check-In Streak',
+      unlockTip: 'Complete 2+ evening check-ins',
+      threshold: 2,
+      unit: 'sessions',
+      fmt: function(v) { return v + ' sessions'; },
+      describe: function(v) { return v + ' evening check-in sessions completed'; },
+    },
+    focus_pattern: {
+      icon: '🧠',
+      name: 'Focus Pattern',
+      unlockTip: 'Complete 5+ Focus Mode sessions',
+      threshold: 5,
+      unit: 'sessions',
+      fmt: function(v) { return v + ' sessions'; },
+      describe: function(v) { return v + ' Focus Mode sessions'; },
+    },
+  };
+
+  var UNLOCKED_KEYS = []; // tracks which insights were newly unlocked this session
+
+  // ── Helpers ───────────────────────────────────────────────────────────────────
+  function esc(s) {
+    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+
+  function isNew(unlockedAt) {
+    if (!unlockedAt) return false;
+    var ms = 24 * 60 * 60 * 1000;
+    return (Date.now() - new Date(unlockedAt).getTime()) < ms;
+  }
+
+  // ── Animation helpers ──────────────────────────────────────────────────────────
+  function prefersReducedMotion() {
+    return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  }
+
+  function animateProgressBar(cardId, targetPct, duration) {
+    if (prefersReducedMotion()) {
+      document.getElementById('fill-' + cardId).style.width = targetPct + '%';
+      return;
+    }
+    var el = document.getElementById('fill-' + cardId);
+    var start = 0;
+    var startTime = null;
+    function step(timestamp) {
+      if (!startTime) startTime = timestamp;
+      var elapsed = timestamp - startTime;
+      var progress = clamp(elapsed / (duration || 400), 0, 1);
+      el.style.width = start + (targetPct - start) * easeOut(progress) + '%';
+      if (progress < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  }
+
+  function easeOut(t) { return 1 - Math.pow(1 - t, 3); }
+
+  function playUnlockAnimation(cardId) {
+    if (prefersReducedMotion()) {
+      // Just show content immediately
+      revealCardContent(cardId);
+      return;
+    }
+
+    var card = document.getElementById('card-' + cardId);
+    var lock = document.getElementById('lock-' + cardId);
+    var fill = document.getElementById('fill-' + cardId);
+
+    // 1. Progress bar completes (already at 100%)
+    // 2. Lock icon springs to unlocked
+    card.classList.add('unlocking');
+    lock.textContent = '🔓';
+    lock.style.transition = 'transform 0.2s cubic-bezier(0.34,1.56,0.64,1)';
+    lock.style.transform = 'scale(1.3)';
+    lock.setAttribute('aria-label', 'Unlocked');
+
+    setTimeout(function() {
+      lock.style.transform = 'scale(1)';
+    }, 200);
+
+    // 3. Border glow
+    setTimeout(function() {
+      card.classList.add('glow-border');
+    }, 250);
+
+    // 4. Content fades in
+    setTimeout(function() {
+      revealCardContent(cardId);
+    }, 500);
+
+    // 5. "New" badge appears
+    setTimeout(function() {
+      var newBadge = document.getElementById('new-' + cardId);
+      if (newBadge) newBadge.style.opacity = '1';
+      card.classList.remove('unlocking');
+    }, 700);
+  }
+
+  function revealCardContent(cardId) {
+    var valueRow = document.getElementById('valueRow-' + cardId);
+    var valueEl  = document.getElementById('value-' + cardId);
+    if (valueRow) { valueRow.style.opacity = '1'; valueRow.style.transition = 'opacity 0.3s ease'; }
+    if (valueEl) {
+      animateValue(valueEl, cardId);
+    }
+  }
+
+  function animateValue(el, cardId) {
+    var config = INSIGHT_CONFIG[cardId];
+    if (!config) return;
+    var weekly = window._weeklyData || {};
+    var unlocks = window._unlockData || {};
+    var status = unlocks[cardId] || {};
+
+    if (cardId === 'spending_this_week') {
+      var v = weekly.total_spend_cents || 0;
+      animateNumber(el, 0, v, 600, function(n) { return '$' + (n / 100).toFixed(2); });
+    } else if (cardId === 'spending_trend') {
+      var days = status.current_value || 0;
+      animateNumber(el, 0, days, 400, function(n) { return Math.round(n) + ' days'; });
+    } else if (cardId === 'task_completion_rate') {
+      var count = status.current_value || 0;
+      animateNumber(el, 0, count, 400, function(n) { return Math.round(n) + ' tasks'; });
+    } else if (cardId === 'evening_session_streak') {
+      var sessions = weekly.evening_sessions_completed || 0;
+      animateNumber(el, 0, sessions, 400, function(n) { return Math.round(n) + ' sessions'; });
+    } else if (cardId === 'focus_pattern') {
+      el.textContent = '0 sessions';
+    }
+  }
+
+  function animateNumber(el, from, to, duration, formatter) {
+    if (prefersReducedMotion()) {
+      el.textContent = formatter(to);
+      return;
+    }
+    var start = null;
+    function step(timestamp) {
+      if (!start) start = timestamp;
+      var t = clamp((timestamp - start) / duration, 0, 1);
+      var eased = easeOut(t);
+      el.textContent = formatter(from + (to - from) * eased);
+      if (t < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  }
+
+  // ── Build card state ──────────────────────────────────────────────────────────
+  function renderAllCards(unlocks, weekly) {
+    var hasAnyUnlocked = false;
+    var newUnlocks = [];
+
+    Object.keys(INSIGHT_CONFIG).forEach(function(key) {
+      var status = unlocks[key] || { unlocked: false, days_left: null };
+      var config = INSIGHT_CONFIG[key];
+      var card   = document.getElementById('card-' + key);
+      if (!card) return;
+
+      card.classList.remove('unlocked', 'locked', 'expanded', 'almost-there');
+
+      if (status.unlocked) {
+        hasAnyUnlocked = true;
+        card.classList.add('unlocked');
+        if (isNew(status.unlocked_at)) {
+          card.classList.add('fresh-unlock');
+        }
+      } else {
+        card.classList.add('locked');
+        // Almost there = >75% to threshold
+        var current = status.current_value || 0;
+        var pct = clamp((current / config.threshold) * 100, 0, 100);
+        if (pct >= 75 && !status.unlocked) {
+          card.classList.add('almost-there');
+        }
+      }
+
+      // Lock icon
+      var lock = document.getElementById('lock-' + key);
+      if (lock) lock.style.display = status.unlocked ? 'none' : '';
+
+      // New badge
+      var newBadge = document.getElementById('new-' + key);
+      if (newBadge) {
+        newBadge.style.opacity = (status.unlocked && isNew(status.unlocked_at)) ? '1' : '0';
+      }
+
+      // Value row
+      var valueRow = document.getElementById('valueRow-' + key);
+      if (valueRow) valueRow.style.opacity = status.unlocked ? '0' : '0';
+
+      // Progress bar
+      var fill = document.getElementById('fill-' + key);
+      var progressCard = document.getElementById('progress-' + key);
+      var progressLabel = document.getElementById('progressLabel-' + key);
+
+      if (status.unlocked) {
+        if (progressCard) progressCard.style.display = 'none';
+        // Value + trend
+        var valueEl = document.getElementById('value-' + key);
+        var trendEl = document.getElementById('trend-' + key);
+        if (valueEl) valueEl.textContent = buildValue(key, status, weekly);
+        if (trendEl) trendEl.innerHTML = buildTrend(key, weekly);
+        if (valueRow) valueRow.style.opacity = '1';
+        // Chart
+        renderChart(key, weekly);
+      } else {
+        if (progressCard) progressCard.style.display = '';
+        var current = status.current_value || 0;
+        var pct = clamp((current / config.threshold) * 100, 0, 100);
+        animateProgressBar(key, pct, 500);
+        if (progressLabel) {
+          progressLabel.textContent = current + ' / ' + config.threshold + ' ' + config.unit;
+        }
+      }
+    });
+
+    document.getElementById('skeletonGrid').style.display = 'none';
+    document.getElementById('insightsGrid').style.display = '';
+
+    // Check if new insights unlocked this session
+    Object.keys(INSIGHT_CONFIG).forEach(function(key) {
+      var status = unlocks[key] || {};
+      if (status.unlocked && isNew(status.unlocked_at) && !status.viewed) {
+        newUnlocks.push(key);
+      }
+    });
+
+    if (newUnlocks.length > 0) {
+      setTimeout(function() { showUnlockToast(newUnlocks[0]); }, 800);
+    }
+  }
+
+  function buildValue(key, status, weekly) {
+    var cfg = INSIGHT_CONFIG[key];
+    if (!cfg) return '—';
+    if (key === 'spending_this_week') {
+      var cents = weekly && weekly.total_spend_cents ? weekly.total_spend_cents : 0;
+      return '$' + (cents / 100).toFixed(2);
+    }
+    if (key === 'spending_trend') {
+      var days = status.current_value || 0;
+      return days + ' days';
+    }
+    if (key === 'task_completion_rate') {
+      var count = status.current_value || 0;
+      return count + ' tasks';
+    }
+    if (key === 'evening_session_streak') {
+      var sessions = weekly && weekly.evening_sessions_completed ? weekly.evening_sessions_completed : 0;
+      return sessions + ' sessions';
+    }
+    return '—';
+  }
+
+  function buildTrend(key, weekly) {
+    var history = weekly && weekly.history ? weekly.history : [];
+    if (history.length < 2) return '';
+    var current, previous;
+    if (key === 'spending_this_week') {
+      current = weekly.total_spend_cents || 0;
+      previous = history.length >= 2 ? (parseInt(history[history.length - 2].total_spend_cents, 10) || 0) : 0;
+    } else if (key === 'task_completion_rate') {
+      current = weekly.tasks_completed || 0;
+      previous = history.length >= 2 ? (parseInt(history[history.length - 2].tasks_completed, 10) || 0) : 0;
+    } else {
+      return '';
+    }
+    if (previous === 0) return '';
+    var diff = current - previous;
+    var pct = Math.abs(Math.round((diff / previous) * 100));
+    if (diff > 0) return '<span class="trend-up">↑ ' + pct + '%</span>';
+    if (diff < 0) return '<span class="trend-down">↓ ' + pct + '%</span>';
+    return '<span class="trend-flat">—no change</span>';
+  }
+
+  // ── CSS bar charts (no external dep) ──────────────────────────────────────────
+  function renderChart(key, weekly) {
+    var container = document.getElementById('chart-' + key);
+    if (!container) return;
+
+    var history = weekly && weekly.history ? weekly.history : [];
+    if (history.length === 0) {
+      container.innerHTML = '<div class="chart-empty">Not enough history yet — check back next week</div>';
+      return;
+    }
+
+    var bars = [];
+    if (key === 'spending_this_week' || key === 'spending_trend') {
+      bars = history.slice(-4).map(function(w) {
+        return { label: formatWeekLabel(w.week_start), value: parseInt(w.total_spend_cents, 10) || 0 };
+      });
+      // Current week
+      if (weekly && weekly.total_spend_cents) {
+        bars.push({ label: 'This wk', value: weekly.total_spend_cents });
+      }
+    } else if (key === 'task_completion_rate') {
+      bars = history.slice(-4).map(function(w) {
+        return { label: formatWeekLabel(w.week_start), value: parseInt(w.tasks_completed, 10) || 0 };
+      });
+      if (weekly && weekly.tasks_completed) {
+        bars.push({ label: 'This wk', value: weekly.tasks_completed });
+      }
+    } else {
+      container.innerHTML = '<div class="chart-empty">Start a Focus Mode session to see your pattern</div>';
+      return;
+    }
+
+    if (bars.length === 0) {
+      container.innerHTML = '<div class="chart-empty">No data yet</div>';
+      return;
+    }
+
+    var maxVal = Math.max.apply(null, bars.map(function(b) { return b.value; })) || 1;
+    var color = key === 'spending_this_week' || key === 'spending_trend' ? 'var(--insight-spending)' : 'var(--insight-task)';
+
+    container.innerHTML = '<div class="bar-chart">' +
+      bars.map(function(b) {
+        var pct = clamp((b.value / maxVal) * 100, 2, 100);
+        return '<div class="bar-col"><div class="bar-bar" style="height:' + pct + '%;background:' + color + '"></div><div class="bar-label">' + b.label + '</div></div>';
+      }).join('') +
+    '</div>';
+  }
+
+  function formatWeekLabel(weekStart) {
+    if (!weekStart) return 'W';
+    var d = new Date(weekStart + 'T00:00:00Z');
+    return (d.getUTCMonth() + 1) + '/' + d.getUTCDate();
+  }
+
+  // ── Toast notification ────────────────────────────────────────────────────────
+  function showUnlockToast(newKey) {
+    var config = INSIGHT_CONFIG[newKey];
+    var toast = document.getElementById('unlockToast');
+    if (!toast || !config) return;
+
+    toast.querySelector('.toast-text').textContent = config.name + ' unlocked!';
+    toast.querySelector('.toast-link').setAttribute('href', '#card-' + newKey);
+
+    toast.classList.add('visible');
+    setTimeout(function() { toast.classList.remove('visible'); }, 5000);
+  }
+
+  function scrollToUnlocked(e) {
+    e.preventDefault();
+    toast.classList.remove('visible');
+    var key = Object.keys(INSIGHT_CONFIG).find(function(k) {
+      var card = document.getElementById('card-' + k);
+      return card && card.classList.contains('fresh-unlock');
+    });
+    if (key) {
+      var el = document.getElementById('card-' + key);
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }
+
+  // ── Card expand/collapse ─────────────────────────────────────────────────────
+  function toggleCardExpand(card) {
+    var wasExpanded = card.classList.contains('expanded');
+    // Collapse all others
+    document.querySelectorAll('.insight-card.expanded').forEach(function(c) {
+      c.classList.remove('expanded');
+    });
+    if (!wasExpanded) {
+      card.classList.add('expanded');
+      markInteracted(card.dataset.key);
+      // Mark as viewed after expand
+      var key = card.dataset.key;
+      var unlocks = window._unlockData || {};
+      var status = unlocks[key];
+      if (status && status.unlocked && !status.viewed) {
+        markViewed(key);
+      }
+    }
+  }
+
+  // ── API calls ─────────────────────────────────────────────────────────────────
+  function markViewed(key) {
+    fetch('/api/v1/insights/viewed', {
+      method: 'POST', headers: auth,
+      body: JSON.stringify({ insight_key: key }),
+    }).catch(function() {});
+  }
+
+  function markInteracted(key) {
+    fetch('/api/v1/insights/interacted', {
+      method: 'POST', headers: auth,
+      body: JSON.stringify({ insight_key: key }),
+    }).catch(function() {});
+  }
+
+  // ── Load data on mount ────────────────────────────────────────────────────────
+  async function loadInsights() {
+    var unlocksData, statsData;
+
+    try {
+      unlocksData = await fetch('/api/v1/insights/unlocks', { headers: auth }).then(function(r) { return r.json(); });
+      statsData   = await fetch('/api/v1/insights/stats',   { headers: auth }).then(function(r) { return r.json(); });
+    } catch (e) {
+      document.getElementById('skeletonGrid').innerHTML = '<div class="empty-state">Could not load insights. <a href="/home">Go home</a></div>';
+      return;
+    }
+
+    var unlocks = unlocksData.unlocks || {};
+    var weekly  = statsData.weekly || {};
+
+    // Enrich unlocks with current_value for progress display
+    var currentValues = {
+      spending_this_week: (statsData.weekly && statsData.weekly.total_spend_cents > 0) ? 1 : 0,
+      spending_trend: unlocks['spending_trend'] ? (unlocks['spending_trend'].current_value || 0) : (statsData.weekly && statsData.weekly.total_spend_cents > 0 ? 1 : 0),
+      task_completion_rate: 0,
+      evening_session_streak: (statsData.weekly && statsData.weekly.evening_sessions_completed) || 0,
+      focus_pattern: 0,
+    };
+
+    // Compute current values from DB-ready signals
+    if (!unlocks['spending_this_week']) {
+      currentValues.spending_this_week = (weekly.total_spend_cents > 0) ? 1 : 0;
+    }
+    if (!unlocks['spending_trend']) {
+      currentValues.spending_trend = unlocksData._distinctDays || 0;
+    }
+    if (!unlocks['task_completion_rate']) {
+      currentValues.task_completion_rate = unlocksData._distinctTaskDays || 0;
+    }
+
+    // Attach current_value to unlock status for progress bar
+    Object.keys(currentValues).forEach(function(k) {
+      if (!unlocks[k]) unlocks[k] = { unlocked: false, current_value: currentValues[k], days_left: null };
+      else unlocks[k].current_value = currentValues[k];
+    });
+
+    window._unlockData = unlocks;
+    window._weeklyData = weekly;
+
+    renderAllCards(unlocks, weekly);
+  }
+
+  loadInsights();
+
+})();
+</script>
+<script src="/js/analytics.js"></script>
+<script>(function(){try{var u=JSON.parse(localStorage.getItem('fl_user')||'{}');if(u.id)FLA.setUser(u.id);}catch(e){}FLA.trackPage('insights');})()</script>
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' });
+}
+</script>
+</body>
+</html>

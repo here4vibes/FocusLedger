@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+    <meta charset='UTF-8'>
+    <link rel="icon" type="image/png" sizes="32x32" href="/icons/fl-icon.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/icons/fl-icon.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/fl-icon.png">
+    <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+    <title>Contact Support - FocusLedger</title>
+    <meta name='description' content='Get help with FocusLedger. Submit a support request, report a bug, or ask a question. We respond quickly.'>
+    <link rel='canonical' href='https://focusledger.net/contact'>
+    <link rel='preconnect' href='https://fonts.googleapis.com'>
+    <link rel='preconnect' href='https://fonts.gstatic.com' crossorigin>
+    <link href='https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500&display=swap' rel='stylesheet'>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --navy: #011e5c;
+            --navy-mid: #02287a;
+            --orange: #c9a84c;
+            --orange-light: #d4b56a;
+            --cream: #faf9f7;
+            --cream-dark: #f5f3ef;
+            --text-dark: #1a1a1a;
+            --text-muted: #6b6b6b;
+            --error: #E07A5F;
+            --error-light: #FAEAE5;
+            --success: #7DB87D;
+            --success-light: #EAFAF0;
+            --border: #e8e5e0;
+        }
+        body {
+            font-family: 'DM Sans', sans-serif;
+            color: var(--text-dark);
+            background: var(--cream);
+            min-height: 100vh;
+            overflow-x: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        h1, h2, h3 { font-family: 'Space Grotesk', sans-serif; }
+
+        .contact-nav {
+            padding: 1.25rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1200px;
+            margin: 0 auto;
+            width: 100%;
+        }
+        .logo {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--navy);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            text-decoration: none;
+        }
+        .logo-dot {
+            width: 12px;
+            height: 12px;
+            background: var(--orange);
+            border-radius: 3px;
+            transform: rotate(45deg);
+        }
+        .nav-links {
+            display: flex;
+            gap: 1.5rem;
+            align-items: center;
+        }
+        .nav-links a {
+            color: var(--text-dark);
+            text-decoration: none;
+            font-size: 0.95rem;
+            font-weight: 500;
+        }
+        .nav-links a:hover { color: var(--navy); }
+        .btn-nav {
+            background: var(--navy);
+            color: white;
+            padding: 0.5rem 1.25rem;
+            border-radius: 4px;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+        .btn-nav:hover { background: var(--navy-mid); color: white; }
+
+        .contact-hero {
+            text-align: center;
+            padding: 3.5rem 2rem 2rem;
+            max-width: 680px;
+            margin: 0 auto;
+        }
+        .contact-hero h1 {
+            font-size: 2.25rem;
+            color: var(--navy);
+            margin-bottom: 0.75rem;
+            line-height: 1.2;
+        }
+        .contact-hero p {
+            color: var(--text-muted);
+            font-size: 1.05rem;
+            line-height: 1.6;
+            max-width: 480px;
+            margin: 0 auto;
+        }
+
+        .contact-form-wrap {
+            flex: 1;
+            padding: 0 2rem 4rem;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+        }
+        .contact-form-card {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 2.5rem;
+            width: 100%;
+            max-width: 560px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.05);
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        .form-label {
+            display: block;
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: var(--text-dark);
+            margin-bottom: 0.5rem;
+        }
+        .form-label .optional {
+            font-weight: 400;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+        .form-input,
+        .form-textarea,
+        .form-select {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 1.5px solid var(--border);
+            border-radius: 4px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 1rem;
+            color: var(--text-dark);
+            background: white;
+            transition: border-color 0.15s ease;
+            appearance: none;
+        }
+        .form-input:focus,
+        .form-textarea:focus,
+        .form-select:focus {
+            outline: none;
+            border-color: var(--navy);
+        }
+        .form-input::placeholder,
+        .form-textarea::placeholder {
+            color: #b0aea8;
+        }
+        .form-textarea {
+            resize: vertical;
+            min-height: 140px;
+        }
+        .form-select {
+            background-image: url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%236b6b6b%22 stroke-width=%222%22><polyline points=%226 9 12 15 18 9%22></polyline></svg>');
+            background-repeat: no-repeat;
+            background-position: right 1rem center;
+            background-size: 16px;
+            padding-right: 2.5rem;
+            cursor: pointer;
+        }
+
+        .submit-btn {
+            width: 100%;
+            background: var(--navy);
+            color: white;
+            border: none;
+            padding: 0.9rem 1.5rem;
+            border-radius: 4px;
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.05rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.15s ease;
+            margin-top: 0.5rem;
+        }
+        .submit-btn:hover { background: var(--navy-mid); }
+        .submit-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+        .form-message {
+            padding: 0.9rem 1rem;
+            border-radius: 4px;
+            margin-bottom: 1.25rem;
+            font-size: 0.95rem;
+            display: none;
+        }
+        .form-message.success {
+            display: block;
+            background: var(--success-light);
+            color: #3a7a3a;
+            border: 1px solid #b8e0b8;
+        }
+        .form-message.error {
+            display: block;
+            background: var(--error-light);
+            color: #a03a2a;
+            border: 1px solid #f0c0b8;
+        }
+
+        .form-hint {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            margin-top: 0.4rem;
+        }
+
+        @media (max-width: 600px) {
+            .contact-hero h1 { font-size: 1.75rem; }
+            .contact-form-card { padding: 1.75rem 1.25rem; }
+            .nav-links { gap: 1rem; }
+            .nav-links a:not(.btn-nav) { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <nav class='contact-nav'>
+        <a href='/' class='logo'>
+            <div class='logo-dot'></div>
+            FocusLedger
+        </a>
+        <div class='nav-links'>
+            <a href='/pricing'>Pricing</a>
+            <a href='/contact'>Contact</a>
+            <a href='/login' class='btn-nav'>Sign In</a>
+        </div>
+    </nav>
+
+    <div class='contact-hero'>
+        <h1>Something on your mind?</h1>
+        <p>Bugs, account issues, feature ideas — drop it here. You'll hear back from Sean within a day or two.</p>
+    </div>
+
+    <div class='contact-form-wrap'>
+        <div class='contact-form-card'>
+            <div id='formMessage' class='form-message'></div>
+
+            <form id='contactForm'>
+                <div class='form-group'>
+                    <label class='form-label' for='name'>
+                        Your name <span class='optional'>(optional)</span>
+                    </label>
+                    <input
+                        type='text'
+                        id='name'
+                        name='name'
+                        class='form-input'
+                        placeholder='What should we call you?'
+                        maxlength='100'
+                        autocomplete='name'
+                    />
+                </div>
+
+                <div class='form-group'>
+                    <label class='form-label' for='email'>
+                        Email address <span style='color: var(--error);'>*</span>
+                    </label>
+                    <input
+                        type='email'
+                        id='email'
+                        name='email'
+                        class='form-input'
+                        placeholder='Where we can reach you'
+                        required
+                        maxlength='254'
+                        autocomplete='email'
+                    />
+                </div>
+
+                <div class='form-group'>
+                    <label class='form-label' for='category'>
+                        What is it about? <span style='color: var(--error);'>*</span>
+                    </label>
+                    <select id='category' name='category' class='form-select' required>
+                        <option value=''>Select a category</option>
+                        <option value='bug'>🐛 Bug — something's broken or not working</option>
+                        <option value='account issue'>🔐 Account issue — login, billing, access</option>
+                        <option value='other'>💬 Something else</option>
+                    </select>
+                </div>
+
+                <div class='form-group'>
+                    <label class='form-label' for='message'>
+                        Message <span style='color: var(--error);'>*</span>
+                    </label>
+                    <textarea
+                        id='message'
+                        name='message'
+                        class='form-textarea'
+                        placeholder='Tell us what's going on. The more detail, the faster we can help.'
+                        required
+                        maxlength='5000'
+                    ></textarea>
+                    <div class='form-hint' id='charCount'>0 / 5000</div>
+                </div>
+
+                <button type='submit' class='submit-btn' id='submitBtn'>
+                    Send message
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById('contactForm');
+        const formMessage = document.getElementById('formMessage');
+        const submitBtn = document.getElementById('submitBtn');
+        const messageField = document.getElementById('message');
+        const charCount = document.getElementById('charCount');
+
+        // Live character count
+        messageField.addEventListener('input', () => {
+            const len = messageField.value.length;
+            charCount.textContent = len + ' / 5000';
+            charCount.style.color = len > 4500 ? 'var(--error)' : 'var(--text-muted)';
+        });
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            formMessage.className = 'form-message';
+            formMessage.style.display = 'none';
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Sending...';
+
+            const data = {
+                name: document.getElementById('name').value.trim(),
+                email: document.getElementById('email').value.trim(),
+                category: document.getElementById('category').value,
+                message: document.getElementById('message').value.trim(),
+            };
+
+            // Basic client-side validation
+            if (!data.email || !data.message || !data.category) {
+                formMessage.textContent = 'Please fill in all required fields.';
+                formMessage.className = 'form-message error';
+                formMessage.style.display = 'block';
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Send message';
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/contact/submit', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data),
+                });
+
+                const json = await res.json();
+
+                if (json.success) {
+                    formMessage.innerHTML = '&#x2713; Message sent! Sean will get back to you within a day or two.';
+                    formMessage.className = 'form-message success';
+                    formMessage.style.display = 'block';
+                    form.reset();
+                    charCount.textContent = '0 / 5000';
+                    charCount.style.color = 'var(--text-muted)';
+                } else {
+                    formMessage.textContent = json.message || 'Something went wrong. Please try again.';
+                    formMessage.className = 'form-message error';
+                    formMessage.style.display = 'block';
+                }
+            } catch {
+                formMessage.textContent = 'Network error — please check your connection and try again.';
+                formMessage.className = 'form-message error';
+                formMessage.style.display = 'block';
+            }
+
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Send message';
+        });
+    </script>
+    <footer style="background:#011e5c;padding:2rem;text-align:center;">
+        <div style="display:flex;justify-content:center;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.75rem;">
+            <a href="/" style="color:rgba(255,255,255,0.7);text-decoration:none;font-size:0.82rem;">Home</a>
+            <a href="/story" style="color:rgba(255,255,255,0.7);text-decoration:none;font-size:0.82rem;">About</a>
+            <a href="/changelog" style="color:rgba(255,255,255,0.7);text-decoration:none;font-size:0.82rem;">Changelog</a>
+            <a href="/pricing" style="color:rgba(255,255,255,0.7);text-decoration:none;font-size:0.82rem;">Pricing</a>
+            <a href="/contact" style="color:rgba(255,255,255,0.7);text-decoration:none;font-size:0.82rem;">Contact</a>
+            <a href="/terms" style="color:rgba(255,255,255,0.7);text-decoration:none;font-size:0.82rem;">Terms</a>
+            <a href="/privacy" style="color:rgba(255,255,255,0.7);text-decoration:none;font-size:0.82rem;">Privacy</a>
+        </div>
+        <p style="color:rgba(255,255,255,0.5);font-size:0.78rem;margin:0;">FocusLedger &copy; 2026</p>
+    </footer>
+</body>
+</html>

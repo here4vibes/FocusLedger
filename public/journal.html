@@ -1,0 +1,1377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#011e5c">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="FocusLedger">
+<link rel="icon" type="image/png" sizes="32x32" href="/icons/fl-icon.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/icons/fl-icon.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/fl-icon.png">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Journal — FocusLedger</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --orange: #c9a84c;
+            --orange-light: #d4b56a;
+            --navy: #011e5c;
+            --navy-mid: #02287a;
+            --navy-light: #033099;
+            --cream: #faf9f7;
+            --cream-dark: #f5f3ef;
+            --text-dark: #1a1a1a;
+            --text-muted: #6b6b6b;
+            --green: #5BA4A4;
+            --green-muted: #4A9292;
+            --success: #7DB87D;
+            --warning: #E07A5F;
+            --border: #e8e5e0;
+            --surface: #FFFFFF;
+        }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            color: var(--text-dark);
+            background: var(--cream);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        h1, h2, h3, h4 { font-family: 'Space Grotesk', sans-serif; }
+
+        /* ── NAV (portal-nav — consistent across all app pages) ── */
+        .portal-nav {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 1.25rem; height: 56px; background: var(--navy);
+            position: sticky; top: 0; z-index: 200; width: 100%;
+        }
+        .portal-logo {
+            font-family: system-ui, sans-serif; font-size: 1.25rem; font-weight: 700;
+            color: white; display: flex; align-items: center; gap: 0.5rem; text-decoration: none;
+        }
+        .logo-dot {
+            width: 10px; height: 10px;
+            background: var(--orange); border-radius: 2px; transform: rotate(45deg);
+        }
+        .portal-nav .nav-links { display: flex; gap: 0.15rem; flex-wrap: wrap; }
+        .portal-nav .nav-link {
+            padding: 0.4rem 0.75rem; font-size: 0.875rem; font-weight: 500;
+            color: rgba(255,255,255,0.75); transition: all 0.15s; white-space: nowrap; text-decoration: none;
+        }
+        .portal-nav .nav-link:hover { background: rgba(255,255,255,0.1); color: white; }
+        .portal-nav .nav-link.active { color: white; border-bottom: 2px solid var(--orange); }
+        @media (max-width: 900px) { .portal-nav .nav-links { display: none; } }
+        .nav-right {
+            display: flex; align-items: center; gap: 0.75rem;
+        }
+
+        /* ── PAGE LAYOUT ── */
+        .page {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem 4rem;
+        }
+
+        /* ── VIEW SWITCHER ── */
+        .view-tabs {
+            display: flex;
+            gap: 0;
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+            margin-bottom: 1.5rem;
+        }
+        .view-tab {
+            flex: 1;
+            padding: 0.65rem 1rem;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.88rem;
+            font-weight: 500;
+            border: none;
+            background: none;
+            cursor: pointer;
+            color: var(--text-muted);
+            transition: background 0.15s, color 0.15s;
+        }
+        .view-tab.active {
+            background: var(--navy);
+            color: white;
+        }
+
+        /* ── COMPOSE PANEL ── */
+        #composeView { display: block; }
+        #historyView { display: none; }
+
+        .compose-header {
+            margin-bottom: 1.5rem;
+        }
+        .compose-header h1 {
+            font-size: 1.8rem;
+            color: var(--navy);
+            font-weight: 700;
+        }
+        .compose-header p {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            margin-top: 0.35rem;
+        }
+
+        /* Entry type toggle */
+        .type-toggle {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.25rem;
+        }
+        .type-btn {
+            flex: 1;
+            padding: 0.55rem 1rem;
+            border: 2px solid var(--border);
+            border-radius: 10px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.88rem;
+            font-weight: 500;
+            cursor: pointer;
+            background: white;
+            color: var(--text-muted);
+            transition: all 0.15s;
+        }
+        .type-btn.active {
+            border-color: var(--navy);
+            color: var(--navy);
+            background: rgba(1,30,92,0.04);
+        }
+
+        /* Text area */
+        .journal-textarea {
+            width: 100%;
+            min-height: 220px;
+            padding: 1.25rem;
+            border: 2px solid var(--border);
+            border-radius: 14px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 1rem;
+            line-height: 1.6;
+            color: var(--text-dark);
+            background: white;
+            resize: vertical;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .journal-textarea:focus {
+            border-color: var(--orange-light);
+        }
+        .journal-textarea::placeholder {
+            color: #C0BDB8;
+        }
+
+        .char-count {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-align: right;
+            margin-top: 0.35rem;
+        }
+
+        /* Submit button */
+        .btn-submit {
+            width: 100%;
+            margin-top: 1rem;
+            padding: 0.95rem 1.5rem;
+            background: var(--navy);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.1s;
+        }
+        .btn-submit:hover { background: var(--navy-mid); }
+        .btn-submit:active { transform: scale(0.98); }
+        .btn-submit:disabled {
+            background: #B8B5B0;
+            cursor: not-allowed;
+        }
+
+        /* ── AI PREVIEW PANEL ── */
+        #aiPreview {
+            display: none;
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            overflow: hidden;
+            margin-top: 1.5rem;
+        }
+        .preview-header {
+            background: var(--navy);
+            color: white;
+            padding: 1rem 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 0.65rem;
+        }
+        .preview-header h3 {
+            font-size: 1rem;
+            font-weight: 600;
+        }
+        .preview-header .ai-badge {
+            font-size: 0.7rem;
+            background: rgba(255,255,255,0.2);
+            border-radius: 20px;
+            padding: 2px 8px;
+            font-weight: 500;
+        }
+        .preview-subtext {
+            padding: 0.75rem 1.25rem;
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            background: var(--cream);
+            border-bottom: 1px solid var(--border);
+        }
+
+        /* Match cards */
+        .match-list {
+            padding: 1rem 1.25rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+        .match-card {
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 0.9rem 1rem;
+            background: white;
+            position: relative;
+        }
+        .match-card.high-confidence {
+            border-left: 4px solid var(--green);
+        }
+        .match-card.med-confidence {
+            border-left: 4px solid var(--orange);
+        }
+        .match-top {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            margin-bottom: 0.5rem;
+        }
+        .match-icon {
+            font-size: 1.2rem;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+        .match-info { flex: 1; }
+        .match-task-title {
+            font-weight: 600;
+            font-size: 0.95rem;
+            color: var(--text-dark);
+        }
+        .match-phrase {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-top: 0.2rem;
+            font-style: italic;
+        }
+        .match-type-badge {
+            font-size: 0.68rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            padding: 2px 7px;
+            border-radius: 20px;
+            display: inline-block;
+            margin-top: 0.3rem;
+        }
+        .badge-complete { background: #D4EDEC; color: var(--green-muted); }
+        .badge-partial  { background: #FFF3CD; color: #8B6914; }
+        .badge-create   { background: #EAF0FF; color: var(--navy); }
+
+        .confidence-bar-wrap {
+            margin-top: 0.5rem;
+        }
+        .confidence-label {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            margin-bottom: 3px;
+        }
+        .confidence-bar {
+            height: 4px;
+            background: var(--cream-dark);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+        .confidence-fill {
+            height: 100%;
+            border-radius: 2px;
+            background: var(--green);
+            transition: width 0.4s;
+        }
+        .confidence-fill.med { background: var(--orange); }
+
+        .match-actions {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 0.75rem;
+        }
+        .btn-approve {
+            flex: 1;
+            min-height: 44px;
+            padding: 0.55rem 1rem;
+            background: var(--green);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+            transition: background 0.15s;
+        }
+        .btn-approve:hover { background: var(--green-muted); }
+        .btn-approve:disabled {
+            background: var(--border);
+            color: var(--text-muted);
+            cursor: default;
+        }
+        .btn-dismiss {
+            min-height: 44px;
+            padding: 0.55rem 1rem;
+            background: none;
+            color: var(--text-muted);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.85rem;
+            cursor: pointer;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+            transition: border-color 0.15s, color 0.15s;
+        }
+        .btn-dismiss:hover { border-color: var(--warning); color: var(--warning); }
+        .btn-undo {
+            min-height: 44px;
+            padding: 0.4rem 0.85rem;
+            background: none;
+            color: var(--orange);
+            border: 1px solid var(--orange-light);
+            border-radius: 8px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.78rem;
+            cursor: pointer;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+            transition: all 0.15s;
+        }
+        .btn-undo:hover { background: rgba(201,168,76,0.06); }
+
+        .match-status-label {
+            font-size: 0.8rem;
+            font-weight: 500;
+            margin-top: 0.5rem;
+        }
+        .status-approved { color: var(--green-muted); }
+        .status-dismissed { color: var(--text-muted); }
+
+        /* No matches */
+        .no-matches {
+            padding: 1.5rem 1.25rem;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+        .no-matches .emoji { font-size: 2rem; margin-bottom: 0.5rem; }
+
+        /* ── NEW TASK SUGGESTIONS ── */
+        .new-tasks-section {
+            padding: 0.75rem 1.25rem 1rem;
+            border-top: 1px solid var(--border);
+        }
+        .new-tasks-header {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 0.82rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--navy);
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+        .suggestion-card {
+            border: 1px dashed var(--border);
+            border-radius: 12px;
+            padding: 0.9rem 1rem;
+            background: rgba(1,30,92,0.02);
+            margin-bottom: 0.65rem;
+            transition: border-color 0.15s;
+        }
+        .suggestion-card:hover { border-color: var(--navy-light); }
+        .suggestion-title {
+            font-weight: 600;
+            font-size: 0.95rem;
+            color: var(--text-dark);
+        }
+        .suggestion-phrase {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            font-style: italic;
+            margin-top: 0.2rem;
+        }
+        .suggestion-due {
+            font-size: 0.78rem;
+            color: var(--navy);
+            margin-top: 0.3rem;
+        }
+        .suggestion-actions {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 0.65rem;
+        }
+        .btn-add-task {
+            flex: 1;
+            min-height: 44px;
+            padding: 0.55rem 1rem;
+            background: var(--navy);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        .btn-add-task:hover { background: var(--navy-mid); }
+        .btn-add-task:disabled {
+            background: var(--border);
+            color: var(--text-muted);
+            cursor: default;
+        }
+        .btn-skip {
+            min-height: 44px;
+            padding: 0.55rem 1rem;
+            background: none;
+            color: var(--text-muted);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: border-color 0.15s, color 0.15s;
+        }
+        .btn-skip:hover { border-color: var(--text-muted); color: var(--text-dark); }
+
+        /* Partial note card */
+        .partial-note-card {
+            margin: 0 1.25rem 1rem;
+            padding: 0.75rem 1rem;
+            background: #FFF3CD;
+            border-radius: 10px;
+            border-left: 4px solid #F0C040;
+        }
+        .partial-note-card p {
+            font-size: 0.85rem;
+            color: #7B5E00;
+        }
+        .partial-note-card strong { color: #5C4500; }
+
+        /* Loading spinner */
+        .spinner-wrap {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-muted);
+        }
+        .spinner {
+            width: 28px; height: 28px;
+            border: 3px solid var(--border);
+            border-top-color: var(--navy);
+            border-radius: 50%;
+            display: inline-block;
+            animation: spin 0.8s linear infinite;
+            margin-bottom: 0.75rem;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ── HISTORY VIEW ── */
+        .history-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        .history-entry {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: box-shadow 0.15s;
+        }
+        .history-entry:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.07); }
+        .history-entry-header {
+            padding: 1rem 1.25rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 1rem;
+        }
+        .history-entry-meta {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+        .history-entry-type {
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            padding: 2px 7px;
+            border-radius: 20px;
+        }
+        .type-evening { background: #EEE4FF; color: #5B2F9A; }
+        .type-morning { background: #FFF3CD; color: #8B6914; }
+        .history-entry-preview {
+            font-size: 0.92rem;
+            color: var(--text-dark);
+            line-height: 1.5;
+            padding: 0 1.25rem 1rem;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        .history-entry-stats {
+            padding: 0.6rem 1.25rem;
+            background: var(--cream);
+            border-top: 1px solid var(--border);
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            display: flex;
+            gap: 1rem;
+        }
+        .history-stat { display: flex; align-items: center; gap: 0.3rem; }
+
+        /* ── DETAIL MODAL ── */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.45);
+            z-index: 200;
+            align-items: flex-end;
+            justify-content: center;
+        }
+        .modal-overlay.open { display: flex; }
+        .modal-sheet {
+            background: white;
+            border-radius: 20px 20px 0 0;
+            width: 100%;
+            max-width: 600px;
+            max-height: 85vh;
+            overflow-y: auto;
+            padding: 1.5rem;
+            animation: slideUp 0.25s ease-out;
+        }
+        @keyframes slideUp {
+            from { transform: translateY(100%); }
+            to   { transform: translateY(0); }
+        }
+        .modal-close {
+            float: right;
+            font-size: 1.5rem;
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: var(--text-muted);
+            line-height: 1;
+        }
+        .modal-close:hover { color: var(--text-dark); }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%) translateY(4rem);
+            background: var(--text-dark);
+            color: white;
+            padding: 0.65rem 1.5rem;
+            border-radius: 30px;
+            font-size: 0.88rem;
+            font-weight: 500;
+            z-index: 999;
+            opacity: 0;
+            transition: transform 0.3s, opacity 0.3s;
+            white-space: nowrap;
+        }
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+        }
+
+        /* Responsive */
+        @media (max-width: 600px) {
+            .page { padding-left: 1rem; padding-right: 1rem; }
+            .compose-header h1 { font-size: 1.5rem; }
+        }
+
+    </style>
+    <link rel="stylesheet" href="/shared-nav.css">
+</head>
+<body>
+<noscript><p style="padding:2rem;text-align:center;font-family:'DM Sans',sans-serif;color:#374151">FocusLedger requires JavaScript.</p></noscript>
+
+<!-- NAV -->
+<nav class="portal-nav">
+    <a href="/home" class="portal-logo"><span class="logo-dot"></span>FocusLedger</a>
+    <div class="nav-links">
+        <a href="/home" class="nav-link">Home</a>
+        <a href="/app/tasks" class="nav-link">Tasks</a>
+        <a href="/app/money" class="nav-link">Money</a>
+        <a href="/app/life" class="nav-link">Life</a>
+        <a href="/news" class="nav-link">News</a>
+        <a href="/app/vault" class="nav-link">Vault</a>
+        <a href="/ideas" class="nav-link">Ideas</a>
+        <a href="/journal" class="nav-link active">Journal</a>
+        <a href="/settings" class="nav-link">Settings</a>
+    </div>
+    <div class="nav-right">
+        <span style="font-size:0.82rem;color:rgba(255,255,255,0.7);" id="userNameDisplay"></span>
+        <button class="logout-btn" id="logoutBtn" style="font-size:0.8rem;color:rgba(255,255,255,0.65);background:none;border:none;cursor:pointer;padding:0.35rem 0.6rem;border-radius:4px;">Logout</button>
+    </div>
+</nav>
+
+<!-- PAGE -->
+<div class="page">
+
+    <!-- View tabs -->
+    <div class="view-tabs">
+        <button class="view-tab active" id="tabWrite">✍️ Write Entry</button>
+        <button class="view-tab" id="tabHistory">📖 History</button>
+    </div>
+
+    <!-- ── COMPOSE VIEW ── -->
+    <div id="composeView">
+        <div class="compose-header">
+            <h1 id="composeTitle">How did today go?</h1>
+            <p id="composeSubtext">Write freely — AI will find tasks you completed and suggest updates.</p>
+        </div>
+
+        <!-- Entry type -->
+        <div class="type-toggle">
+            <button class="type-btn active" id="btnEvening">🌙 Evening Reflection</button>
+            <button class="type-btn" id="btnMorning">☀️ Morning Plan</button>
+        </div>
+
+        <!-- Text area -->
+        <textarea
+            class="journal-textarea"
+            id="journalTextarea"
+            placeholder="e.g. 'Finished the tax stuff, called dentist and made an appointment, bought groceries for about $60. Still need to follow up with the insurance people.'"
+            maxlength="3000"
+        ></textarea>
+        <div class="char-count" style="display:flex;justify-content:space-between;align-items:center;">
+            <span><span id="charCount">0</span> / 3000</span>
+            <span id="journalVoiceBtn"></span>
+        </div>
+
+        <button class="btn-submit" id="submitBtn" disabled>
+            Analyze &amp; Find Matches →
+        </button>
+        <p id="submitHint" style="font-size:0.78rem;color:var(--text-muted);text-align:center;margin-top:0.5rem;">Write at least 10 characters above to continue</p>
+
+        <!-- AI Preview Panel -->
+        <div id="aiPreview">
+            <div class="preview-header">
+                <h3>AI Found These Matches</h3>
+                <span class="ai-badge">Preview</span>
+            </div>
+            <div class="preview-subtext">
+                Review each match before anything changes. You're in control.
+            </div>
+            <div id="previewBody"></div>
+        </div>
+    </div>
+
+    <!-- ── HISTORY VIEW ── -->
+    <div id="historyView">
+        <div id="historyBody">
+            <div class="spinner-wrap"><div class="spinner"></div><p>Loading entries…</p></div>
+        </div>
+    </div>
+
+</div>
+
+<!-- Detail Modal -->
+<div class="modal-overlay" id="detailModal">
+    <div class="modal-sheet" id="detailSheet">
+        <button class="modal-close" id="modalCloseBtn">×</button>
+        <div id="detailContent"></div>
+    </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ─────────────────────────────────────────────────────────────
+// Auth
+// ─────────────────────────────────────────────────────────────
+const token = localStorage.getItem('fl_token');
+if (!token) { window.location.href = '/login'; }
+
+function authHeaders() {
+    return { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` };
+}
+
+// Show user name
+try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    if (payload.name) document.getElementById('userNameDisplay').textContent = payload.name.split(' ')[0];
+} catch(_) {}
+
+// ─────────────────────────────────────────────────────────────
+// State
+// ─────────────────────────────────────────────────────────────
+let entryType = 'evening';
+let currentEntryId = null;
+let currentMatches = [];
+
+// ─────────────────────────────────────────────────────────────
+// Entry type toggle
+// ─────────────────────────────────────────────────────────────
+function setEntryType(type) {
+    entryType = type;
+    document.getElementById('btnEvening').classList.toggle('active', type === 'evening');
+    document.getElementById('btnMorning').classList.toggle('active', type === 'morning');
+
+    if (type === 'evening') {
+        document.getElementById('composeTitle').textContent = 'How did today go?';
+        document.getElementById('composeSubtext').textContent = 'Write freely — AI will find tasks you completed and suggest updates.';
+        document.getElementById('journalTextarea').placeholder = "e.g. 'Finished the tax stuff, called dentist, bought groceries for $60. Still need to call insurance.'";
+    } else {
+        document.getElementById('composeTitle').textContent = "What's on tap today?";
+        document.getElementById('composeSubtext').textContent = 'Mention what you plan to do — AI surfaces matching tasks and can create new ones.';
+        document.getElementById('journalTextarea').placeholder = "e.g. 'I need to call insurance, pay the electricity bill, and get groceries. Maybe a quick workout.'";
+    }
+}
+
+// ─────────────────────────────────────────────────────────────
+// Textarea
+// ─────────────────────────────────────────────────────────────
+function onTextareaInput(el) {
+    document.getElementById('charCount').textContent = el.value.length;
+    const ready = el.value.trim().length >= 10;
+    document.getElementById('submitBtn').disabled = !ready;
+    const hint = document.getElementById('submitHint');
+    if (hint) hint.style.display = ready ? 'none' : '';
+}
+
+// ─────────────────────────────────────────────────────────────
+// View switcher
+// ─────────────────────────────────────────────────────────────
+function switchView(view) {
+    const isCompose = view === 'compose';
+    document.getElementById('composeView').style.display = isCompose ? 'block' : 'none';
+    document.getElementById('historyView').style.display = isCompose ? 'none' : 'block';
+    document.getElementById('tabWrite').classList.toggle('active', isCompose);
+    document.getElementById('tabHistory').classList.toggle('active', !isCompose);
+    if (!isCompose) loadHistory();
+}
+
+// ─────────────────────────────────────────────────────────────
+// Submit journal
+// ─────────────────────────────────────────────────────────────
+async function submitJournal() {
+    const content = document.getElementById('journalTextarea').value.trim();
+    if (content.length < 10) return;
+
+    const btn = document.getElementById('submitBtn');
+    btn.disabled = true;
+    btn.textContent = 'Analyzing…';
+
+    // Show loading state in preview
+    const preview = document.getElementById('aiPreview');
+    const previewBody = document.getElementById('previewBody');
+    preview.style.display = 'block';
+    previewBody.innerHTML = `<div class="spinner-wrap"><div class="spinner"></div><p>Reading your entry…</p></div>`;
+
+    try {
+        const resp = await fetch('/api/journal', {
+            method: 'POST',
+            headers: authHeaders(),
+            body: JSON.stringify({ content, entry_type: entryType })
+        });
+        const data = await resp.json();
+
+        if (!data.success) {
+            showToast('Something went wrong. Please try again.');
+            btn.disabled = false;
+            btn.textContent = 'Analyze & Find Matches →';
+            preview.style.display = 'none';
+            return;
+        }
+
+        currentEntryId = data.entry.id;
+        currentMatches = data.matches || [];
+
+        renderPreview(data.entry, data.matches, data.expense_mentions || [], data.new_task_suggestions || []);
+
+        btn.textContent = '✓ Entry saved';
+        setTimeout(() => {
+            btn.textContent = 'Submit Another Entry';
+            btn.disabled = false;
+            document.getElementById('journalTextarea').value = '';
+            document.getElementById('charCount').textContent = '0';
+        }, 3000);
+
+    } catch(err) {
+        showToast('Network error. Please try again.');
+        btn.disabled = false;
+        btn.textContent = 'Analyze & Find Matches →';
+        document.getElementById('aiPreview').style.display = 'none';
+    }
+}
+
+// ─────────────────────────────────────────────────────────────
+// Render preview matches
+// ─────────────────────────────────────────────────────────────
+function renderPreview(entry, matches, expenseMentions, newTaskSuggestions) {
+    const body = document.getElementById('previewBody');
+    newTaskSuggestions = newTaskSuggestions || [];
+
+    // Partial note banner
+    let partialHtml = '';
+    if (entry.partial_note) {
+        partialHtml = `
+            <div class="partial-note-card">
+                <p>📋 <strong>Progress noted:</strong> ${escHtml(entry.partial_note)}</p>
+            </div>`;
+    }
+
+    // Expense mentions banner
+    let expenseHtml = '';
+    if (expenseMentions.length > 0) {
+        const expList = expenseMentions.map(e => `$${e.amount.toFixed(2)} ${e.description}`).join(', ');
+        expenseHtml = `
+            <div class="partial-note-card" style="background:#E8F8F5;border-left-color:#5BA4A4;">
+                <p>💰 <strong>Expenses logged:</strong> ${escHtml(expList)}</p>
+            </div>`;
+    }
+
+    // Existing task matches
+    let matchesHtml = '';
+    if (matches.length > 0) {
+        const matchCards = matches.map(m => renderMatchCard(m)).join('');
+        matchesHtml = `<div class="match-list">${matchCards}</div>`;
+    } else if (newTaskSuggestions.length === 0) {
+        matchesHtml = `
+            <div class="no-matches">
+                <div class="emoji">🔍</div>
+                <p>No task matches found with enough confidence.<br>
+                <span style="font-size:0.8rem">AI only suggests completions when it's reasonably sure.</span></p>
+            </div>`;
+    }
+
+    // New task suggestions section
+    let suggestionsHtml = '';
+    if (newTaskSuggestions.length > 0) {
+        const cards = newTaskSuggestions.map((s, i) => renderSuggestionCard(s, i)).join('');
+        suggestionsHtml = `
+            <div class="new-tasks-section">
+                <div class="new-tasks-header">➕ New Tasks Found</div>
+                ${cards}
+            </div>`;
+    }
+
+    body.innerHTML = partialHtml + expenseHtml + matchesHtml + suggestionsHtml;
+}
+
+function renderSuggestionCard(suggestion, index) {
+    let dueInfo = '';
+    if (suggestion.due_date || suggestion.due_time) {
+        const parts = [];
+        if (suggestion.due_date) {
+            const d = new Date(suggestion.due_date + 'T00:00:00');
+            parts.push(d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+        }
+        if (suggestion.due_time) {
+            // Format "08:45" → "8:45 AM"
+            const [h, m] = suggestion.due_time.split(':');
+            const hr = parseInt(h);
+            const ampm = hr >= 12 ? 'PM' : 'AM';
+            const hr12 = hr === 0 ? 12 : hr > 12 ? hr - 12 : hr;
+            parts.push(`${hr12}:${m} ${ampm}`);
+        }
+        dueInfo = `<div class="suggestion-due">📅 ${parts.join(' at ')}</div>`;
+    }
+
+    return `
+        <div class="suggestion-card" id="suggestion_${index}">
+            <div class="suggestion-title">${escHtml(suggestion.title)}</div>
+            ${suggestion.matched_phrase ? `<div class="suggestion-phrase">"${escHtml(suggestion.matched_phrase)}"</div>` : ''}
+            ${dueInfo}
+            <div class="suggestion-actions">
+                <button class="btn-add-task" id="addTaskBtn_${index}" data-title="${escHtml(suggestion.title)}" data-due-date="${suggestion.due_date || ''}" data-due-time="${suggestion.due_time || ''}">
+                    ➕ Add Task
+                </button>
+                <button class="btn-skip" id="skipBtn_${index}">Skip</button>
+            </div>
+        </div>`;
+}
+
+function renderMatchCard(match, isHistory = false) {
+    const conf = parseFloat(match.confidence);
+    const isHigh = conf >= 0.85;
+    const confPct = Math.round(conf * 100);
+    const confClass = isHigh ? '' : ' med';
+    const cardClass = isHigh ? 'high-confidence' : 'med-confidence';
+
+    let icon = '✅';
+    if (match.match_type === 'partial') icon = '⏳';
+    if (match.match_type === 'create') icon = '➕';
+
+    let typeBadge = '';
+    if (match.match_type === 'complete') typeBadge = '<span class="match-type-badge badge-complete">Complete</span>';
+    if (match.match_type === 'partial')  typeBadge = '<span class="match-type-badge badge-partial">Partial</span>';
+    if (match.match_type === 'create')   typeBadge = '<span class="match-type-badge badge-create">New task</span>';
+
+    let actionsHtml = '';
+    if (isHistory) {
+        // History view — show status only
+        if (match.user_approved === true) {
+            actionsHtml = `<div class="match-status-label status-approved">✓ Approved${match.task_completed ? ' — task completed' : ''}</div>`;
+            if (match.task_completed && !match.completion_undone) {
+                actionsHtml += `<button class="btn-undo" data-entry-id="${match.journal_entry_id || currentEntryId}" data-match-id="${match.id}">Undo completion</button>`;
+            }
+        } else if (match.user_approved === false) {
+            actionsHtml = `<div class="match-status-label status-dismissed">✕ Dismissed</div>`;
+        } else {
+            actionsHtml = `<div class="match-status-label" style="color:var(--text-muted)">Pending review</div>`;
+        }
+    } else {
+        // Compose view — show action buttons (NO inline onclick — mobile Safari ignores them)
+        actionsHtml = `
+            <div class="match-actions" id="matchActions_${match.id}">
+                <button class="btn-approve" data-match-id="${match.id}">
+                    ${match.match_type === 'complete' ? '✓ Complete task' : match.match_type === 'partial' ? '📋 Log progress' : '➕ Create task'}
+                </button>
+                <button class="btn-dismiss" data-match-id="${match.id}">Dismiss</button>
+            </div>`;
+    }
+
+    return `
+        <div class="match-card ${cardClass}" id="matchCard_${match.id}">
+            <div class="match-top">
+                <div class="match-icon">${icon}</div>
+                <div class="match-info">
+                    <div class="match-task-title">${escHtml(match.task_title || 'Task')}</div>
+                    ${match.matched_phrase ? `<div class="match-phrase">"${escHtml(match.matched_phrase)}"</div>` : ''}
+                    ${typeBadge}
+                </div>
+            </div>
+            <div class="confidence-bar-wrap">
+                <div class="confidence-label">${confPct}% confidence ${isHigh ? '— strong match' : '— possible match'}</div>
+                <div class="confidence-bar">
+                    <div class="confidence-fill${confClass}" style="width:${confPct}%"></div>
+                </div>
+            </div>
+            ${match.progress_note ? `<p style="font-size:0.8rem;color:var(--text-muted);margin-top:0.5rem;">Note: ${escHtml(match.progress_note)}</p>` : ''}
+            ${match.followup_task_title ? `<p style="font-size:0.8rem;color:var(--navy);margin-top:0.4rem;">+ Creates follow-up: "${escHtml(match.followup_task_title)}"</p>` : ''}
+            ${actionsHtml}
+        </div>`;
+}
+
+// ─────────────────────────────────────────────────────────────
+// Create task from suggestion (event delegation)
+// ─────────────────────────────────────────────────────────────
+document.addEventListener('click', function(e) {
+    // Handle "Add Task" button clicks
+    const addBtn = e.target.closest('.btn-add-task');
+    if (addBtn && !addBtn.disabled) {
+        const title = addBtn.getAttribute('data-title');
+        const dueDate = addBtn.getAttribute('data-due-date') || null;
+        const dueTime = addBtn.getAttribute('data-due-time') || null;
+        createTaskFromSuggestion(addBtn, title, dueDate, dueTime);
+        return;
+    }
+
+    // Handle "Skip" button clicks
+    const skipBtn = e.target.closest('.btn-skip');
+    if (skipBtn) {
+        const card = skipBtn.closest('.suggestion-card');
+        if (card) {
+            card.style.opacity = '0.4';
+            card.innerHTML = '<div style="text-align:center;padding:0.5rem;color:var(--text-muted);font-size:0.85rem;">Skipped</div>';
+        }
+        return;
+    }
+
+    // Handle "Complete Task" / "Log Progress" / approve button clicks
+    const approveBtn = e.target.closest('.btn-approve');
+    if (approveBtn && !approveBtn.disabled) {
+        const matchId = parseInt(approveBtn.getAttribute('data-match-id'));
+        if (matchId) {
+            approveMatch(matchId, approveBtn);
+        }
+        return;
+    }
+
+    // Handle "Dismiss" button clicks
+    const dismissBtn = e.target.closest('.btn-dismiss');
+    if (dismissBtn && !dismissBtn.disabled) {
+        const matchId = parseInt(dismissBtn.getAttribute('data-match-id'));
+        if (matchId) {
+            dismissMatch(matchId, dismissBtn);
+        }
+        return;
+    }
+
+    // Handle "Undo completion" button clicks
+    const undoBtn = e.target.closest('.btn-undo');
+    if (undoBtn && !undoBtn.disabled) {
+        const entryId = parseInt(undoBtn.getAttribute('data-entry-id')) || currentEntryId;
+        const matchId = parseInt(undoBtn.getAttribute('data-match-id'));
+        if (matchId) {
+            undoMatch(entryId, matchId, undoBtn);
+        }
+        return;
+    }
+});
+
+async function createTaskFromSuggestion(btn, title, dueDate, dueTime) {
+    btn.disabled = true;
+    btn.textContent = 'Creating…';
+
+    try {
+        const resp = await fetch('/api/journal/create-task', {
+            method: 'POST',
+            headers: authHeaders(),
+            body: JSON.stringify({
+                title: title,
+                due_date: dueDate || null,
+                due_time: dueTime || null,
+                entry_id: currentEntryId
+            })
+        });
+        const data = await resp.json();
+
+        if (data.success) {
+            const card = btn.closest('.suggestion-card');
+            if (card) {
+                card.style.borderColor = 'var(--green)';
+                card.style.borderStyle = 'solid';
+                card.style.background = 'rgba(91,164,164,0.04)';
+                const actionsDiv = btn.closest('.suggestion-actions');
+                if (actionsDiv) {
+                    actionsDiv.innerHTML = '<div style="color:var(--green-muted);font-weight:600;font-size:0.85rem;">✓ Task created</div>';
+                }
+            }
+            showToast('✓ Task added to your list!');
+        } else {
+            showToast(data.message || 'Could not create task.');
+            btn.disabled = false;
+            btn.textContent = '➕ Add Task';
+        }
+    } catch (_) {
+        showToast('Network error. Try again.');
+        btn.disabled = false;
+        btn.textContent = '➕ Add Task';
+    }
+}
+
+// ─────────────────────────────────────────────────────────────
+// Approve / dismiss / undo match actions
+// ─────────────────────────────────────────────────────────────
+async function approveMatch(matchId, btn) {
+    btn.disabled = true;
+    btn.textContent = '…';
+
+    try {
+        const resp = await fetch(`/api/journal/${currentEntryId}/matches/${matchId}/approve`, {
+            method: 'POST', headers: authHeaders()
+        });
+        const data = await resp.json();
+
+        if (data.success) {
+            const actionsDiv = document.getElementById(`matchActions_${matchId}`);
+            if (actionsDiv) {
+                let html = '<div class="match-status-label status-approved">✓ Done';
+                if (data.task_completed) html += ' — task completed';
+                html += '</div>';
+                if (data.task_completed) {
+                    html += `<button class="btn-undo" style="margin-top:0.35rem" data-entry-id="${currentEntryId}" data-match-id="${matchId}">Undo completion</button>`;
+                }
+                if (data.followup_created) {
+                    html += `<p style="font-size:0.8rem;color:var(--navy);margin-top:0.3rem;">✓ Follow-up created: "${escHtml(data.followup_created.title)}"</p>`;
+                }
+                actionsDiv.outerHTML = html;
+            }
+            showToast(data.task_completed ? '✓ Task completed!' : '✓ Progress logged!');
+        } else {
+            showToast('Could not apply change. Try again.');
+            btn.disabled = false;
+            btn.textContent = 'Complete task';
+        }
+    } catch(_) {
+        showToast('Network error.');
+        btn.disabled = false;
+    }
+}
+
+async function dismissMatch(matchId, btn) {
+    btn.disabled = true;
+    try {
+        const resp = await fetch(`/api/journal/${currentEntryId}/matches/${matchId}/dismiss`, {
+            method: 'POST', headers: authHeaders()
+        });
+        const data = await resp.json();
+        if (data.success) {
+            const actionsDiv = document.getElementById(`matchActions_${matchId}`);
+            if (actionsDiv) {
+                actionsDiv.outerHTML = '<div class="match-status-label status-dismissed">✕ Dismissed</div>';
+            }
+        }
+    } catch(_) {
+        btn.disabled = false;
+    }
+}
+
+async function undoMatch(entryId, matchId, btn) {
+    btn.disabled = true;
+    btn.textContent = '…';
+    try {
+        const resp = await fetch(`/api/journal/${entryId}/matches/${matchId}/undo`, {
+            method: 'POST', headers: authHeaders()
+        });
+        const data = await resp.json();
+        if (data.success) {
+            btn.outerHTML = '<div class="match-status-label" style="color:var(--text-muted)">↩ Completion undone</div>';
+            showToast('↩ Task marked incomplete again.');
+        } else {
+            btn.disabled = false;
+            btn.textContent = 'Undo completion';
+            showToast(data.message || 'Could not undo.');
+        }
+    } catch(_) {
+        btn.disabled = false;
+        btn.textContent = 'Undo completion';
+        showToast('Network error.');
+    }
+}
+
+// ─────────────────────────────────────────────────────────────
+// History
+// ─────────────────────────────────────────────────────────────
+let historyLoaded = false;
+
+async function loadHistory() {
+    if (historyLoaded) return;
+    const body = document.getElementById('historyBody');
+    body.innerHTML = `<div class="spinner-wrap"><div class="spinner"></div><p>Loading…</p></div>`;
+
+    try {
+        const resp = await fetch('/api/journal?limit=30', { headers: authHeaders() });
+        const data = await resp.json();
+
+        if (!data.success) {
+            body.innerHTML = `<p style="color:var(--text-muted);text-align:center;padding:2rem">Failed to load entries.</p>`;
+            return;
+        }
+
+        historyLoaded = true;
+
+        if (data.entries.length === 0) {
+            body.innerHTML = `
+                <div class="no-matches" style="padding:3rem">
+                    <div class="emoji">📓</div>
+                    <p>No journal entries yet.<br>Write your first reflection above!</p>
+                </div>`;
+            return;
+        }
+
+        const cards = data.entries.map(e => renderHistoryCard(e)).join('');
+        body.innerHTML = `<div class="history-list">${cards}</div>`;
+    } catch(_) {
+        body.innerHTML = `<p style="color:var(--text-muted);text-align:center;padding:2rem">Failed to load. Check your connection.</p>`;
+    }
+}
+
+function renderHistoryCard(entry) {
+    const matches = Array.isArray(entry.matches) ? entry.matches : [];
+    const completed = matches.filter(m => m.task_completed).length;
+    const approved  = matches.filter(m => m.user_approved === true).length;
+    const date = new Date(entry.created_at);
+    const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    const timeStr = date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+    const preview = (entry.content || '').slice(0, 140);
+
+    return `
+        <div class="history-entry" onclick="openEntryDetail(${entry.id})">
+            <div class="history-entry-header">
+                <div class="history-entry-meta">
+                    ${dateStr} · ${timeStr}
+                </div>
+                <span class="history-entry-type type-${entry.entry_type}">${entry.entry_type === 'evening' ? '🌙 Evening' : '☀️ Morning'}</span>
+            </div>
+            <div class="history-entry-preview">${escHtml(preview)}${entry.content.length > 140 ? '…' : ''}</div>
+            <div class="history-entry-stats">
+                <div class="history-stat">🔍 ${matches.length} match${matches.length !== 1 ? 'es' : ''}</div>
+                ${completed > 0 ? `<div class="history-stat">✅ ${completed} completed</div>` : ''}
+                ${approved > completed ? `<div class="history-stat">📋 ${approved - completed} logged</div>` : ''}
+            </div>
+        </div>`;
+}
+
+// ─────────────────────────────────────────────────────────────
+// Entry detail modal
+// ─────────────────────────────────────────────────────────────
+async function openEntryDetail(entryId) {
+    const modal = document.getElementById('detailModal');
+    const content = document.getElementById('detailContent');
+    modal.classList.add('open');
+    content.innerHTML = `<div class="spinner-wrap"><div class="spinner"></div><p>Loading…</p></div>`;
+
+    try {
+        const resp = await fetch(`/api/journal/${entryId}`, { headers: authHeaders() });
+        const data = await resp.json();
+
+        if (!data.success) {
+            content.innerHTML = `<p style="color:var(--text-muted)">Could not load entry.</p>`;
+            return;
+        }
+
+        const entry = data.entry;
+        const matches = data.matches || [];
+        const date = new Date(entry.created_at);
+        const dateStr = date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+
+        const matchCards = matches.length > 0
+            ? matches.map(m => renderMatchCard(m, true)).join('')
+            : `<div class="no-matches"><div class="emoji">🔍</div><p>No task matches were found.</p></div>`;
+
+        content.innerHTML = `
+            <h3 style="font-size:1.1rem;color:var(--navy);margin-bottom:0.25rem">${dateStr}</h3>
+            <span class="history-entry-type type-${entry.entry_type}" style="display:inline-block;margin-bottom:1rem">${entry.entry_type === 'evening' ? '🌙 Evening' : '☀️ Morning'}</span>
+            <p style="font-size:0.95rem;line-height:1.65;color:var(--text-dark);margin-bottom:1.5rem;white-space:pre-wrap">${escHtml(entry.content)}</p>
+            ${entry.partial_note ? `<div class="partial-note-card"><p>📋 <strong>AI note:</strong> ${escHtml(entry.partial_note)}</p></div>` : ''}
+            <h4 style="font-size:0.9rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;margin:1rem 0 0.75rem">AI Matches</h4>
+            <div class="match-list" style="padding:0">${matchCards}</div>
+        `;
+
+        // Track entryId for undo actions in modal
+        currentEntryId = entryId;
+    } catch(_) {
+        content.innerHTML = `<p style="color:var(--text-muted)">Failed to load.</p>`;
+    }
+}
+
+function closeModal(e) {
+    if (e.target === document.getElementById('detailModal')) closeDetailModal();
+}
+
+function closeDetailModal() {
+    document.getElementById('detailModal').classList.remove('open');
+}
+
+// ─────────────────────────────────────────────────────────────
+// Utils
+// ─────────────────────────────────────────────────────────────
+function escHtml(str) {
+    return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// ─────────────────────────────────────────────────────────────
+// Event binding via addEventListener (mobile Safari compatible)
+// Inline event handlers (oninput=, onclick=) are unreliable on
+// iOS Safari and Android WebView. Bind everything here instead.
+// ─────────────────────────────────────────────────────────────
+(function initEventListeners() {
+    const textarea = document.getElementById('journalTextarea');
+    const charCount = document.getElementById('charCount');
+    const submitBtn = document.getElementById('submitBtn');
+    const submitHint = document.getElementById('submitHint');
+
+    // Core textarea handler — updates char count + enables/disables submit
+    function handleTextareaInput() {
+        var len = textarea.value.length;
+        charCount.textContent = len;
+        var ready = textarea.value.trim().length >= 10;
+        submitBtn.disabled = !ready;
+        if (submitHint) submitHint.style.display = ready ? 'none' : '';
+    }
+
+    // Bind multiple events for maximum mobile compatibility
+    textarea.addEventListener('input', handleTextareaInput);
+    textarea.addEventListener('keyup', handleTextareaInput);
+    textarea.addEventListener('change', handleTextareaInput);
+    textarea.addEventListener('paste', function() {
+        // paste event fires before value updates; defer
+        setTimeout(handleTextareaInput, 0);
+    });
+
+    // View tabs
+    document.getElementById('tabWrite').addEventListener('click', function() { switchView('compose'); });
+    document.getElementById('tabHistory').addEventListener('click', function() { switchView('history'); });
+
+    // Entry type toggle
+    document.getElementById('btnEvening').addEventListener('click', function() { setEntryType('evening'); });
+    document.getElementById('btnMorning').addEventListener('click', function() { setEntryType('morning'); });
+
+    // Submit button
+    submitBtn.addEventListener('click', function() { submitJournal(); });
+
+    // Modal close
+    document.getElementById('detailModal').addEventListener('click', function(e) { closeModal(e); });
+    document.getElementById('modalCloseBtn').addEventListener('click', function() { closeDetailModal(); });
+
+    // Logout
+    var logoutBtn = document.getElementById('logoutBtn');
+    if (logoutBtn) logoutBtn.addEventListener('click', function() { localStorage.removeItem('fl_token'); window.location.href = '/login'; });
+})();
+</script>
+<!-- Voice Input module -->
+<script src="/js/voice-input.js"></script>
+<script>
+(function() {
+    function initVoice() {
+        var wrap = document.getElementById('journalVoiceBtn');
+        if (wrap && window.VoiceInput) {
+            VoiceInput.attach({
+                container: wrap,
+                targetInput: document.getElementById('journalTextarea'),
+                context: 'journal'
+            });
+        }
+    }
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initVoice);
+    } else {
+        initVoice();
+    }
+})();
+</script>
+
+    <script src="/shared-nav.js"></script>
+    <script src="/buddy-widget.js"></script>
+</body>
+</html>

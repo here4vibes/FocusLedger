@@ -1,0 +1,552 @@
+/*
+ * app-layout.css — Layout layer for /app page
+ * Structural positioning only: flex, grid, fixed/sticky elements, responsive breakpoints
+ * No visual properties (colors, shadows, borders) — those live in app-spacing.css or design-system.css
+ *
+ * Injected after shared-nav.css; imported via <link> in app.html
+ */
+
+:root {
+  /* Override layout-relevant tokens to match lightweight patterns */
+  --app-card-radius: 12px;
+}
+
+/* ── Dashboard Grid ─────────────────────────────────────────────────── */
+/*
+ * Single-column layout for /app/tasks — matches Money/Vault/Buddy width
+ * min-height prevents grid collapse when content hasn't loaded yet
+ * Uses --nav-height via inline CSS override (80px fallback for legacy)
+ */
+.dashboard {
+  /* max-width: 100% is critical for mobile — prevents content min-width from
+     forcing the grid beyond the viewport. The parent already has overflow-x: hidden
+     on body, but the grid itself must not claim more width than available. */
+  max-width: min(1400px, 100%);
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0;
+  align-items: start;
+  /* Floor at viewport height minus nav — prevents 0-height grid collapse */
+  min-height: calc(100vh - var(--nav-height, 60px));
+  /* Prevent grid from expanding beyond viewport width via min-width override */
+  min-width: 0;
+}
+
+/* ── Column Layout ──────────────────────────────────────────────────── */
+.tasks-column {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  /* Prevent content min-size from forcing horizontal overflow */
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.spending-column {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+/* Column headers: flex row, space-between */
+.column-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.25rem;
+}
+
+/* ── Add Task Form ──────────────────────────────────────────────────── */
+.add-task-form {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+.add-task-form input[type="text"] {
+  flex: 1;
+}
+
+/* ── Task List Container ────────────────────────────────────────────── */
+/*
+ * Flex column, gap set in app-spacing.css
+ * id="taskList" — JS injects .task-card children dynamically
+ */
+.task-list {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Completed section (collapsed by default) */
+.completed-section {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 0;
+  cursor: pointer;
+  user-select: none;
+  border-radius: 20px;
+}
+.completed-section-tasks {
+  display: none;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-top: 0.35rem;
+}
+.completed-section-tasks.visible {
+  display: flex;
+}
+
+/* ── Task Card Structure ─────────────────────────────────────────────── */
+/*
+ * Rows inside .task-card use flex for alignment.
+ * Title + chevron in row1, value tags + time in row2.
+ * Task card flex layout handled here; visual (bg, padding, radius) in app-spacing.css.
+ * NOTE: Duplicate .task-card selector exists in app.html — fix there.
+ */
+.task-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0; /* Prevent content min-width from overriding flex container on small viewports */
+}
+.task-card-row1 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-width: 0; /* Prevent children from expanding past viewport width */
+}
+.task-card-row2 {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+.task-card-main {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+/* Title overflow handling */
+.task-card-title {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Checkbox container */
+.task-card-checkbox-area {
+  flex-shrink: 0;
+}
+
+/* Due date tags container */
+.task-card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.25rem;
+}
+
+/* ── Summary Pill ───────────────────────────────────────────────────── */
+.summary-pill {
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+}
+
+/* ── Filter / Sort Bar ──────────────────────────────────────────────── */
+.filter-tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+  flex-wrap: wrap;
+}
+.filter-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 50px;
+  font-size: 0.82rem;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.sort-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+/* ── Break Down Toggle ───────────────────────────────────────────────── */
+.breakdown-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  cursor: pointer;
+  user-select: none;
+}
+.breakdown-toggle .toggle-track {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.breakdown-toggle .toggle-knob {
+  position: absolute;
+  top: 2px;
+  transition: left 0.2s;
+}
+.breakdown-toggle .toggle-track.active .toggle-knob {
+  left: 18px;
+}
+
+/* ── Steps Input Area ────────────────────────────────────────────────── */
+.steps-input-area {
+  display: none;
+  margin-bottom: 1rem;
+  padding: 0.75rem 1rem;
+}
+.steps-input-area.visible {
+  display: block;
+}
+.step-inputs {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+/* ── App Nav (sticky top bar) ────────────────────────────────────────── */
+.app-nav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.app-nav-inner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+.app-nav-inner .logo {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* ── Money Cards / Spoke Cards ──────────────────────────────────────── */
+.card {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Budget hero section */
+.budget-hero {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+/* Spoke sections (recurring bills, AI suggestions, etc.) */
+.spoke-section {
+  display: flex;
+  flex-direction: column;
+}
+.spoke-card {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Confetti Container (global, lives in app.html inline) ─────────── */
+/* position: fixed full-viewport overlay, z-index 9999 — structural only */
+.confetti-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 9999;
+  overflow: hidden;
+  /* background: transparent enforced in app.html inline; do NOT duplicate here */
+}
+
+/* ── Loading / Empty States ─────────────────────────────────────────── */
+.task-list-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  gap: 0.75rem;
+}
+
+/* ── Floating Bug Report Button (mobile only) ─────────────────────────── */
+.bug-report-fab {
+  display: none;
+  position: fixed;
+  bottom: calc(60px + env(safe-area-inset-bottom) + 8px);
+  right: 16px;
+  z-index: 250;
+  align-items: center;
+  gap: 6px;
+}
+@media (max-width: 900px) {
+  .bug-report-fab { display: flex; }
+}
+
+/* ── Responsive Breakpoints ─────────────────────────────────────────── */
+
+/* Mobile (≤899px): constrain dashboard to match bottom nav width.
+   Bottom nav is full viewport (left:0; right:0;). Content must not bleed wider. */
+@media (max-width: 899px) {
+  .dashboard {
+    max-width: 100%;
+    width: 100%;
+    padding-left: 1rem;
+    padding-right: 1rem;
+    box-sizing: border-box;
+  }
+
+  /* All child containers inherit the viewport constraint */
+  .dashboard > * {
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+}
+
+/* Tablet / narrow desktop: single column layout */
+@media (min-width: 900px) {
+  .dashboard {
+    grid-template-columns: 1fr;
+  }
+
+  /* Sidebar mode: dashboard fills available width */
+  body.shared-nav-active .dashboard {
+    /* sidebar (200px) + remaining space */
+    max-width: calc(100vw - var(--nav-sidebar-width, 0px) - 2rem);
+  }
+}
+
+/* Large screens: constrain content width — 1100px matches Vault page-wrap */
+@media (min-width: 1200px) {
+  body.shared-nav-active .dashboard {
+    max-width: 1100px;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+}
+
+@media (min-width: 1440px) {
+  body.shared-nav-active .dashboard {
+    padding-left: 3rem;
+    padding-right: 3rem;
+  }
+}
+
+/* ── Mobile-first polish (≤ 768px) ──────────────────────────────────── */
+@media (max-width: 768px) {
+  /* Stack add-task form on narrow screens */
+  .add-task-form {
+    flex-direction: column;
+  }
+  .add-task-form .btn-orange {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* Due date row wraps */
+  .due-date-row {
+    flex-wrap: wrap;
+  }
+
+  /* Expense form rows wrap */
+  .expense-form-row {
+    flex-wrap: wrap;
+  }
+  .expense-form-row select {
+    flex: 1 1 100%;
+  }
+
+  /* Column header font size */
+  .column-header h2 {
+    font-size: 1.2rem;
+  }
+}
+
+/* ── Task Card Tap-to-Expand Animation ───────────────────────────────── */
+/*
+ * .task-card-main → tap target for expand
+ * .task-expanded-content → slides down with height animation
+ * Uses max-height for CSS-only transition (no JS-measured heights)
+ */
+.task-card {
+  transition: box-shadow 0.2s ease;
+}
+.task-card.is-expanded {
+  box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+}
+
+.task-expanded-content {
+  overflow: hidden;
+  max-height: 0;
+  opacity: 0;
+  transition: max-height 0.28s cubic-bezier(0.4, 0, 0.2, 1),
+              opacity 0.22s ease;
+  padding-left: 2.5rem;
+}
+.task-card.is-expanded .task-expanded-content {
+  max-height: 800px;
+  opacity: 1;
+}
+
+/* ── Recurring Icon ──────────────────────────────────────────────────── */
+.task-recurring-icon {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.7rem;
+  color: var(--green-muted, #4A9292);
+  margin-left: 0.3rem;
+  opacity: 0.8;
+}
+
+/* ── Detail View (expanded task panel) ───────────────────────────────── */
+.task-detail-section {
+  margin-top: 0.6rem;
+  border-top: 1px solid var(--border, #e8e5e0);
+  padding-top: 0.6rem;
+}
+.task-detail-section-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted, #6b6b6b);
+  margin-bottom: 0.35rem;
+}
+
+/* Recurrence picker */
+.recurrence-picker {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  margin-top: 0.3rem;
+}
+.recurrence-option {
+  padding: 0.3rem 0.7rem;
+  border-radius: 50px;
+  border: 1.5px solid var(--border, #e8e5e0);
+  font-size: 0.78rem;
+  cursor: pointer;
+  background: transparent;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  font-family: inherit;
+}
+.recurrence-option:hover {
+  border-color: var(--orange, #c9a84c);
+  color: var(--orange, #c9a84c);
+}
+.recurrence-option.active {
+  background: var(--orange, #c9a84c);
+  border-color: var(--orange, #c9a84c);
+  color: white;
+  font-weight: 500;
+}
+.recurrence-day-row {
+  display: none;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.4rem;
+}
+.recurrence-day-row.visible {
+  display: flex;
+}
+
+/* Value tag pills in detail view */
+.value-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.3rem;
+}
+.value-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.3rem 0.65rem;
+  border-radius: 50px;
+  border: 1.5px solid transparent;
+  font-size: 0.78rem;
+  cursor: pointer;
+  transition: border-color 0.15s;
+  font-family: inherit;
+}
+.value-pill:hover {
+  border-color: currentColor;
+}
+.value-pill.selected {
+  font-weight: 600;
+}
+
+/* Inline title edit */
+.task-title-edit {
+  font-size: 1rem;
+  font-weight: 600;
+  font-family: var(--font-display);
+  border: none;
+  border-bottom: 2px solid var(--brand-accent, #c9a84c);
+  background: transparent;
+  outline: none;
+  width: 100%;
+  color: var(--text-dark, #1a1a1a);
+  padding: 0.1rem 0;
+  margin-bottom: 0.4rem;
+}
+
+/* Task detail header row */
+.task-detail-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+.task-detail-close-btn {
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  color: var(--text-muted, #6b6b6b);
+  border-radius: 6px;
+  line-height: 1;
+}
+.task-detail-close-btn:hover {
+  background: var(--border, #e8e5e0);
+  color: var(--text-dark, #1a1a1a);
+}
+
+/* ── Very small screens (≤ 480px) ───────────────────────────────────── */
+@media (max-width: 480px) {
+  /* Nav inner tightens */
+  .app-nav-inner {
+    padding: 0.75rem 1rem;
+  }
+
+  /* Logo font size */
+  .logo {
+    font-size: 1.25rem;
+  }
+}
+

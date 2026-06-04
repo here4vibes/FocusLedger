@@ -1,0 +1,1153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#011e5c">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="FocusLedger">
+<link rel="icon" type="image/png" sizes="32x32" href="/icons/fl-icon.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/icons/fl-icon.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/fl-icon.png">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>My Values — FocusLedger</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+    <!-- Meta Pixel base + PageView -->
+    <script>
+    !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+    n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
+    n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
+    t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,
+    document,'script','https://connect.facebook.net/en_US/fbevents.js');
+    fbq('init','1597499061553078');
+    fbq('track','PageView');
+    </script>
+    <noscript><img height="1" width="1" style="display:none"
+    src="https://www.facebook.com/tr?id=1597499061553078&ev=PageView&noscript=1"/></noscript>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --orange: #c9a84c;
+            --orange-light: #d4b56a;
+            --navy: #011e5c;
+            --navy-mid: #02287a;
+            --navy-light: #033099;
+            --cream: #faf9f7;
+            --cream-dark: #f5f3ef;
+            --text-dark: #1a1a1a;
+            --text-muted: #6b6b6b;
+            --green: #5BA4A4;
+        
+            --success: #7DB87D;
+            --warning: #E07A5F;
+            --error: #E07A5F;
+            --error-light: #FAEAE5;
+            --border: #e8e5e0;
+            --surface: #FFFFFF;
+        }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            color: var(--text-dark);
+            background: var(--cream);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        h1, h2, h3, h4 { font-family: 'Space Grotesk', sans-serif; }
+
+        .logo-dot {
+            width: 10px;
+            height: 10px;
+            background: var(--orange);
+            border-radius: 2px;
+            transform: rotate(45deg);
+        }
+
+        /* PAGE */
+        .page {
+            max-width: 860px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem 4rem;
+        }
+
+        .page-header {
+            margin-bottom: 2rem;
+        }
+        .page-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--navy);
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+        }
+        .page-subtitle {
+            margin-top: 0.4rem;
+            color: var(--text-muted);
+            font-size: 1rem;
+        }
+
+        /* EMPTY STATE */
+        .empty-state {
+            text-align: center;
+            padding: 3rem 1rem;
+            background: white;
+            border-radius: 16px;
+            border: 2px dashed var(--cream-dark);
+        }
+        .empty-icon { font-size: 3rem; margin-bottom: 1rem; }
+        .empty-title {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--navy);
+            margin-bottom: 0.5rem;
+        }
+        .empty-sub { color: var(--text-muted); font-size: 0.95rem; margin-bottom: 1.5rem; }
+
+        /* VALUES GRID */
+        .values-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .value-card {
+            background: white;
+            border-radius: 14px;
+            padding: 1rem 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+            transition: box-shadow 0.2s;
+            position: relative;
+        }
+        .value-card:hover { box-shadow: 0 3px 12px rgba(0,0,0,0.10); }
+
+        .value-color-bar {
+            width: 4px;
+            border-radius: 4px;
+            align-self: stretch;
+            min-height: 40px;
+            flex-shrink: 0;
+        }
+
+        .value-icon {
+            font-size: 1.6rem;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 10px;
+            flex-shrink: 0;
+        }
+
+        .value-body {
+            flex: 1;
+            min-width: 0;
+        }
+        .value-name {
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 600;
+            font-size: 1rem;
+            color: var(--navy);
+        }
+        .value-rank {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            margin-top: 1px;
+        }
+        .value-targets {
+            display: flex;
+            gap: 0.75rem;
+            margin-top: 0.5rem;
+            flex-wrap: wrap;
+        }
+        .value-target-chip {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            background: var(--cream-dark);
+            padding: 0.2rem 0.55rem;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+        .value-target-chip span { font-weight: 600; color: var(--navy); }
+
+        /* Progress bars */
+        .value-progress {
+            margin-top: 0.6rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+        }
+        .progress-row {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .progress-label {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            width: 54px;
+            flex-shrink: 0;
+        }
+        .progress-track {
+            flex: 1;
+            height: 6px;
+            background: var(--cream-dark);
+            border-radius: 6px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            border-radius: 6px;
+            transition: width 0.6s ease;
+        }
+        .progress-pct {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            width: 36px;
+            text-align: right;
+            flex-shrink: 0;
+        }
+
+        /* Value actions */
+        .value-actions {
+            display: flex;
+            gap: 0.4rem;
+            flex-shrink: 0;
+        }
+        .btn-icon {
+            width: 34px;
+            height: 34px;
+            border-radius: 8px;
+            border: none;
+            background: var(--cream-dark);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            transition: background 0.2s, color 0.2s;
+        }
+        .btn-icon:hover { background: var(--cream); color: var(--orange); }
+        .btn-icon.danger:hover { background: #fff0ee; color: #e07a5f; }
+        .btn-icon.move:hover { background: var(--cream); color: var(--navy); }
+
+        /* ADD VALUE BUTTON */
+        .btn-add-value {
+            width: 100%;
+            padding: 0.85rem;
+            background: white;
+            border: 2px dashed var(--cream-dark);
+            border-radius: 14px;
+            color: var(--text-muted);
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.95rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            transition: border-color 0.2s, color 0.2s;
+            margin-bottom: 2rem;
+        }
+        .btn-add-value:hover {
+            border-color: var(--orange);
+            color: var(--orange);
+        }
+
+        /* WEEK SNAPSHOT HEADER */
+        .snapshot-label {
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--text-muted);
+            margin-bottom: 0.75rem;
+        }
+
+        /* MODAL */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(45,42,38,0.45);
+            z-index: 500;
+            align-items: flex-end;
+            justify-content: center;
+        }
+        .modal-overlay.open {
+            display: flex;
+        }
+        @media (min-width: 600px) {
+            .modal-overlay { align-items: center; }
+        }
+        .modal {
+            background: white;
+            border-radius: 20px 20px 0 0;
+            padding: 1.75rem 1.5rem 2rem;
+            width: 100%;
+            max-width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 -4px 30px rgba(0,0,0,0.15);
+        }
+        @media (min-width: 600px) {
+            .modal { border-radius: 20px; box-shadow: 0 8px 40px rgba(0,0,0,0.18); }
+        }
+        .modal-title {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--navy);
+            margin-bottom: 1.25rem;
+        }
+        .modal-close {
+            float: right;
+            background: none;
+            border: none;
+            font-size: 1.3rem;
+            cursor: pointer;
+            color: var(--text-muted);
+            line-height: 1;
+            margin-top: -2px;
+        }
+        .modal-close:hover { color: var(--navy); }
+
+        .form-group {
+            margin-bottom: 1.1rem;
+        }
+        .form-label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--navy);
+            margin-bottom: 0.4rem;
+        }
+        .form-hint {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            margin-bottom: 0.4rem;
+        }
+        .form-input {
+            width: 100%;
+            padding: 0.65rem 0.85rem;
+            border: 1.5px solid var(--cream-dark);
+            border-radius: 10px;
+            font-size: 1rem;
+            font-family: 'DM Sans', sans-serif;
+            color: var(--navy);
+            background: var(--cream);
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .form-input:focus { border-color: var(--orange); }
+
+        /* Icon picker */
+        .icon-picker {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(44px, 1fr));
+            gap: 0.4rem;
+        }
+        .icon-option {
+            width: 44px;
+            height: 44px;
+            font-size: 1.4rem;
+            border-radius: 10px;
+            border: 2px solid transparent;
+            background: var(--cream-dark);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: border-color 0.15s, background 0.15s;
+        }
+        .icon-option.selected {
+            border-color: var(--orange);
+            background: #fff5f0;
+        }
+        .icon-option:hover { background: #fff5f0; }
+
+        /* Color picker */
+        .color-picker {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+        .color-swatch {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 3px solid transparent;
+            transition: transform 0.15s, border-color 0.15s;
+        }
+        .color-swatch.selected {
+            border-color: var(--navy);
+            transform: scale(1.2);
+        }
+        .color-swatch:hover { transform: scale(1.1); }
+
+        /* Targets row */
+        .targets-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem;
+        }
+
+        /* Buttons */
+        .btn-primary {
+            width: 100%;
+            padding: 0.8rem;
+            background: var(--orange);
+            color: white;
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1rem;
+            font-weight: 600;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.1s;
+            margin-top: 0.5rem;
+        }
+        .btn-primary:hover { background: #c97340; }
+        .btn-primary:active { transform: scale(0.98); }
+        .btn-primary:disabled { background: var(--cream-dark); color: var(--text-muted); cursor: not-allowed; }
+
+        /* CONFETTI */
+        .confetti-container {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 9999;
+        }
+        .confetti-piece {
+            position: absolute;
+            animation: confettiFall 1.2s ease-in forwards;
+        }
+        @keyframes confettiFall {
+            0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+            100% { transform: translateY(200px) rotate(720deg); opacity: 0; }
+        }
+
+        /* LOADING */
+        .loading { text-align: center; padding: 3rem; color: var(--text-muted); font-size: 1.5rem; }
+
+        /* Error toast */
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--navy);
+            color: white;
+            padding: 0.7rem 1.25rem;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            z-index: 9000;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+        }
+        .toast.show { opacity: 1; }
+
+        @media (max-width: 600px) {
+            .page { padding: 1.5rem 1rem 4rem; }
+            .page-title { font-size: 1.5rem; }
+            .targets-row { grid-template-columns: 1fr; }
+        }
+
+        /* ONBOARDING BANNER */
+        .onboarding-banner {
+            display: none;
+            background: linear-gradient(135deg, #f0f7ff 0%, #e8f4fd 100%);
+            border: 1.5px solid #b8d8f5;
+            border-radius: 14px;
+            padding: 1rem 1.25rem;
+            margin-bottom: 1.25rem;
+            position: relative;
+        }
+        .onboarding-banner.visible { display: flex; align-items: flex-start; gap: 0.75rem; }
+        .onboarding-banner-icon { font-size: 1.4rem; flex-shrink: 0; margin-top: 1px; }
+        .onboarding-banner-body { flex: 1; }
+        .onboarding-banner-text {
+            font-size: 0.92rem;
+            color: #1a3a5c;
+            line-height: 1.5;
+        }
+        .onboarding-banner-actions { margin-top: 0.65rem; }
+        .btn-got-it {
+            background: var(--navy);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 0.4rem 1rem;
+            font-size: 0.85rem;
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .btn-got-it:hover { background: var(--navy-mid); }
+        .onboarding-banner-close {
+            position: absolute;
+            top: 0.6rem;
+            right: 0.75rem;
+            background: none;
+            border: none;
+            font-size: 1rem;
+            color: var(--text-muted);
+            cursor: pointer;
+            line-height: 1;
+            padding: 0.2rem;
+        }
+        .onboarding-banner-close:hover { color: var(--navy); }
+
+        /* TOOLTIP on values heading */
+        .info-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--cream-dark);
+            color: var(--text-muted);
+            font-size: 0.7rem;
+            font-weight: 700;
+            font-family: 'Space Grotesk', sans-serif;
+            border: none;
+            cursor: pointer;
+            flex-shrink: 0;
+            position: relative;
+            transition: background 0.2s, color 0.2s;
+        }
+        .info-btn:hover { background: var(--orange); color: white; }
+        .tooltip-wrap { position: relative; display: inline-flex; }
+        .tooltip-box {
+            display: none;
+            position: absolute;
+            top: calc(100% + 8px);
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--navy);
+            color: white;
+            font-size: 0.8rem;
+            line-height: 1.5;
+            padding: 0.6rem 0.85rem;
+            border-radius: 10px;
+            width: 240px;
+            z-index: 300;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.18);
+            pointer-events: none;
+        }
+        .tooltip-box::before {
+            content: '';
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            border: 6px solid transparent;
+            border-bottom-color: var(--navy);
+        }
+        .tooltip-wrap:hover .tooltip-box,
+        .tooltip-wrap.open .tooltip-box { display: block; }
+        @media (max-width: 600px) {
+            .tooltip-box { left: auto; right: 0; transform: none; }
+            .tooltip-box::before { left: auto; right: 12px; transform: none; }
+        }
+
+        /* ── Portal Nav (consistent across all app pages) ── */
+        .portal-nav {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 1.25rem; height: 56px; background: var(--navy);
+            position: sticky; top: 0; z-index: 200; width: 100%;
+        }
+        .portal-logo {
+            font-family: system-ui, sans-serif; font-size: 1.25rem; font-weight: 700;
+            color: white; display: flex; align-items: center; gap: 0.5rem; text-decoration: none;
+        }
+        .portal-nav .nav-links { display: flex; gap: 0.15rem; flex-wrap: wrap; }
+        .portal-nav .nav-link {
+            padding: 0.4rem 0.75rem; font-size: 0.875rem; font-weight: 500;
+            color: rgba(255,255,255,0.75); transition: all 0.15s; white-space: nowrap; text-decoration: none;
+        }
+        .portal-nav .nav-link:hover { background: rgba(255,255,255,0.1); color: white; }
+        .portal-nav .nav-link.active { color: white; border-bottom: 2px solid var(--orange); }
+        @media (max-width: 900px) { .portal-nav .nav-links { display: none; } }
+        .nav-right {
+            display: flex; align-items: center; gap: 0.75rem;
+        }
+
+        /* ── Bottom Tabs (mobile fixed bar) ── */
+        .bottom-tabs {
+            display: none; position: fixed; bottom: 0; left: 0; right: 0;
+            background: var(--navy); z-index: 200;
+            padding: 0.5rem 0; padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+        }
+        .bottom-tabs-inner {
+            display: flex; justify-content: space-around;
+            max-width: 600px; margin: 0 auto;
+        }
+        .tab-btn {
+            display: flex; flex-direction: column; align-items: center; gap: 0.2rem;
+            padding: 0.4rem 0.75rem; border: none; background: none; cursor: pointer;
+            font-size: 0.7rem; color: rgba(255,255,255,0.6); font-family: 'DM Sans', sans-serif;
+            transition: color 0.15s;
+        }
+        .tab-btn.active { color: var(--orange); }
+        .tab-btn-icon { font-size: 1.2rem; }
+        @media (max-width: 900px) {
+            .bottom-tabs { display: block; }
+            body { padding-bottom: calc(70px + env(safe-area-inset-bottom)); }
+        }
+        @media (min-width: 901px) { .bottom-tabs { display: none !important; } }
+    </style>
+<link rel="stylesheet" href="/css/design-system.css">
+</head>
+<body>
+<noscript><p style="padding:2rem;text-align:center;font-family:'DM Sans',sans-serif;color:#374151">FocusLedger requires JavaScript.</p></noscript>
+
+    <!-- NAV -->
+    <nav class="portal-nav">
+        <a href="/home" class="portal-logo"><span class="logo-dot"></span>FocusLedger</a>
+        <div class="nav-links">
+            <a href="/home" class="nav-link">Home</a>
+            <a href="/app/tasks" class="nav-link">Tasks</a>
+            <a href="/app/money" class="nav-link">Money</a>
+            <a href="/app/life" class="nav-link">Life</a>
+            <a href="/news" class="nav-link">News</a>
+            <a href="/app/vault" class="nav-link">Vault</a>
+            <a href="/ideas" class="nav-link">Ideas</a>
+            <a href="/journal" class="nav-link">Journal</a>
+            <a href="/settings" class="nav-link">Settings</a>
+        </div>
+        <div class="nav-right">
+            <button class="logout-btn" id="logoutBtn" style="font-size:0.8rem;color:rgba(255,255,255,0.65);background:none;border:none;cursor:pointer;padding:0.35rem 0.6rem;border-radius:4px;">Logout</button>
+        </div>
+    </nav>
+
+    <!-- CONFETTI -->
+    <div class="confetti-container" id="confettiContainer"></div>
+
+    <!-- TOAST -->
+    <div class="toast" id="toast"></div>
+
+    <!-- PAGE -->
+    <div class="page">
+        <div class="page-header">
+            <div class="page-title">
+                💙 My Values
+                <span class="tooltip-wrap" id="valuesInfoWrap">
+                    <button class="info-btn" id="valuesInfoBtn" aria-label="What do values do?" type="button">i</button>
+                    <div class="tooltip-box" role="tooltip">Your values weight Buddy's suggestions. The more aligned a task is with what matters to you, the higher it surfaces.</div>
+                </span>
+            </div>
+            <div class="page-subtitle">What matters most to you — this week and beyond</div>
+        </div>
+
+        <!-- ONBOARDING BANNER (shown on first visit, dismissed permanently) -->
+        <div class="onboarding-banner" id="onboardingBanner" role="status" aria-live="polite">
+            <div class="onboarding-banner-icon">💡</div>
+            <div class="onboarding-banner-body">
+                <div class="onboarding-banner-text">These 8 values shape how Buddy prioritizes your tasks. Edit anytime — they stay personal.</div>
+                <div class="onboarding-banner-actions">
+                    <button class="btn-got-it" id="gotItBtn" type="button">Got it</button>
+                </div>
+            </div>
+            <button class="onboarding-banner-close" id="bannerCloseBtn" aria-label="Dismiss" type="button">✕</button>
+        </div>
+
+        <div id="mainContent">
+            <div class="loading">✨</div>
+        </div>
+    </div>
+
+    <!-- ADD / EDIT VALUE MODAL -->
+    <div class="modal-overlay" id="valueModal">
+        <div class="modal">
+            <button class="modal-close" id="modalClose">✕</button>
+            <div class="modal-title" id="modalTitle">Add a Value</div>
+
+            <div class="form-group">
+                <label class="form-label">What matters to you?</label>
+                <input type="text" class="form-input" id="inputValueName" placeholder="e.g. Family, Health, Creativity…" maxlength="100">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Pick an icon</label>
+                <div class="icon-picker" id="iconPicker"></div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Color</label>
+                <div class="color-picker" id="colorPicker"></div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Weekly goals <span style="font-weight:400;color:var(--text-muted)">(optional)</span></label>
+                <div class="class form-hint">Set targets to track your progress each week</div>
+                <div class="targets-row">
+                    <div>
+                        <label class="form-label" style="font-size:0.8rem">⏱ Hours/week</label>
+                        <input type="number" class="form-input" id="inputHoursTarget" placeholder="e.g. 5" min="0" max="168" step="0.5">
+                    </div>
+                    <div>
+                        <label class="form-label" style="font-size:0.8rem">💰 Budget/week ($)</label>
+                        <input type="number" class="form-input" id="inputSpendTarget" placeholder="e.g. 50" min="0" step="1">
+                    </div>
+                </div>
+            </div>
+
+            <button class="btn-primary" id="saveValueBtn">Save Value</button>
+        </div>
+    </div>
+
+    <script>
+        var TOKEN_KEY = 'fl_token';
+        var token = localStorage.getItem(TOKEN_KEY);
+
+        if (!token) {
+            window.location.href = '/login';
+        }
+
+        // API helper
+        function api(method, path, body) {
+            return fetch('/api' + path, {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + token
+                },
+                body: body ? JSON.stringify(body) : undefined
+            }).then(function(r) {
+                if (r.status === 401) {
+                    localStorage.removeItem(TOKEN_KEY);
+                    window.location.href = '/login';
+                }
+                return r.json();
+            });
+        }
+
+        // =======================================
+        // CONSTANTS
+        // =======================================
+        var DEFAULT_ICONS = ['💙','❤️','💪','💼','💰','🎨','📚','🌟','🧘','✨','🤝','🏡','🌿','🎯','🎵','✈️','🐶','🍎','☀️','🌊'];
+        var DEFAULT_COLORS = [
+            '#c9a84c','#E07A5F','#5B88B4','#5BA4A4','#C89040',
+            '#8B6BA8','#6BA882','#EC407A','#F0A855','#7E57C2',
+            '#5BA4A4','#5B88B4','#C89040','#4A9292','#7E6BA8'
+        ];
+
+        // =======================================
+        // STATE
+        // =======================================
+        var state = {
+            values: [],
+            snapshot: [],
+            editingId: null,
+            selectedIcon: DEFAULT_ICONS[0],
+            selectedColor: DEFAULT_COLORS[0]
+        };
+
+        // =======================================
+        // CONFETTI
+        // =======================================
+        function showConfetti() {
+            var el = document.getElementById('confettiContainer');
+            var colors = ['#c9a84c','#F0A855','#5BA4A4','#4A9292','#C89040','#8B6BA8'];
+            var originX = window.innerWidth / 2;
+            var originY = window.innerHeight / 3;
+            for (var i = 0; i < 28; i++) {
+                var p = document.createElement('div');
+                p.className = 'confetti-piece';
+                p.style.background = colors[Math.floor(Math.random() * colors.length)];
+                p.style.left = (originX + (Math.random() - 0.5) * 300) + 'px';
+                p.style.top = (originY + (Math.random() - 0.5) * 80) + 'px';
+                p.style.width = (5 + Math.random() * 7) + 'px';
+                p.style.height = (5 + Math.random() * 7) + 'px';
+                p.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
+                p.style.animationDuration = (0.9 + Math.random() * 0.5) + 's';
+                p.style.animationDelay = (Math.random() * 0.2) + 's';
+                el.appendChild(p);
+            }
+            setTimeout(function() {
+                el.querySelectorAll('.confetti-piece').forEach(function(p) { p.remove(); });
+            }, 1800);
+        }
+
+        // =======================================
+        // TOAST
+        // =======================================
+        function showToast(msg) {
+            var t = document.getElementById('toast');
+            t.textContent = msg;
+            t.classList.add('show');
+            setTimeout(function() { t.classList.remove('show'); }, 3000);
+        }
+
+        // =======================================
+        // RENDER
+        // =======================================
+        function rankLabel(rank) {
+            var labels = ['Most important','2nd','3rd','4th','5th','6th','7th','8th','9th','10th'];
+            return labels[rank] || ('#' + (rank + 1));
+        }
+
+        function hexToRgba(hex, alpha) {
+            var r = parseInt(hex.slice(1,3),16);
+            var g = parseInt(hex.slice(3,5),16);
+            var b = parseInt(hex.slice(5,7),16);
+            return 'rgba(' + r + ',' + g + ',' + b + ',' + alpha + ')';
+        }
+
+        function escapeHtml(s) {
+            return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        }
+
+        function renderValues() {
+            var container = document.getElementById('mainContent');
+            if (state.values.length === 0) {
+                container.innerHTML = '<div class="empty-state">' +
+                    '<div class="empty-icon">💙</div>' +
+                    '<div class="empty-title">What matters most to you?</div>' +
+                    '<div class="empty-sub">Add your values to track what\'s important in life</div>' +
+                    '<button class="btn-primary" onclick="openAddModal()" style="width:auto;padding:0.75rem 2rem">+ Add my first value</button>' +
+                    '</div>' +
+                    '<button class="btn-add-value" onclick="openAddModal()" style="margin-top:1rem;display:none">+ Add value</button>';
+                return;
+            }
+
+            var snapshotMap = {};
+            state.snapshot.forEach(function(s) { snapshotMap[s.id] = s; });
+
+            var html = '<div class="snapshot-label">This week\'s snapshot</div>';
+            html += '<div class="values-list" id="valuesList">';
+
+            state.values.forEach(function(v, idx) {
+                var snap = snapshotMap[v.id] || { hours_this_week: 0, spend_this_week: 0 };
+                var iconBg = hexToRgba(v.color, 0.12);
+
+                html += '<div class="value-card" data-id="' + v.id + '">';
+                html += '<div class="value-color-bar" style="background:' + escapeHtml(v.color) + '"></div>';
+                html += '<div class="value-icon" style="background:' + iconBg + '">' + escapeHtml(v.icon) + '</div>';
+                html += '<div class="value-body">';
+                html += '<div class="value-name">' + escapeHtml(v.value_name) + '</div>';
+                html += '<div class="value-rank">' + rankLabel(idx) + '</div>';
+
+                // Targets
+                if (v.weekly_hours_target || v.weekly_spend_target) {
+                    html += '<div class="value-targets">';
+                    if (v.weekly_hours_target) {
+                        html += '<div class="value-target-chip">⏱ <span>' + v.weekly_hours_target + 'h</span> /week</div>';
+                    }
+                    if (v.weekly_spend_target) {
+                        html += '<div class="value-target-chip">💰 <span>$' + parseFloat(v.weekly_spend_target).toFixed(0) + '</span> /week</div>';
+                    }
+                    html += '</div>';
+
+                    // Progress bars
+                    html += '<div class="value-progress">';
+                    if (v.weekly_hours_target) {
+                        var hPct = Math.min(100, Math.round((snap.hours_this_week / v.weekly_hours_target) * 100));
+                        html += '<div class="progress-row">';
+                        html += '<div class="progress-label">Time</div>';
+                        html += '<div class="progress-track"><div class="progress-fill" style="width:' + hPct + '%;background:' + escapeHtml(v.color) + '"></div></div>';
+                        html += '<div class="progress-pct">' + hPct + '%</div>';
+                        html += '</div>';
+                    }
+                    if (v.weekly_spend_target) {
+                        var sPct = Math.min(100, Math.round((snap.spend_this_week / v.weekly_spend_target) * 100));
+                        html += '<div class="progress-row">';
+                        html += '<div class="progress-label">Spend</div>';
+                        html += '<div class="progress-track"><div class="progress-fill" style="width:' + sPct + '%;background:' + escapeHtml(v.color) + '"></div></div>';
+                        html += '<div class="progress-pct">' + sPct + '%</div>';
+                        html += '</div>';
+                    }
+                    html += '</div>';
+                }
+
+                html += '</div>'; // .value-body
+
+                // Actions
+                html += '<div class="value-actions">';
+                if (idx > 0) {
+                    html += '<button class="btn-icon move" onclick="moveValue(' + v.id + ',' + (idx-1) + ')" title="Move up">↑</button>';
+                } else {
+                    html += '<div style="width:34px"></div>';
+                }
+                if (idx < state.values.length - 1) {
+                    html += '<button class="btn-icon move" onclick="moveValue(' + v.id + ',' + (idx+1) + ')" title="Move down">↓</button>';
+                } else {
+                    html += '<div style="width:34px"></div>';
+                }
+                html += '<button class="btn-icon" onclick="openEditModal(' + v.id + ')" title="Edit">✏️</button>';
+                html += '<button class="btn-icon danger" onclick="deleteValue(' + v.id + ')" title="Remove">🗑</button>';
+                html += '</div>';
+
+                html += '</div>'; // .value-card
+            });
+
+            html += '</div>'; // .values-list
+            html += '<button class="btn-add-value" onclick="openAddModal()">+ Add another value</button>';
+
+            container.innerHTML = html;
+        }
+
+        // =======================================
+        // LOAD DATA
+        // =======================================
+        function loadAll() {
+            Promise.all([
+                api('GET', '/values'),
+                api('GET', '/values/week-snapshot')
+            ]).then(function(results) {
+                state.values = (results[0] && results[0].values) || [];
+                state.snapshot = (results[1] && results[1].snapshot) || [];
+                renderValues();
+            }).catch(function() {
+                document.getElementById('mainContent').innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-title">Could not load values</div><div class="empty-sub">Please refresh the page</div></div>';
+            });
+        }
+
+        // =======================================
+        // MOVE VALUE (reorder)
+        // =======================================
+        function moveValue(id, newIdx) {
+            var currentIdx = state.values.findIndex(function(v) { return v.id === id; });
+            if (currentIdx === -1 || newIdx < 0 || newIdx >= state.values.length) return;
+            var arr = state.values.slice();
+            var item = arr.splice(currentIdx, 1)[0];
+            arr.splice(newIdx, 0, item);
+            state.values = arr;
+            renderValues();
+            // Persist
+            var order = arr.map(function(v) { return v.id; });
+            api('POST', '/values/reorder', { order: order }).catch(function() {
+                showToast('Could not save order — please try again');
+            });
+        }
+
+        // =======================================
+        // DELETE VALUE
+        // =======================================
+        function deleteValue(id) {
+            if (!confirm('Remove this value?')) return;
+            api('DELETE', '/values/' + id).then(function(data) {
+                if (data.success) {
+                    state.values = state.values.filter(function(v) { return v.id !== id; });
+                    state.snapshot = state.snapshot.filter(function(s) { return s.id !== id; });
+                    renderValues();
+                    showToast('Value removed');
+                } else {
+                    showToast(data.message || 'Could not remove value');
+                }
+            });
+        }
+
+        // =======================================
+        // MODAL — ICON & COLOR PICKERS
+        // =======================================
+        function buildIconPicker() {
+            var picker = document.getElementById('iconPicker');
+            picker.innerHTML = '';
+            DEFAULT_ICONS.forEach(function(icon) {
+                var btn = document.createElement('button');
+                btn.className = 'icon-option' + (state.selectedIcon === icon ? ' selected' : '');
+                btn.textContent = icon;
+                btn.type = 'button';
+                btn.onclick = function() {
+                    state.selectedIcon = icon;
+                    picker.querySelectorAll('.icon-option').forEach(function(b) { b.classList.remove('selected'); });
+                    btn.classList.add('selected');
+                };
+                picker.appendChild(btn);
+            });
+        }
+
+        function buildColorPicker() {
+            var picker = document.getElementById('colorPicker');
+            picker.innerHTML = '';
+            DEFAULT_COLORS.forEach(function(color) {
+                var sw = document.createElement('button');
+                sw.className = 'color-swatch' + (state.selectedColor === color ? ' selected' : '');
+                sw.style.background = color;
+                sw.type = 'button';
+                sw.title = color;
+                sw.onclick = function() {
+                    state.selectedColor = color;
+                    picker.querySelectorAll('.color-swatch').forEach(function(s) { s.classList.remove('selected'); });
+                    sw.classList.add('selected');
+                };
+                picker.appendChild(sw);
+            });
+        }
+
+        function openAddModal() {
+            state.editingId = null;
+            state.selectedIcon = DEFAULT_ICONS[0];
+            state.selectedColor = DEFAULT_COLORS[state.values.length % DEFAULT_COLORS.length];
+            document.getElementById('inputValueName').value = '';
+            document.getElementById('inputHoursTarget').value = '';
+            document.getElementById('inputSpendTarget').value = '';
+            document.getElementById('modalTitle').textContent = 'Add a Value';
+            document.getElementById('saveValueBtn').textContent = 'Add Value';
+            buildIconPicker();
+            buildColorPicker();
+            document.getElementById('valueModal').classList.add('open');
+            setTimeout(function() { document.getElementById('inputValueName').focus(); }, 100);
+        }
+
+        function openEditModal(id) {
+            var v = state.values.find(function(x) { return x.id === id; });
+            if (!v) return;
+            state.editingId = id;
+            state.selectedIcon = v.icon;
+            state.selectedColor = v.color;
+            document.getElementById('inputValueName').value = v.value_name;
+            document.getElementById('inputHoursTarget').value = v.weekly_hours_target || '';
+            document.getElementById('inputSpendTarget').value = v.weekly_spend_target || '';
+            document.getElementById('modalTitle').textContent = 'Edit Value';
+            document.getElementById('saveValueBtn').textContent = 'Save Changes';
+            buildIconPicker();
+            buildColorPicker();
+            document.getElementById('valueModal').classList.add('open');
+            setTimeout(function() { document.getElementById('inputValueName').focus(); }, 100);
+        }
+
+        function closeModal() {
+            document.getElementById('valueModal').classList.remove('open');
+        }
+
+        document.getElementById('modalClose').onclick = closeModal;
+        document.getElementById('valueModal').addEventListener('click', function(e) {
+            if (e.target === this) closeModal();
+        });
+
+        document.getElementById('saveValueBtn').onclick = function() {
+            var name = document.getElementById('inputValueName').value.trim();
+            if (!name) {
+                var nameInput = document.getElementById('inputValueName');
+                nameInput.focus();
+                nameInput.style.borderColor = 'var(--error)';
+                showToast('Give your value a name');
+                setTimeout(function() { nameInput.style.borderColor = ''; }, 2000);
+                return;
+            }
+            var hTarget = parseFloat(document.getElementById('inputHoursTarget').value) || null;
+            var sTarget = parseFloat(document.getElementById('inputSpendTarget').value) || null;
+            var btn = document.getElementById('saveValueBtn');
+            btn.disabled = true;
+
+            var payload = {
+                value_name: name,
+                icon: state.selectedIcon,
+                color: state.selectedColor,
+                weekly_hours_target: hTarget,
+                weekly_spend_target: sTarget
+            };
+
+            var promise = state.editingId
+                ? api('PUT', '/values/' + state.editingId, payload)
+                : api('POST', '/values', payload);
+
+            promise.then(function(data) {
+                btn.disabled = false;
+                if (data.success) {
+                    closeModal();
+                    if (state.editingId) {
+                        // Update in-place
+                        var idx = state.values.findIndex(function(v) { return v.id === state.editingId; });
+                        if (idx !== -1) state.values[idx] = data.value;
+                    } else {
+                        state.values.push(data.value);
+                        if (state.values.length === 1) { showConfetti(); }
+                    }
+                    renderValues();
+                    showToast(state.editingId ? 'Value updated ✓' : 'Value added ✓');
+                } else {
+                    showToast(data.message || 'Could not save value');
+                }
+            }).catch(function() {
+                btn.disabled = false;
+                showToast('Something went wrong — please try again');
+            });
+        };
+
+        // Enter key in name field submits
+        document.getElementById('inputValueName').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') document.getElementById('saveValueBtn').click();
+        });
+
+        // =======================================
+        // LOGOUT
+        // =======================================
+        document.getElementById('logoutBtn').addEventListener('click', function() {
+            localStorage.removeItem(TOKEN_KEY);
+            localStorage.removeItem('fl_user');
+            window.location.href = '/login';
+        });
+
+        // =======================================
+        // ONBOARDING BANNER
+        // =======================================
+        function dismissOnboardingBanner() {
+            var banner = document.getElementById('onboardingBanner');
+            banner.classList.remove('visible');
+            // Persist dismissal — instant UI, fire-and-forget
+            api('POST', '/values/dismiss-banner').catch(function() {});
+        }
+
+        document.getElementById('gotItBtn').addEventListener('click', dismissOnboardingBanner);
+        document.getElementById('bannerCloseBtn').addEventListener('click', dismissOnboardingBanner);
+
+        function loadOnboardingStatus() {
+            api('GET', '/values/setup-status').then(function(data) {
+                if (data && data.show_onboarding) {
+                    document.getElementById('onboardingBanner').classList.add('visible');
+                }
+            }).catch(function() {
+                // Non-critical — banner stays hidden on error
+            });
+        }
+
+        // =======================================
+        // TOOLTIP (mobile tap toggle)
+        // =======================================
+        document.getElementById('valuesInfoBtn').addEventListener('click', function(e) {
+            e.stopPropagation();
+            var wrap = document.getElementById('valuesInfoWrap');
+            wrap.classList.toggle('open');
+        });
+        document.addEventListener('click', function() {
+            document.getElementById('valuesInfoWrap').classList.remove('open');
+        });
+
+        // =======================================
+        // INIT
+        // =======================================
+        loadAll();
+        loadOnboardingStatus();
+    </script>
+    <!-- Analytics -->
+    <script src="/js/analytics.js"></script>
+    <script>(function(){try{var u=JSON.parse(localStorage.getItem('fl_user')||'{}');if(u.id)FLA.setUser(u.id);}catch(e){}FLA.trackPage('values');FLA.trackEvent('feature_use_values');})()</script>
+
+    <!-- Shared navigation (bottom bar mobile, left sidebar desktop) -->
+    <link rel="stylesheet" href="/shared-nav.css">
+    <script src="/shared-nav.js"></script>
+    <script src="/buddy-widget.js"></script>
+</body>
+</html>

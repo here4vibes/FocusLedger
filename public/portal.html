@@ -1,0 +1,1708 @@
+<!DOCTYPE html>
+<html lang=en>
+<head>
+<meta charset=UTF-8>
+<link rel=manifest href=/manifest.json>
+<meta name=theme-color content=#011e5c>
+<meta name=apple-mobile-web-app-capable content=yes>
+<meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
+<meta name=apple-mobile-web-app-title content=FocusLedger>
+<link rel="icon" type="image/png" sizes="32x32" href="/icons/fl-icon.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/icons/fl-icon.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/icons/fl-icon.png">
+<meta name=viewport content=width=device-width, initial-scale=1.0, viewport-fit=cover>
+<title>FocusLedger — Command Center</title>
+<link rel=preconnect href=https://fonts.googleapis.com>
+<link rel=preconnect href=https://fonts.gstatic.com crossorigin>
+<link href=https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500&display=swap rel=stylesheet>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+--orange:#c9a84c;--orange-light:#d4b56a;--navy:#011e5c;--navy-mid:#02287a;--navy-light:#033099;
+--cream:#faf9f7;--cream-dark:#f5f3ef;--text-dark:#1a1a1a;--text-muted:#6b6b6b;
+--green:#5BA4A4;--green-muted:#4A9292;--success:#7DB87D;--warning:#E07A5F;
+--error:#E07A5F;--error-light:#FAEAE5;--border:#e8e5e0;--surface:#FFFFFF;
+--bias-left:#4A90D9;--bias-lean-left:#7FB3E8;--bias-center:#7A7A7A;--bias-lean-right:#E07A7A;--bias-right:#C0392B
+}
+body{font-family:'DM Sans',sans-serif;color:var(--text-dark);background:var(--cream);overflow-x:hidden;min-height:100vh;padding-bottom:80px}
+h1,h2,h3,h4{font-family:'Space Grotesk',sans-serif}
+a{color:inherit;text-decoration:none}
+
+/* PORTAL WRAPPER */
+.portal-wrap{max-width:1200px;margin:0 auto;padding:1.5rem 1rem 2rem;min-height:calc(100vh - 56px)}
+
+/* NAV */
+.portal-nav{display:flex;align-items:center;justify-content:space-between;padding:0 1.25rem;height:56px;background:var(--navy);position:sticky;top:0;z-index:200;width:100%}
+.portal-logo{font-family:system-ui,sans-serif;font-size:1.25rem;font-weight:700;color:white;display:flex;align-items:center;gap:0.5rem;text-decoration:none}
+.logo-dot{width:10px;height:10px;background:var(--orange);border-radius:2px;transform:rotate(45deg)}
+.nav-links{display:flex;gap:0.15rem;flex-wrap:wrap}
+.nav-link{padding:0.4rem 0.75rem;border-radius:0;font-size:0.875rem;font-weight:500;color:rgba(255,255,255,0.75);transition:all 0.15s;white-space:nowrap}
+.nav-link:hover{background:rgba(255,255,255,0.1);color:white}
+.nav-link.active{background:transparent;color:white;border-bottom:2px solid var(--orange)}
+.nav-right{display:flex;align-items:center;gap:0.5rem}
+.user-greeting{font-size:0.8rem;color:rgba(255,255,255,0.65)}
+.logout-btn{font-size:0.8rem;color:rgba(255,255,255,0.65);background:none;border:none;cursor:pointer;padding:0.35rem 0.6rem;border-radius:4px;transition:all 0.15s;font-family:system-ui,sans-serif}
+.logout-btn:hover{color:var(--orange);background:rgba(255,255,255,0.08)}
+
+/* ZONE LABELS */
+.zone-label{font-family:Georgia,"Times New Roman",serif;font-size:1.1rem;font-weight:700;color:var(--navy);margin-bottom:0.85rem;display:flex;align-items:center;gap:0.75rem;letter-spacing:0}
+.zone-label::after{content:'';flex:1;height:1px;background:var(--border)}
+
+/* CARD BASE */
+.card{background:var(--surface);border-radius:4px;border:1px solid var(--border);padding:1.1rem;box-shadow:0 2px 8px rgba(0,0,0,0.06)}
+.card-title{font-size:0.95rem;font-weight:600;color:var(--navy);margin-bottom:0.6rem;display:flex;align-items:center;gap:0.4rem}
+.card-title .emoji{font-size:1rem}
+.card-meta{font-size:0.75rem;color:var(--text-muted)}
+
+/* ZONE 1 GRID */
+.zone1{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:2rem}
+.zone1-tasks{grid-column:1}
+.zone1-right{display:grid;grid-template-rows:auto auto;gap:1rem}
+
+/* TASKS CARD */
+.task-list{list-style:none;display:flex;flex-direction:column;gap:0.15rem}
+.task-item{display:flex;align-items:center;gap:0.6rem;padding:0.5rem 0.4rem;border-radius:6px;transition:background 0.15s;min-height:44px}
+.task-item:hover{background:var(--cream-dark)}
+.task-check{width:20px;height:20px;border-radius:5px;border:2px solid #D0CCC6;flex-shrink:0;cursor:pointer;transition:all 0.15s;display:flex;align-items:center;justify-content:center;min-width:20px}
+.task-check.done{background:var(--green);border-color:var(--green)}
+.task-check.done::after{content:'✓';color:white;font-size:11px;font-weight:700}
+.task-text{flex:1;font-size:0.9rem;color:var(--navy);line-height:1.3}
+.task-text.done{text-decoration:line-through;color:var(--text-muted)}
+.task-due{font-size:0.72rem;color:var(--text-muted);white-space:nowrap;margin-left:auto;padding-left:0.5rem}
+.streak-badge{display:inline-flex;align-items:center;gap:0.3rem;background:rgba(91,164,164,0.1);color:var(--green-muted);font-size:0.72rem;font-weight:600;padding:0.25rem 0.6rem;border-radius:50px}
+.streak-badge svg{width:12px;height:12px}
+
+/* QUICK ADD */
+.quick-add-row{display:flex;gap:0.5rem;margin-top:0.75rem}
+.quick-add-input{flex:1;padding:0.55rem 0.75rem;border:1px solid var(--border);border-radius:4px;font-size:0.875rem;font-family:system-ui,sans-serif;color:var(--text-dark);background:var(--cream);outline:none;min-height:44px;transition:border-color 0.15s}
+.quick-add-input:focus{border-color:var(--navy);background:var(--surface)}
+.quick-add-btn{min-height:44px;padding:0.55rem 1rem;background:var(--navy);color:white;border:none;border-radius:4px;font-weight:600;font-size:0.875rem;cursor:pointer;font-family:system-ui,sans-serif;transition:opacity 0.15s;min-width:44px}
+.quick-add-btn:hover{opacity:0.88}
+
+/* TASKS LINK */
+.card-footer{margin-top:0.75rem;padding-top:0.6rem;border-top:1px solid var(--border);display:flex;justify-content:flex-end}
+.card-link{font-size:0.8rem;color:var(--orange);font-weight:500;display:flex;align-items:center;gap:0.25rem}
+.card-link:hover{text-decoration:underline}
+
+/* FINANCE SNAPSHOT */
+.finance-grid{display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:0.5rem}
+.finance-stat{text-align:center;padding:0.75rem 0.5rem;background:var(--cream);border-radius:8px}
+.finance-amount{font-family:'Space Grotesk',sans-serif;font-size:1.3rem;font-weight:700;color:var(--navy)}
+.finance-amount.positive{color:var(--green-muted)}
+.finance-label{font-size:0.72rem;color:var(--text-muted);margin-top:0.15rem;font-weight:500}
+.impulse-bar{height:6px;background:var(--cream-dark);border-radius:3px;margin-top:0.75rem;overflow:hidden}
+.impulse-fill{height:100%;border-radius:3px;transition:width 0.5s ease}
+.impulse-label{font-size:0.72rem;color:var(--text-muted);margin-top:0.3rem;display:flex;justify-content:space-between}
+
+/* CALENDAR STRIP */
+.calendar-strip{display:flex;gap:0.4rem;overflow-x:auto;padding-bottom:0.25rem;scrollbar-width:none}
+.calendar-strip::-webkit-scrollbar{display:none}
+.cal-event{min-flex:0;padding:0.5rem 0.6rem;background:var(--cream);border-radius:7px;border:1px solid var(--border);min-width:80px;flex-shrink:0}
+.cal-event-time{font-size:0.7rem;font-weight:600;color:var(--orange);margin-bottom:0.15rem}
+.cal-event-title{font-size:0.78rem;color:var(--navy);line-height:1.3}
+.cal-empty{font-size:0.8rem;color:var(--text-muted);text-align:center;padding:0.5rem 0}
+
+/* QUICK ACTIONS BAR */
+.quick-actions{display:flex;gap:0.5rem;flex-wrap:wrap}
+.qa-btn{display:inline-flex;align-items:center;gap:0.4rem;padding:0.6rem 1rem;background:var(--surface);border:1px solid var(--border);border-radius:4px;font-size:0.875rem;font-weight:500;color:var(--navy);cursor:pointer;transition:all 0.15s;font-family:system-ui,sans-serif;min-height:44px}
+.qa-btn:hover{background:var(--cream-dark);border-color:var(--navy)}
+
+/* ZONE 2 GRID */
+.zone2{display:grid;grid-template-columns:160px 1fr;gap:1rem;margin-bottom:2rem}
+
+/* WEATHER WIDGET */
+.weather-icon{font-size:2.5rem;line-height:1;margin-bottom:0.4rem}
+.weather-temp{font-family:'Space Grotesk',sans-serif;font-size:2rem;font-weight:700;color:var(--navy)}
+.weather-condition{font-size:0.8rem;color:var(--text-muted);margin-top:0.2rem;margin-bottom:0.5rem}
+.weather-highlow{display:flex;gap:0.75rem;font-size:0.78rem;color:var(--text-muted);margin-top:0.5rem}
+.weather-highlow span{font-weight:600}
+.weather-highlow .high{color:var(--warning)}
+.weather-highlow .low{color:var(--green-muted)}
+.weather-extras{display:flex;gap:0.75rem;justify-content:center;font-size:0.75rem;color:var(--text-muted);margin-top:0.5rem}
+
+/* LOCAL AREA */
+.headline-item{padding:0.65rem 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:flex-start;gap:0.75rem}
+.headline-item:last-child{border-bottom:none;padding-bottom:0}
+.headline-text{font-size:0.875rem;font-weight:500;color:var(--navy);line-height:1.4;flex:1}
+.headline-meta{font-size:0.72rem;color:var(--text-muted);white-space:nowrap;text-align:right;flex-shrink:0}
+.headline-source{display:block;margin-bottom:0.1rem}
+
+/* ZONE 3 */
+.zone3{margin-bottom:1rem}
+.balanced-bar{display:flex;gap:0.5rem;align-items:center;margin-bottom:1rem;padding:0.6rem 0.75rem;background:var(--cream-dark);border-radius:8px}
+.balanced-label{font-size:0.75rem;font-weight:600;color:var(--text-muted);white-space:nowrap}
+.bias-pills{display:flex;gap:0.35rem;flex:1;flex-wrap:wrap;justify-content:center}
+.bias-pill{font-size:0.65rem;font-weight:600;padding:0.2rem 0.55rem;border-radius:50px;white-space:nowrap}
+.bp-left{background:rgba(74,144,217,0.12);color:var(--bias-left)}
+.bp-lean-left{background:rgba(127,179,232,0.15);color:var(--bias-lean-left)}
+.bp-center{background:rgba(122,122,122,0.12);color:var(--bias-center)}
+.bp-lean-right{background:rgba(224,122,122,0.12);color:var(--bias-lean-right)}
+.bp-right{background:rgba(192,57,43,0.1);color:var(--bias-right)}
+
+/* GLOBAL NEWS */
+.news-grid{display:grid;grid-template-columns:1fr 1fr;gap:0.75rem}
+.news-card{background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:0.85rem;display:flex;flex-direction:column;gap:0.5rem;cursor:pointer;transition:border-color 0.15s,box-shadow 0.15s;min-height:44px;justify-content:space-between}
+.news-card:hover{border-color:var(--navy);box-shadow:0 2px 8px rgba(0,0,0,0.07);transform:none}
+.news-headline{font-size:0.875rem;font-weight:500;color:var(--navy);line-height:1.4}
+.news-footer{display:flex;justify-content:space-between;align-items:center}
+.news-source{font-size:0.72rem;color:var(--text-muted)}
+.news-meta{display:flex;align-items:center;gap:0.4rem}
+
+/* BIAS BADGE */
+.bias-badge{font-size:0.62rem;font-weight:700;padding:0.18rem 0.5rem;border-radius:50px;white-space:nowrap;letter-spacing:0.02em}
+.bb-left{background:rgba(74,144,217,0.15);color:var(--bias-left)}
+.bb-lean-left{background:rgba(127,179,232,0.2);color:#5A8FD4}
+.bb-center{background:rgba(122,122,122,0.15);color:#666}
+.bb-lean-right{background:rgba(224,122,122,0.15);color:#C0392B}
+.bb-right{background:rgba(192,57,43,0.12);color:#B03020}
+.bb-unrated{background:rgba(107,107,107,0.1);color:#888}
+.news-loading{padding:1rem;text-align:center;color:var(--text-muted);font-size:0.85rem}
+
+
+/* EMPTY / LOADING STATES */
+.skeleton{background:linear-gradient(90deg,var(--cream-dark) 25%,var(--border) 50%,var(--cream-dark) 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:4px}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.empty-state{text-align:center;padding:1.5rem 1rem;color:var(--text-muted);font-size:0.875rem}
+.empty-state .empty-icon{font-size:2rem;margin-bottom:0.5rem;opacity:0.4}
+.auth-gate{text-align:center;padding:4rem 1rem}
+.auth-gate h2{font-size:1.5rem;color:var(--navy);margin-bottom:0.75rem}
+.auth-gate p{color:var(--text-muted);margin-bottom:1.5rem}
+.auth-gate a{display:inline-block;background:var(--orange);color:white;padding:0.75rem 2rem;border-radius:50px;font-weight:600;min-height:44px;line-height:1}
+
+/* LOADING SPINNER */
+.spinner{width:24px;height:24px;border:2px solid var(--border);border-top-color:var(--orange);border-radius:50%;animation:spin 0.7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* RESPONSIVE */
+@media(max-width:900px){
+.zone1{grid-template-columns:1fr}
+.zone1-tasks{grid-column:1}
+.zone2{grid-template-columns:1fr}
+.news-grid{grid-template-columns:1fr}
+body{padding-bottom:calc(80px + env(safe-area-inset-bottom))}
+.portal-wrap{padding:1rem 0.75rem 1.5rem}
+.nav-links{display:none}
+.nav-hamburger{display:flex}
+}
+@media(max-width:600px){
+.zone1{grid-template-columns:1fr}
+.news-grid{grid-template-columns:1fr}
+.finance-grid{grid-template-columns:1fr 1fr}
+}
+
+/* ── MORNING LAUNCH ───────────────────────────────────────────────────────── */
+.ml-overlay{position:fixed;inset:0;z-index:9000;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(160deg,#011e5c 0%,#02287a 60%,#011440 100%);padding:1.5rem 1rem;overflow:hidden}
+.ml-overlay.hidden{display:none}
+/* confetti canvas sits behind content */
+.ml-confetti{position:absolute;inset:0;pointer-events:none}
+
+.ml-header{text-align:center;margin-bottom:2rem;position:relative;z-index:1}
+.ml-greeting{font-family:'Space Grotesk',sans-serif;font-size:1.5rem;font-weight:700;color:white;margin-bottom:0.35rem}
+.ml-sub{font-size:0.9rem;color:rgba(255,255,255,0.65)}
+.ml-streak-pill{display:inline-flex;align-items:center;gap:0.4rem;background:rgba(201,168,76,0.2);border:1px solid rgba(201,168,76,0.4);color:var(--orange-light);font-size:0.8rem;font-weight:600;padding:0.3rem 0.8rem;border-radius:50px;margin-top:0.75rem}
+
+/* Task card */
+.ml-card{background:white;border-radius:16px;padding:1.75rem;width:100%;max-width:420px;box-shadow:0 20px 60px rgba(0,0,0,0.4);position:relative;z-index:1}
+.ml-task-label{font-size:0.72rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.6rem}
+.ml-task-title{font-family:'Space Grotesk',sans-serif;font-size:1.35rem;font-weight:700;color:var(--navy);line-height:1.3;margin-bottom:0.5rem}
+.ml-task-meta{font-size:0.78rem;color:var(--text-muted);margin-bottom:1.5rem;min-height:1.2em}
+.ml-overdue-badge{display:inline-block;background:#faeae5;color:var(--warning);font-size:0.7rem;font-weight:600;padding:0.15rem 0.55rem;border-radius:50px;margin-right:0.4rem}
+.ml-steps-badge{display:inline-block;background:rgba(91,164,164,0.1);color:var(--green-muted);font-size:0.7rem;font-weight:600;padding:0.15rem 0.55rem;border-radius:50px}
+
+/* Done / Skip buttons */
+.ml-actions{display:flex;flex-direction:column;gap:0.65rem}
+.ml-done-btn{width:100%;min-height:54px;background:var(--navy);color:white;border:none;border-radius:10px;font-family:'Space Grotesk',sans-serif;font-size:1.05rem;font-weight:700;cursor:pointer;letter-spacing:0.01em;transition:transform 0.1s,opacity 0.1s;display:flex;align-items:center;justify-content:center;gap:0.5rem}
+.ml-done-btn:active{transform:scale(0.97)}
+.ml-done-btn.celebrating{background:var(--green-muted)}
+.ml-skip-btn{width:100%;min-height:44px;background:transparent;color:rgba(1,30,92,0.45);border:1.5px solid rgba(1,30,92,0.15);border-radius:8px;font-size:0.875rem;font-weight:500;cursor:pointer;font-family:system-ui,sans-serif;transition:all 0.15s}
+.ml-skip-btn:hover{background:rgba(1,30,92,0.04);color:var(--navy)}
+
+/* Exit button */
+.ml-exit-wrap{margin-top:1.25rem;text-align:center;position:relative;z-index:1}
+.ml-exit-btn{background:none;border:none;color:rgba(255,255,255,0.45);font-size:0.8rem;cursor:pointer;font-family:system-ui,sans-serif;padding:0.5rem 1rem;min-height:44px;transition:color 0.15s}
+.ml-exit-btn:hover{color:rgba(255,255,255,0.85)}
+
+/* Progress dots */
+.ml-progress{display:flex;gap:0.4rem;justify-content:center;margin-bottom:1.5rem;position:relative;z-index:1}
+.ml-dot{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,0.2);transition:all 0.3s}
+.ml-dot.done{background:var(--orange)}
+.ml-dot.current{background:white;transform:scale(1.25)}
+
+/* Celebration overlay (brief) */
+.ml-celebration{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:2;pointer-events:none;opacity:0;transition:opacity 0.25s}
+.ml-celebration.show{opacity:1}
+.ml-celebration-icon{font-size:3.5rem;margin-bottom:0.75rem;animation:mlPop 0.4s ease-out}
+.ml-celebration-text{font-family:'Space Grotesk',sans-serif;font-size:1.1rem;font-weight:700;color:var(--navy);text-align:center}
+@keyframes mlPop{0%{transform:scale(0.3);opacity:0}70%{transform:scale(1.15)}100%{transform:scale(1);opacity:1}}
+
+/* Summary screen */
+.ml-summary{text-align:center;position:relative;z-index:1;width:100%;max-width:400px}
+.ml-summary-icon{font-size:4rem;margin-bottom:1rem;animation:mlPop 0.5s ease-out}
+.ml-summary-title{font-family:'Space Grotesk',sans-serif;font-size:1.6rem;font-weight:700;color:white;margin-bottom:0.5rem}
+.ml-summary-sub{font-size:0.95rem;color:rgba(255,255,255,0.7);margin-bottom:1.5rem;line-height:1.5}
+.ml-summary-streak{display:inline-flex;align-items:center;gap:0.4rem;background:rgba(201,168,76,0.2);border:1px solid rgba(201,168,76,0.4);color:var(--orange-light);font-size:0.9rem;font-weight:600;padding:0.5rem 1.25rem;border-radius:50px;margin-bottom:2rem}
+.ml-summary-close{min-height:54px;padding:0.85rem 2.5rem;background:var(--orange);color:white;border:none;border-radius:10px;font-family:'Space Grotesk',sans-serif;font-size:1rem;font-weight:700;cursor:pointer;transition:opacity 0.15s}
+.ml-summary-close:hover{opacity:0.88}
+
+/* Avoidance nudge */
+.ml-avoidance{background:rgba(201,168,76,0.1);border:1px solid rgba(201,168,76,0.3);border-radius:8px;padding:0.75rem 1rem;margin-top:0.75rem;font-size:0.82rem;color:rgba(1,30,92,0.75);line-height:1.4;display:none}
+.ml-avoidance.show{display:block}
+
+/* Empty state (no tasks) */
+.ml-empty{text-align:center;position:relative;z-index:1;width:100%;max-width:400px}
+.ml-empty-icon{font-size:3rem;margin-bottom:1rem;opacity:0.7}
+.ml-empty-title{font-family:'Space Grotesk',sans-serif;font-size:1.4rem;font-weight:700;color:white;margin-bottom:0.5rem}
+.ml-empty-sub{font-size:0.9rem;color:rgba(255,255,255,0.65);margin-bottom:1.75rem}
+.ml-quick-add-row{display:flex;gap:0.5rem;width:100%;max-width:380px}
+.ml-quick-add-input{flex:1;padding:0.8rem 1rem;border:none;border-radius:8px;font-size:0.95rem;font-family:system-ui,sans-serif;outline:none;background:rgba(255,255,255,0.95)}
+.ml-quick-add-btn{min-height:48px;padding:0.8rem 1.25rem;background:var(--orange);color:white;border:none;border-radius:8px;font-weight:700;font-size:0.9rem;cursor:pointer;font-family:system-ui,sans-serif;white-space:nowrap}
+
+/* Start my day button in Quick Actions */
+.qa-btn.ml-start-btn{background:linear-gradient(135deg,var(--navy) 0%,var(--navy-mid) 100%);color:white;border-color:var(--navy-mid);font-weight:600}
+.qa-btn.ml-start-btn:hover{opacity:0.88}
+</style>
+<link rel=stylesheet href=/css/design-system.css>
+</head>
+<body>
+
+<!-- NAV (full-bleed, outside portal-wrap) -->
+<nav class=portal-nav id=portalNav>
+<a href=/home class=portal-logo><span class=logo-dot></span>FocusLedger</a>
+<div class=nav-links id=navLinks>
+<a href=/home class="nav-link active" id=navHome>Home</a>
+<a href=/app class=nav-link id=navTasks>Tasks</a>
+<a href=/money class=nav-link id=navMoney>Money</a>
+<a href=/app/life class=nav-link id=navLife>Life</a>
+<a href=/news class=nav-link id=navNews>News</a>
+<a href=/vault class=nav-link id=navVault>Vault</a>
+<a href=/ideas class=nav-link id=navIdeas>Ideas</a>
+<a href=/journal class=nav-link id=navJournal>Journal</a>
+<a href=/settings class=nav-link id=navSettings>Settings</a>
+</div>
+<div class=nav-right>
+<span class=user-greeting id=userGreeting></span>
+<button class=logout-btn id=logoutBtn>Logout</button>
+</div>
+</nav>
+
+<!-- PORTAL WRAPPER -->
+<div class=portal-wrap id=app>
+
+<!-- ZONE 1: PERSONAL DASHBOARD -->
+<div class=zone-label>Your Command Center</div>
+<section class=zone1>
+
+<!-- TASKS MODULE -->
+<div class=zone1-tasks>
+<div class=card>
+<div class=card-title><span class=emoji>✅</span> Today's Tasks</div>
+<div class=streak-badge id=streakBadge style=display:none>
+<svg viewBox=0 0 16 16 fill=currentColor><path d=M6.5 1.5a.5.5 0 0 1 .5-.5h1.5a.5.5 0 0 1 .5.5v3.766l1.793 1.793-.707.707L8 5.707 6.354 7.207l-.707-.707L7.5 4.5V1.5zM2 11.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zm9.5 1.5a1.5 1.5 0 1 0-3 0 1.5 1.5 0 0 0 3 0zm-9-4.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zM5 8a1.5 1.5 0 1 0-3 0 1.5 1.5 0 0 0 3 0zM9.5 11a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z M12.5 10a.5.5 0 0 1-.5.5h-9a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 .5.5v9zM8 4.5L10.5 7 7 10.5 4.5 7z'/></svg>
+<span id=streakCount></span>
+</div>
+<ul class=task-list id=taskList>
+<li class=empty-state id=tasksLoading>
+<div class=spinner style='margin:0 auto 0.5rem'></div>
+Loading tasks…
+</li>
+</ul>
+<form class=quick-add-row id=quickAddForm>
+<input class=quick-add-input id=quickAddInput type=text placeholder='Add a task…' autocomplete=off autocorrect=off autocapitalize=off>
+<button type=submit class=quick-add-btn id=quickAddBtn>+ Add</button>
+</form>
+<div class=card-footer>
+<a href=/app class=card-link>View all tasks →</a>
+</div>
+</div>
+</div>
+
+<!-- RIGHT COLUMN -->
+<div class=zone1-right>
+
+<!-- FINANCE SNAPSHOT -->
+<div class=card>
+<div class=card-title><span class=emoji>💰</span> Money Snapshot</div>
+<div class=finance-grid id=financeLoading>
+<div class=finance-stat><div class=skeleton style='width:60px;height:28px;margin:0 auto 4px'></div><div class=finance-label>Loading…</div></div>
+<div class=finance-stat><div class=skeleton style='width:60px;height:28px;margin:0 auto 4px'></div><div class=finance-label>Loading…</div></div>
+</div>
+<div id=financeData style='display:none'>
+<div class=finance-grid>
+<div class=finance-stat><div class=finance-amount id=finBalance>—</div><div class=finance-label>Balance</div></div>
+<div class=finance-stat><div class=finance-amount positive id=finToday>—</div><div class=finance-label>Today</div></div>
+</div>
+<div class=impulse-bar><div class=impulse-fill id=impulseFill style='width:0%'></div></div>
+<div class=impulse-label><span>Impulse score</span><span id=impulseLabel>—</span></div>
+</div>
+<div class=card-footer><a href=/money class=card-link>Full money view →</a></div>
+</div>
+
+<!-- CALENDAR WIDGET -->
+<div class=card>
+<div class=card-title><span class=emoji>📅</span> Coming Up</div>
+<div id=calendarLoading class=cal-empty>
+<div class=spinner style='margin:0 auto 0.5rem'></div>
+</div>
+<div id=calendarData style='display:none'>
+<div class=calendar-strip id=calendarStrip></div>
+</div>
+<div id=calendarEmpty class=cal-empty style='display:none'>
+No events today — <a href=/calendar style=color:var(--orange)>set up calendar</a>
+</div>
+<div class=card-footer><a href=/calendar class=card-link>Full calendar →</a></div>
+</div>
+
+</div><!-- /zone1-right -->
+</section>
+
+<!-- QUICK ACTIONS BAR -->
+<div style='margin-bottom:2rem'>
+<div class=zone-label>Quick Actions</div>
+<div class=quick-actions>
+<button class="qa-btn ml-start-btn" id=startMyDayBtn>🌅 <span>Start my day</span></button>
+<button class=qa-btn data-action=task>+ <span>Add Task</span></button>
+<button class=qa-btn data-action=expense>💸 <span>Add Expense</span></button>
+<button class=qa-btn data-action=note>📓 <span>Journal</span></button>
+</div>
+</div>
+
+<!-- JOURNAL CARD -->
+<div style='margin-bottom:2rem'>
+<div class=zone-label>Daily Journal</div>
+<div class=card id=journalCard>
+<div style='display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap'>
+<div>
+<div id=journalPrompt style='font-size:1rem;font-weight:600;color:var(--navy);margin-bottom:0.2rem'>How was your day?</div>
+<div id=journalLastEntry style='font-size:0.78rem;color:var(--text-muted)'>Reflect, and AI finds tasks you completed →</div>
+</div>
+<a href=/journal style='display:inline-flex;align-items:center;gap:0.4rem;background:var(--navy);color:white;padding:0.6rem 1.25rem;border-radius:8px;font-size:0.875rem;font-weight:600;text-decoration:none;min-height:44px;white-space:nowrap;flex-shrink:0'>📓 Write Entry</a>
+</div>
+</div>
+</div>
+
+<!-- ZONE 2: HYPERLOCAL -->
+<div class=zone-label>Your Area</div>
+<section class=zone2>
+
+<!-- WEATHER WIDGET -->
+<div class='card weather-card' id=weatherCard style='text-align:center'>
+<div id=weatherLoading>
+<div class=spinner style='margin:0 auto 0.5rem'></div>
+<div style='font-size:0.75rem;color:var(--text-muted)'>Getting weather…</div>
+</div>
+<div id=weatherData style='display:none'>
+<div class=weather-icon id=weatherIcon></div>
+<div class=weather-temp id=weatherTemp></div>
+<div class=weather-condition id=weatherCondition></div>
+<div class=weather-highlow>
+<span class=high id=weatherHigh></span>
+<span class=low id=weatherLow></span>
+</div>
+<div class=weather-extras id=weatherExtras></div>
+</div>
+<div id=weatherDenied style='display:none;font-size:0.78rem;color:var(--text-muted);padding:0.25rem 0'>
+<div style='font-size:1.5rem;margin-bottom:0.4rem'>📍</div>
+<div style='margin-bottom:0.6rem'>Enable location for weather</div>
+<button id=weatherLocationBtn style='background:var(--orange);color:white;border:none;padding:0.4rem 0.8rem;border-radius:4px;font-size:0.75rem;cursor:pointer;font-family:system-ui,sans-serif;min-height:36px'>Allow</button>
+</div>
+</div>
+
+<!-- LOCAL AREA CARD -->
+<div class=card style='flex:1'>
+<div class=card-title><span class=emoji>🏙️</span> Local</div>
+<div id=localAreaGreeting style='padding:0.4rem 0 0.75rem;border-bottom:1px solid var(--border);margin-bottom:0.75rem'>
+<div id=greetingText style='font-size:1.05rem;font-weight:600;color:var(--navy);margin-bottom:0.15rem'></div>
+<div id=greetingLocation style='font-size:0.75rem;color:var(--text-muted)'></div>
+</div>
+<div style='text-align:center;padding:0.75rem 0'>
+<div style='font-size:1.5rem;margin-bottom:0.4rem'>📰</div>
+<div style='font-size:0.875rem;font-weight:500;color:var(--navy);margin-bottom:0.2rem'>Local news coming soon</div>
+<div style='font-size:0.75rem;color:var(--text-muted)'>Pulling in stories from your area</div>
+</div>
+<div class=card-footer>
+<a href=/news class=card-link>See all news →</a>
+</div>
+</div>
+
+</section>
+
+<!-- ZONE 3: GLOBAL NEWS -->
+<div class=zone-label>Global Headlines</div>
+<section class=zone3>
+
+<!-- Balanced View Indicator -->
+<div class=balanced-bar>
+<span class=balanced-label>Balanced View</span>
+<div class=bias-pills id=balancePills>
+<span class='bias-pill bp-left' id=bpLeft style=display:none></span>
+<span class='bias-pill bp-lean-left' id=bpLeanLeft style=display:none></span>
+<span class='bias-pill bp-center' id=bpCenter style=display:none></span>
+<span class='bias-pill bp-lean-right' id=bpLeanRight style=display:none></span>
+<span class='bias-pill bp-right' id=bpRight style=display:none></span>
+</div>
+</div>
+
+<!-- News Grid (populated by loadNews()) -->
+<div class=news-grid id=newsGrid><div class=news-loading style='grid-column:1/-1;padding:2rem;text-align:center;color:var(--text-muted)'>Loading headlines…</div></div>
+
+<div class=card-footer style='margin-top:1rem'>
+<a href=/news class=card-link>See all headlines →</a>
+</div>
+</section>
+
+</div><!-- /portal-wrap -->
+
+<!-- ── MORNING LAUNCH OVERLAY ──────────────────────────────────────────────── -->
+<div id=morningLaunchOverlay class="ml-overlay hidden" role=dialog aria-modal=true aria-label="Morning Launch">
+  <canvas id=mlConfetti class=ml-confetti></canvas>
+
+  <!-- HEADER: greeting + streak pill -->
+  <div class=ml-header id=mlHeader>
+    <div class=ml-greeting id=mlGreeting>Good morning 👋</div>
+    <div class=ml-sub id=mlSub>Here's your easiest win to start</div>
+    <div class=ml-streak-pill id=mlStreakPill style=display:none>🔥 <span id=mlStreakCount>0</span> day streak</div>
+  </div>
+
+  <!-- PROGRESS DOTS -->
+  <div class=ml-progress id=mlProgress></div>
+
+  <!-- TASK CARD (main flow) -->
+  <div class=ml-card id=mlTaskCard style=display:none>
+    <div class=ml-task-label>Easiest win</div>
+    <div class=ml-task-title id=mlTaskTitle>Loading…</div>
+    <div class=ml-task-meta id=mlTaskMeta></div>
+    <!-- brief celebration overlay inside card -->
+    <div class=ml-celebration id=mlCelebration>
+      <div class=ml-celebration-icon>✅</div>
+      <div class=ml-celebration-text>Done!</div>
+    </div>
+    <div id=mlAvoidanceNudge class=ml-avoidance>
+      You've been putting this one off — want to break it into smaller steps?
+      <a id=mlBreakStepsLink href=/app style="color:var(--navy);font-weight:600;margin-left:0.25rem">Break it down →</a>
+    </div>
+    <div class=ml-actions>
+      <button class=ml-done-btn id=mlDoneBtn>
+        <span id=mlDoneBtnText>✓ Done</span>
+      </button>
+      <button class=ml-skip-btn id=mlSkipBtn>Skip for now</button>
+    </div>
+  </div>
+
+  <!-- EMPTY STATE (no tasks) -->
+  <div class=ml-empty id=mlEmpty style=display:none>
+    <div class=ml-empty-icon>🎉</div>
+    <div class=ml-empty-title>All clear!</div>
+    <div class=ml-empty-sub>No tasks yet. What's one thing you want to handle today?</div>
+    <div class=ml-quick-add-row>
+      <input class=ml-quick-add-input id=mlQuickAddInput type=text placeholder="What do you need to do?" autocomplete=off>
+      <button class=ml-quick-add-btn id=mlQuickAddBtn>Add</button>
+    </div>
+  </div>
+
+  <!-- SESSION SUMMARY -->
+  <div class=ml-summary id=mlSummary style=display:none>
+    <div class=ml-summary-icon id=mlSummaryIcon>💪</div>
+    <div class=ml-summary-title id=mlSummaryTitle>Nice work!</div>
+    <div class=ml-summary-sub id=mlSummarySub></div>
+    <div class=ml-summary-streak id=mlSummaryStreak style=display:none>🔥 <span id=mlSummaryStreakCount>0</span> day streak</div>
+    <button class=ml-summary-close id=mlSummaryClose>Let's go →</button>
+    <!-- Morning nudge soft prompt — shown after first completed session if not yet subscribed -->
+    <div id=mlNotifPrompt style="display:none;margin-top:16px;padding:14px 16px;background:rgba(255,255,255,0.12);border-radius:12px;text-align:left;border:1px solid rgba(255,255,255,0.15);">
+      <div style="font-weight:600;font-size:14px;margin-bottom:6px;">Want a morning nudge? 🌅</div>
+      <div style="font-size:13px;opacity:0.85;margin-bottom:12px;">We'll tap you at 7am so you remember to start your day.</div>
+      <div style="display:flex;gap:8px;">
+        <button id=mlNotifEnable style="flex:1;padding:9px 12px;background:#fff;color:#1a1a2e;border:none;border-radius:8px;font-weight:600;font-size:13px;cursor:pointer;">Enable notifications</button>
+        <button id=mlNotifDismiss style="flex:1;padding:9px 12px;background:transparent;color:rgba(255,255,255,0.65);border:1px solid rgba(255,255,255,0.25);border-radius:8px;font-size:13px;cursor:pointer;">Not now</button>
+      </div>
+      <div id=mlNotifStatus style="margin-top:10px;font-size:12px;opacity:0.75;display:none;"></div>
+    </div>
+  </div>
+
+  <!-- EXIT BUTTON (always visible during task flow) -->
+  <div class=ml-exit-wrap id=mlExitWrap>
+    <button class=ml-exit-btn id=mlExitBtn>That's enough for now</button>
+  </div>
+</div>
+
+<!-- Shared navigation (bottom bar mobile, left sidebar desktop) -->
+<link rel="stylesheet" href="/shared-nav.css">
+<script src="/shared-nav.js"></script>
+<script src="/buddy-widget.js"></script>
+<script>
+(function() {
+  // News card clicks are bound dynamically in loadNews() after cards are rendered
+
+  // ── CSP-SAFE: Logout (nav is outside portal-wrap, always in DOM) ──
+  var logoutEl = document.getElementById('logoutBtn');
+  if (logoutEl) {
+    logoutEl.addEventListener('click', function() {
+      localStorage.removeItem('fl_token');
+      location.href = '/login';
+    });
+  }
+
+  var token = localStorage.getItem('fl_token');
+  if (!token) {
+    // Not logged in — show auth gate, hide logout btn
+    if (logoutEl) logoutEl.style.display = 'none';
+    document.getElementById('app').innerHTML = '<div class=auth-gate><h2>FocusLedger</h2><p>Sign in to access your command center</p><a href=/login>Sign In</a></div>';
+    return;
+  }
+
+  // Load user info
+  loadUserInfo();
+  loadTasks();
+  loadStreak();
+  loadFinance();
+  loadCalendar();
+  loadNews();
+  loadWeather();
+  loadJournalCard();
+
+  function getHeaders() {
+    return { 'Authorization': 'Bearer ' + localStorage.getItem('fl_token'), 'Content-Type': 'application/json' };
+  }
+
+  function loadUserInfo() {
+    // Decode JWT to get name/email
+    try {
+      var parts = localStorage.getItem('fl_token').split('.');
+      if (parts.length === 3) {
+        var payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+        var name = payload.name || payload.email || 'there';
+        document.getElementById('userGreeting').textContent = name.split(' ')[0];
+      }
+    } catch(e) {}
+  }
+
+  function loadTasks() {
+    fetch('/api/tasks', { headers: getHeaders() })
+      .then(function(r) { return r.ok ? r.json() : null; })
+      .then(function(data) {
+        if (!data) return;
+        var tasks = (data.tasks || []).slice(0, 8);
+        var today = new Date().toISOString().slice(0, 10);
+        var todayTasks = tasks.filter(function(t) { return !t.is_completed; });
+        var doneCount = tasks.filter(function(t) { return t.is_completed; }).length;
+
+        var html = '';
+        if (todayTasks.length === 0 && doneCount === 0) {
+          html = '<li class=empty-state><div class=empty-icon>✅</div>No tasks yet — add one above!</li>';
+        } else {
+          // Streak: loaded from /api/tasks/streak
+          var streak = 0;
+          // Show incomplete tasks first, then completed
+          todayTasks.forEach(function(t) {
+            var dueStr = t.due_date ? '<span class=task-due>' + formatDue(t.due_date) + '</span>' : '';
+            html += '<li class=task-item data-id=' + t.id + '>' +
+              '<div class=task-check></div>' +
+              '<span class=task-text>' + escHtml(t.title) + '</span>' + dueStr + '</li>';
+          });
+          // Show up to 3 completed
+          var completed = tasks.filter(function(t) { return t.is_completed; }).slice(0, 3);
+          completed.forEach(function(t) {
+            html += '<li class=task-item data-id=' + t.id + '>' +
+              '<div class="task-check done"></div>' +
+              '<span class="task-text done">' + escHtml(t.title) + '</span></li>';
+          });
+        }
+        document.getElementById('taskList').innerHTML = html;
+        if (streak > 0) {
+          document.getElementById('streakBadge').style.display = 'inline-flex';
+          document.getElementById('streakCount').textContent = streak + ' day streak 🔥';
+        }
+      })
+      .catch(function() {
+        document.getElementById('taskList').innerHTML = '<li class=empty-state>Could not load tasks</li>';
+      });
+  }
+
+  function loadStreak() {
+    fetch('/api/tasks/streak', { headers: getHeaders() })
+      .then(function(r) { return r.ok ? r.json() : null; })
+      .then(function(data) {
+        if (!data) return;
+        var streak = data.current_streak || 0;
+        if (streak > 0) {
+          var badge = document.getElementById('streakBadge');
+          var countEl = document.getElementById('streakCount');
+          if (badge) badge.style.display = 'inline-flex';
+          if (countEl) countEl.textContent = streak + ' day streak 🔥';
+        }
+      })
+      .catch(function() {}); // streak is non-critical, fail silently
+  }
+
+  function loadFinance() {
+    fetch('/api/expenses/budget', { headers: getHeaders() })
+      .then(function(r) { return r.ok ? r.json() : null; })
+      .then(function(data) {
+        document.getElementById('financeLoading').style.display = 'none';
+        document.getElementById('financeData').style.display = 'block';
+        if (data && data.budget) {
+          var b = data.budget;
+          var weeklyAmount = parseFloat(b.weekly_amount || 0);
+          var totalSpent = parseFloat(b.total_spent || 0);
+          var remaining = weeklyAmount - totalSpent;
+          document.getElementById('finBalance').textContent = formatCurrency(remaining);
+          document.getElementById('finToday').textContent = formatCurrency(totalSpent);
+          // Impulse = % of weekly budget used
+          if (weeklyAmount > 0) {
+            var pct = Math.min(100, Math.round((totalSpent / weeklyAmount) * 100));
+            document.getElementById('impulseFill').style.width = pct + '%';
+            document.getElementById('impulseFill').style.background = pct > 70 ? 'var(--warning)' : pct > 40 ? 'var(--orange-light)' : 'var(--green)';
+            document.getElementById('impulseLabel').textContent = pct + '% spent';
+          }
+        }
+      })
+      .catch(function() {
+        document.getElementById('financeLoading').style.display = 'none';
+        document.getElementById('financeData').style.display = 'block';
+        document.getElementById('finBalance').textContent = '—';
+        document.getElementById('finToday').textContent = '—';
+      });
+  }
+
+  function loadCalendar() {
+    // Fetch real time blocks for today from the API
+    var today = new Date();
+    var y = today.getFullYear();
+    var m = String(today.getMonth() + 1).padStart(2, '0');
+    var d = String(today.getDate()).padStart(2, '0');
+    var todayStr = y + '-' + m + '-' + d;
+
+    fetch('/api/time-blocks?date=' + todayStr, { headers: getHeaders() })
+      .then(function(r) { return r.ok ? r.json() : null; })
+      .then(function(data) {
+        document.getElementById('calendarLoading').style.display = 'none';
+        var blocks = (data && data.time_blocks) ? data.time_blocks : [];
+        // Filter to only today's blocks
+        var todayBlocks = blocks.filter(function(b) {
+          return (b.block_date || '').slice(0, 10) === todayStr;
+        });
+        // Sort by start_time
+        todayBlocks.sort(function(a, b) {
+          return (a.start_time || '').localeCompare(b.start_time || '');
+        });
+
+        if (todayBlocks.length === 0) {
+          document.getElementById('calendarEmpty').style.display = 'block';
+          document.getElementById('calendarData').style.display = 'none';
+          return;
+        }
+
+        var strip = document.getElementById('calendarStrip');
+        var html = '';
+        todayBlocks.forEach(function(b) {
+          var label = b.title || b.task_title || b.value_name || 'Time Block';
+          var timeStr = formatBlockTime(b.start_time);
+          html += '<div class=cal-event><div class=cal-event-time>' + escHtml(timeStr) + '</div><div class=cal-event-title>' + escHtml(label) + '</div></div>';
+        });
+        strip.innerHTML = html;
+        document.getElementById('calendarData').style.display = 'block';
+      })
+      .catch(function() {
+        document.getElementById('calendarLoading').style.display = 'none';
+        document.getElementById('calendarEmpty').style.display = 'block';
+      });
+  }
+
+  // Format "HH:MM:SS" or "HH:MM" to "9:30 AM" style
+  function formatBlockTime(timeStr) {
+    if (!timeStr) return '';
+    var parts = timeStr.split(':');
+    var h = parseInt(parts[0], 10);
+    var m = parseInt(parts[1], 10);
+    var ampm = h >= 12 ? 'PM' : 'AM';
+    var hour = h % 12 || 12;
+    return hour + ':' + String(m).padStart(2, '0') + ' ' + ampm;
+  }
+
+  function loadNews() {
+    // Load global headlines for Zone 3 (de-polarized)
+    fetch('/api/news/headlines?limit=12')
+      .then(function(r) { return r.ok ? r.json() : null; })
+      .then(function(data) {
+        var grid = document.getElementById('newsGrid');
+        if (!data || !data.articles || data.articles.length === 0) {
+          grid.innerHTML = '<div style="grid-column:1/-1;padding:2rem;text-align:center;color:var(--text-muted);font-size:0.9rem">News is warming up — check back in a moment. <a href=/news style=color:var(--orange)>Full news page →</a></div>';
+          return;
+        }
+        var html = '';
+        data.articles.forEach(function(a) {
+          html += '<div class="news-card" data-url="' + escHtml(a.url) + '">' +
+            '<div class=news-headline>' + escHtml(a.headline) + '</div>' +
+            '<div class=news-footer>' +
+            '<span class=news-source>' + escHtml(a.source || '') + '</span>' +
+            '<div class=news-meta>' +
+            '<span class=card-meta>' + escHtml(a.age || '') + '</span>' +
+            '<span class="bias-badge ' + escHtml(a.bias_class || 'bb-unrated') + '">' + escHtml(a.bias_label || 'Unrated') + '</span>' +
+            '</div></div></div>';
+        });
+        grid.innerHTML = html;
+        // Re-bind news card clicks
+        grid.querySelectorAll('.news-card[data-url]').forEach(function(card) {
+          card.addEventListener('click', function() { window.open(this.dataset.url, '_blank', 'noopener'); });
+        });
+        // Update balance bar
+        if (data.balance) {
+          var b = data.balance;
+          var bpMap = {
+            'bpLeft': ['left', 'Left'],
+            'bpLeanLeft': ['lean_left', 'Lean Left'],
+            'bpCenter': ['center', 'Center'],
+            'bpLeanRight': ['lean_right', 'Lean Right'],
+            'bpRight': ['right', 'Right']
+          };
+          Object.keys(bpMap).forEach(function(id) {
+            var info = bpMap[id];
+            var el = document.getElementById(id);
+            var count = b[info[0]] || 0;
+            if (el && count > 0) {
+              el.textContent = count + ' ' + info[1];
+              el.style.display = 'inline-flex';
+            }
+          });
+        }
+      })
+      .catch(function() {
+        var grid = document.getElementById('newsGrid');
+        if (grid) grid.innerHTML = '<div style="grid-column:1/-1;padding:1rem;text-align:center;color:var(--text-muted);font-size:0.85rem">Could not load headlines</div>';
+      });
+
+  }
+
+  // ── WEATHER & HYPERLOCAL ────────────────────────────────────────────────
+  var WEATHER_CACHE_KEY = 'fl_weather_v1';
+  var WEATHER_TTL = 30 * 60 * 1000; // 30 min
+
+  function updateGreeting() {
+    var greetEl = document.getElementById('greetingText');
+    if (!greetEl) return;
+    var hour = new Date().getHours();
+    var period = hour < 12 ? 'morning' : hour < 17 ? 'afternoon' : 'evening';
+    var name = '';
+    try {
+      var parts = localStorage.getItem('fl_token').split('.');
+      if (parts.length === 3) {
+        var pl = JSON.parse(atob(parts[1].replace(/-/g,'+').replace(/_/g,'/')));
+        name = (pl.name || pl.email || '').split(' ')[0];
+      }
+    } catch(e) {}
+    greetEl.textContent = 'Good ' + period + (name ? ', ' + name : '') + '.';
+  }
+
+  function getWeatherIcon(code) {
+    if (code === 0) return '☀️';
+    if (code === 1) return '🌤️';
+    if (code === 2) return '⛅';
+    if (code === 3) return '☁️';
+    if (code <= 48) return '🌫️';
+    if (code <= 55) return '🌦️';
+    if (code <= 65) return '🌧️';
+    if (code <= 77) return '❄️';
+    if (code <= 82) return '🌦️';
+    if (code <= 99) return '⛈️';
+    return '🌡️';
+  }
+
+  function getWeatherCondition(code) {
+    if (code === 0) return 'Clear sky';
+    if (code === 1) return 'Mostly clear';
+    if (code === 2) return 'Partly cloudy';
+    if (code === 3) return 'Overcast';
+    if (code <= 48) return 'Foggy';
+    if (code <= 55) return 'Drizzle';
+    if (code <= 65) return 'Rain';
+    if (code <= 77) return 'Snow';
+    if (code <= 82) return 'Showers';
+    if (code <= 99) return 'Thunderstorm';
+    return 'Unknown';
+  }
+
+  function renderWeather(d) {
+    var loadEl = document.getElementById('weatherLoading');
+    var dataEl = document.getElementById('weatherData');
+    if (loadEl) loadEl.style.display = 'none';
+    if (dataEl) dataEl.style.display = 'block';
+    var iconEl = document.getElementById('weatherIcon');
+    var tempEl = document.getElementById('weatherTemp');
+    var condEl = document.getElementById('weatherCondition');
+    var highEl = document.getElementById('weatherHigh');
+    var lowEl  = document.getElementById('weatherLow');
+    var extEl  = document.getElementById('weatherExtras');
+    if (iconEl) iconEl.textContent = getWeatherIcon(d.weather_code);
+    if (tempEl) tempEl.textContent = d.temp + '°';
+    if (condEl) condEl.textContent = getWeatherCondition(d.weather_code);
+    if (highEl) highEl.textContent = 'H: ' + d.high + '°';
+    if (lowEl)  lowEl.textContent  = 'L: '  + d.low  + '°';
+    if (extEl)  extEl.innerHTML =
+      '<span>💧 ' + d.humidity + '%</span>' +
+      (d.precip_prob > 0 ? '<span>🌧 ' + d.precip_prob + '%</span>' : '');
+    var locEl = document.getElementById('greetingLocation');
+    if (locEl && d.city) locEl.textContent = d.city + (d.region ? ', ' + d.region : '');
+  }
+
+  function showWeatherDenied() {
+    var loadEl = document.getElementById('weatherLoading');
+    var denEl  = document.getElementById('weatherDenied');
+    if (loadEl) loadEl.style.display = 'none';
+    if (denEl)  denEl.style.display  = 'block';
+  }
+
+  function doFetchWeather(lat, lon, city, region) {
+    var url = 'https://api.open-meteo.com/v1/forecast?latitude=' + lat + '&longitude=' + lon +
+      '&current=temperature_2m,relative_humidity_2m,precipitation_probability,weather_code,apparent_temperature' +
+      '&daily=temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=1&temperature_unit=fahrenheit';
+    fetch(url)
+      .then(function(r) { return r.ok ? r.json() : null; })
+      .then(function(data) {
+        if (!data || !data.current) { showWeatherDenied(); return; }
+        var wd = {
+          timestamp: Date.now(),
+          temp: Math.round(data.current.temperature_2m),
+          humidity: Math.round(data.current.relative_humidity_2m),
+          precip_prob: data.current.precipitation_probability || 0,
+          weather_code: data.current.weather_code,
+          high: Math.round(data.daily.temperature_2m_max[0]),
+          low: Math.round(data.daily.temperature_2m_min[0]),
+          city: city || '',
+          region: region || ''
+        };
+        try { localStorage.setItem(WEATHER_CACHE_KEY, JSON.stringify(wd)); } catch(e) {}
+        renderWeather(wd);
+      })
+      .catch(function() { showWeatherDenied(); });
+  }
+
+  function fetchWeatherByIP() {
+    fetch('https://ipapi.co/json/')
+      .then(function(r) { return r.ok ? r.json() : null; })
+      .then(function(d) {
+        if (d && d.latitude && d.longitude) {
+          doFetchWeather(d.latitude, d.longitude, d.city, d.region_code);
+        } else {
+          showWeatherDenied();
+        }
+      })
+      .catch(function() { showWeatherDenied(); });
+  }
+
+  // Geocode a city/zip via Open-Meteo geocoding API, then fetch weather
+  function fetchWeatherByLocation(loc) {
+    // Build search query: prefer city name, fall back to zip code
+    var query = '';
+    if (loc.city) {
+      query = loc.city + (loc.state_region ? ' ' + loc.state_region : '');
+    } else if (loc.zip_code) {
+      query = loc.zip_code;
+    }
+    if (!query) { fetchWeatherByIP(); return; }
+
+    var geoUrl = 'https://geocoding-api.open-meteo.com/v1/search?name=' +
+      encodeURIComponent(query) + '&count=1&language=en&format=json';
+
+    fetch(geoUrl)
+      .then(function(r) { return r.ok ? r.json() : null; })
+      .then(function(d) {
+        if (d && d.results && d.results.length > 0) {
+          var place = d.results[0];
+          doFetchWeather(
+            place.latitude,
+            place.longitude,
+            place.name || loc.city || '',
+            place.admin1 || loc.state_region || ''
+          );
+        } else {
+          // Geocoding found nothing — fall back to IP
+          fetchWeatherByIP();
+        }
+      })
+      .catch(function() { fetchWeatherByIP(); });
+  }
+
+  // Try user's saved location from Settings (DB) as a fallback
+  function fetchWeatherBySavedLocation() {
+    var h = getHeaders();
+    fetch('/api/news/location', { headers: h })
+      .then(function(r) { return r.ok ? r.json() : null; })
+      .then(function(d) {
+        if (d && d.location && (d.location.city || d.location.zip_code)) {
+          fetchWeatherByLocation(d.location);
+        } else {
+          // No saved location — fall back to IP
+          fetchWeatherByIP();
+        }
+      })
+      .catch(function() { fetchWeatherByIP(); });
+  }
+
+  function loadWeather() {
+    updateGreeting();
+    // Check cache
+    try {
+      var raw = localStorage.getItem(WEATHER_CACHE_KEY);
+      if (raw) {
+        var cached = JSON.parse(raw);
+        if (Date.now() - cached.timestamp < WEATHER_TTL) {
+          renderWeather(cached);
+          return;
+        }
+      }
+    } catch(e) {}
+    // Fallback chain: geolocation → saved location from Settings → IP lookup
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        function(pos) { doFetchWeather(pos.coords.latitude, pos.coords.longitude); },
+        function() { fetchWeatherBySavedLocation(); },
+        { timeout: 8000, maximumAge: 600000 }
+      );
+    } else {
+      fetchWeatherBySavedLocation();
+    }
+  }
+
+  // "Allow" button re-tries geolocation
+  var weatherBtn = document.getElementById('weatherLocationBtn');
+  if (weatherBtn) {
+    weatherBtn.addEventListener('click', function() {
+      var denEl  = document.getElementById('weatherDenied');
+      var loadEl = document.getElementById('weatherLoading');
+      if (denEl)  denEl.style.display  = 'none';
+      if (loadEl) loadEl.style.display = 'block';
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          function(pos) { doFetchWeather(pos.coords.latitude, pos.coords.longitude); },
+          function() { showWeatherDenied(); },
+          { timeout: 10000 }
+        );
+      } else {
+        fetchWeatherByIP();
+      }
+    });
+  }
+
+  function loadJournalCard() {
+    var promptEl = document.getElementById('journalPrompt');
+    var metaEl = document.getElementById('journalLastEntry');
+    if (!promptEl || !metaEl) return;
+    var hour = new Date().getHours();
+    promptEl.textContent = hour >= 17 || hour < 5 ? 'How did today go?' : 'What\'s on tap today?';
+    fetch('/api/journal?limit=1', { headers: getHeaders() })
+      .then(function(r) { return r.ok ? r.json() : null; })
+      .then(function(data) {
+        if (data && data.entries && data.entries.length > 0) {
+          var last = data.entries[0];
+          var d = new Date(last.created_at);
+          var ds = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+          var matches = Array.isArray(last.matches) ? last.matches.filter(function(m) { return m.task_completed; }).length : 0;
+          metaEl.textContent = 'Last entry: ' + ds + (matches > 0 ? ' · ' + matches + ' task' + (matches > 1 ? 's' : '') + ' completed' : '') + ' — write a new one →';
+        }
+      })
+      .catch(function() {});
+  }
+
+  function handleQuickAdd(e) {
+    e.preventDefault();
+    var input = document.getElementById('quickAddInput');
+    var btn = document.getElementById('quickAddBtn');
+    var title = input.value.trim();
+    if (!title) return;
+
+    // Disable button to prevent double-tap on mobile
+    if (btn) { btn.disabled = true; btn.textContent = 'Adding…'; }
+
+    fetch('/api/tasks', {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ title: title })
+    }).then(function(r) { return r.json().then(function(d) { return { ok: r.ok, status: r.status, data: d }; }); })
+    .then(function(res) {
+      if (res.ok && res.data.task) {
+        // Success — clear input and add task to list
+        input.value = '';
+        var emptyEl = document.querySelector('#taskList .empty-state');
+        if (emptyEl) emptyEl.remove();
+        var li = document.createElement('li');
+        li.className = 'task-item';
+        li.dataset.id = res.data.task.id;
+        li.innerHTML = '<div class=task-check></div>' +
+          '<span class=task-text>' + escHtml(title) + '</span>';
+        document.getElementById('taskList').appendChild(li);
+      } else if (res.data.code === 'TASK_LIMIT_REACHED') {
+        showToast(res.data.message || 'Task limit reached — switch to Autopilot for unlimited tasks.', 'warning');
+      } else {
+        // Any other error — show message, keep input intact
+        showToast(res.data.message || 'Could not add task. Try again.', 'error');
+      }
+    }).catch(function(err) {
+      console.error('[QuickAdd] Failed:', err);
+      showToast('Network error — task not saved.', 'error');
+    }).finally(function() {
+      // Re-enable button
+      if (btn) { btn.disabled = false; btn.textContent = '+ Add'; }
+    });
+  }
+
+  window.toggleTask = function(id, el) {
+    // Optimistic UI update
+    el.classList.toggle('done');
+    var text = el.parentElement.querySelector('.task-text');
+    if (text) text.classList.toggle('done');
+
+    fetch('/api/tasks/' + id + '/toggle', {
+      method: 'PATCH',
+      headers: getHeaders()
+    }).then(function(r) {
+      if (!r.ok) throw new Error('Toggle failed');
+      return r.json();
+    }).then(function(data) {
+      if (!data.success && !data.task) {
+        // Revert optimistic update
+        el.classList.toggle('done');
+        if (text) text.classList.toggle('done');
+      }
+    }).catch(function() {
+      // Revert optimistic update on network error
+      el.classList.toggle('done');
+      if (text) text.classList.toggle('done');
+    });
+  };
+
+  window.handleLogout = function() {
+    localStorage.removeItem('fl_token');
+    location.href = '/login';
+  };
+
+  window.handleQuickActionTask = function() {
+    document.getElementById('quickAddInput').focus();
+  };
+
+  window.handleQuickActionExpense = function() {
+    location.href = '/money';
+  };
+
+  window.handleQuickActionNote = function() {
+    location.href = '/journal';
+  };
+
+  function showToast(msg, type) {
+    var existing = document.querySelector('.fl-toast');
+    if (existing) existing.remove();
+    var toast = document.createElement('div');
+    toast.className = 'fl-toast';
+    toast.textContent = msg;
+    var bg = type === 'error' ? 'var(--error)' : type === 'warning' ? 'var(--orange)' : 'var(--green)';
+    toast.style.cssText = 'position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:' + bg + ';color:white;padding:0.75rem 1.25rem;border-radius:8px;font-size:0.875rem;font-weight:500;z-index:9999;max-width:90%;text-align:center;box-shadow:0 4px 12px rgba(0,0,0,0.15);animation:toastIn 0.3s ease';
+    document.body.appendChild(toast);
+    setTimeout(function() { toast.style.opacity = '0'; toast.style.transition = 'opacity 0.3s'; }, 3000);
+    setTimeout(function() { toast.remove(); }, 3300);
+  }
+
+  function escHtml(s) {
+    if (!s) return '';
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&#34;').replace(/'/g,'&#39;');
+  }
+
+  function formatDue(dateStr) {
+    if (!dateStr) return '';
+    var d = new Date(dateStr);
+    var now = new Date();
+    var diff = d - now;
+    if (diff < 0) return 'Overdue';
+    if (diff < 86400000) return 'Today';
+    if (diff < 172800000) return 'Tomorrow';
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  }
+
+  function formatCurrency(n) {
+    if (n === undefined || n === null) return '—';
+    if (typeof n === 'string') n = parseFloat(n.replace(/[$,]/g, ''));
+    if (isNaN(n)) return '$0';
+    var abs = Math.abs(n);
+    var str = abs >= 1000 ? '$' + (abs/1000).toFixed(1) + 'k' : '$' + abs.toFixed(0);
+    return n < 0 ? '-' + str : str;
+  }
+
+  // ── CSP-SAFE: Authenticated event handlers (addEventListener) ──
+  // Quick-add form submit (replaces inline onsubmit for mobile Safari reliability)
+  var quickAddForm = document.getElementById('quickAddForm');
+  if (quickAddForm) {
+    quickAddForm.addEventListener('submit', handleQuickAdd);
+  }
+
+  // Quick action buttons
+  document.querySelectorAll('.qa-btn[data-action]').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var action = this.dataset.action;
+      if (action === 'task') handleQuickActionTask();
+      else if (action === 'expense') handleQuickActionExpense();
+      else if (action === 'note') handleQuickActionNote();
+    });
+  });
+
+  // Task checkboxes — event delegation (handles dynamically created items)
+  document.getElementById('taskList').addEventListener('click', function(e) {
+    var check = e.target.closest('.task-check');
+    if (check) {
+      var item = check.closest('.task-item');
+      if (item && item.dataset.id) {
+        toggleTask(parseInt(item.dataset.id), check);
+      }
+    }
+  });
+
+  // ── MORNING LAUNCH ─────────────────────────────────────────────────────────
+  (function morningLaunch() {
+    var overlay      = document.getElementById('morningLaunchOverlay');
+    var startBtn     = document.getElementById('startMyDayBtn');
+    var taskCard     = document.getElementById('mlTaskCard');
+    var emptyState   = document.getElementById('mlEmpty');
+    var summaryEl    = document.getElementById('mlSummary');
+    var exitWrap     = document.getElementById('mlExitWrap');
+    var greetingEl   = document.getElementById('mlGreeting');
+    var subEl        = document.getElementById('mlSub');
+    var streakPill   = document.getElementById('mlStreakPill');
+    var streakCount  = document.getElementById('mlStreakCount');
+    var progressEl   = document.getElementById('mlProgress');
+    var taskTitle    = document.getElementById('mlTaskTitle');
+    var taskMeta     = document.getElementById('mlTaskMeta');
+    var doneBtn      = document.getElementById('mlDoneBtn');
+    var doneBtnText  = document.getElementById('mlDoneBtnText');
+    var skipBtn      = document.getElementById('mlSkipBtn');
+    var avoidNudge   = document.getElementById('mlAvoidanceNudge');
+    var breakLink    = document.getElementById('mlBreakStepsLink');
+    var celebration  = document.getElementById('mlCelebration');
+    var exitBtn      = document.getElementById('mlExitBtn');
+    var summaryClose = document.getElementById('mlSummaryClose');
+    var summaryIcon  = document.getElementById('mlSummaryIcon');
+    var summaryTitle = document.getElementById('mlSummaryTitle');
+    var summarySub   = document.getElementById('mlSummarySub');
+    var summaryStreak = document.getElementById('mlSummaryStreak');
+    var summaryStreakCount = document.getElementById('mlSummaryStreakCount');
+    var quickAddInput = document.getElementById('mlQuickAddInput');
+    var quickAddBtn   = document.getElementById('mlQuickAddBtn');
+    var canvas       = document.getElementById('mlConfetti');
+
+    // Session state
+    var tasks = [];         // effort-sorted tasks from API
+    var idx = 0;            // current task index
+    var completed = 0;      // tasks completed this session
+    var skipped = 0;        // tasks skipped this session
+    var events = [];        // { task_id, event_type } records
+    var currentStreak = 0;  // streak from API
+
+    function getHour() { return new Date().getHours(); }
+    function getGreeting() {
+      var h = getHour();
+      if (h < 12) return 'Good morning 👋';
+      if (h < 17) return 'Good afternoon 👋';
+      return 'Good evening 👋';
+    }
+
+    // ── Confetti ────────────────────────────────────────────────────────────
+    var confettiPieces = [];
+    var confettiRaf;
+    function launchConfetti() {
+      if (!canvas) return;
+      canvas.width  = overlay.offsetWidth;
+      canvas.height = overlay.offsetHeight;
+      var ctx = canvas.getContext('2d');
+      var colors = ['#c9a84c','#5BA4A4','#E07A5F','#7DB87D','#ffffff','#d4b56a'];
+      confettiPieces = [];
+      for (var i = 0; i < 80; i++) {
+        confettiPieces.push({
+          x: Math.random() * canvas.width,
+          y: -10 - Math.random() * 40,
+          r: 4 + Math.random() * 6,
+          c: colors[Math.floor(Math.random() * colors.length)],
+          vy: 2.5 + Math.random() * 3.5,
+          vx: -1.5 + Math.random() * 3,
+          rot: Math.random() * 360,
+          rv: -2 + Math.random() * 4
+        });
+      }
+      if (confettiRaf) cancelAnimationFrame(confettiRaf);
+      var frames = 0;
+      function tick() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        frames++;
+        confettiPieces.forEach(function(p) {
+          p.y += p.vy;
+          p.x += p.vx;
+          p.rot += p.rv;
+          ctx.save();
+          ctx.translate(p.x, p.y);
+          ctx.rotate(p.rot * Math.PI / 180);
+          ctx.fillStyle = p.c;
+          ctx.fillRect(-p.r/2, -p.r/2, p.r, p.r * 0.55);
+          ctx.restore();
+        });
+        if (frames < 80) confettiRaf = requestAnimationFrame(tick);
+        else ctx.clearRect(0, 0, canvas.width, canvas.height);
+      }
+      tick();
+    }
+
+    // ── Open / Close ────────────────────────────────────────────────────────
+    function openLaunch() {
+      overlay.classList.remove('hidden');
+      document.body.style.overflow = 'hidden';
+      // hide bottom nav during launch
+      var tabs = document.querySelector('.bottom-tabs');
+      if (tabs) tabs.style.display = 'none';
+      greetingEl.textContent = getGreeting();
+      subEl.textContent = 'Loading your tasks…';
+      taskCard.style.display = 'none';
+      emptyState.style.display = 'none';
+      summaryEl.style.display = 'none';
+      exitWrap.style.display = 'block';
+      progressEl.innerHTML = '';
+      idx = 0; completed = 0; skipped = 0; events = [];
+      fetchMorningTasks();
+    }
+
+    function closeLaunch() {
+      overlay.classList.add('hidden');
+      document.body.style.overflow = '';
+      var tabs = document.querySelector('.bottom-tabs');
+      if (tabs) tabs.style.display = '';
+      if (confettiRaf) cancelAnimationFrame(confettiRaf);
+      if (canvas) { var ctx = canvas.getContext('2d'); ctx.clearRect(0,0,canvas.width,canvas.height); }
+    }
+
+    // ── Fetch tasks ──────────────────────────────────────────────────────────
+    function fetchMorningTasks() {
+      fetch('/api/tasks/morning-launch', { headers: getHeaders() })
+        .then(function(r) { return r.ok ? r.json() : null; })
+        .then(function(data) {
+          if (!data) { closeLaunch(); showToast('Could not load morning tasks.', 'error'); return; }
+          tasks = data.tasks || [];
+          var streak = data.streak || {};
+          currentStreak = streak.current || 0;
+
+          // Show streak pill
+          if (currentStreak > 0) {
+            streakCount.textContent = currentStreak;
+            streakPill.style.display = 'inline-flex';
+          } else {
+            streakPill.style.display = 'none';
+          }
+
+          if (tasks.length === 0) {
+            showEmptyState();
+          } else {
+            buildProgressDots();
+            showTask(0);
+          }
+        })
+        .catch(function() { closeLaunch(); showToast('Network error.', 'error'); });
+    }
+
+    // ── Progress dots ────────────────────────────────────────────────────────
+    function buildProgressDots() {
+      var show = Math.min(tasks.length, 7);
+      var html = '';
+      for (var i = 0; i < show; i++) {
+        html += '<div class="ml-dot' + (i === 0 ? ' current' : '') + '" data-i=' + i + '></div>';
+      }
+      if (tasks.length > 7) html += '<div class=ml-dot style=opacity:0.3>…</div>';
+      progressEl.innerHTML = html;
+    }
+
+    function updateDots(completedIdx) {
+      var dots = progressEl.querySelectorAll('.ml-dot[data-i]');
+      dots.forEach(function(d) {
+        var i = parseInt(d.dataset.i);
+        d.classList.remove('done','current');
+        if (i < completedIdx) d.classList.add('done');
+        else if (i === completedIdx) d.classList.add('current');
+      });
+    }
+
+    // ── Show a task ──────────────────────────────────────────────────────────
+    function showTask(i) {
+      if (i >= tasks.length) { endSession(); return; }
+      idx = i;
+      var t = tasks[i];
+      subEl.textContent = 'Here\'s your easiest win';
+      taskTitle.textContent = t.title;
+      // meta badges
+      var meta = '';
+      if (t.is_overdue) meta += '<span class=ml-overdue-badge>Overdue</span>';
+      if (t.step_count > 0) meta += '<span class=ml-steps-badge>' + t.step_count + ' step' + (t.step_count !== 1 ? 's' : '') + '</span>';
+      taskMeta.innerHTML = meta;
+      // avoidance nudge (3+ skips on same task)
+      if (t.skip_count >= 3) {
+        avoidNudge.classList.add('show');
+        if (breakLink) breakLink.href = '/app#task-' + t.id;
+      } else {
+        avoidNudge.classList.remove('show');
+      }
+      celebration.classList.remove('show');
+      taskCard.style.display = 'block';
+      emptyState.style.display = 'none';
+      summaryEl.style.display = 'none';
+      exitWrap.style.display = 'block';
+      updateDots(i);
+      // reset done button
+      doneBtn.disabled = false;
+      doneBtnText.textContent = '✓ Done';
+      doneBtn.classList.remove('celebrating');
+    }
+
+    // ── Done ─────────────────────────────────────────────────────────────────
+    function handleDone() {
+      if (doneBtn.disabled) return;
+      var t = tasks[idx];
+      doneBtn.disabled = true;
+      // Optimistically toggle the task
+      fetch('/api/tasks/' + t.id + '/toggle', {
+        method: 'PATCH',
+        headers: getHeaders()
+      }).catch(function() {});
+      // Record event
+      events.push({ task_id: t.id, event_type: 'completed' });
+      completed++;
+      // Celebrate briefly
+      celebration.classList.add('show');
+      doneBtn.classList.add('celebrating');
+      doneBtnText.textContent = '✓ Done!';
+      launchConfetti();
+      // After 700ms, advance
+      setTimeout(function() {
+        celebration.classList.remove('show');
+        if (idx + 1 < tasks.length) {
+          showTask(idx + 1);
+          // update sub copy
+          var copies = ['One down. What\'s next?', 'Momentum building 🚀', 'You\'re on a roll!', 'Keep going!', 'Amazing focus! 🎯'];
+          subEl.textContent = copies[Math.min(completed - 1, copies.length - 1)];
+        } else {
+          endSession();
+        }
+      }, 700);
+    }
+
+    // ── Skip ─────────────────────────────────────────────────────────────────
+    function handleSkip() {
+      var t = tasks[idx];
+      events.push({ task_id: t.id, event_type: 'skipped' });
+      skipped++;
+      if (idx + 1 < tasks.length) {
+        showTask(idx + 1);
+      } else {
+        endSession();
+      }
+    }
+
+    // ── Empty state ──────────────────────────────────────────────────────────
+    function showEmptyState() {
+      subEl.textContent = 'Start fresh';
+      taskCard.style.display = 'none';
+      summaryEl.style.display = 'none';
+      emptyState.style.display = 'block';
+      exitWrap.style.display = 'block';
+      progressEl.innerHTML = '';
+      if (quickAddInput) quickAddInput.focus();
+    }
+
+    // ── End session ───────────────────────────────────────────────────────────
+    function endSession() {
+      // Save session to backend (non-blocking)
+      fetch('/api/tasks/morning-launch/session', {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify({ tasks_completed: completed, tasks_skipped: skipped, events: events })
+      }).then(function(r) { return r.ok ? r.json() : null; })
+        .then(function(data) {
+          var newStreak = (data && data.streak) ? data.streak.current : currentStreak + (completed > 0 ? 1 : 0);
+          showSummary(completed, skipped, newStreak);
+        })
+        .catch(function() { showSummary(completed, skipped, currentStreak); });
+
+      taskCard.style.display = 'none';
+      emptyState.style.display = 'none';
+      exitWrap.style.display = 'none';
+      progressEl.innerHTML = '';
+    }
+
+    // ── Summary ───────────────────────────────────────────────────────────────
+    function showSummary(done, skips, newStreak) {
+      summaryEl.style.display = 'block';
+      exitWrap.style.display = 'none';
+
+      var now = new Date();
+      var hour = now.getHours();
+      var timeStr = hour < 10 ? 'before ' + formatHour(hour) : 'this morning';
+
+      if (done === 0 && skips === 0) {
+        summaryIcon.textContent = '👍';
+        summaryTitle.textContent = 'All good!';
+        summarySub.textContent = 'Come back when you\'re ready. Tasks will be here.';
+      } else if (done === 0) {
+        summaryIcon.textContent = '👀';
+        summaryTitle.textContent = 'No rush.';
+        summarySub.textContent = 'Tasks noted. Pick one when you\'re ready.';
+      } else if (done === 1) {
+        summaryIcon.textContent = '✅';
+        summaryTitle.textContent = 'One down.';
+        summarySub.textContent = 'One task completed ' + timeStr + '. That counts.';
+      } else {
+        var emojis = ['🎯','💪','🚀','⚡','🔥'];
+        summaryIcon.textContent = emojis[Math.min(done - 2, emojis.length - 1)];
+        summaryTitle.textContent = 'You knocked out ' + done + ' task' + (done !== 1 ? 's' : '') + '!';
+        summarySub.textContent = done + ' task' + (done !== 1 ? 's' : '') + ' done ' + timeStr + '. Momentum > motivation.';
+      }
+
+      // Streak display
+      if (newStreak > 0 && done > 0) {
+        summaryStreakCount.textContent = newStreak;
+        summaryStreak.style.display = 'inline-flex';
+        // Show milestone confetti
+        if (newStreak === 3 || newStreak === 7 || newStreak === 14 || newStreak === 30) {
+          launchConfetti();
+          summaryIcon.textContent = '🏆';
+        }
+      } else {
+        summaryStreak.style.display = 'none';
+      }
+
+      // reload tasks in background so portal shows fresh state
+      loadTasks();
+
+      // Show morning nudge opt-in prompt after first completed session
+      if (done > 0) {
+        setTimeout(maybeShowNotifPrompt, 800);
+      }
+    }
+
+    // ── Morning nudge opt-in prompt ────────────────────────────────────────────
+    // Shown after a completed session if push isn't already granted.
+    // Respects a 7-day dismiss cooldown stored in localStorage.
+    function maybeShowNotifPrompt() {
+      var promptEl = document.getElementById('mlNotifPrompt');
+      if (!promptEl) return;
+      // Need browser push support
+      if (!('Notification' in window) || !('PushManager' in window) || !('serviceWorker' in navigator)) return;
+      // Skip if already granted or explicitly denied
+      if (Notification.permission === 'granted' || Notification.permission === 'denied') return;
+      // Skip if dismissed in last 7 days
+      try {
+        var dismissedAt = parseInt(localStorage.getItem('fl_notif_dismiss_at') || '0', 10);
+        if (dismissedAt && (Date.now() - dismissedAt) < 7 * 24 * 60 * 60 * 1000) return;
+      } catch(e) {}
+      promptEl.style.display = 'block';
+
+      // Wire up buttons (once only)
+      var enableBtn  = document.getElementById('mlNotifEnable');
+      var dismissBtn = document.getElementById('mlNotifDismiss');
+      var statusEl   = document.getElementById('mlNotifStatus');
+      if (enableBtn && !enableBtn._wired) {
+        enableBtn._wired = true;
+        enableBtn.addEventListener('click', function() {
+          enableBtn.disabled = true;
+          enableBtn.textContent = 'Enabling…';
+          subscribeToMorningNudge(statusEl, promptEl);
+        });
+      }
+      if (dismissBtn && !dismissBtn._wired) {
+        dismissBtn._wired = true;
+        dismissBtn.addEventListener('click', function() {
+          try { localStorage.setItem('fl_notif_dismiss_at', Date.now().toString()); } catch(e) {}
+          promptEl.style.display = 'none';
+        });
+      }
+    }
+
+    // Request permission + subscribe + send timezone to backend
+    function subscribeToMorningNudge(statusEl, promptEl) {
+      var token = '';
+      try { token = localStorage.getItem('fl_token') || ''; } catch(e) {}
+      if (!token) {
+        if (statusEl) { statusEl.textContent = 'Log in first to enable nudges.'; statusEl.style.display = 'block'; }
+        return;
+      }
+      Notification.requestPermission().then(function(permission) {
+        if (permission !== 'granted') {
+          if (statusEl) {
+            statusEl.textContent = 'Permission denied. You can enable it in browser settings.';
+            statusEl.style.display = 'block';
+          }
+          var enableBtn = document.getElementById('mlNotifEnable');
+          if (enableBtn) { enableBtn.disabled = false; enableBtn.textContent = 'Enable notifications'; }
+          return;
+        }
+        return navigator.serviceWorker.ready.then(function(reg) {
+          return fetch('/api/notifications/vapid-public-key')
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+              if (!data.key) throw new Error('VAPID not configured');
+              return reg.pushManager.subscribe({
+                userVisibleOnly: true,
+                applicationServerKey: urlBase64ToUint8ArrayPortal(data.key)
+              });
+            })
+            .then(function(subscription) {
+              var tz = 'America/New_York';
+              try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone || tz; } catch(e) {}
+              return fetch('/api/notifications/subscribe', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                body: JSON.stringify({ subscription: subscription.toJSON(), timezone: tz })
+              });
+            })
+            .then(function(r) {
+              if (r.ok) {
+                promptEl.innerHTML = '<div style="text-align:center;padding:8px 0;font-weight:600;">✅ Morning nudge enabled!</div><div style="text-align:center;font-size:13px;opacity:0.8">We\'ll tap you at 7am with your tasks.</div>';
+              } else {
+                throw new Error('Subscribe failed');
+              }
+            });
+        });
+      }).catch(function(err) {
+        if (statusEl) {
+          statusEl.textContent = 'Could not enable. Try from Settings.';
+          statusEl.style.display = 'block';
+        }
+        var enableBtn = document.getElementById('mlNotifEnable');
+        if (enableBtn) { enableBtn.disabled = false; enableBtn.textContent = 'Enable notifications'; }
+      });
+    }
+
+    function urlBase64ToUint8ArrayPortal(base64String) {
+      var padding = '='.repeat((4 - base64String.length % 4) % 4);
+      var base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
+      var rawData = window.atob(base64);
+      var outputArray = new Uint8Array(rawData.length);
+      for (var i = 0; i < rawData.length; ++i) { outputArray[i] = rawData.charCodeAt(i); }
+      return outputArray;
+    }
+
+    function formatHour(h) {
+      if (h === 0) return '12am';
+      if (h < 12) return h + 'am';
+      if (h === 12) return '12pm';
+      return (h - 12) + 'pm';
+    }
+
+    // ── Quick add from empty state ────────────────────────────────────────────
+    function handleMlQuickAdd() {
+      if (!quickAddInput) return;
+      var title = quickAddInput.value.trim();
+      if (!title) return;
+      quickAddBtn.disabled = true;
+      quickAddBtn.textContent = '…';
+      fetch('/api/tasks', {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify({ title: title })
+      }).then(function(r) { return r.ok ? r.json() : null; })
+        .then(function(data) {
+          if (data && data.task) {
+            // Add to tasks array and show it
+            tasks.push({
+              id: data.task.id,
+              title: title,
+              step_count: 0,
+              is_overdue: 0,
+              skip_count: 0
+            });
+            buildProgressDots();
+            showTask(tasks.length - 1);
+          } else {
+            showToast('Could not add task. Try again.', 'error');
+          }
+        })
+        .catch(function() { showToast('Network error.', 'error'); })
+        .finally(function() {
+          quickAddBtn.disabled = false;
+          quickAddBtn.textContent = 'Add';
+          quickAddInput.value = '';
+        });
+    }
+
+    // ── Wire up events ────────────────────────────────────────────────────────
+    if (startBtn) startBtn.addEventListener('click', openLaunch);
+    if (doneBtn)  doneBtn.addEventListener('click', handleDone);
+    if (skipBtn)  skipBtn.addEventListener('click', handleSkip);
+    if (exitBtn)  exitBtn.addEventListener('click', function() {
+      if (completed > 0 || skipped > 0) {
+        endSession();
+      } else {
+        // save empty session still for streak logic
+        fetch('/api/tasks/morning-launch/session', {
+          method: 'POST',
+          headers: getHeaders(),
+          body: JSON.stringify({ tasks_completed: 0, tasks_skipped: 0, events: [] })
+        }).catch(function() {});
+        closeLaunch();
+      }
+    });
+    if (summaryClose) summaryClose.addEventListener('click', closeLaunch);
+    if (quickAddBtn) quickAddBtn.addEventListener('click', handleMlQuickAdd);
+    if (quickAddInput) {
+      quickAddInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') handleMlQuickAdd();
+      });
+    }
+
+    // Keyboard: Escape to close
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape' && !overlay.classList.contains('hidden')) {
+        closeLaunch();
+      }
+    });
+
+    // ── Auto-launch on first visit of the day ─────────────────────────────────
+    // Triggers in two scenarios:
+    // 1. ?launch=1 in URL — tapped a morning push notification. Launch immediately.
+    // 2. Normal morning visit (6am–11am) if not already launched today.
+    var today = new Date().toISOString().slice(0, 10);
+    var lastLaunchDate = '';
+    try { lastLaunchDate = localStorage.getItem('fl_ml_last_launch') || ''; } catch(e) {}
+
+    var urlParams = new URLSearchParams(window.location.search);
+    var fromNotification = urlParams.get('launch') === '1';
+
+    if (fromNotification) {
+      // Came from morning push notification — launch immediately, mark today done
+      setTimeout(function() {
+        try { localStorage.setItem('fl_ml_last_launch', today); } catch(e) {}
+        openLaunch();
+        // Clean URL so refresh doesn't re-trigger
+        try { history.replaceState({}, '', '/home'); } catch(e) {}
+      }, 300);
+    } else {
+      var isAutoLaunchHour = getHour() >= 6 && getHour() < 11;
+      if (isAutoLaunchHour && lastLaunchDate !== today) {
+        // Defer 600ms so the page loads first
+        setTimeout(function() {
+          try { localStorage.setItem('fl_ml_last_launch', today); } catch(e) {}
+          openLaunch();
+        }, 600);
+      }
+    }
+
+    // Update timezone on backend (so morning nudge fires at correct local time)
+    (function() {
+      var token = '';
+      try { token = localStorage.getItem('fl_token') || ''; } catch(e) {}
+      if (!token) return;
+      try {
+        var tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        if (tz) {
+          fetch('/api/notifications/timezone', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+            body: JSON.stringify({ timezone: tz })
+          }).catch(function() {});
+        }
+      } catch(e) {}
+    })();
+  })();
+
+})();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daily Three Template — FocusLedger</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,400&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --navy: #011e5c;
+            --navy-mid: #02287a;
+            --gold: #c9a84c;
+            --gold-faint: #f7f1e4;
+            --cream: #faf8f4;
+            --cream-warm: #f3ede3;
+            --teal: #3a8585;
+            --teal-faint: #edf5f5;
+            --border: #ddd8ce;
+            --border-light: #eae6de;
+            --text-main: #18181b;
+            --text-body: #3d3d44;
+            --text-muted: #8a8a95;
+            --font-display: 'Fraunces', Georgia, serif;
+            --font-body: 'DM Sans', system-ui, sans-serif;
+            --line-height: 38px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html { font-size: 14px; }
+        body {
+            font-family: var(--font-body);
+            color: var(--text-main);
+            background: white;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* ── PAGE WRAPPER ── */
+        .page {
+            max-width: 760px;
+            margin: 0 auto;
+            background: white;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* ── HEADER ── */
+        .header {
+            background: var(--navy);
+            padding: 1.5rem 2.5rem 1.25rem;
+            position: relative;
+        }
+        .header::after {
+            content: '';
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--gold) 0%, var(--teal) 60%, transparent 100%);
+        }
+        .header-inner {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .header-left {}
+        .header-tag {
+            font-size: 0.6rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            color: rgba(201,168,76,0.7);
+            margin-bottom: 0.3rem;
+        }
+        .header h1 {
+            font-family: var(--font-display);
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: white;
+            line-height: 1.15;
+            letter-spacing: -0.02em;
+        }
+        .header h1 em {
+            font-style: italic;
+            color: var(--gold);
+            font-weight: 400;
+        }
+        .header-right {
+            text-align: right;
+        }
+        .date-label {
+            font-size: 0.62rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: rgba(255,255,255,0.35);
+            margin-bottom: 0.35rem;
+        }
+        .date-line {
+            width: 160px;
+            height: 1px;
+            background: rgba(255,255,255,0.2);
+            border: none;
+            border-bottom: 1px solid rgba(255,255,255,0.25);
+            display: block;
+        }
+
+        /* ── MORNING SECTION ── */
+        .section {
+            padding: 1.25rem 2.5rem;
+            flex: 1;
+        }
+
+        .section-label {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            margin-bottom: 1rem;
+        }
+        .section-label-icon {
+            width: 22px; height: 22px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            flex-shrink: 0;
+        }
+        .icon-morning { background: var(--gold-faint); }
+        .icon-evening { background: var(--teal-faint); }
+        .section-label-text {
+            font-size: 0.62rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+        }
+        .label-morning { color: #8a6820; }
+        .label-evening { color: var(--teal); }
+        .section-label-rule {
+            flex: 1;
+            height: 1px;
+            background: var(--border-light);
+        }
+
+        /* ── MOOD ROW ── */
+        .mood-row {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            padding-bottom: 0.85rem;
+            border-bottom: 1px solid var(--border-light);
+        }
+        .mood-label {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            white-space: nowrap;
+        }
+        .mood-circles {
+            display: flex;
+            gap: 0.6rem;
+        }
+        .mood-circle {
+            width: 28px; height: 28px;
+            border-radius: 50%;
+            border: 1.5px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+        .energy-label {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            margin-left: auto;
+            white-space: nowrap;
+        }
+        .energy-boxes {
+            display: flex;
+            gap: 0.3rem;
+        }
+        .energy-box {
+            width: 18px; height: 18px;
+            border: 1.5px solid var(--border);
+            border-radius: 2px;
+        }
+
+        /* ── TASK BLOCK ── */
+        .task-block {
+            margin-bottom: 1rem;
+        }
+        .task-num-row {
+            display: flex;
+            align-items: baseline;
+            gap: 0.6rem;
+            margin-bottom: 0.4rem;
+        }
+        .task-num {
+            font-family: var(--font-display);
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--navy);
+            opacity: 0.12;
+            line-height: 1;
+            flex-shrink: 0;
+            width: 22px;
+        }
+        .task-name-line {
+            flex: 1;
+            height: 1px;
+            border: none;
+            border-bottom: 1.5px solid var(--text-main);
+            opacity: 0.18;
+            margin-bottom: 2px;
+        }
+        .task-meta {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 0.5rem;
+            margin-left: 28px;
+            padding-bottom: 0.65rem;
+            border-bottom: 1px dashed var(--border-light);
+        }
+        .task-meta-item {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+        .task-meta-label {
+            font-size: 0.6rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            white-space: nowrap;
+        }
+        .task-meta-line {
+            flex: 1;
+            height: 1px;
+            border: none;
+            border-bottom: 1px solid var(--border);
+            min-width: 80px;
+        }
+        .task-done-box {
+            width: 16px; height: 16px;
+            border: 1.5px solid var(--border);
+            border-radius: 2px;
+            flex-shrink: 0;
+        }
+
+        /* ── DIVIDER ── */
+        .section-hr {
+            height: 1px;
+            background: var(--border);
+            margin: 0 2.5rem;
+        }
+
+        /* ── EVENING SECTION ── */
+        .reflection-block {
+            margin-bottom: 0.85rem;
+        }
+        .reflection-q {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            margin-bottom: 0.35rem;
+            font-style: italic;
+        }
+        .reflection-lines {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        .write-line {
+            height: 1px;
+            border: none;
+            border-bottom: 1px solid var(--border);
+            display: block;
+        }
+
+        /* ── COMPLETION ROW ── */
+        .completion-row {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            margin-top: 0.85rem;
+            padding-top: 0.85rem;
+            border-top: 1px solid var(--border-light);
+        }
+        .completion-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .completion-box {
+            width: 16px; height: 16px;
+            border: 1.5px solid var(--border);
+            border-radius: 2px;
+        }
+        .completion-label {
+            font-size: 0.68rem;
+            color: var(--text-muted);
+        }
+
+        /* ── SCIENCE NOTE ── */
+        .science-note {
+            background: var(--cream-warm);
+            border-left: 3px solid var(--gold);
+            padding: 0.85rem 1rem;
+            margin: 0 2.5rem 1rem;
+        }
+        .science-note p {
+            font-size: 0.68rem;
+            color: var(--text-body);
+            line-height: 1.55;
+        }
+        .science-note strong {
+            color: var(--text-main);
+        }
+
+        /* ── FOOTER ── */
+        .footer {
+            background: var(--navy);
+            padding: 0.6rem 2.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .footer-brand {
+            font-size: 0.65rem;
+            font-weight: 700;
+            color: rgba(255,255,255,0.5);
+            letter-spacing: 0.03em;
+        }
+        .footer-tagline {
+            font-size: 0.62rem;
+            color: rgba(255,255,255,0.3);
+            font-style: italic;
+        }
+        .footer-url {
+            font-size: 0.62rem;
+            color: rgba(201,168,76,0.6);
+        }
+
+        /* ── PRINT STYLES ── */
+        @media print {
+            html { font-size: 11px; }
+            body { background: white; }
+            .page { max-width: 100%; min-height: 0; box-shadow: none; }
+            a { color: inherit; text-decoration: none; }
+            .header { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .footer { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .science-note { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        }
+
+        @media screen {
+            body { background: #e8e4de; }
+            .page {
+                margin: 2rem auto;
+                box-shadow: 0 4px 40px rgba(0,0,0,0.15), 0 1px 4px rgba(0,0,0,0.1);
+            }
+        }
+
+        /* ── EMAIL GATE OVERLAY ── */
+        .gate-overlay {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: var(--cream);
+            padding: 1.5rem;
+        }
+        .gate-card {
+            background: var(--navy);
+            border-radius: 6px;
+            padding: 2.5rem 2rem;
+            max-width: 420px;
+            width: 100%;
+            text-align: center;
+            box-shadow: 0 8px 40px rgba(1,30,92,0.3);
+        }
+        .gate-icon { font-size: 2.5rem; margin-bottom: 0.75rem; }
+        .gate-card h2 {
+            font-family: var(--font-display);
+            font-size: 1.4rem;
+            font-weight: 600;
+            color: white;
+            line-height: 1.25;
+            margin-bottom: 0.6rem;
+        }
+        .gate-card h2 em { color: var(--gold); font-style: italic; }
+        .gate-card p {
+            font-size: 0.82rem;
+            color: rgba(255,255,255,0.6);
+            line-height: 1.55;
+            margin-bottom: 1.5rem;
+        }
+        .gate-form { width: 100%; }
+        .gate-input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            font-size: 0.9rem;
+            border: 2px solid rgba(201,168,76,0.3);
+            border-radius: 4px;
+            background: rgba(255,255,255,0.08);
+            color: white;
+            outline: none;
+            box-sizing: border-box;
+            margin-bottom: 0.75rem;
+            transition: border-color 0.15s;
+        }
+        .gate-input::placeholder { color: rgba(255,255,255,0.4); }
+        .gate-input:focus { border-color: var(--gold); }
+        .gate-input.error { border-color: #e07070; }
+        .gate-submit {
+            width: 100%;
+            padding: 0.8rem;
+            background: var(--gold);
+            color: #1a1a1a;
+            font-size: 0.9rem;
+            font-weight: 700;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            letter-spacing: 0.01em;
+            transition: background 0.15s;
+        }
+        .gate-submit:hover { background: var(--gold-light); }
+        .gate-submit:disabled { opacity: 0.5; cursor: not-allowed; }
+        .gate-error {
+            color: #f0a0a0;
+            font-size: 0.78rem;
+            margin-top: 0.5rem;
+            display: none;
+        }
+        .gate-error.visible { display: block; }
+        .gate-success { display: none; text-align: center; }
+        .gate-success.visible { display: block; }
+        .gate-success h3 {
+            font-family: var(--font-display);
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--gold);
+            margin-bottom: 0.5rem;
+        }
+        .gate-success p { font-size: 0.8rem; color: rgba(255,255,255,0.6); margin-bottom: 1.25rem; }
+        .gate-success .gate-download-btn {
+            display: inline-block;
+            padding: 0.75rem 1.5rem;
+            background: var(--gold);
+            color: #1a1a1a;
+            font-weight: 700;
+            font-size: 0.85rem;
+            border-radius: 4px;
+            text-decoration: none;
+        }
+        .gate-success .gate-download-btn:hover { background: var(--gold-light); }
+        .gate-success .gate-signup-nudge { margin-top: 1rem; font-size: 0.75rem; color: rgba(255,255,255,0.4); }
+        .gate-success .gate-signup-nudge a { color: var(--teal-light); text-decoration: none; }
+        .gate-success .gate-signup-nudge a:hover { text-decoration: underline; }
+        .page-gated { display: none; }
+
+        @media print {
+            .gate-overlay { display: none; }
+            .page-gated { display: block; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- EMAIL GATE OVERLAY -->
+<div class="gate-overlay" id="gateOverlay">
+    <div class="gate-card">
+        <div class="gate-icon">📅</div>
+        <h2>Get your free <em>Daily Three Template</em></h2>
+        <p>Enter your email to download the printable — no signup required.</p>
+
+        <div class="gate-form" id="gateForm">
+            <input type="email" class="gate-input" id="gateEmail" placeholder="your@email.com" autocomplete="email" />
+            <button type="button" class="gate-submit" id="gateSubmit">Download Free →</button>
+            <div class="gate-error" id="gateError"></div>
+        </div>
+
+        <div class="gate-success" id="gateSuccess">
+            <h3>You're in! ✓</h3>
+            <p>Your download is ready.</p>
+            <a href="javascript:window.print()" class="gate-download-btn">🖨️ Print / Save PDF</a>
+            <p class="gate-signup-nudge">Want the full experience? <a href="https://focusledger.net/signup">Try FocusLedger free →</a></p>
+        </div>
+    </div>
+</div>
+
+<!-- PRINTABLE CONTENT (hidden until email submitted) -->
+<div class="page page-gated" id="pageContent">
+
+    <!-- HEADER -->
+    <div class="header">
+        <div class="header-inner">
+            <div class="header-left">
+                <div class="header-tag">Accountabilibuddy · Daily Three</div>
+                <h1>Today's <em>Three</em> Things</h1>
+            </div>
+            <div class="header-right">
+                <div class="date-label">Date</div>
+                <hr class="date-line">
+            </div>
+        </div>
+    </div>
+
+    <!-- MORNING SECTION -->
+    <div class="section">
+
+        <div class="section-label">
+            <div class="section-label-icon icon-morning">☀️</div>
+            <span class="section-label-text label-morning">Morning — Set Your Intention</span>
+            <div class="section-label-rule"></div>
+        </div>
+
+        <!-- Mood + Energy -->
+        <div class="mood-row">
+            <span class="mood-label">Mood check-in:</span>
+            <div class="mood-circles">
+                <div class="mood-circle">😵</div>
+                <div class="mood-circle">😐</div>
+                <div class="mood-circle">🙂</div>
+                <div class="mood-circle">😄</div>
+            </div>
+            <span class="energy-label">Energy (1–5):</span>
+            <div class="energy-boxes">
+                <div class="energy-box"></div>
+                <div class="energy-box"></div>
+                <div class="energy-box"></div>
+                <div class="energy-box"></div>
+                <div class="energy-box"></div>
+            </div>
+        </div>
+
+        <!-- Task 1 -->
+        <div class="task-block">
+            <div class="task-num-row">
+                <div class="task-num">1</div>
+                <div class="task-name-line"></div>
+                <div class="task-name-line"></div>
+            </div>
+            <div class="task-meta">
+                <div class="task-meta-item">
+                    <span class="task-meta-label">Time block:</span>
+                    <div class="task-meta-line"></div>
+                </div>
+                <div class="task-meta-item">
+                    <span class="task-meta-label">Done</span>
+                    <div class="task-done-box"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Task 2 -->
+        <div class="task-block">
+            <div class="task-num-row">
+                <div class="task-num">2</div>
+                <div class="task-name-line"></div>
+                <div class="task-name-line"></div>
+            </div>
+            <div class="task-meta">
+                <div class="task-meta-item">
+                    <span class="task-meta-label">Time block:</span>
+                    <div class="task-meta-line"></div>
+                </div>
+                <div class="task-meta-item">
+                    <span class="task-meta-label">Done</span>
+                    <div class="task-done-box"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Task 3 -->
+        <div class="task-block">
+            <div class="task-num-row">
+                <div class="task-num">3</div>
+                <div class="task-name-line"></div>
+                <div class="task-name-line"></div>
+            </div>
+            <div class="task-meta">
+                <div class="task-meta-item">
+                    <span class="task-meta-label">Time block:</span>
+                    <div class="task-meta-line"></div>
+                </div>
+                <div class="task-meta-item">
+                    <span class="task-meta-label">Done</span>
+                    <div class="task-done-box"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- One thing to avoid -->
+        <div style="margin-top: 0.5rem; margin-bottom: 0;">
+            <div class="task-meta-item" style="gap: 0.5rem;">
+                <span class="task-meta-label" style="white-space: nowrap; color: var(--text-muted);">One thing I'm avoiding today:</span>
+                <div class="task-meta-line"></div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- DIVIDER -->
+    <div class="section-hr"></div>
+
+    <!-- SCIENCE NOTE -->
+    <div class="science-note" style="margin-top: 0.85rem;">
+        <p><strong>Why only three?</strong> Barkley's behavioral inhibition model + Gollwitzer's 94-study meta-analysis agree: naming a small number of specific tasks with time context <em>roughly doubles follow-through</em>. A full backlog triggers avoidance. Three tractable tasks with time blocks create implementation intentions. That's the mechanism.</p>
+    </div>
+
+    <!-- EVENING SECTION -->
+    <div class="section" style="padding-top: 0.25rem;">
+
+        <div class="section-label">
+            <div class="section-label-icon icon-evening">🌙</div>
+            <span class="section-label-text label-evening">Evening — Honest Recap</span>
+            <div class="section-label-rule"></div>
+        </div>
+
+        <div class="reflection-block">
+            <div class="reflection-q">What got done? (tasks completed, partial wins, redirects)</div>
+            <div class="reflection-lines">
+                <hr class="write-line">
+                <hr class="write-line">
+                <hr class="write-line">
+            </div>
+        </div>
+
+        <div class="reflection-block">
+            <div class="reflection-q">What got in the way? (interruption, avoidance loop, underestimated time)</div>
+            <div class="reflection-lines">
+                <hr class="write-line">
+                <hr class="write-line">
+            </div>
+        </div>
+
+        <div class="reflection-block">
+            <div class="reflection-q">One thing I'll do differently tomorrow:</div>
+            <div class="reflection-lines">
+                <hr class="write-line">
+                <hr class="write-line">
+            </div>
+        </div>
+
+        <!-- Completion checkboxes -->
+        <div class="completion-row">
+            <div class="completion-item">
+                <div class="completion-box"></div>
+                <span class="completion-label">3 tasks identified this morning</span>
+            </div>
+            <div class="completion-item">
+                <div class="completion-box"></div>
+                <span class="completion-label">Evening recap done</span>
+            </div>
+            <div class="completion-item">
+                <div class="completion-box"></div>
+                <span class="completion-label">Tomorrow's three already in mind</span>
+            </div>
+        </div>
+
+    </div>
+
+</div><!-- /pageContent -->
+
+    <!-- FOOTER -->
+    <div class="footer">
+        <div class="footer-brand">FocusLedger</div>
+        <div class="footer-tagline">Executive functioning on autopilot</div>
+        <div class="footer-url">focusledger.net</div>
+    </div>
+
+</div>
+</div>
+
+<script>
+(function () {
+    'use strict';
+    var STORAGE_KEY = 'fl_lm_daily3';
+    var pageContent = document.getElementById('pageContent');
+    var gateOverlay = document.getElementById('gateOverlay');
+    var gateForm = document.getElementById('gateForm');
+    var gateEmail = document.getElementById('gateEmail');
+    var gateSubmit = document.getElementById('gateSubmit');
+    var gateError = document.getElementById('gateError');
+    var gateSuccess = document.getElementById('gateSuccess');
+
+    // If already submitted, show printable content and skip overlay
+    if (localStorage.getItem(STORAGE_KEY)) {
+        gateOverlay.style.display = 'none';
+        pageContent.style.display = 'block';
+        return;
+    }
+
+    // Hide printable content until email captured
+    pageContent.style.display = 'none';
+
+    gateSubmit.addEventListener('click', function () {
+        var email = gateEmail.value.trim();
+        if (!email || !/^[^\n\r@]+@[^\n\r@]+$/.test(email)) {
+            gateError.textContent = 'Please enter a valid email address.';
+            gateError.classList.add('visible');
+            gateEmail.classList.add('error');
+            return;
+        }
+
+        gateError.textContent = '';
+        gateError.classList.remove('visible');
+        gateEmail.classList.remove('error');
+        gateSubmit.disabled = true;
+        gateSubmit.textContent = 'Submitting...';
+
+        var formData = new FormData();
+        formData.append('email', email);
+        formData.append('lead_magnet_type', 'daily_three');
+        formData.append('source_page', window.location.href);
+
+        fetch('/api/leads/capture', { method: 'POST', body: formData })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                if (data.success) {
+                    localStorage.setItem(STORAGE_KEY, '1');
+                    pageContent.style.display = 'block';
+                    gateOverlay.style.display = 'none';
+                } else {
+                    gateError.textContent = data.message || 'Something went wrong. Please try again.';
+                    gateError.classList.add('visible');
+                    gateSubmit.disabled = false;
+                    gateSubmit.textContent = 'Download Free →';
+                }
+            })
+            .catch(function () {
+                localStorage.setItem(STORAGE_KEY, '1');
+                pageContent.style.display = 'block';
+                gateOverlay.style.display = 'none';
+            });
+    });
+
+    gateEmail.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') gateSubmit.click();
+    });
+})();
+</script>
+
+</body>
+</html>

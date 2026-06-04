@@ -1,0 +1,65 @@
+{
+  "name": "FocusLedger",
+  "short_name": "FocusLedger",
+  "description": "One app for your tasks and your money — ADHD-friendly focus tracker with bank sync.",
+  "start_url": "/app",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#faf9f7",
+  "theme_color": "#011e5c",
+  "categories": ["productivity", "finance", "utilities"],
+  "lang": "en",
+  "icons": [
+    {
+      "src": "/icons/fl-icon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/fl-icon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icons/fl-icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/fl-icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "screenshots": [],
+  "share_target": {
+    "action": "/share",
+    "method": "GET",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  },
+  "shortcuts": [
+    {
+      "name": "Add Task",
+      "short_name": "Task",
+      "description": "Jump straight to adding a new task",
+      "url": "/app#add-task",
+      "icons": [{ "src": "/icons/fl-icon.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Log Expense",
+      "short_name": "Expense",
+      "description": "Quickly log a new expense",
+      "url": "/app#add-expense",
+      "icons": [{ "src": "/icons/fl-icon.png", "sizes": "192x192" }]
+    }
+  ]
+}

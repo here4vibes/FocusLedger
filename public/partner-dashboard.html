@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <link rel="icon" type="image/png" href="/icons/fl-icon.png" />
+  <title>Partner Dashboard — FocusLedger</title>
+  <link rel="stylesheet" href="/css/design-system.css" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--cream);
+      color: var(--text-dark);
+      font-family: var(--font-sans);
+      min-height: 100vh;
+      padding-bottom: 80px; /* bottom-tabs clearance */
+    }
+
+    /* ── Header ─────────────────────────────────────────────────────── */
+    .page-header {
+      background: var(--trust-blue);
+      color: #fff;
+      padding: 20px 20px 24px;
+    }
+    .page-header .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: rgba(255,255,255,0.7);
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 500;
+      margin-bottom: 12px;
+    }
+    .page-header .back-link:hover { color: #fff; }
+    .partner-meta {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .partner-avatar {
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      border: 2px solid rgba(255,255,255,0.3);
+      object-fit: cover;
+      flex-shrink: 0;
+    }
+    .partner-avatar-initials {
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      background: var(--gold);
+      color: var(--trust-blue);
+      font-family: var(--font-serif);
+      font-size: 22px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      border: 2px solid rgba(255,255,255,0.2);
+    }
+    .partner-info h2 {
+      font-family: var(--font-sans) !important;
+      font-size: 18px;
+      font-weight: 600;
+      color: #fff;
+      margin-bottom: 2px;
+    }
+    .partner-info p {
+      font-size: 13px;
+      color: rgba(255,255,255,0.65);
+    }
+    .tandem-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: rgba(255,255,255,0.12);
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 20px;
+      padding: 3px 10px;
+      font-size: 11px;
+      font-weight: 600;
+      color: rgba(255,255,255,0.9);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-left: auto;
+      flex-shrink: 0;
+    }
+
+    /* ── Content ─────────────────────────────────────────────────────── */
+    .content {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px 16px;
+    }
+
+    /* ── Section title ───────────────────────────────────────────────── */
+    .section-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      margin-bottom: 10px;
+      padding: 0 2px;
+    }
+
+    /* ── Completion Feed ─────────────────────────────────────────────── */
+    .feed-section { margin-bottom: 28px; }
+
+    .feed-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 12px 14px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--card-radius);
+      margin-bottom: 8px;
+    }
+    .feed-icon {
+      width: 28px;
+      height: 28px;
+      background: #edfcf0;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+    .feed-body { flex: 1; min-width: 0; }
+    .feed-body .feed-name {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-dark);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .feed-body .feed-meta {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+    .feed-tag {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 7px;
+      border-radius: 10px;
+      flex-shrink: 0;
+      align-self: center;
+    }
+    .tag-household {
+      background: #eff6ff;
+      color: #1d4ed8;
+      border: 1px solid #bfdbfe;
+    }
+    .tag-shared {
+      background: #f5f3ff;
+      color: #6d28d9;
+      border: 1px solid #ddd6fe;
+    }
+
+    /* ── Task Groups ─────────────────────────────────────────────────── */
+    .task-group { margin-bottom: 28px; }
+
+    .task-card {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 13px 14px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--card-radius);
+      margin-bottom: 6px;
+      transition: opacity 0.15s;
+    }
+    .task-card.is-done { opacity: 0.55; }
+
+    .task-check {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      border: 2px solid var(--border);
+      flex-shrink: 0;
+      margin-top: 1px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .task-check.done {
+      background: var(--success);
+      border-color: var(--success);
+      color: #fff;
+      font-size: 11px;
+    }
+
+    .task-body { flex: 1; min-width: 0; }
+    .task-title {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-dark);
+      line-height: 1.4;
+    }
+    .task-card.is-done .task-title {
+      text-decoration: line-through;
+      color: var(--text-muted);
+    }
+    .task-sub {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 3px;
+    }
+    .task-meta {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-left: auto;
+      flex-shrink: 0;
+    }
+
+    /* ── Empty state ─────────────────────────────────────────────────── */
+    .empty-state {
+      text-align: center;
+      padding: 32px 20px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--card-radius);
+    }
+    .empty-state .icon { font-size: 36px; margin-bottom: 10px; }
+    .empty-state h3 {
+      font-family: var(--font-sans) !important;
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text-dark);
+      margin-bottom: 6px;
+    }
+    .empty-state p {
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+
+    /* ── No partnership state ────────────────────────────────────────── */
+    .no-partner-wrap {
+      max-width: 420px;
+      margin: 60px auto;
+      text-align: center;
+      padding: 0 20px;
+    }
+    .no-partner-wrap .big-icon { font-size: 52px; margin-bottom: 16px; }
+    .no-partner-wrap h2 {
+      font-size: 22px;
+      color: var(--text-dark);
+      margin-bottom: 10px;
+    }
+    .no-partner-wrap p {
+      font-size: 15px;
+      color: var(--text-muted);
+      line-height: 1.6;
+      margin-bottom: 24px;
+    }
+    .btn-primary {
+      display: inline-block;
+      padding: 13px 28px;
+      background: var(--trust-blue);
+      color: #fff;
+      border: none;
+      border-radius: var(--btn-radius);
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      transition: background 0.15s;
+    }
+    .btn-primary:hover { background: var(--trust-blue-mid); }
+
+    /* ── Privacy notice ──────────────────────────────────────────────── */
+    .privacy-note {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 12px 14px;
+      background: #fffbeb;
+      border: 1px solid #f59e0b;
+      border-radius: var(--card-radius);
+      margin-bottom: 24px;
+      font-size: 13px;
+      color: #78350f;
+      line-height: 1.5;
+    }
+    .privacy-note .lock-icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+
+    /* ── Spinner ─────────────────────────────────────────────────────── */
+    .spinner {
+      width: 36px; height: 36px;
+      border: 3px solid var(--border);
+      border-top-color: var(--trust-blue);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      margin: 60px auto;
+      display: block;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Refresh button ─────────────────────────────────────────────── */
+    .refresh-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 14px;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: var(--btn-radius);
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .refresh-btn:hover { background: var(--cream-dark); }
+    .refresh-row {
+      display: flex;
+      justify-content: flex-end;
+      margin-bottom: 16px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Loading -->
+  <div id="state-loading">
+    <span class="spinner"></span>
+  </div>
+
+  <!-- No partnership -->
+  <div id="state-no-partner" style="display:none;">
+    <div class="no-partner-wrap">
+      <div class="big-icon">🤝</div>
+      <h2>No partner yet</h2>
+      <p>Invite a friend from Settings to see their shared tasks here. You'll both be able to cheer each other on.</p>
+      <a href="/settings" class="btn-primary">Go to Settings</a>
+    </div>
+  </div>
+
+  <!-- Main dashboard (has active partnership) -->
+  <div id="state-dashboard" style="display:none;">
+
+    <!-- Header -->
+    <div class="page-header">
+      <a href="/app/tasks" class="back-link">← Back to app</a>
+      <div class="partner-meta">
+        <div id="partner-avatar-wrap"></div>
+        <div class="partner-info">
+          <h2 id="partner-name">Partner</h2>
+          <p id="partner-email"></p>
+        </div>
+        <span class="tandem-badge">🤝 Tandem</span>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <!-- Privacy notice -->
+      <div class="privacy-note">
+        <span class="lock-icon">🔒</span>
+        <span>You only see tasks <strong>your partner has chosen to share</strong>. Private tasks are never shown here.</span>
+      </div>
+
+      <!-- Refresh -->
+      <div class="refresh-row">
+        <button class="refresh-btn" id="btn-refresh">↻ Refresh</button>
+      </div>
+
+      <!-- Completion Feed -->
+      <div class="feed-section" id="feed-section" style="display:none;">
+        <div class="section-title">Recently completed</div>
+        <div id="feed-list"></div>
+      </div>
+
+      <!-- Household tasks -->
+      <div class="task-group" id="household-group" style="display:none;">
+        <div class="section-title">🏠 Household tasks</div>
+        <div id="household-list"></div>
+      </div>
+
+      <!-- Individually shared tasks -->
+      <div class="task-group" id="shared-group" style="display:none;">
+        <div class="section-title">📌 Shared with you</div>
+        <div id="shared-list"></div>
+      </div>
+
+      <!-- Empty state (partner has no shared tasks) -->
+      <div class="empty-state" id="empty-state" style="display:none;">
+        <div class="icon">👀</div>
+        <h3>Nothing shared yet</h3>
+        <p id="empty-desc">Your partner hasn't shared any tasks yet. They can mark tasks as "Household" or share individual tasks from their task list.</p>
+      </div>
+
+      <!-- Tell Buddy section — Tandem Buddy-mediated accountability -->
+      <!-- Only shown when user has Tandem access. Hidden by JS if no access. -->
+      <div id="tell-buddy-section" class="task-group" style="display:none;">
+        <div class="section-title">💬 Tell Buddy</div>
+        <div style="
+          background: var(--surface);
+          border: 1px solid var(--border);
+          border-radius: var(--card-radius);
+          padding: 16px;
+        ">
+          <p style="font-size:13px; color:var(--text-muted); margin-bottom:12px; line-height:1.5;">
+            If you're worried about something — <strong>tell Buddy, not your partner.</strong>
+            Buddy will weave it into its coaching naturally, without pressure or attribution.
+          </p>
+          <textarea id="concern-text" placeholder="e.g. I'm worried they haven't been keeping up with the bills lately…" style="
+            width: 100%;
+            min-height: 80px;
+            padding: 10px 12px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: inherit;
+            resize: vertical;
+            background: var(--cream);
+            color: var(--text-dark);
+            margin-bottom: 10px;
+          "></textarea>
+          <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+            <select id="concern-topic" style="
+              padding: 8px 10px;
+              border: 1px solid var(--border);
+              border-radius: 8px;
+              font-size: 13px;
+              background: var(--cream);
+              color: var(--text-muted);
+              flex-shrink: 0;
+            ">
+              <option value="">Topic (optional)</option>
+              <option value="finances and bills">Finances &amp; bills</option>
+              <option value="health and self-care">Health &amp; self-care</option>
+              <option value="work and career">Work &amp; career</option>
+              <option value="household tasks">Household tasks</option>
+              <option value="focus and productivity">Focus &amp; productivity</option>
+              <option value="emotional wellbeing">Emotional wellbeing</option>
+            </select>
+            <button id="concern-submit" style="
+              padding: 9px 18px;
+              background: var(--trust-blue);
+              color: #fff;
+              border: none;
+              border-radius: 8px;
+              font-size: 14px;
+              font-weight: 600;
+              cursor: pointer;
+              transition: background 0.15s;
+            ">Tell Buddy</button>
+          </div>
+          <p id="concern-confirm" style="display:none; margin-top:10px; font-size:13px; color:#059669; font-weight:500;">
+            ✓ Buddy will keep this in mind — coaching only, never nagging.
+          </p>
+          <p id="concern-error" style="display:none; margin-top:10px; font-size:13px; color:#dc2626;"></p>
+          <p style="margin-top:12px; font-size:11px; color:var(--text-muted); line-height:1.4;">
+            🔒 Buddy will <strong>never</strong> quote your words or reveal that you sent this.
+            It uses your concern as a gentle coaching signal only.
+          </p>
+        </div>
+      </div>
+
+      <!-- Tandem upsell — shown when trial expired and no active subscription -->
+      <div id="tandem-upsell" style="display:none; margin-top:8px;">
+        <div style="
+          background: linear-gradient(135deg, #011e5c 0%, #02287a 100%);
+          border-radius: var(--card-radius);
+          padding: 22px;
+          color: #fff;
+          text-align: center;
+        ">
+          <div style="font-size:32px; margin-bottom:10px;">🤝</div>
+          <h3 style="font-size:17px; font-weight:700; margin-bottom:8px;">Your Tandem trial has ended</h3>
+          <p style="font-size:13px; color:rgba(255,255,255,0.75); margin-bottom:18px; line-height:1.5;">
+            Subscribe to Tandem to keep Buddy-mediated accountability, partner visibility, and shared task tracking.
+          </p>
+          <div style="display:flex; gap:10px; justify-content:center; flex-wrap:wrap;">
+            <a href="https://buy.stripe.com/5kQ3cudOzfx07o43Xbcs802" target="_blank" style="
+              display:inline-block;
+              padding:11px 20px;
+              background: var(--gold, #c9a84c);
+              color: #011e5c;
+              border-radius:8px;
+              font-size:14px;
+              font-weight:700;
+              text-decoration:none;
+            ">$14.99/mo</a>
+            <a href="https://buy.stripe.com/4gM8wOaCnesW37OctHcs803" target="_blank" style="
+              display:inline-block;
+              padding:11px 20px;
+              background: rgba(255,255,255,0.12);
+              color: #fff;
+              border: 1px solid rgba(255,255,255,0.25);
+              border-radius:8px;
+              font-size:14px;
+              font-weight:600;
+              text-decoration:none;
+            ">$149/yr — save 17%</a>
+          </div>
+          <p style="margin-top:14px; font-size:12px; color:rgba(255,255,255,0.5);">
+            If one partner subscribes, both get access.
+          </p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    const API = {
+      status:  '/api/partnerships/status',
+      tasks:   '/api/partnerships/partner-tasks',
+      feed:    '/api/partnerships/completion-feed',
+      tandemAccess: '/api/partnerships/tandem-access',
+      concern: '/api/partnerships/concern',
+      tandemActivate: '/api/partnerships/tandem-activate',
+    };
+
+    function jwt() {
+      try { return localStorage.getItem('token') || sessionStorage.getItem('token') || ''; }
+      catch { return ''; }
+    }
+
+    function authedFetch(url) {
+      return fetch(url, {
+        headers: {
+          'Authorization': `Bearer ${jwt()}`,
+          'Content-Type': 'application/json',
+        },
+      });
+    }
+
+    function showState(id) {
+      ['state-loading','state-no-partner','state-dashboard'].forEach(s => {
+        const el = document.getElementById(s);
+        if (el) el.style.display = s === id ? '' : 'none';
+      });
+    }
+
+    function relativeTime(isoStr) {
+      if (!isoStr) return '';
+      const diff = Date.now() - new Date(isoStr).getTime();
+      const mins = Math.floor(diff / 60000);
+      if (mins < 1) return 'just now';
+      if (mins < 60) return `${mins}m ago`;
+      const hrs = Math.floor(mins / 60);
+      if (hrs < 24) return `${hrs}h ago`;
+      const days = Math.floor(hrs / 24);
+      return `${days}d ago`;
+    }
+
+    function formatDueDate(dateStr) {
+      if (!dateStr) return '';
+      const [y, m, d] = dateStr.split('-').map(Number);
+      const date = new Date(y, m - 1, d);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const tomorrow = new Date(today); tomorrow.setDate(today.getDate() + 1);
+      if (date < today) return '⚠️ Overdue';
+      if (date.getTime() === today.getTime()) return 'Due today';
+      if (date.getTime() === tomorrow.getTime()) return 'Due tomorrow';
+      return 'Due ' + date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    }
+
+    function renderAvatar(name, avatarUrl) {
+      const wrap = document.getElementById('partner-avatar-wrap');
+      if (avatarUrl) {
+        const img = document.createElement('img');
+        img.src = avatarUrl;
+        img.alt = name || 'Partner';
+        img.className = 'partner-avatar';
+        img.onerror = () => { wrap.innerHTML = ''; wrap.appendChild(makeInitials(name)); };
+        wrap.appendChild(img);
+      } else {
+        wrap.appendChild(makeInitials(name));
+      }
+    }
+
+    function makeInitials(name) {
+      const div = document.createElement('div');
+      div.className = 'partner-avatar-initials';
+      div.textContent = (name || '?').charAt(0).toUpperCase();
+      return div;
+    }
+
+    function renderFeedItem(item, partnerName) {
+      const el = document.createElement('div');
+      el.className = 'feed-item';
+      const tag = item.is_household
+        ? '<span class="feed-tag tag-household">Household</span>'
+        : '<span class="feed-tag tag-shared">Shared</span>';
+      el.innerHTML = `
+        <div class="feed-icon">✅</div>
+        <div class="feed-body">
+          <div class="feed-name">${escHtml(item.title)}</div>
+          <div class="feed-meta">${escHtml(partnerName || 'Partner')} · ${relativeTime(item.completed_at)}</div>
+        </div>
+        ${tag}
+      `;
+      return el;
+    }
+
+    function renderTaskCard(task) {
+      const isDone = task.is_completed;
+      const el = document.createElement('div');
+      el.className = 'task-card' + (isDone ? ' is-done' : '');
+
+      const checkHtml = isDone
+        ? '<div class="task-check done">✓</div>'
+        : '<div class="task-check"></div>';
+
+      const dueLine = task.due_date && !isDone
+        ? `<div class="task-sub">${formatDueDate(task.due_date)}</div>` : '';
+
+      const tag = task.is_household
+        ? '<span class="feed-tag tag-household">Household</span>'
+        : '<span class="feed-tag tag-shared">Shared</span>';
+
+      el.innerHTML = `
+        ${checkHtml}
+        <div class="task-body">
+          <div class="task-title">${escHtml(task.title)}</div>
+          ${dueLine}
+        </div>
+        <div class="task-meta">${tag}</div>
+      `;
+      return el;
+    }
+
+    function escHtml(str) {
+      return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    async function loadDashboard() {
+      try {
+        // Fetch tasks + completion feed in parallel
+        const [tasksRes, feedRes] = await Promise.all([
+          authedFetch(API.tasks),
+          authedFetch(API.feed),
+        ]);
+
+        const tasksData = await tasksRes.json();
+        const feedData  = feedRes.ok ? await feedRes.json() : { completions: [] };
+
+        if (!tasksData.success) {
+          if (tasksRes.status === 403) { showState('state-no-partner'); return; }
+          throw new Error(tasksData.message || 'Failed to load tasks');
+        }
+
+        const partner   = tasksData.partner || {};
+        const tasks     = tasksData.tasks   || [];
+        const feed      = feedData.completions || [];
+        const pName     = partner.partner_name || feedData.partner_name || 'Partner';
+        const pEmail    = partner.partner_email || '';
+        const pAvatar   = partner.partner_avatar || null;
+
+        // Render header
+        renderAvatar(pName, pAvatar);
+        document.getElementById('partner-name').textContent  = pName;
+        document.getElementById('partner-email').textContent = pEmail;
+
+        // Completion feed (max 5 items)
+        const feedList = document.getElementById('feed-list');
+        const recentFeed = feed.slice(0, 5);
+        if (recentFeed.length > 0) {
+          recentFeed.forEach(item => feedList.appendChild(renderFeedItem(item, pName)));
+          document.getElementById('feed-section').style.display = '';
+        }
+
+        // Split tasks into groups
+        const householdTasks = tasks.filter(t => t.is_household);
+        const sharedTasks    = tasks.filter(t => !t.is_household && t.is_shared_with_partner);
+
+        const householdList = document.getElementById('household-list');
+        const sharedList    = document.getElementById('shared-list');
+
+        if (householdTasks.length > 0) {
+          householdTasks.forEach(t => householdList.appendChild(renderTaskCard(t)));
+          document.getElementById('household-group').style.display = '';
+        }
+
+        if (sharedTasks.length > 0) {
+          sharedTasks.forEach(t => sharedList.appendChild(renderTaskCard(t)));
+          document.getElementById('shared-group').style.display = '';
+        }
+
+        // Empty state
+        if (householdTasks.length === 0 && sharedTasks.length === 0) {
+          document.getElementById('empty-desc').textContent =
+            `${pName} hasn't shared any tasks yet. They can mark tasks as "Household" or share individual tasks from their task list.`;
+          document.getElementById('empty-state').style.display = '';
+        }
+
+        showState('state-dashboard');
+      } catch (err) {
+        console.error('[partner-dashboard]', err);
+        showState('state-no-partner');
+      }
+    }
+
+    // Check for a Tandem activation from Stripe redirect (?tandem_success=1&session_id=...)
+    async function handleTandemActivationRedirect() {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('tandem_success') !== '1') return;
+      const sessionId = params.get('session_id');
+      if (!sessionId) return;
+
+      try {
+        const res = await fetch(API.tandemActivate, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${jwt()}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ session_id: sessionId }),
+        });
+        // Whether activation succeeded or not — remove params and reload clean
+      } catch (_) { /* best-effort */ }
+
+      // Clean up URL params without reloading page
+      const cleanUrl = window.location.pathname;
+      window.history.replaceState({}, '', cleanUrl);
+    }
+
+    async function checkTandemAccess() {
+      try {
+        const res = await authedFetch(API.tandemAccess);
+        if (!res.ok) return { hasTandem: false };
+        return await res.json();
+      } catch { return { hasTandem: false }; }
+    }
+
+    async function applyTandemGate(access) {
+      // Tell Buddy section: only show if Tandem is active
+      const tellSection = document.getElementById('tell-buddy-section');
+      const upsell = document.getElementById('tandem-upsell');
+
+      if (access.hasTandem) {
+        if (tellSection) tellSection.style.display = '';
+        if (upsell) upsell.style.display = 'none';
+      } else {
+        if (tellSection) tellSection.style.display = 'none';
+        if (upsell) upsell.style.display = '';
+      }
+    }
+
+    // Wire up "Tell Buddy" concern submission
+    document.getElementById('concern-submit')?.addEventListener('click', async () => {
+      const text = (document.getElementById('concern-text')?.value || '').trim();
+      const topic = document.getElementById('concern-topic')?.value || '';
+      const btn = document.getElementById('concern-submit');
+      const confirm = document.getElementById('concern-confirm');
+      const errEl = document.getElementById('concern-error');
+
+      if (!text) return;
+
+      if (errEl) errEl.style.display = 'none';
+      if (confirm) confirm.style.display = 'none';
+      if (btn) { btn.disabled = true; btn.textContent = 'Sending…'; }
+
+      try {
+        const res = await fetch(API.concern, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${jwt()}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ concern_text: text, topic_area: topic || undefined }),
+        });
+        const data = await res.json();
+        if (data.success) {
+          if (document.getElementById('concern-text')) document.getElementById('concern-text').value = '';
+          if (confirm) confirm.style.display = '';
+          setTimeout(() => { if (confirm) confirm.style.display = 'none'; }, 5000);
+        } else {
+          if (errEl) { errEl.textContent = data.message || 'Failed to send'; errEl.style.display = ''; }
+        }
+      } catch (err) {
+        if (errEl) { errEl.textContent = 'Something went wrong. Try again.'; errEl.style.display = ''; }
+      } finally {
+        if (btn) { btn.disabled = false; btn.textContent = 'Tell Buddy'; }
+      }
+    });
+
+    async function init() {
+      const token = jwt();
+      if (!token) {
+        window.location.href = '/login?redirect=' + encodeURIComponent(window.location.href);
+        return;
+      }
+
+      // Handle Stripe redirect activation before anything else
+      await handleTandemActivationRedirect();
+
+      // Check for active partnership first
+      try {
+        const res  = await authedFetch(API.status);
+        const data = await res.json();
+
+        if (!data.success || data.state !== 'active') {
+          showState('state-no-partner');
+          return;
+        }
+      } catch {
+        showState('state-no-partner');
+        return;
+      }
+
+      // Load dashboard + check Tandem access in parallel
+      const [_, access] = await Promise.all([
+        loadDashboard(),
+        checkTandemAccess(),
+      ]);
+      await applyTandemGate(access);
+    }
+
+    document.getElementById('btn-refresh')?.addEventListener('click', async () => {
+      // Clear rendered content and reload
+      ['feed-list','household-list','shared-list'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.innerHTML = '';
+      });
+      ['feed-section','household-group','shared-group','empty-state'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = 'none';
+      });
+      document.getElementById('partner-avatar-wrap').innerHTML = '';
+      showState('state-loading');
+      await loadDashboard();
+    });
+
+    init();
+  </script>
+</body>
+</html>

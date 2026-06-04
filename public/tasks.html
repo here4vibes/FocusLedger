@@ -1,0 +1,895 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Tasks — FocusLedger</title>
+    <link rel="icon" type="image/png" sizes="32x32" href="/icons/fl-icon.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/shared-nav.css">
+    <link rel="stylesheet" href="/css/design-system.css">
+    <link rel="stylesheet" href="/css/app-layout.css">
+    <link rel="stylesheet" href="/css/app-spacing.css">
+    <style>
+        :root {
+            --orange: #c9a84c;
+            --orange-light: #d4b56a;
+            --navy: #011e5c;
+            --navy-mid: #02287a;
+            --navy-light: #033099;
+            --cream: #faf9f7;
+            --warm-white: #fafaf8;
+            --text-dark: #1a1a1a;
+            --text-muted: #6b6b6b;
+            --green: #5BA4A4;
+            --green-muted: #4A9292;
+            --border: #e8e5e0;
+            --surface: #FFFFFF;
+            --nav-height: 60px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            color: var(--text-dark);
+            background: var(--cream);
+            overflow-x: hidden;
+            min-height: 100vh;
+        }
+
+        h1, h2, h3, h4 {
+            font-family: 'Space Grotesk', sans-serif;
+        }
+
+        /* ── Page shell ─────────────────────────────── */
+        .tl-page {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 1.25rem 1rem;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 0;
+            min-height: calc(100vh - var(--nav-height));
+            min-width: 0;
+        }
+
+        /* ── Column header ──────────────────────────── */
+        .tl-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.25rem;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+        }
+
+        .tl-header-left {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+        }
+
+        .tl-header h2 {
+            font-size: 1.4rem;
+            color: var(--navy);
+            font-weight: 700;
+        }
+
+        .tl-header-right {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .tl-summary {
+            background: #D4EDEC;
+            color: var(--green-muted);
+            font-size: 0.8rem;
+            font-weight: 600;
+            padding: 0.35rem 0.9rem;
+            border-radius: 50px;
+            white-space: nowrap;
+        }
+
+        .tl-free-count {
+            font-size: 0.75rem;
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 600;
+            color: var(--text-muted);
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 0.15rem 0.6rem;
+            white-space: nowrap;
+            display: none;
+        }
+
+        /* ── Sort button ────────────────────────────── */
+        .tl-sort-btn {
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            background: none;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0.35rem 0.65rem;
+            cursor: pointer;
+            font-family: 'DM Sans', sans-serif;
+            transition: color 0.2s, background 0.2s;
+        }
+
+        .tl-sort-btn:hover { color: var(--navy); background: rgba(201,168,76,0.06); }
+        .tl-sort-btn.active { color: var(--orange); border-color: var(--orange-light); }
+        .tl-sort-btn svg { width: 14px; height: 14px; flex-shrink: 0; }
+
+        /* ── Filter tabs ────────────────────────────── */
+        .tl-filter-tabs {
+            display: flex;
+            gap: 0.25rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .fl-filter-tab {
+            padding: 0.4rem 0.9rem;
+            border: 1.5px solid var(--border);
+            border-radius: 20px;
+            background: none;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .fl-filter-tab:hover { border-color: var(--orange-light); color: var(--navy); }
+        .fl-filter-tab.active { background: var(--orange); color: white; border-color: var(--orange); }
+
+        /* ── New task button ────────────────────────── */
+        .tl-new-task-btn {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            margin-bottom: 0.75rem;
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.88rem;
+            cursor: pointer;
+            padding: 0.4rem 0.5rem;
+            border-radius: 8px;
+            transition: color 0.2s, background 0.2s;
+        }
+
+        .tl-new-task-btn:hover { color: var(--navy); background: rgba(201,168,76,0.06); }
+
+        /* ── Task form card ─────────────────────────── */
+        .tl-task-form-card {
+            background: var(--surface);
+            border-radius: 12px;
+            padding: 1rem 1.25rem;
+            margin-bottom: 1rem;
+            border: 1px solid var(--border);
+            box-shadow: 0 2px 12px rgba(45,42,38,0.04);
+            display: none;
+        }
+
+        .tl-add-form {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .tl-add-form input[type="text"] {
+            flex: 1;
+            padding: 0.75rem 1rem;
+            border: 2px solid var(--border);
+            border-radius: 10px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.95rem;
+            color: var(--text-dark);
+            background: white;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .tl-add-form input[type="text"]:focus { border-color: var(--orange-light); }
+        .tl-add-form input[type="text"]::placeholder { color: #B0ADA8; }
+
+        .tl-btn-orange {
+            background: var(--orange);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.25rem;
+            border-radius: 10px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.1s;
+            white-space: nowrap;
+        }
+
+        .tl-btn-orange:hover { background: var(--orange-light); }
+        .tl-btn-orange:active { transform: scale(0.97); }
+        .tl-btn-orange:disabled { opacity: 0.6; cursor: not-allowed; }
+
+        .tl-char-counter {
+            font-size: 0.72rem;
+            color: #B0ADA8;
+            text-align: right;
+            margin-top: 0.25rem;
+            padding-right: 0.25rem;
+            display: none;
+        }
+
+        /* ── Breakdown toggle ────────────────────────── */
+        .tl-breakdown-toggle {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin: 0.5rem 0;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .tl-breakdown-toggle .tl-toggle-track {
+            width: 36px;
+            height: 20px;
+            background: #D8D5D0;
+            border-radius: 10px;
+            position: relative;
+            transition: background 0.2s;
+        }
+
+        .tl-breakdown-toggle .tl-toggle-track.active { background: var(--green); }
+
+        .tl-breakdown-toggle .tl-toggle-knob {
+            width: 16px;
+            height: 16px;
+            background: white;
+            border-radius: 50%;
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            transition: left 0.2s;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+        }
+
+        .tl-breakdown-toggle .tl-toggle-track.active .tl-toggle-knob { left: 18px; }
+
+        .tl-breakdown-toggle span {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+        }
+
+        /* ── Steps input area ────────────────────────── */
+        .tl-steps-input-area {
+            display: none;
+            margin-bottom: 0.75rem;
+            padding: 0.75rem 1rem;
+            background: var(--cream);
+            border-radius: 10px;
+            border: 1px dashed #D8D5D0;
+        }
+
+        .tl-steps-input-area label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            display: block;
+            margin-bottom: 0.5rem;
+        }
+
+        .fl-step-input-row {
+            display: flex;
+            gap: 0.4rem;
+            align-items: center;
+            margin-bottom: 0.4rem;
+        }
+
+        .fl-step-field {
+            flex: 1;
+            padding: 0.5rem 0.75rem;
+            border: 1.5px solid #D8D5D0;
+            border-radius: 8px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.85rem;
+            color: var(--text-dark);
+            outline: none;
+            background: white;
+        }
+
+        .fl-step-field:focus { border-color: var(--green); }
+
+        .fl-btn-remove-step {
+            width: 24px;
+            height: 24px;
+            background: none;
+            border: none;
+            color: #B0ADA8;
+            cursor: pointer;
+            font-size: 1.1rem;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: color 0.15s;
+        }
+
+        .fl-btn-remove-step:hover { color: var(--orange); }
+
+        .tl-btn-add-step {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 0.25rem 0.5rem;
+            border-radius: 6px;
+            transition: background 0.15s;
+        }
+
+        .tl-btn-add-step:hover { background: rgba(0,0,0,0.04); }
+
+        /* ── Due date / duration toggles ────────────── */
+        .tl-toggle-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 0.25rem 0.5rem;
+            border-radius: 6px;
+            font-family: 'DM Sans', sans-serif;
+            margin-right: 0.5rem;
+            transition: color 0.15s;
+        }
+
+        .tl-toggle-link:hover { color: var(--navy); }
+
+        .tl-date-inputs {
+            display: none;
+            margin: 0.4rem 0;
+            gap: 0.5rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .tl-date-inputs label {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+        }
+
+        .tl-date-inputs input[type="date"],
+        .tl-date-inputs input[type="time"],
+        .tl-date-inputs input[type="number"] {
+            border: 1.5px solid var(--border);
+            border-radius: 8px;
+            padding: 0.35rem 0.5rem;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.82rem;
+            color: var(--text-dark);
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .tl-date-inputs input[type="date"]:focus,
+        .tl-date-inputs input[type="time"]:focus { border-color: var(--green); }
+
+        .tl-btn-clear {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 0.25rem 0.4rem;
+        }
+
+        .tl-btn-clear:hover { color: var(--orange); }
+
+        /* ── Task list ──────────────────────────────── */
+        .tl-task-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        /* ── Task card ─────────────────────────────── */
+        .task-card {
+            background: var(--warm-white);
+            border-radius: 12px;
+            padding: 0.9rem 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            transition: box-shadow 0.2s;
+            border: 1px solid var(--border);
+        }
+
+        .task-card:hover { box-shadow: 0 4px 16px rgba(45,42,38,0.08); }
+
+        .task-card-main {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.65rem;
+            cursor: pointer;
+        }
+
+        .task-checkbox {
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--border);
+            border-radius: 6px;
+            flex-shrink: 0;
+            margin-top: 2px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: border-color 0.2s, background 0.2s;
+        }
+
+        .task-checkbox:hover { border-color: var(--green); }
+
+        .task-checkbox.checked {
+            background: var(--green);
+            border-color: var(--green);
+        }
+
+        .task-checkbox.checked svg { stroke: white; }
+
+        .task-card-title {
+            flex: 1;
+            font-size: 0.95rem;
+            color: var(--text-dark);
+            line-height: 1.4;
+            padding-top: 1px;
+            min-width: 0;
+        }
+
+        .task-card-title.strong { font-weight: 500; }
+        .task-card-title.struck { text-decoration: line-through; color: var(--text-muted); }
+
+        .task-card-meta {
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+            flex-wrap: wrap;
+            margin-left: 28px;
+        }
+
+        .task-card-meta-tag {
+            font-size: 0.75rem;
+            padding: 0.15rem 0.45rem;
+            border-radius: 12px;
+            background: rgba(0,0,0,0.04);
+        }
+
+        .task-card-meta-tag.clickable {
+            cursor: pointer;
+        }
+
+        .task-card-meta-tag.clickable:hover {
+            background: rgba(201,168,76,0.1);
+        }
+
+        .meta-sep { color: var(--border); font-size: 0.75rem; }
+
+        .due-overdue { color: #E07A5F; }
+        .due-urgent { color: #E07A5F; }
+        .due-soon { color: var(--text-muted); }
+        .due-ok { color: var(--text-muted); }
+
+        /* ── Task expanded content ──────────────────── */
+        .task-expanded-content {
+            margin-left: 28px;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .task-notes-row {
+            display: flex;
+            flex-direction: column;
+            gap: 0.3rem;
+        }
+
+        .task-notes-textarea {
+            width: 100%;
+            padding: 0.5rem 0.75rem;
+            border: 1.5px solid var(--border);
+            border-radius: 8px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.85rem;
+            color: var(--text-dark);
+            resize: vertical;
+            min-height: 60px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .task-notes-textarea:focus { border-color: var(--green); }
+
+        .task-notes-actions {
+            display: flex;
+            gap: 0.4rem;
+        }
+
+        .task-notes-toggle-btn {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 0.25rem 0;
+            text-align: left;
+            font-family: 'DM Sans', sans-serif;
+        }
+
+        .task-notes-toggle-btn:hover { color: var(--navy); }
+
+        /* ── Steps ─────────────────────────────────── */
+        .task-steps-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.3rem;
+        }
+
+        .task-step-row {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.2rem 0;
+        }
+
+        .task-step-checkbox {
+            width: 16px;
+            height: 16px;
+            border: 1.5px solid var(--border);
+            border-radius: 4px;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+
+        .task-step-checkbox.checked { background: var(--green); border-color: var(--green); }
+        .task-step-checkbox.checked svg { stroke: white; stroke-width: 3; }
+
+        .task-step-title { flex: 1; font-size: 0.85rem; color: var(--text-dark); }
+        .task-step-title.strong { font-weight: 500; }
+        .task-step-title.struck { text-decoration: line-through; color: var(--text-muted); }
+
+        .task-step-delete {
+            color: var(--text-muted);
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 0.9rem;
+            padding: 0 0.25rem;
+            opacity: 0;
+            transition: opacity 0.15s;
+        }
+
+        .task-step-row:hover .task-step-delete { opacity: 1; }
+
+        .task-add-step-row {
+            display: flex;
+            gap: 0.4rem;
+            align-items: center;
+        }
+
+        .task-step-input {
+            flex: 1;
+            padding: 0.4rem 0.65rem;
+            border: 1.5px solid var(--border);
+            border-radius: 8px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.82rem;
+            color: var(--text-dark);
+            outline: none;
+            background: white;
+            transition: border-color 0.2s;
+        }
+
+        .task-step-input:focus { border-color: var(--green); }
+        .task-step-input::placeholder { color: #B0ADA8; }
+
+        /* ── Task action row ────────────────────────── */
+        .task-card-actions {
+            display: flex;
+            gap: 0.4rem;
+            flex-wrap: wrap;
+            margin-left: 28px;
+        }
+
+        .task-action-btn {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            background: none;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0.3rem 0.6rem;
+            cursor: pointer;
+            font-family: 'DM Sans', sans-serif;
+            transition: all 0.15s;
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        .task-action-btn:hover { color: var(--navy); border-color: var(--orange-light); }
+        .task-action-delete:hover { color: #E07A5F; border-color: #E07A5F; }
+
+        /* ── Inline edit ────────────────────────────── */
+        .task-inline-edit-row {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            margin-left: 28px;
+        }
+
+        .task-duration-edit-inline {
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        .btn-sm {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            background: none;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 0.2rem 0.4rem;
+            cursor: pointer;
+            font-family: 'DM Sans', sans-serif;
+            transition: all 0.15s;
+        }
+
+        .btn-sm:hover { color: var(--navy); border-color: var(--orange-light); }
+
+        /* ── Completed section ─────────────────────── */
+        .completed-section-header {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 0.25rem;
+            cursor: pointer;
+            user-select: none;
+            margin-top: 0.5rem;
+        }
+
+        .completed-section-header:hover { opacity: 0.8; }
+
+        .completed-section-chevron {
+            width: 16px;
+            height: 16px;
+            stroke: var(--text-muted);
+            transition: transform 0.2s;
+        }
+
+        .completed-section-chevron.open { transform: rotate(90deg); }
+
+        .completed-section-label {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .completed-section-count {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            background: rgba(0,0,0,0.05);
+            border-radius: 10px;
+            padding: 0.1rem 0.45rem;
+        }
+
+        .completed-section-tasks {
+            display: none;
+        }
+
+        .completed-section-tasks.visible { display: flex; flex-direction: column; gap: 0.75rem; }
+
+        /* ── Skeleton loader ────────────────────────── */
+        #fl-task-skeleton {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .tl-skeleton-row {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            background: var(--warm-white);
+            border-radius: 12px;
+            padding: 0.9rem 1rem;
+            border: 1px solid var(--border);
+        }
+
+        .tl-sk-checkbox {
+            width: 20px;
+            height: 20px;
+            border-radius: 6px;
+            background: var(--skeleton-base, #f0f0f0);
+            animation: sk-pulse 1.5s ease-in-out infinite;
+        }
+
+        .tl-sk-info { flex: 1; display: flex; flex-direction: column; gap: 0.3rem; }
+
+        .tl-sk-title {
+            height: 14px;
+            border-radius: 4px;
+            background: var(--skeleton-base, #f0f0f0);
+            width: 65%;
+            animation: sk-pulse 1.5s ease-in-out infinite;
+        }
+
+        .tl-sk-meta {
+            height: 10px;
+            border-radius: 4px;
+            background: var(--skeleton-base, #f0f0f0);
+            width: 40%;
+            animation: sk-pulse 1.5s ease-in-out infinite;
+            animation-delay: 0.2s;
+        }
+
+        .tl-sk-right { width: 30px; }
+
+        @keyframes sk-pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* ── Empty state ────────────────────────────── */
+        .empty-state {
+            padding: 2rem 1rem;
+            text-align: center;
+        }
+
+        .empty-icon {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .empty-state p {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+
+        /* ── Responsive ─────────────────────────────── */
+        @media (min-width: 900px) {
+            .tl-page {
+                padding: 1.5rem 2rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .tl-header { flex-direction: column; align-items: flex-start; }
+            .tl-header-right { width: 100%; justify-content: space-between; }
+            .task-card-meta { margin-left: 0; }
+            .task-card-actions { margin-left: 0; }
+            .task-expanded-content { margin-left: 0; }
+            .task-inline-edit-row { margin-left: 0; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- Shared nav (bottom bar on mobile, sidebar on desktop) -->
+<nav id="shared-nav"></nav>
+
+<!-- Page content -->
+<div class="tl-page">
+
+    <!-- Header -->
+    <div class="tl-header">
+        <div class="tl-header-left">
+            <h2>Tasks</h2>
+            <span id="fl-free-task-count"></span>
+        </div>
+        <div class="tl-header-right">
+            <button class="tl-sort-btn" id="fl-sort-due-date-btn" title="Sort by due date">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="12" x2="15" y2="12"></line><line x1="3" y1="18" x2="9" y2="18"></line></svg>
+                Due date
+            </button>
+            <div class="tl-summary" id="fl-task-summary">Loading...</div>
+        </div>
+    </div>
+
+    <!-- Filter tabs -->
+    <div class="tl-filter-tabs">
+        <button class="fl-filter-tab active" data-filter="all">All</button>
+        <button class="fl-filter-tab" data-filter="active">Active</button>
+        <button class="fl-filter-tab" data-filter="completed">Completed</button>
+    </div>
+
+    <!-- New task button -->
+    <button class="tl-new-task-btn" id="fl-new-task-btn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        New task
+    </button>
+
+    <!-- Task entry form -->
+    <div class="tl-task-form-card" id="fl-task-form-card">
+        <div class="tl-add-form">
+            <input type="text" id="fl-task-input" placeholder="What needs doing?" maxlength="150" autocomplete="off" autocorrect="off" autocapitalize="off">
+            <button class="tl-btn-orange" id="fl-add-task-btn">Add</button>
+        </div>
+        <div class="tl-char-counter" id="fl-task-char-counter"></div>
+
+        <!-- NLP chips placeholder -->
+        <div id="fl-task-nlp-chips"></div>
+
+        <!-- Break it down toggle -->
+        <div class="tl-breakdown-toggle" id="fl-breakdown-toggle">
+            <div class="tl-toggle-track" id="fl-toggle-track">
+                <div class="tl-toggle-knob"></div>
+            </div>
+            <span>Break it down into steps</span>
+        </div>
+
+        <!-- Steps input area -->
+        <div class="tl-steps-input-area" id="fl-steps-input-area">
+            <label>Add steps (press Enter after each)</label>
+            <div id="fl-step-inputs"></div>
+            <button class="tl-btn-add-step" id="fl-add-step-btn">+ Add another step</button>
+        </div>
+
+        <!-- Due date toggle -->
+        <div style="margin-top:0.5rem;">
+            <button class="tl-toggle-link" id="fl-due-date-toggle-btn" type="button">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                Set due date
+            </button>
+            <div class="tl-date-inputs" id="fl-due-date-inputs-area">
+                <label>Date</label>
+                <input type="date" id="fl-task-due-date">
+                <label style="margin-left:0.25rem;">Time <span style="font-size:0.7rem;opacity:0.7;">(optional)</span></label>
+                <input type="time" id="fl-task-due-time">
+                <button class="tl-btn-clear" id="fl-clear-due-date-btn" type="button">&times; clear</button>
+            </div>
+        </div>
+
+        <!-- Duration toggle -->
+        <div style="margin-top:0.3rem;">
+            <button class="tl-toggle-link" id="fl-duration-toggle-btn" type="button">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                Your time estimate
+            </button>
+            <div class="tl-date-inputs" id="fl-duration-input-area">
+                <label>Minutes</label>
+                <input type="number" id="fl-task-duration" min="1" max="480" placeholder="?" style="width:70px;padding:0.4rem 0.5rem;border:1.5px solid var(--border);border-radius:6px;font-size:0.85rem;outline:none;text-align:center;">
+            </div>
+        </div>
+    </div>
+
+    <!-- Skeleton loader -->
+    <div id="fl-task-skeleton">
+        <div class="tl-skeleton-row"><div class="tl-sk-checkbox"></div><div class="tl-sk-info"><div class="tl-sk-title"></div><div class="tl-sk-meta"></div></div><div class="tl-sk-right"></div></div>
+        <div class="tl-skeleton-row"><div class="tl-sk-checkbox"></div><div class="tl-sk-info"><div class="tl-sk-title"></div><div class="tl-sk-meta"></div></div><div class="tl-sk-right"></div></div>
+        <div class="tl-skeleton-row"><div class="tl-sk-checkbox"></div><div class="tl-sk-info"><div class="tl-sk-title"></div><div class="tl-sk-meta"></div></div><div class="tl-sk-right"></div></div>
+    </div>
+
+    <!-- Task list container -->
+    <div class="tl-task-list" id="fl-task-list"></div>
+
+</div>
+
+<!-- Load shared nav JS -->
+<script src="/js/shared-nav.js"></script>
+<!-- Load task page component -->
+<script src="/js/pages/tasks-page.js"></script>
+
+</body>
+</html>

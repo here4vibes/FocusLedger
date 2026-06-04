@@ -1,0 +1,340 @@
+/*
+ * app-spacing.css — Spacing layer for /app page
+ * Padding, margins, gaps — the whitespace and rhythm system.
+ * No layout rules (flex/grid/position) here; those live in app-layout.css.
+ * Visual properties (colors, shadows, radius) intentionally minimal — use design-system.css.
+ *
+ * Lightweight research targets applied here:
+ *   - Task item padding: 16–20px vertical (was ~14px)
+ *   - Task list gap: 1rem (was 0.5rem)
+ *   - Border-radius: 12px on cards, 8-10px on buttons
+ *   - Hover transitions: 150ms ease
+ *
+ * Injected after app-layout.css and design-system.css; imported via <link> in app.html
+ */
+
+/* ── Spacing Scale ─────────────────────────────────────────────────── */
+/*
+ * Base unit: 4px
+ * Scale: 4, 8, 12, 16, 20, 24, 32, 48
+ * Component gaps use 16px+ per lightweight research
+ */
+:root {
+  --space-1: 0.25rem;   /* 4px  */
+  --space-2: 0.5rem;    /* 8px  */
+  --space-3: 0.75rem;   /* 12px */
+  --space-4: 1rem;      /* 16px */
+  --space-5: 1.25rem;   /* 20px */
+  --space-6: 1.5rem;    /* 24px */
+  --space-8: 2rem;      /* 32px */
+  --space-12: 3rem;     /* 48px */
+
+  /* App-specific spacing overrides */
+  --app-padding-x: 1rem;
+  --app-padding-y: 1.25rem;
+}
+
+/* ── Dashboard Spacing ──────────────────────────────────────────────── */
+.dashboard {
+  padding: var(--app-padding-y) var(--app-padding-x);
+}
+
+/* ── Task List Spacing ──────────────────────────────────────────────── */
+.task-list {
+  gap: 0.65rem;
+}
+
+/* ── Task Card Spacing ──────────────────────────────────────────────── */
+/*
+ * Vertical padding: 1rem 1.125rem (16–18px) per lightweight research
+ * Horizontal padding: 1.125rem (18px)
+ * Border-radius: 10px per lightweight research
+ * LEFT COLOR STRIP: 4px left edge — creates visual separation without border/shadow
+ * No box-shadow; hover uses background-color shift only
+ */
+.task-card {
+  padding: 1.1rem 1.25rem;
+  gap: 0.4rem;
+  border-radius: 14px;
+  background: #ffffff;
+  border: 1px solid rgba(0,0,0,0.055);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.04);
+  transition: box-shadow 200ms ease, transform 150ms ease, opacity 150ms ease;
+  cursor: pointer;
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  position: relative;
+}
+.task-card:hover {
+  box-shadow: 0 2px 6px rgba(0,0,0,0.06), 0 8px 24px rgba(0,0,0,0.07);
+  transform: translateY(-1px);
+}
+
+/* Task card row2 wraps at small gaps */
+.task-card-row2 {
+  gap: 0.35rem;
+}
+
+/* ── Task Card Row Visual ─────────────────────────────────────────── */
+/*
+ * Row1: title + chevron in flex row
+ * Row2: value badge + time estimate in flex row
+ * Accent color strip handled by .task-card background gradient above
+ */
+.task-card-row1 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.task-card-main {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.task-card-title {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.975rem;
+  font-weight: 500;
+  color: #141416;
+  line-height: 1.3;
+  font-family: 'Space Grotesk', sans-serif;
+  letter-spacing: -0.01em;
+}
+.task-card-title.struck {
+  text-decoration: line-through;
+  color: #B0ADA8;
+}
+.task-card-chevron {
+  flex-shrink: 0;
+  font-size: 1.1rem;
+  color: var(--text-muted);
+  margin-left: 0.5rem;
+}
+.task-card-value {
+  font-size: 0.78rem;
+  font-weight: 500;
+}
+.task-card-time {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+/* Completed section: task cards slightly faded */
+.completed-section-tasks .task-card {
+  opacity: 0.55;
+  transition: background-color 150ms ease, opacity 150ms ease;
+}
+.completed-section-tasks .task-card:hover {
+  opacity: 0.85;
+}
+
+/* ── Completion Animation — Lightweight Pattern ───────────────────── */
+/*
+ * scale(0.97) → scale(1) → fade out, 200ms ease-out
+ * Reduced motion: scale(0.97) → scale(1), 300ms
+ */
+.task-card.completing {
+  animation: taskCardComplete 0.8s ease forwards;
+  will-change: transform, opacity;
+}
+@keyframes taskCardComplete {
+  0%   { transform: scale(1); opacity: 1; }
+  10%  { transform: scale(0.97); opacity: 1; }
+  25%  { transform: scale(1); opacity: 1; }
+  75%  { transform: scale(1); opacity: 1; }
+  100% { transform: scale(0.97); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .task-card.completing {
+    animation: taskCardCompleteReduced 0.3s ease forwards;
+  }
+  @keyframes taskCardCompleteReduced {
+    0%  { transform: scale(1); opacity: 1; }
+    50% { transform: scale(0.97); opacity: 1; }
+    100% { transform: scale(0.97); opacity: 0.55; }
+  }
+}
+
+/* ── Card Spacing ───────────────────────────────────────────────────── */
+.card {
+  padding: 1.5rem;
+}
+
+/* ── Add Task Form Spacing ─────────────────────────────────────────── */
+.add-task-form input[type="text"] {
+  padding: 0.75rem 1rem;
+}
+
+/* ── Buttons Spacing ────────────────────────────────────────────────── */
+.btn-orange {
+  padding: 0.75rem 1.25rem;
+}
+
+/* ── Spoke Section Spacing ────────────────────────────────────────── */
+.spoke-section {
+  margin-bottom: 1.5rem;
+}
+.spoke-card {
+  padding: 1rem 1.25rem;
+  margin-bottom: 0.75rem;
+}
+
+/* ── Column Header Spacing ─────────────────────────────────────────── */
+.column-header {
+  margin-bottom: 1.25rem;
+}
+.column-header h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  font-family: 'Space Grotesk', sans-serif;
+  letter-spacing: -0.025em;
+  color: #141416;
+}
+
+/* ── Filter / Sort Bar Spacing ─────────────────────────────────────── */
+.filter-tabs {
+  margin-bottom: 0.75rem;
+  gap: 0.5rem;
+}
+.filter-tab {
+  padding: 0.35rem 0.75rem;
+}
+.sort-btn {
+  padding: 0.35rem 0.75rem;
+}
+
+/* ── Summary Pill Spacing ───────────────────────────────────────────── */
+.summary-pill {
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.35rem 0.9rem;
+}
+
+/* ── Breakdown Toggle Spacing ───────────────────────────────────────── */
+.breakdown-toggle {
+  margin-bottom: 1rem;
+}
+.breakdown-toggle span {
+  font-size: 0.82rem;
+}
+
+/* ── Steps Input Area Spacing ───────────────────────────────────────── */
+.steps-input-area {
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+}
+.step-inputs {
+  gap: 0.4rem;
+}
+
+/* ── App Nav Spacing ────────────────────────────────────────────────── */
+.app-nav-inner {
+  padding: 1rem 2rem;
+}
+
+/* ── Task Title / Metadata Spacing ─────────────────────────────────── */
+.task-card-title {
+  font-size: 0.95rem;
+  line-height: 1.3;
+}
+.task-card-value {
+  font-size: 0.78rem;
+  font-weight: 500;
+}
+.task-card-time {
+  font-size: 0.78rem;
+}
+.task-card-chevron {
+  font-size: 1.1rem;
+  margin-left: 0.5rem;
+}
+
+/* ── Tag / Badge Spacing ─────────────────────────────────────────────── */
+.task-card-tags {
+  gap: 0.35rem;
+  margin-top: 0.25rem;
+}
+
+/* ── Loading / Empty State Spacing ──────────────────────────────────── */
+.task-list-empty {
+  padding: 2rem;
+  gap: 0.75rem;
+}
+
+/* ── Bug Report FAB Spacing ─────────────────────────────────────────── */
+.bug-report-fab {
+  padding: 10px 14px;
+  font-size: 0.75rem;
+  border-radius: 24px;
+}
+
+/* ── Responsive Spacing Adjustments ─────────────────────────────────── */
+
+/* Tablet: reduce dashboard padding */
+@media (max-width: 900px) {
+  .dashboard {
+    padding: 1.25rem;
+  }
+}
+
+/* Mobile: further reduce padding */
+@media (max-width: 768px) {
+  .dashboard {
+    padding: 1rem;
+  }
+  .card {
+    padding: 1rem;
+  }
+  .column-header {
+    margin-bottom: 1rem;
+  }
+  .column-header h2 {
+    font-size: 1.2rem;
+  }
+}
+
+/* Very small screens */
+@media (max-width: 480px) {
+  .dashboard {
+    padding: 0.75rem;
+  }
+  .app-nav-inner {
+    padding: 0.75rem 1rem;
+  }
+  .task-card {
+    padding: 0.875rem 1rem;
+  }
+}
+
+/* ── Completion Animation Timing ────────────────────────────────────── */
+/*
+ * Lightweight: scale + fade, 200ms ease-out
+ * Reduced motion: scale only, 300ms
+ */
+.task-card.completing {
+  animation: taskRowComplete 0.8s ease forwards;
+  will-change: transform, opacity;
+}
+
+@keyframes taskRowComplete {
+  0%   { transform: scale(1); opacity: 1; }
+  15%  { transform: scale(1.03); }
+  30%  { transform: scale(1); }
+  70%  { transform: scale(1); opacity: 1; }
+  100% { transform: translateX(12px); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .task-card.completing {
+    animation: taskRowCompleteReduced 0.3s ease forwards;
+  }
+  @keyframes taskRowCompleteReduced {
+    0%  { transform: scale(1); }
+    50% { transform: scale(1.03); }
+    100% { transform: scale(1); opacity: 0.55; }
+  }
+}

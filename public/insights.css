@@ -1,0 +1,266 @@
+/* ── Insights Page CSS ─────────────────────────────────────────────────────── */
+
+/* ── Tokens (mirrors design-system) ───────────────────────────────────────── */
+:root {
+  --orange:         #c9a84c;
+  --orange-light:   #d4b56a;
+  --navy:           #011e5c;
+  --navy-mid:       #02287a;
+  --cream:          #faf9f7;
+  --cream-dark:     #f5f3ef;
+  --text-dark:      #1a1a1a;
+  --text-muted:     #6b6b6b;
+  --border:         #e8e5e0;
+  --surface:        #ffffff;
+  --green:          #5BA4A4;
+  --success:        #7DB87D;
+  --error:          #E07A5F;
+  --teal:           #0891B2;
+  --teal-dark:      #0E7490;
+
+  /* Insight-specific palette */
+  --insight-spending:   #c9a84c;
+  --insight-trend:      #8B5CF6;
+  --insight-task:       #22C55E;
+  --insight-evening:    #0891B2;
+  --insight-focus:      #EC4899;
+  --glow-color:         #c9a84c;
+}
+
+/* ── Base ───────────────────────────────────────────────────────────────────── */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: 'DM Sans', system-ui, sans-serif;
+  color: var(--text-dark);
+  background: var(--cream);
+  min-height: 100vh;
+  overflow-x: hidden;
+  padding-bottom: calc(90px + env(safe-area-inset-bottom));
+}
+
+/* ── Nav (portal-nav matches app pages) ─────────────────────────────────────── */
+.portal-nav {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 1.25rem; height: 56px; background: var(--navy);
+  position: sticky; top: 0; z-index: 200;
+}
+.portal-logo {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 1.25rem; font-weight: 700;
+  color: white; display: flex; align-items: center; gap: 0.5rem; text-decoration: none;
+}
+.logo-dot { width: 10px; height: 10px; background: var(--orange); border-radius: 2px; transform: rotate(45deg); }
+.back-link {
+  font-size: 0.85rem; color: rgba(255,255,255,0.75);
+  text-decoration: none; display: flex; align-items: center; gap: 0.35rem;
+  padding: 0.4rem 0.6rem; border-radius: 6px; transition: all 0.15s;
+}
+.back-link:hover { color: white; background: rgba(255,255,255,0.1); }
+.logout-btn {
+  font-size: 0.8rem; color: rgba(255,255,255,0.65); background: none;
+  border: none; cursor: pointer; padding: 0.35rem 0.6rem;
+  font-family: system-ui, sans-serif;
+}
+
+/* ── Page wrap ──────────────────────────────────────────────────────────────── */
+.page-wrap { max-width: 680px; margin: 0 auto; padding: 1.5rem 1.25rem 2rem; }
+.page-header { margin-bottom: 1.75rem; }
+.page-title {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 1.75rem; font-weight: 700; color: var(--navy); margin-bottom: 0.35rem;
+}
+.page-subtitle { font-size: 0.85rem; color: var(--text-muted); }
+
+/* ── Unlock toast ──────────────────────────────────────────────────────────── */
+.unlock-toast {
+  position: fixed; top: 68px; left: 50%; transform: translateX(-50%) translateY(-120px);
+  background: white; border: 1.5px solid var(--orange);
+  border-radius: 12px; padding: 0.65rem 1rem;
+  display: flex; align-items: center; gap: 0.6rem;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+  z-index: 300;
+  transition: transform 0.35s cubic-bezier(0.34,1.56,0.64,1);
+  max-width: calc(100vw - 2rem); white-space: nowrap;
+}
+.unlock-toast.visible { transform: translateX(-50%) translateY(0); }
+.toast-icon { font-size: 1.1rem; }
+.toast-text { font-size: 0.85rem; font-weight: 600; color: var(--navy); }
+.toast-link { font-size: 0.8rem; font-weight: 600; color: var(--orange); text-decoration: none; }
+.toast-link:hover { color: var(--orange-light); }
+
+/* ── Skeleton loading ───────────────────────────────────────────────────────── */
+#skeletonGrid { display: flex; flex-direction: column; gap: 0.85rem; }
+.skeleton-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 14px; padding: 1.1rem 1.25rem;
+  display: flex; align-items: center; gap: 1rem;
+}
+.sk-icon {
+  width: 44px; height: 44px; border-radius: 12px;
+  background: linear-gradient(90deg, #f0ede9 25%, #e8e5e0 50%, #f0ede9 75%);
+  background-size: 200% 100%; animation: shimmer 1.4s infinite; flex-shrink: 0;
+}
+.sk-content { flex: 1; display: flex; flex-direction: column; gap: 0.5rem; }
+.sk-line {
+  height: 0.8rem; border-radius: 6px;
+  background: linear-gradient(90deg, #f0ede9 25%, #e8e5e0 50%, #f0ede9 75%);
+  background-size: 200% 100%; animation: shimmer 1.4s infinite;
+}
+.sk-line.sk-title { width: 55%; }
+.sk-line.sk-value { width: 35%; height: 1.4rem; }
+.sk-line.sk-meta  { width: 45%; }
+@keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+/* ── Insights grid ──────────────────────────────────────────────────────────── */
+.insights-grid { display: flex; flex-direction: column; gap: 0.85rem; }
+
+/* ── Insight card ───────────────────────────────────────────────────────────── */
+.insight-card {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 16px;
+  padding: 1.25rem;
+  cursor: pointer;
+  transition: border-color 0.2s, box-shadow 0.2s, transform 0.15s;
+  position: relative;
+  overflow: hidden;
+}
+.insight-card:hover { border-color: var(--orange); box-shadow: 0 3px 12px rgba(201,168,76,0.12); }
+.insight-card.expanded { border-color: var(--teal); box-shadow: 0 4px 16px rgba(8,145,178,0.1); }
+
+/* Locked state */
+.insight-card.locked { border-style: dashed; opacity: 0.85; }
+.insight-card.locked .card-value-row { display: none; }
+.insight-card.locked .card-chart { display: none; }
+.insight-card.locked .expand-hint { display: none; }
+
+/* Almost there pulse */
+.insight-card.almost-there {
+  animation: almostPulse 2.5s ease-in-out infinite;
+}
+@keyframes almostPulse {
+  0%, 100% { border-color: var(--border); }
+  50%       { border-color: var(--orange); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .insight-card.almost-there { animation: none; }
+}
+
+/* Unlocked glow border animation */
+.insight-card.glow-border {
+  animation: glowFlash 0.5s ease-out forwards;
+}
+@keyframes glowFlash {
+  0%   { box-shadow: 0 0 0 0 rgba(201,168,76,0); border-color: var(--orange); }
+  50%  { box-shadow: 0 0 0 6px rgba(201,168,76,0.3); }
+  100% { box-shadow: 0 0 0 0 rgba(201,168,76,0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .insight-card.glow-border { animation: none; }
+}
+
+/* ── Card header ────────────────────────────────────────────────────────────── */
+.card-header { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.85rem; }
+.card-icon-wrap {
+  position: relative; width: 44px; height: 44px; flex-shrink: 0;
+  border-radius: 12px; background: var(--cream-dark);
+  display: flex; align-items: center; justify-content: center;
+}
+.card-icon { font-size: 1.2rem; }
+.lock-badge { position: absolute; bottom: -2px; right: -2px; font-size: 0.7rem; }
+
+.card-meta { flex: 1; }
+.card-name {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.95rem; font-weight: 600; color: var(--navy); display: block;
+}
+.card-status { font-size: 0.75rem; color: var(--text-muted); margin-top: 0.15rem; }
+
+/* New badge */
+.new-badge {
+  font-size: 0.65rem; font-weight: 700; letter-spacing: 0.06em;
+  background: var(--orange); color: white;
+  padding: 2px 7px; border-radius: 8px;
+  opacity: 0; transition: opacity 0.3s;
+  flex-shrink: 0; align-self: flex-start;
+}
+
+/* ── Value row ──────────────────────────────────────────────────────────────── */
+.card-value-row { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.6rem; }
+.card-value {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 1.5rem; font-weight: 700; color: var(--navy);
+}
+.card-trend { font-size: 0.82rem; font-weight: 600; }
+.trend-up   { color: var(--error); }
+.trend-down { color: var(--green); }
+.trend-flat { color: var(--text-muted); }
+
+/* ── Progress bar ───────────────────────────────────────────────────────────── */
+.card-progress { display: flex; align-items: center; gap: 0.75rem; }
+.progress-track {
+  flex: 1; height: 7px; background: var(--border); border-radius: 100px; overflow: hidden;
+}
+.progress-fill {
+  height: 100%; background: var(--orange); border-radius: 100px;
+  transition: width 0.4s ease-out; width: 0%;
+}
+.progress-label { font-size: 0.72rem; color: var(--text-muted); white-space: nowrap; }
+
+/* ── Chart ─────────────────────────────────────────────────────────────────── */
+.card-chart { margin-top: 1rem; }
+.expand-hint {
+  font-size: 0.72rem; color: var(--text-muted); text-align: center;
+  margin-top: 0.6rem; display: none;
+}
+.insight-card.expanded .expand-hint { display: block; }
+
+/* Bar chart (CSS-only) */
+.bar-chart {
+  display: flex; align-items: flex-end; gap: 0.5rem; height: 60px;
+  padding: 0 0.25rem;
+}
+.bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 0.2rem; height: 100%; justify-content: flex-end; }
+.bar-bar {
+  width: 100%; max-width: 32px; border-radius: 4px 4px 0 0;
+  transition: height 0.4s ease; min-height: 4px;
+}
+.bar-label { font-size: 0.6rem; color: var(--text-muted); text-align: center; }
+
+.chart-empty { font-size: 0.75rem; color: var(--text-muted); text-align: center; padding: 0.75rem 0; }
+
+/* ── Expanded state — additional historical detail ─────────────────────────── */
+.insight-card.expanded .card-chart { display: block; }
+
+/* Expanded extra content */
+.expanded-detail {
+  display: none; margin-top: 0.85rem; padding-top: 0.75rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.8rem; color: var(--text-muted); line-height: 1.5;
+}
+.insight-card.expanded .expanded-detail { display: block; }
+
+/* ── Mobile ────────────────────────────────────────────────────────────────── */
+@media (max-width: 480px) {
+  .page-wrap { padding: 1rem 0.85rem 1.5rem; }
+  .page-title { font-size: 1.4rem; }
+  .insight-card { padding: 1rem; border-radius: 14px; }
+  .card-name { font-size: 0.9rem; }
+  .card-value { font-size: 1.3rem; }
+  .bar-chart { height: 50px; }
+}
+
+/* ── prefers-reduced-motion ─────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .insight-card { transition: none; }
+  .insight-card:hover { border-color: var(--orange); box-shadow: none; }
+  .insight-card.glow-border { animation: none; box-shadow: none; }
+  .insight-card.almost-there { animation: none; }
+  .progress-fill { transition: none; }
+  .bar-bar { transition: none; }
+  .unlock-toast { transition: none; }
+}
+
+/* ── Shared nav bottom bar overrides ────────────────────────────────────────── */
+body { padding-bottom: calc(90px + env(safe-area-inset-bottom)); }

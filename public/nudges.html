@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#011e5c">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="FocusLedger">
+  <link rel="icon" type="image/png" sizes="32x32" href="/icons/fl-icon.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/icons/fl-icon.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Nudges — FocusLedger</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --orange: #c9a84c;
+      --navy: #011e5c;
+      --cream: #faf9f7;
+      --cream-dark: #f5f3ef;
+      --text-dark: #1a1a1a;
+      --text-muted: #6b6b6b;
+      --border: #e8e5e0;
+      --surface: #fff;
+      --teal: #0891B2;
+      --teal-light: #22D3EE;
+      --teal-dark: #0E7490;
+      --teal-bg: #F0FDFE;
+      --teal-border: #A5F3FC;
+      --amber-bg: #FFFBEB;
+      --amber-border: #FDE68A;
+      --amber-text: #92400E;
+      --red-bg: #FFF1F0;
+      --red-border: #FECACA;
+      --red-text: #991B1B;
+    }
+    body {
+      font-family: 'DM Sans', sans-serif;
+      color: var(--text-dark);
+      background: var(--cream);
+      min-height: 100vh;
+      padding-bottom: calc(70px + env(safe-area-inset-bottom));
+    }
+    h1, h2, h3 { font-family: 'Space Grotesk', sans-serif; }
+
+    /* NAV */
+    .portal-nav {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 1.25rem; height: 56px; background: var(--navy);
+      position: sticky; top: 0; z-index: 200; width: 100%;
+    }
+    .portal-logo {
+      font-family: system-ui, sans-serif; font-size: 1.25rem; font-weight: 700;
+      color: white; display: flex; align-items: center; gap: 0.5rem; text-decoration: none;
+    }
+    .logo-dot { width: 10px; height: 10px; background: var(--orange); border-radius: 2px; transform: rotate(45deg); }
+    .nav-links { display: flex; gap: 0.15rem; flex-wrap: wrap; }
+    .nav-link {
+      padding: 0.4rem 0.75rem; font-size: 0.875rem; font-weight: 500;
+      color: rgba(255,255,255,0.75); transition: all 0.15s; white-space: nowrap; text-decoration: none;
+    }
+    .nav-link:hover { background: rgba(255,255,255,0.1); color: white; }
+    .nav-link.active { color: white; border-bottom: 2px solid var(--orange); }
+    .nav-right { display: flex; align-items: center; gap: 0.5rem; }
+    .logout-btn {
+      font-size: 0.8rem; color: rgba(255,255,255,0.65); background: none;
+      border: none; cursor: pointer; padding: 0.35rem 0.6rem; border-radius: 4px;
+      transition: all 0.15s; font-family: system-ui, sans-serif;
+    }
+    .logout-btn:hover { color: var(--orange); background: rgba(255,255,255,0.08); }
+    @media (max-width: 900px) { .nav-links { display: none; } }
+
+    /* BREADCRUMB */
+    .breadcrumb {
+      display: flex; align-items: center; gap: 0.4rem;
+      font-size: 0.8rem; color: var(--text-muted); padding: 0.75rem 1.25rem;
+      max-width: 720px; margin: 0 auto;
+    }
+    .breadcrumb a { color: var(--teal-dark); text-decoration: none; }
+    .breadcrumb a:hover { text-decoration: underline; }
+    .breadcrumb-sep { color: var(--border); }
+
+    /* PAGE */
+    .page-wrap { max-width: 720px; margin: 0 auto; padding: 0 1.25rem 2rem; }
+
+    /* HEADER */
+    .page-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 1.5rem; flex-wrap: wrap; gap: 0.75rem;
+    }
+    .page-header-left { display: flex; align-items: center; gap: 0.85rem; }
+    .page-icon {
+      width: 48px; height: 48px; border-radius: 13px;
+      background: var(--teal-bg); display: flex; align-items: center;
+      justify-content: center; font-size: 1.4rem; flex-shrink: 0;
+      border: 1px solid var(--teal-border);
+    }
+    .page-header h1 { font-size: 1.5rem; color: var(--navy); }
+    .page-header p { font-size: 0.85rem; color: var(--text-muted); margin-top: 0.1rem; }
+
+    .mark-all-btn {
+      font-size: 0.8rem; font-weight: 600; color: var(--teal-dark);
+      background: var(--teal-bg); border: 1px solid var(--teal-border);
+      padding: 0.4rem 0.9rem; border-radius: 50px; cursor: pointer;
+      transition: all 0.15s; touch-action: manipulation; white-space: nowrap;
+    }
+    .mark-all-btn:hover { background: var(--teal-border); }
+    .mark-all-btn:disabled { opacity: 0.45; cursor: default; }
+
+    /* FILTER TABS */
+    .filter-tabs {
+      display: flex; gap: 0.4rem; margin-bottom: 1.25rem;
+      border-bottom: 1px solid var(--border); padding-bottom: 0;
+    }
+    .filter-tab {
+      font-size: 0.82rem; font-weight: 600; color: var(--text-muted);
+      background: none; border: none; padding: 0.5rem 0.85rem;
+      cursor: pointer; border-bottom: 2px solid transparent;
+      margin-bottom: -1px; transition: all 0.15s; touch-action: manipulation;
+      font-family: 'DM Sans', sans-serif;
+    }
+    .filter-tab.active { color: var(--navy); border-bottom-color: var(--orange); }
+    .filter-tab:hover:not(.active) { color: var(--text-dark); }
+
+    /* NUDGE CARD */
+    .nudge-list { display: flex; flex-direction: column; gap: 0.75rem; }
+
+    .nudge-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 14px; padding: 1rem 1.1rem;
+      display: flex; gap: 0.9rem; align-items: flex-start;
+      transition: border-color 0.15s, box-shadow 0.15s;
+      position: relative;
+    }
+    .nudge-card:not(.dismissed):hover {
+      border-color: var(--teal); box-shadow: 0 2px 10px rgba(8,145,178,0.08);
+    }
+
+    /* Left severity bar */
+    .nudge-card::before {
+      content: ''; position: absolute; left: 0; top: 12px; bottom: 12px;
+      width: 3px; border-radius: 0 2px 2px 0;
+    }
+    .nudge-card.sev-info::before    { background: var(--teal); }
+    .nudge-card.sev-warning::before { background: #D97706; }
+    .nudge-card.sev-critical::before { background: #DC2626; }
+    .nudge-card.dismissed { opacity: 0.5; }
+
+    /* Severity icon bubble */
+    .nudge-icon {
+      width: 40px; height: 40px; border-radius: 10px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center; font-size: 1.1rem;
+    }
+    .nudge-card.sev-info    .nudge-icon { background: var(--teal-bg); }
+    .nudge-card.sev-warning .nudge-icon { background: var(--amber-bg); }
+    .nudge-card.sev-critical .nudge-icon { background: var(--red-bg); }
+
+    .nudge-body { flex: 1; min-width: 0; }
+    .nudge-meta {
+      display: flex; align-items: center; gap: 0.5rem;
+      margin-bottom: 0.35rem; flex-wrap: wrap;
+    }
+    .nudge-type-pill {
+      font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+      padding: 0.15rem 0.5rem; border-radius: 50px;
+    }
+    .sev-info    .nudge-type-pill { background: var(--teal-bg); color: var(--teal-dark); border: 1px solid var(--teal-border); }
+    .sev-warning .nudge-type-pill { background: var(--amber-bg); color: var(--amber-text); border: 1px solid var(--amber-border); }
+    .sev-critical .nudge-type-pill { background: var(--red-bg); color: var(--red-text); border: 1px solid var(--red-border); }
+
+    .nudge-time { font-size: 0.72rem; color: var(--text-muted); }
+    .nudge-message { font-size: 0.9rem; line-height: 1.55; color: var(--text-dark); margin-bottom: 0.65rem; }
+
+    .nudge-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+    .nudge-action-btn {
+      font-size: 0.78rem; font-weight: 600; padding: 0.3rem 0.75rem;
+      border-radius: 50px; cursor: pointer; border: none;
+      transition: all 0.15s; touch-action: manipulation;
+      text-decoration: none; display: inline-flex; align-items: center;
+      font-family: 'DM Sans', sans-serif;
+    }
+    .btn-primary {
+      background: var(--navy); color: white;
+    }
+    .btn-primary:hover { background: #02287a; }
+    .btn-dismiss {
+      background: var(--cream-dark); color: var(--text-muted);
+    }
+    .btn-dismiss:hover { background: var(--border); color: var(--text-dark); }
+
+    /* STATES */
+    .loading-state {
+      text-align: center; padding: 3rem 1rem; color: var(--text-muted);
+    }
+    .loading-spinner {
+      width: 28px; height: 28px; border: 3px solid var(--border);
+      border-top-color: var(--teal); border-radius: 50%;
+      animation: spin 0.8s linear infinite; margin: 0 auto 0.75rem;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .empty-state {
+      text-align: center; padding: 3.5rem 1.5rem;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 16px; color: var(--text-muted);
+    }
+    .empty-icon { font-size: 2.5rem; margin-bottom: 0.75rem; }
+    .empty-state h3 { font-size: 1rem; color: var(--navy); margin-bottom: 0.4rem; }
+    .empty-state p { font-size: 0.85rem; line-height: 1.5; }
+
+    /* UNREAD DOT */
+    .unread-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--orange); flex-shrink: 0;
+      margin-top: 4px;
+    }
+
+    /* BOTTOM TABS */
+    .bottom-tabs {
+      display: none; position: fixed; bottom: 0; left: 0; right: 0;
+      background: var(--navy); z-index: 200;
+      padding: 0.5rem 0;
+      padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+    }
+    .bottom-tabs-inner {
+      display: flex; justify-content: space-around;
+      max-width: 600px; margin: 0 auto;
+    }
+    .tab-btn {
+      display: flex; flex-direction: column; align-items: center; gap: 0.2rem;
+      padding: 0.4rem 0.75rem; border: none; background: none; cursor: pointer;
+      font-size: 0.65rem; color: rgba(255,255,255,0.6);
+      font-family: system-ui, sans-serif; transition: color 0.15s;
+      min-width: 44px; min-height: 44px; justify-content: center;
+      touch-action: manipulation;
+    }
+    .tab-btn.active { color: var(--orange); }
+    .tab-btn-icon { font-size: 1.1rem; line-height: 1; position: relative; }
+    .tab-badge {
+      position: absolute; top: -4px; right: -8px;
+      min-width: 16px; height: 16px; border-radius: 8px;
+      background: #DC2626; color: white;
+      font-size: 0.55rem; font-weight: 700; font-family: system-ui, sans-serif;
+      display: flex; align-items: center; justify-content: center;
+      padding: 0 3px; line-height: 1;
+    }
+    @media (max-width: 900px) { .bottom-tabs { display: block; } }
+    @media (min-width: 901px) { .bottom-tabs { display: none !important; } }
+  </style>
+  <link rel="stylesheet" href="/css/design-system.css">
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="portal-nav">
+  <a href="/home" class="portal-logo"><span class="logo-dot"></span>FocusLedger</a>
+  <div class="nav-links">
+    <a href="/home" class="nav-link">Home</a>
+    <a href="/app/tasks" class="nav-link">Tasks</a>
+    <a href="/app/money" class="nav-link">Money</a>
+    <a href="/app/life" class="nav-link active">Life</a>
+    <a href="/news" class="nav-link">News</a>
+    <a href="/app/vault" class="nav-link">Vault</a>
+    <a href="/ideas" class="nav-link">Ideas</a>
+    <a href="/journal" class="nav-link">Journal</a>
+    <a href="/settings" class="nav-link">Settings</a>
+  </div>
+  <div class="nav-right">
+    <button class="logout-btn" id="logoutBtn">Logout</button>
+  </div>
+</nav>
+
+<!-- BREADCRUMB -->
+<div class="breadcrumb">
+  <a href="/app/life">Life</a>
+  <span class="breadcrumb-sep">›</span>
+  <span>Nudges</span>
+</div>
+
+<!-- PAGE -->
+<div class="page-wrap">
+
+  <!-- HEADER -->
+  <div class="page-header">
+    <div class="page-header-left">
+      <div class="page-icon">🔔</div>
+      <div>
+        <h1>Nudges</h1>
+        <p>Proactive alerts tied to your documents, insurance, and health score.</p>
+      </div>
+    </div>
+    <button class="mark-all-btn" id="markAllBtn" disabled>Mark all read</button>
+  </div>
+
+  <!-- FILTER TABS -->
+  <div class="filter-tabs" role="tablist">
+    <button class="filter-tab active" data-filter="pending" role="tab">Pending</button>
+    <button class="filter-tab" data-filter="all" role="tab">All</button>
+    <button class="filter-tab" data-filter="dismissed" role="tab">Dismissed</button>
+  </div>
+
+  <!-- NUDGE LIST -->
+  <div id="nudgeList">
+    <div class="loading-state">
+      <div class="loading-spinner"></div>
+      <div>Loading nudges…</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Shared navigation (bottom bar mobile, left sidebar desktop) -->
+
+<script>
+(function() {
+  var token = localStorage.getItem('fl_token');
+  if (!token) { window.location.href = '/login'; return; }
+
+  var authHdr = { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' };
+
+  document.getElementById('logoutBtn').addEventListener('click', function() {
+    localStorage.removeItem('fl_token');
+    window.location.href = '/login';
+  });
+
+  // ── State ──────────────────────────────────────────────────────────────────
+  var allNudges = [];
+  var activeFilter = 'pending';
+
+  // ── Filter tabs ────────────────────────────────────────────────────────────
+  document.querySelectorAll('.filter-tab').forEach(function(tab) {
+    tab.addEventListener('click', function() {
+      document.querySelectorAll('.filter-tab').forEach(function(t) { t.classList.remove('active'); });
+      this.classList.add('active');
+      activeFilter = this.dataset.filter;
+      renderNudges();
+    });
+  });
+
+  // ── Load nudges ────────────────────────────────────────────────────────────
+  function loadNudges() {
+    // Trigger generation first (fire-and-forget) then fetch
+    fetch('/api/nudge-system/generate', { method: 'POST', headers: authHdr }).catch(function() {});
+
+    // Fetch all nudges (pending + recent dismissed for "All" tab)
+    fetchNudges();
+  }
+
+  function fetchNudges() {
+    fetch('/api/nudge-system/feed', { headers: authHdr })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (!data.success) throw new Error('API error');
+        allNudges = data.nudges || [];
+        renderNudges();
+        updateMarkAllBtn();
+      })
+      .catch(function() {
+        document.getElementById('nudgeList').innerHTML =
+          '<div class="empty-state"><div class="empty-icon">⚠️</div>' +
+          '<h3>Couldn\'t load nudges</h3>' +
+          '<p>Check your connection and refresh.</p></div>';
+      });
+  }
+
+  // ── Render ─────────────────────────────────────────────────────────────────
+  function renderNudges() {
+    var filtered = allNudges.filter(function(n) {
+      if (activeFilter === 'pending')   return n.status === 'pending' || n.status === 'delivered';
+      if (activeFilter === 'dismissed') return n.status === 'dismissed';
+      return true; // 'all'
+    });
+
+    var list = document.getElementById('nudgeList');
+
+    if (filtered.length === 0) {
+      var emptyMsgs = {
+        pending: { icon: '✅', title: 'All caught up', body: 'No nudges right now. We\'ll alert you when something needs attention.' },
+        dismissed: { icon: '🗑️', title: 'Nothing dismissed', body: 'Nudges you dismiss will appear here.' },
+        all: { icon: '🔔', title: 'No nudges yet', body: 'As you add documents and insurance policies, nudges will fire automatically.' }
+      };
+      var msg = emptyMsgs[activeFilter] || emptyMsgs.all;
+      list.innerHTML =
+        '<div class="empty-state">' +
+        '<div class="empty-icon">' + msg.icon + '</div>' +
+        '<h3>' + escHtml(msg.title) + '</h3>' +
+        '<p>' + escHtml(msg.body) + '</p>' +
+        '</div>';
+      return;
+    }
+
+    list.innerHTML = '<div class="nudge-list">' +
+      filtered.map(function(n) { return renderCard(n); }).join('') +
+      '</div>';
+
+    // Wire action buttons after DOM inject (CRITICAL: no inline onclick)
+    list.querySelectorAll('[data-dismiss-id]').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        dismissNudge(parseInt(this.dataset.dismissId, 10), this);
+      });
+    });
+
+    list.querySelectorAll('[data-action-url]').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var nudgeId = parseInt(this.dataset.nudgeId, 10);
+        var url = this.dataset.actionUrl;
+        markActedOn(nudgeId);
+        window.location.href = url;
+      });
+    });
+  }
+
+  function renderCard(n) {
+    var sev = nudgeSeverity(n);
+    var icon = nudgeIcon(n);
+    var typeLabel = nudgeTypeLabel(n.type);
+    var isDismissed = n.status === 'dismissed';
+    var timeStr = relativeTime(n.created_at);
+
+    var unreadDot = (n.status === 'pending') ? '<div class="unread-dot"></div>' : '';
+
+    var actionBtn = '';
+    if (!isDismissed && n.action_url) {
+      actionBtn =
+        '<button class="nudge-action-btn btn-primary" data-action-url="' + escHtml(n.action_url) +
+        '" data-nudge-id="' + n.id + '">' + escHtml(n.action_label || 'View') + '</button>';
+    }
+
+    var dismissBtn = '';
+    if (!isDismissed) {
+      dismissBtn = '<button class="nudge-action-btn btn-dismiss" data-dismiss-id="' + n.id + '">Dismiss</button>';
+    }
+
+    return '<div class="nudge-card sev-' + sev + (isDismissed ? ' dismissed' : '') + '" id="nudge-' + n.id + '">' +
+      '<div class="nudge-icon">' + icon + '</div>' +
+      '<div class="nudge-body">' +
+        '<div class="nudge-meta">' +
+          '<span class="nudge-type-pill">' + escHtml(typeLabel) + '</span>' +
+          '<span class="nudge-time">' + escHtml(timeStr) + '</span>' +
+        '</div>' +
+        '<div class="nudge-message">' + escHtml(n.message) + '</div>' +
+        (actionBtn || dismissBtn
+          ? '<div class="nudge-actions">' + actionBtn + dismissBtn + '</div>'
+          : '') +
+      '</div>' +
+      unreadDot +
+      '</div>';
+  }
+
+  // ── Actions ────────────────────────────────────────────────────────────────
+  function dismissNudge(id, btn) {
+    btn.disabled = true;
+    btn.textContent = '…';
+    fetch('/api/nudge-system/dismiss/' + id, { method: 'POST', headers: authHdr })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.success) {
+          var nudge = allNudges.find(function(n) { return n.id === id; });
+          if (nudge) nudge.status = 'dismissed';
+          renderNudges();
+          updateMarkAllBtn();
+        }
+      })
+      .catch(function() { btn.disabled = false; btn.textContent = 'Dismiss'; });
+  }
+
+  function markActedOn(id) {
+    fetch('/api/nudge-system/acted/' + id, { method: 'POST', headers: authHdr }).catch(function() {});
+    var nudge = allNudges.find(function(n) { return n.id === id; });
+    if (nudge) nudge.status = 'acted_on';
+  }
+
+  // ── Mark all ───────────────────────────────────────────────────────────────
+  document.getElementById('markAllBtn').addEventListener('click', function() {
+    var btn = this;
+    btn.disabled = true;
+    var pending = allNudges.filter(function(n) {
+      return n.status === 'pending' || n.status === 'delivered';
+    });
+    var promises = pending.map(function(n) {
+      return fetch('/api/nudge-system/dismiss/' + n.id, { method: 'POST', headers: authHdr })
+        .then(function() { n.status = 'dismissed'; })
+        .catch(function() {});
+    });
+    Promise.all(promises).then(function() {
+      renderNudges();
+      updateMarkAllBtn();
+    });
+  });
+
+  function updateMarkAllBtn() {
+    var btn = document.getElementById('markAllBtn');
+    var hasPending = allNudges.some(function(n) {
+      return n.status === 'pending' || n.status === 'delivered';
+    });
+    btn.disabled = !hasPending;
+  }
+
+  // ── Helpers ────────────────────────────────────────────────────────────────
+  function nudgeSeverity(n) {
+    if (n.urgency === 'urgent') return 'critical';
+    if (n.type === 'score_drop') return 'warning';
+    return 'info';
+  }
+
+  function nudgeIcon(n) {
+    var icons = {
+      document_expiry: '📄',
+      insurance_gap:   '🏥',
+      score_drop:      '📉',
+      annual_review:   '🔄',
+      vault_empty:     '📁',
+      task_streak:     '🎯',
+      task_miss:       '⚡'
+    };
+    return icons[n.type] || '🔔';
+  }
+
+  function nudgeTypeLabel(type) {
+    var labels = {
+      document_expiry: 'Expiry',
+      insurance_gap:   'Insurance',
+      score_drop:      'Score Drop',
+      annual_review:   'Annual Review',
+      vault_empty:     'Vault',
+      task_streak:     'Streak',
+      task_miss:       'Tasks'
+    };
+    return labels[type] || type.replace(/_/g, ' ');
+  }
+
+  function relativeTime(iso) {
+    if (!iso) return '';
+    var diff = Date.now() - new Date(iso).getTime();
+    var mins = Math.floor(diff / 60000);
+    if (mins < 2)   return 'just now';
+    if (mins < 60)  return mins + 'm ago';
+    var hrs = Math.floor(mins / 60);
+    if (hrs < 24)   return hrs + 'h ago';
+    var days = Math.floor(hrs / 24);
+    if (days === 1) return 'yesterday';
+    if (days < 7)   return days + 'd ago';
+    return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  }
+
+  function escHtml(s) {
+    return String(s || '')
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  loadNudges();
+})();
+</script>
+<link rel="stylesheet" href="/shared-nav.css">
+<script src="/shared-nav.js"></script>
+<script src="/buddy-widget.js"></script>
+<script src="/js/analytics.js"></script>
+<script>(function(){try{var u=JSON.parse(localStorage.getItem('fl_user')||'{}');if(u.id)FLA.setUser(u.id);}catch(e){}FLA.trackPage('nudges');})()</script>
+
+<!-- Service worker registration -->
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' })
+    .then(function(reg) {
+      reg.addEventListener('updatefound', function() {
+        var newWorker = reg.installing;
+        newWorker.addEventListener('statechange', function() {
+          if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+            window.dispatchEvent(new Event('SW_UPDATED'));
+          }
+        });
+      });
+    });
+  window.addEventListener('SW_UPDATED', function() { window.location.reload(); });
+}
+</script>
+</body>
+</html>
