@@ -153,7 +153,7 @@ app.get('/health', async (req, res) => {
       pool.query('SELECT 1'),
       new Promise((_, reject) => setTimeout(() => reject(new Error('DB timeout')), 4000)),
     ]);
-    res.json({ status: 'ok', db: 'ok', latency_ms: Date.now() - start });
+    res.json({ status: 'ok', db: 'ok', latency_ms: Date.now() - start, commit: process.env.RENDER_GIT_COMMIT || 'unknown' });
   } catch (err) {
     res.status(503).json({ status: 'degraded', db: 'error', error: err.message, latency_ms: Date.now() - start });
   }

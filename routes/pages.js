@@ -8,16 +8,18 @@ const fs = require('fs');
 const router = express.Router();
 const pub = (file) => path.join(__dirname, '..', 'public', file);
 
-// Landing page — injects Polsia analytics slug at request time
+// Landing page — served from views/ (not public/) so it cannot be shadowed
+// by a Render persistent disk mounted at public/. Also injects Polsia slug.
+const LANDING_PATH = path.join(__dirname, '..', 'views', 'index.html');
 router.get('/', (req, res) => {
   const slug = process.env.POLSIA_ANALYTICS_SLUG || '';
-  const htmlPath = pub('index.html');
-  if (fs.existsSync(htmlPath)) {
-    let html = fs.readFileSync(htmlPath, 'utf8');
-    html = html.replace('__POLSIA_SLUG__', slug);
+  if (fs.existsSync(LANDING_PATH)) {
+    let html = fs.readFileSync(LANDING_PATH, 'utf8');
+    if (slug) html = html.replace('__POLSIA_SLUG__', slug);
+    res.setHeader('Cache-Control', 'no-cache, must-revalidate');
     res.type('html').send(html);
   } else {
-    res.json({ message: 'Hello from Polsia Instance!' });
+    res.json({ message: 'Landing page not found', path: LANDING_PATH });
   }
 });
 

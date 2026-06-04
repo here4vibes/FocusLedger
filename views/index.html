@@ -1,0 +1,3834 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#011e5c">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="FocusLedger">
+    <link rel="icon" type="image/png" sizes="32x32" href="/icons/fl-icon.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/icons/fl-icon.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/fl-icon.png">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FocusLedger — Your brain's exoskeleton.</title>
+    <meta name="description" content="Nudges and routines to help you show up how you want to for the people you love. Built by a CPA with ADHD.">
+    <!-- Open Graph -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://focusledger.net/">
+    <meta property="og:title" content="Your brain's exoskeleton.">
+    <meta property="og:description" content="Nudges and routines to help you show up how you want to for the people you love.">
+    <meta property="og:image" content="https://focusledger.net/icons/og-home.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:site_name" content="FocusLedger">
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Your brain's exoskeleton.">
+    <meta name="twitter:description" content="Nudges and routines to help you show up how you want to for the people you love.">
+    <meta name="twitter:image" content="https://focusledger.net/icons/og-home.png">
+    <!-- Canonical -->
+    <link rel="canonical" href="https://focusledger.net/">
+    <!-- Meta Pixel base + PageView -->
+    <script>
+    !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+    n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
+    n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
+    t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,
+    document,'script','https://connect.facebook.net/en_US/fbevents.js');
+    fbq('init','1597499061553078');
+    fbq('track','PageView');
+    </script>
+    <noscript><img height="1" width="1" style="display:none"
+    src="https://www.facebook.com/tr?id=1597499061553078&ev=PageView&noscript=1"/></noscript>
+    <!-- Fonts: Space Grotesk (display) + Satoshi (body) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        @import url('https://api.fontshare.com/v2/css?f[]=satoshi@400,500,600,700&display=swap');
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --navy: #011e5c;
+            --navy-dark: #010f30;
+            --orange: #F26B3A;
+            --orange-light: #F5895A;
+            --cream: #faf8f4;
+            --cream-warm: #f5f1ea;
+            --cream-deep: #ede8df;
+            --surface: #ffffff;
+            --text-main: #141416;
+            --text-body: #44444a;
+            --text-muted: #8a8a95;
+            --teal: #4a9292;
+            --teal-light: #5ba4a4;
+            --teal-dark: #3a7a7a;
+            --border: #e8e3d9;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.05), 0 4px 16px rgba(0,0,0,0.04);
+            --shadow-md: 0 4px 12px rgba(0,0,0,0.06), 0 16px 40px rgba(0,0,0,0.06);
+            --font-display: 'Space Grotesk', system-ui, sans-serif;
+            --font-body: 'Satoshi', system-ui, -apple-system, sans-serif;
+            --radius-sm: 10px;
+            --radius-md: 16px;
+            --radius-lg: 22px;
+            --gold: #F26B3A;
+            --gold-light: #F5895A;
+        }
+
+        html { scroll-behavior: smooth; }
+
+        body {
+            font-family: var(--font-body);
+            color: var(--text-main);
+            background: var(--cream);
+            overflow-x: hidden;
+            line-height: 1.65;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        h1, h2, h3, h4, h5, h6 {
+            font-family: var(--font-display);
+        }
+
+        /* ── NAV ── */
+        nav {
+            background: transparent;
+            position: sticky;
+            top: 0;
+            z-index: 200;
+            transition: background 0.3s, backdrop-filter 0.3s, box-shadow 0.3s;
+        }
+        nav.nav-scrolled {
+            background: rgba(250,248,244,0.88);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            box-shadow: 0 1px 0 var(--border);
+        }
+        .nav-inner {
+            padding: 0 2rem;
+            height: 64px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .logo {
+            font-family: var(--font-display);
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--navy);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            text-decoration: none;
+            letter-spacing: -0.02em;
+        }
+        .logo-icon { height: 26px; width: auto; display: block; flex-shrink: 0; }
+        .nav-links { display: flex; align-items: center; gap: 0.25rem; }
+        .nav-links-pages { display: contents; }
+        .nav-links a {
+            color: var(--text-body);
+            text-decoration: none;
+            font-size: 0.875rem;
+            font-weight: 500;
+            padding: 0.45rem 0.85rem;
+            border-radius: 8px;
+            transition: all 0.15s;
+        }
+        .nav-links a:hover { color: var(--navy); background: rgba(1,30,92,0.05); }
+        .nav-cta {
+            background: var(--navy) !important;
+            color: white !important;
+            font-weight: 600 !important;
+            border-radius: 10px !important;
+            padding: 0.5rem 1.1rem !important;
+        }
+        .nav-cta:hover { background: var(--navy-dark) !important; }
+        .nav-hamburger {
+            display: none;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 0.5rem;
+            color: var(--navy);
+        }
+        .nav-hamburger svg { width: 22px; height: 22px; }
+        .nav-mobile-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 300;
+            background: rgba(1,15,48,0.5);
+        }
+        .nav-mobile-overlay.active { display: block; }
+        .nav-mobile-drawer {
+            position: absolute;
+            top: 0; right: 0;
+            width: min(300px, 88vw);
+            background: var(--cream);
+            height: 100%;
+            padding: 1.5rem;
+            transform: translateX(100%);
+            transition: transform 0.25s ease;
+            border-left: 1px solid var(--border);
+        }
+        .nav-mobile-overlay.active .nav-mobile-drawer { transform: translateX(0); }
+        .nav-mobile-drawer-header { display: flex; justify-content: flex-end; margin-bottom: 1.5rem; }
+        .nav-mobile-close {
+            background: none; border: none;
+            color: var(--text-muted); cursor: pointer; padding: 0.25rem;
+        }
+        .nav-mobile-close svg { width: 22px; height: 22px; }
+        .nav-mobile-links { display: flex; flex-direction: column; gap: 0.25rem; }
+        .nav-mobile-links a {
+            color: var(--text-body);
+            text-decoration: none;
+            font-size: 1rem;
+            font-weight: 500;
+            padding: 0.85rem 0.75rem;
+            border-radius: 10px;
+            transition: all 0.15s;
+        }
+        .nav-mobile-links a:hover { color: var(--navy); background: rgba(1,30,92,0.05); }
+        .nav-mobile-links a.nav-mobile-cta {
+            background: var(--navy);
+            color: white;
+            text-align: center;
+            border-radius: 12px;
+            margin-top: 0.75rem;
+            font-weight: 700;
+        }
+        .nav-mobile-links a.nav-mobile-cta:hover { background: var(--navy-dark); }
+
+        /* ── HERO ── */
+        .hero {
+            background: var(--cream);
+            padding: 6rem 2rem 5rem;
+            position: relative;
+            overflow: hidden;
+        }
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: -20%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80%;
+            height: 60%;
+            background: radial-gradient(ellipse at center, rgba(242,107,58,0.07) 0%, transparent 70%);
+            pointer-events: none;
+        }
+        .hero-inner {
+            max-width: 1120px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 5rem;
+            align-items: center;
+            min-height: 58vh;
+        }
+        .hero-text { max-width: 560px; }
+
+        /* Founder line — subtle, not a section */
+        .founder-line {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            font-style: italic;
+            margin-bottom: 2rem;
+            letter-spacing: 0.01em;
+        }
+
+        .hero-text h1 {
+            font-family: var(--font-display);
+            font-size: 5.5rem;
+            line-height: 1.0;
+            font-weight: 700;
+            letter-spacing: -0.035em;
+            color: var(--navy);
+            margin-bottom: 1.75rem;
+        }
+        .hero-text h1 em {
+            font-style: italic;
+            color: var(--orange);
+            font-weight: 400;
+        }
+        .hero-sub {
+            font-size: 1.125rem;
+            line-height: 1.75;
+            color: var(--text-body);
+            max-width: 440px;
+            margin-bottom: 2.75rem;
+            font-weight: 400;
+        }
+
+        /* Single primary CTA */
+        .hero-cta-wrap {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 1rem;
+        }
+        .btn-primary {
+            display: inline-flex;
+            align-items: center;
+            background: var(--navy);
+            color: white;
+            padding: 0.9rem 2rem;
+            border-radius: 12px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.975rem;
+            transition: background 0.2s, box-shadow 0.2s, transform 0.15s;
+            letter-spacing: -0.01em;
+            min-height: 50px;
+            box-shadow: 0 2px 8px rgba(1,30,92,0.18), 0 8px 24px rgba(1,30,92,0.12);
+        }
+        .btn-primary:hover {
+            background: var(--navy-dark);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(1,30,92,0.22), 0 12px 32px rgba(1,30,92,0.16);
+        }
+        .btn-primary-gold {
+            background: var(--orange);
+            color: white;
+            box-shadow: 0 2px 8px rgba(242,107,58,0.2), 0 8px 24px rgba(242,107,58,0.12);
+        }
+        .btn-primary-gold:hover {
+            background: var(--orange-light);
+            box-shadow: 0 4px 12px rgba(242,107,58,0.28), 0 12px 32px rgba(242,107,58,0.18);
+        }
+        .cta-secondary-row {
+            display: flex;
+            align-items: center;
+            gap: 1.25rem;
+            flex-wrap: wrap;
+        }
+        .cta-secondary-row a {
+            font-size: 0.875rem;
+            color: var(--text-muted);
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.15s;
+        }
+        .cta-secondary-row a:hover { color: var(--navy); }
+
+        /* Trust strip */
+        .hero-trust {
+            margin-top: 2.5rem;
+            display: flex;
+            gap: 1.25rem;
+            flex-wrap: wrap;
+        }
+        .trust-item {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+        .trust-item svg { color: var(--teal); flex-shrink: 0; }
+
+        /* Hero mockup */
+        .hero-visual { position: relative; }
+        .hero-mockup {
+            background: var(--surface);
+            border-radius: 18px;
+            box-shadow: 0 8px 40px rgba(1,30,92,0.12), 0 2px 8px rgba(0,0,0,0.04);
+            overflow: hidden;
+            border: 1px solid var(--border);
+        }
+        .mockup-topbar {
+            background: var(--navy);
+            padding: 0.7rem 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .mkdot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.2);
+        }
+        .mkurl {
+            flex: 1;
+            background: rgba(255,255,255,0.1);
+            border-radius: 2px;
+            height: 20px;
+            margin: 0 0.5rem;
+            display: flex;
+            align-items: center;
+            padding: 0 0.6rem;
+            font-size: 0.68rem;
+            color: rgba(255,255,255,0.55);
+            font-family: var(--font-body);
+        }
+        .mockup-body {
+            padding: 1.25rem;
+            background: var(--cream);
+        }
+        .mk-section-label {
+            font-size: 0.62rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--navy);
+            opacity: 0.5;
+            margin-bottom: 0.5rem;
+        }
+        .mk-row { display: flex; gap: 0.6rem; margin-bottom: 0.6rem; }
+        .mk-card {
+            background: var(--surface);
+            border-radius: 10px;
+            padding: 0.8rem;
+            flex: 1;
+            border: 1px solid var(--border);
+        }
+        .mk-task {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.22rem 0;
+        }
+        .mk-check {
+            width: 13px; height: 13px;
+            border-radius: 2px;
+            border: 1.5px solid #c8c4be;
+            flex-shrink: 0;
+        }
+        .mk-check.done { background: var(--teal); border-color: var(--teal); }
+        .mk-task-text { font-size: 0.7rem; color: var(--text-main); }
+        .mk-task-text.done { text-decoration: line-through; color: var(--text-muted); }
+        .mk-stat { text-align: center; padding: 0.3rem 0; }
+        .mk-amount {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--navy);
+            line-height: 1;
+        }
+        .mk-unit { font-size: 0.58rem; color: var(--text-muted); margin-top: 0.2rem; }
+        /* Impulse alert — the product differentiator */
+        .mk-alert {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.45rem;
+            background: rgba(242,107,58,0.08);
+            border: 1px solid rgba(242,107,58,0.22);
+            border-radius: 10px;
+            padding: 0.5rem 0.65rem;
+            margin-top: 0.4rem;
+        }
+        .mk-alert-dot {
+            width: 6px; height: 6px;
+            border-radius: 50%;
+            background: var(--orange);
+            flex-shrink: 0;
+            margin-top: 3px;
+        }
+        .mk-alert-text {
+            font-size: 0.62rem;
+            color: #9a3a10;
+            line-height: 1.4;
+            font-weight: 500;
+        }
+
+        /* ── SECTION: What this is NOT ── */
+        .not-section {
+            background: var(--navy);
+            padding: 5rem 2rem;
+        }
+        .not-inner {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        .not-header {
+            margin-bottom: 3rem;
+        }
+        .eyebrow {
+            display: inline-block;
+            font-size: 0.72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            margin-bottom: 1rem;
+        }
+        .eyebrow-gold { color: var(--orange); opacity: 0.85; }
+        .eyebrow-navy { color: rgba(255,255,255,0.65); }
+        .eyebrow-dark { color: var(--text-muted); }
+        .not-header h2 {
+            font-family: var(--font-display);
+            font-size: 2.6rem;
+            font-weight: 700;
+            color: white;
+            line-height: 1.15;
+            letter-spacing: -0.01em;
+        }
+        .not-header h2 em {
+            font-style: italic;
+            color: var(--orange);
+        }
+        /* Asymmetric two-column layout */
+        .not-grid {
+            display: grid;
+            grid-template-columns: 1.3fr 1fr;
+            gap: 4rem;
+            align-items: start;
+        }
+        .not-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+        }
+        .not-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+        }
+        .not-x {
+            width: 22px; height: 22px;
+            border-radius: 2px;
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+        .not-x svg { width: 11px; height: 11px; color: rgba(255,255,255,0.35); }
+        .not-item-text {
+            font-size: 1rem;
+            color: rgba(255,255,255,0.75);
+            line-height: 1.5;
+        }
+        .not-instead {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 18px;
+            padding: 2rem;
+        }
+        .not-instead-label {
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--orange);
+            margin-bottom: 1.25rem;
+        }
+        .not-instead-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.85rem;
+            margin-bottom: 1.1rem;
+        }
+        .not-instead-item:last-child { margin-bottom: 0; }
+        .not-check {
+            width: 20px; height: 20px;
+            border-radius: 2px;
+            background: rgba(74,146,146,0.2);
+            border: 1px solid rgba(74,146,146,0.35);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            margin-top: 1px;
+        }
+        .not-check svg { width: 11px; height: 11px; color: var(--teal-light); }
+        .not-instead-text {
+            font-size: 0.9rem;
+            color: rgba(255,255,255,0.78);
+            line-height: 1.5;
+        }
+
+        /* ── SECTION: Three Pillars (asymmetric) ── */
+        .pillars {
+            background: var(--cream);
+            padding: 6rem 2rem;
+        }
+        .pillars-inner { max-width: 1120px; margin: 0 auto; }
+        .section-intro {
+            max-width: 520px;
+            margin-bottom: 4rem;
+        }
+        .section-intro h2 {
+            font-family: var(--font-display);
+            font-size: 2.75rem;
+            font-weight: 600;
+            color: var(--navy);
+            line-height: 1.1;
+            letter-spacing: -0.02em;
+            margin-bottom: 1rem;
+        }
+        .section-intro p {
+            font-size: 1rem;
+            color: var(--text-body);
+            line-height: 1.7;
+        }
+
+        /* Pillar 1: Tasks — wide left card */
+        .pillar-tasks {
+            display: grid;
+            grid-template-columns: 1.4fr 1fr;
+            gap: 2px;
+            margin-bottom: 2px;
+            border-radius: 20px 20px 0 0;
+            overflow: hidden;
+        }
+        .pillar-card-main {
+            background: var(--navy);
+            padding: 3rem;
+            position: relative;
+        }
+        .pillar-card-accent {
+            background: var(--cream-warm);
+            padding: 2.5rem;
+            border: 1px solid var(--border);
+        }
+        .pillar-number {
+            font-family: var(--font-display);
+            font-size: 5rem;
+            font-weight: 300;
+            color: rgba(255,255,255,0.08);
+            line-height: 1;
+            position: absolute;
+            top: 1.5rem;
+            right: 2rem;
+        }
+        .pillar-card-main h3 {
+            font-family: var(--font-display);
+            font-size: 1.8rem;
+            font-weight: 600;
+            color: white;
+            margin-bottom: 0.85rem;
+            line-height: 1.15;
+            letter-spacing: -0.02em;
+            position: relative;
+            z-index: 1;
+        }
+        .pillar-card-main p {
+            font-size: 0.95rem;
+            color: rgba(255,255,255,0.78);
+            line-height: 1.7;
+            max-width: 380px;
+        }
+        .pillar-tag {
+            display: inline-block;
+            font-size: 0.68rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            padding: 0.3rem 0.7rem;
+            border-radius: 2px;
+            margin-bottom: 1.25rem;
+        }
+        .pillar-tag-blue {
+            background: rgba(255,255,255,0.1);
+            color: rgba(255,255,255,0.82);
+        }
+        .pillar-tag-gold {
+            background: rgba(242,107,58,0.2);
+            color: #f5a07a;
+        }
+        .pillar-tag-teal {
+            background: rgba(126,200,200,0.18);
+            color: #7ec8c8;
+        }
+        .pillar-feature-list {
+            list-style: none;
+            margin-top: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.6rem;
+        }
+        .pillar-feature-list li {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            font-size: 0.875rem;
+            color: rgba(255,255,255,0.75);
+        }
+        .pillar-feature-list li::before {
+            content: '';
+            width: 4px; height: 4px;
+            background: var(--orange);
+            border-radius: 1px;
+            flex-shrink: 0;
+            transform: rotate(45deg);
+        }
+        /* Pillar accent card — supplementary content */
+        .pillar-card-accent h4 {
+            font-family: var(--font-display);
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--navy);
+            margin-bottom: 0.5rem;
+        }
+        .pillar-card-accent p {
+            font-size: 0.875rem;
+            color: var(--text-body);
+            line-height: 1.65;
+        }
+        .pillar-accent-stat {
+            margin-top: 1.75rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--border);
+        }
+        .pillar-accent-stat .stat-num {
+            font-family: var(--font-display);
+            font-size: 2.5rem;
+            font-weight: 600;
+            color: var(--navy);
+            line-height: 1;
+        }
+        .pillar-accent-stat .stat-label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-top: 0.3rem;
+            line-height: 1.4;
+        }
+
+        /* Pillar 2: Money — reversed layout */
+        .pillar-money {
+            display: grid;
+            grid-template-columns: 1fr 1.4fr;
+            gap: 2px;
+            margin-bottom: 2px;
+            overflow: hidden;
+        }
+        .pillar-card-warm {
+            background: var(--cream-deep);
+            padding: 2.5rem;
+            border: 1px solid var(--border);
+        }
+        .pillar-card-warm h4 {
+            font-family: var(--font-display);
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--navy);
+            margin-bottom: 0.5rem;
+        }
+        .pillar-card-warm p {
+            font-size: 0.875rem;
+            color: var(--text-body);
+            line-height: 1.65;
+        }
+        .pillar-card-gold {
+            background: #1a1400;
+            padding: 3rem;
+            position: relative;
+            overflow: hidden;
+        }
+        .pillar-card-gold::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle at 80% 20%, rgba(242,107,58,0.12) 0%, transparent 60%);
+            pointer-events: none;
+        }
+        .pillar-card-gold h3 {
+            font-family: var(--font-display);
+            font-size: 1.8rem;
+            font-weight: 600;
+            color: white;
+            margin-bottom: 0.85rem;
+            line-height: 1.15;
+            letter-spacing: -0.02em;
+            position: relative;
+        }
+        .pillar-card-gold p {
+            font-size: 0.95rem;
+            color: rgba(255,255,255,0.78);
+            line-height: 1.7;
+            max-width: 380px;
+        }
+        .pillar-card-gold .pillar-feature-list li { color: rgba(255,255,255,0.72); }
+        .pillar-card-gold .pillar-feature-list li::before { background: var(--orange); }
+
+        /* Pillar 3: Accountabilibuddy — full-width dark strip */
+        .pillar-buddy {
+            background: var(--cream-warm);
+            border: 1px solid var(--border);
+            border-radius: 0 0 20px 20px;
+            padding: 3rem;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 4rem;
+            align-items: center;
+        }
+        .pillar-buddy-text {}
+        .pillar-buddy-text .pillar-tag { margin-bottom: 1rem; }
+        .pillar-buddy-text h3 {
+            font-family: var(--font-display);
+            font-size: 1.8rem;
+            font-weight: 600;
+            color: var(--navy);
+            margin-bottom: 0.85rem;
+            line-height: 1.15;
+            letter-spacing: -0.02em;
+        }
+        .pillar-buddy-text p {
+            font-size: 0.95rem;
+            color: var(--text-body);
+            line-height: 1.7;
+        }
+        .pillar-buddy-text .pillar-feature-list li { color: var(--text-body); }
+        .pillar-buddy-text .pillar-feature-list li::before { background: var(--teal); }
+        /* Mini morning check-in visual */
+        .buddy-visual {
+            background: var(--surface);
+            border-radius: 18px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(1,30,92,0.08);
+        }
+        .buddy-vis-header {
+            background: var(--navy);
+            padding: 0.65rem 1rem;
+            font-size: 0.7rem;
+            color: rgba(255,255,255,0.72);
+            font-weight: 600;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+        }
+        .buddy-vis-body { padding: 1.25rem; }
+        .buddy-greeting {
+            font-family: var(--font-display);
+            font-size: 0.85rem;
+            font-weight: 400;
+            color: var(--navy);
+            margin-bottom: 0.15rem;
+        }
+        .buddy-subline {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            margin-bottom: 1rem;
+        }
+        .buddy-mood-row {
+            display: flex;
+            gap: 0.35rem;
+            margin-bottom: 1.1rem;
+        }
+        .buddy-mood {
+            flex: 1;
+            padding: 0.3rem 0.1rem;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            font-size: 0.6rem;
+            text-align: center;
+            color: var(--text-body);
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        .buddy-mood.selected {
+            background: rgba(1,30,92,0.06);
+            border-color: var(--navy);
+            color: var(--navy);
+            font-weight: 600;
+        }
+        .buddy-plan-label {
+            font-size: 0.65rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-muted);
+            margin-bottom: 0.5rem;
+        }
+        .buddy-plan-task {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.4rem 0.5rem;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            margin-bottom: 0.35rem;
+            background: var(--cream);
+        }
+        .buddy-task-num {
+            width: 16px; height: 16px;
+            border-radius: 2px;
+            background: var(--navy);
+            color: white;
+            font-size: 0.58rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .buddy-task-text { font-size: 0.68rem; color: var(--text-main); }
+        .buddy-task-reason {
+            margin-left: auto;
+            font-size: 0.58rem;
+            color: var(--text-muted);
+            white-space: nowrap;
+        }
+
+        /* ── SECTION: Bottom CTA ── */
+        .final-cta {
+            background: var(--navy-dark);
+            padding: 8rem 2rem;
+        }
+        .final-cta-inner {
+            max-width: 600px;
+            margin: 0 auto;
+            text-align: left;
+        }
+        .final-cta .eyebrow-gold { margin-bottom: 1.5rem; display: block; }
+        .final-cta h2 {
+            font-family: var(--font-display);
+            font-size: 3rem;
+            font-weight: 700;
+            color: white;
+            line-height: 1.12;
+            letter-spacing: -0.01em;
+            margin-bottom: 1.25rem;
+        }
+        .final-cta h2 em {
+            font-style: italic;
+            color: var(--orange);
+        }
+        .final-cta p {
+            font-size: 1.05rem;
+            color: rgba(255,255,255,0.75);
+            line-height: 1.75;
+            margin-bottom: 2.5rem;
+        }
+        .final-cta-trust {
+            margin-top: 1.5rem;
+            display: flex;
+            gap: 1.25rem;
+            flex-wrap: wrap;
+        }
+        .final-cta-trust span {
+            font-size: 0.8rem;
+            color: rgba(255,255,255,0.55);
+        }
+
+        /* ── PRICING (slim inline) ── */
+        .pricing-section {
+            background: var(--cream-warm);
+            padding: 5rem 2rem;
+            border-top: 1px solid var(--border);
+        }
+        .pricing-inner {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        .pricing-intro {
+            margin-bottom: 2.5rem;
+        }
+        .pricing-intro h2 {
+            font-family: var(--font-display);
+            font-size: 2rem;
+            font-weight: 600;
+            color: var(--navy);
+            margin-bottom: 0.5rem;
+            letter-spacing: -0.015em;
+        }
+        .pricing-intro p {
+            font-size: 0.95rem;
+            color: var(--text-body);
+        }
+        .pricing-cards {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.25rem;
+            margin-bottom: 1.25rem;
+        }
+        .price-card {
+            background: var(--surface);
+            border-radius: 18px;
+            padding: 1.75rem;
+            border: 1.5px solid var(--border);
+        }
+        .price-card.featured {
+            border-color: var(--navy);
+            position: relative;
+        }
+        .price-badge {
+            position: absolute;
+            top: -11px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--navy);
+            color: white;
+            font-size: 0.65rem;
+            font-weight: 700;
+            letter-spacing: 0.07em;
+            text-transform: uppercase;
+            padding: 0.25rem 0.85rem;
+            border-radius: 10px;
+            white-space: nowrap;
+        }
+        .price-name {
+            font-size: 0.8rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-muted);
+            margin-bottom: 0.35rem;
+        }
+        .price-num {
+            font-size: 2.1rem;
+            font-weight: 700;
+            color: var(--navy);
+            line-height: 1;
+            margin-bottom: 0.2rem;
+        }
+        .price-num span { font-size: 1rem; font-weight: 400; color: var(--text-muted); }
+        .price-period {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            margin-bottom: 1.25rem;
+        }
+        .price-features {
+            list-style: none;
+            margin-bottom: 1.25rem;
+        }
+        .price-features li {
+            font-size: 0.875rem;
+            color: var(--text-body);
+            padding: 0.2rem 0;
+            display: flex;
+            align-items: flex-start;
+            gap: 0.5rem;
+        }
+        .price-features li.yes::before {
+            content: '✓';
+            color: var(--teal);
+            font-weight: 700;
+            font-size: 0.8rem;
+            flex-shrink: 0;
+        }
+        .price-features li.no::before {
+            content: '–';
+            color: var(--text-muted);
+            flex-shrink: 0;
+        }
+        .price-features li.no { color: var(--text-muted); }
+        .price-features li.no em {
+            font-style: normal;
+            color: var(--orange);
+            font-size: 0.78rem;
+        }
+        .price-btn {
+            display: block;
+            width: 100%;
+            padding: 0.75rem;
+            border-radius: 12px;
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 0.9rem;
+            text-align: center;
+            transition: all 0.18s;
+        }
+        .price-btn-free {
+            background: var(--cream-warm);
+            color: var(--navy);
+            border: 1.5px solid var(--border);
+        }
+        .price-btn-free:hover { background: var(--cream-deep); }
+        .price-btn-pro {
+            background: var(--navy);
+            color: white;
+            border: 1.5px solid var(--navy);
+        }
+        .price-btn-pro:hover { background: var(--navy-dark); }
+        .price-btn-tandem {
+            background: var(--teal);
+            color: white;
+            border: 1.5px solid var(--teal);
+        }
+        .price-btn-tandem:hover { background: var(--teal-dark); }
+        .pricing-compare {
+            text-align: center;
+            font-size: 0.875rem;
+        }
+        .pricing-compare a {
+            color: var(--navy);
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .pricing-compare a:hover { text-decoration: underline; }
+
+        /* ── TANDEM PRICING ── */
+        .tandem-section {
+            background: var(--cream);
+            border-top: 1px solid var(--border);
+            padding: 5rem 2rem;
+        }
+        .tandem-inner {
+            max-width: 640px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 2.5rem;
+        }
+        .tandem-intro {
+            text-align: center;
+        }
+        .tandem-intro h2 {
+            font-family: var(--font-display);
+            font-size: clamp(1.8rem, 4vw, 2.6rem);
+            font-weight: 600;
+            color: var(--navy);
+            line-height: 1.15;
+            letter-spacing: -0.02em;
+            margin: 0.75rem 0 0.5rem;
+        }
+        .tandem-intro h2 em {
+            font-style: italic;
+            color: var(--teal);
+            font-weight: 400;
+        }
+        .tandem-intro p {
+            font-size: 1rem;
+            color: var(--text-body);
+            line-height: 1.65;
+        }
+        .tandem-card {
+            background: var(--surface);
+            border: 1.5px solid var(--teal);
+            border-radius: 20px;
+            padding: 2.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.75rem;
+        }
+        .tandem-card-header {
+            text-align: center;
+        }
+        .tandem-tier-name {
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.14em;
+            color: var(--teal);
+            margin-bottom: 0.75rem;
+        }
+        .tandem-price {
+            display: flex;
+            align-items: baseline;
+            justify-content: center;
+            gap: 0.35rem;
+        }
+        .tandem-price-amount {
+            font-family: var(--font-display);
+            font-size: 2.5rem;
+            font-weight: 600;
+            color: var(--text-main);
+            letter-spacing: -0.025em;
+        }
+        .tandem-price-period {
+            font-size: 1rem;
+            color: var(--text-body);
+        }
+        .tandem-price-annual {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-left: 0.25rem;
+        }
+        .tandem-trial {
+            margin-top: 0.6rem;
+            font-size: 0.85rem;
+            color: var(--teal);
+            font-weight: 500;
+        }
+        .tandem-value-props {
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+            padding: 1.75rem 0;
+            border-top: 1px solid var(--border);
+            border-bottom: 1px solid var(--border);
+        }
+        .tandem-prop {
+            display: flex;
+            gap: 1rem;
+            align-items: flex-start;
+        }
+        .tandem-prop-icon {
+            width: 22px;
+            height: 22px;
+            flex-shrink: 0;
+            color: var(--teal);
+            margin-top: 2px;
+        }
+        .tandem-prop-text {
+            display: flex;
+            flex-direction: column;
+            gap: 0.15rem;
+        }
+        .tandem-prop-text strong {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text-main);
+        }
+        .tandem-prop-text span {
+            font-size: 0.825rem;
+            color: var(--text-muted);
+            line-height: 1.5;
+        }
+        .tandem-cta-btn {
+            display: block;
+            text-align: center;
+            background: var(--teal);
+            color: white;
+            padding: 0.9rem 2rem;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 0.95rem;
+            text-decoration: none;
+            letter-spacing: 0.01em;
+            transition: background 0.2s, box-shadow 0.2s;
+            box-shadow: 0 4px 16px rgba(74,146,146,0.3);
+        }
+        .tandem-cta-btn:hover {
+            background: var(--teal-light);
+            box-shadow: 0 6px 24px rgba(74,146,146,0.4);
+        }
+        .tandem-no-cc {
+            text-align: center;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+        .tandem-links {
+            text-align: center;
+            font-size: 0.875rem;
+        }
+        .tandem-links a {
+            color: var(--navy);
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .tandem-links a:hover { text-decoration: underline; }
+
+        /* ── FOOTER ── */
+        footer {
+            background: var(--navy);
+            padding: 2rem 2rem;
+        }
+        .footer-inner {
+            max-width: 1120px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+        }
+        .footer-logo {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: rgba(255,255,255,0.78);
+        }
+        .footer-logo img { height: 20px; opacity: 0.7; }
+        .footer-nav {
+            display: flex;
+            gap: 0.25rem;
+            flex-wrap: wrap;
+        }
+        .footer-nav a {
+            color: rgba(255,255,255,0.65);
+            text-decoration: none;
+            font-size: 0.8rem;
+            padding: 0.35rem 0.6rem;
+            border-radius: 2px;
+            transition: color 0.15s;
+        }
+        .footer-nav a:hover { color: rgba(255,255,255,0.8); }
+        .footer-legal {
+            font-size: 0.75rem;
+            color: rgba(255,255,255,0.48);
+        }
+        .footer-privacy-badge {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            font-size: 0.72rem;
+            color: rgba(255,255,255,0.52);
+            white-space: nowrap;
+        }
+        .footer-privacy-badge svg {
+            opacity: 0.5;
+            flex-shrink: 0;
+        }
+
+        /* ── RESPONSIVE ── */
+        @media (max-width: 960px) {
+            .hero-inner {
+                grid-template-columns: 1fr;
+                gap: 3rem;
+                min-height: auto;
+            }
+            .hero-text { max-width: 100%; }
+            .hero-visual { display: none; }
+            .not-grid {
+                grid-template-columns: 1fr;
+                gap: 2.5rem;
+            }
+            .pillar-tasks,
+            .pillar-money {
+                grid-template-columns: 1fr;
+            }
+            .pillar-buddy {
+                grid-template-columns: 1fr;
+                gap: 2.5rem;
+            }
+            .pricing-cards {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        @media (max-width: 700px) {
+            .pricing-cards {
+                grid-template-columns: 1fr;
+            }
+        }
+        @media (max-width: 600px) {
+            .hero { padding: 3rem 1.25rem 3.5rem; }
+            .hero-text h1 { font-size: 2.75rem; }
+            .not-section { padding: 4rem 1.25rem; }
+            .not-header h2 { font-size: 2rem; }
+            .pillars { padding: 4rem 1.25rem; }
+            .section-intro h2 { font-size: 2rem; }
+            .pillar-card-main,
+            .pillar-card-gold { padding: 2rem 1.5rem; }
+            .pillar-buddy { padding: 2rem 1.5rem; }
+            .pricing-section { padding: 4rem 1.25rem; }
+            .final-cta { padding: 5rem 1.25rem; }
+            .final-cta h2 { font-size: 2.25rem; }
+            .footer-inner { flex-direction: column; align-items: flex-start; gap: 1.25rem; }
+            .footer-nav { display: none; }
+            .nav-inner { padding: 0 1rem; height: 56px; }
+            .nav-links-pages { display: none !important; }
+            .nav-hamburger { display: flex; }
+        }
+        @media (max-width: 400px) {
+            .hero-text h1 { font-size: 2.3rem; }
+        }
+
+        /* ── SCROLL REVEAL ── */
+        .reveal {
+            opacity: 0;
+            transform: translateY(22px);
+            transition: opacity 0.65s ease, transform 0.65s ease;
+        }
+        .reveal.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* ── TIER BADGES ── */
+        .badge-pro {
+            display: inline-block;
+            font-size: 0.6rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            padding: 0.15rem 0.45rem;
+            border-radius: 8px;
+            background: rgba(242,107,58,0.14);
+            color: #b8450a;
+            margin-left: 0.4rem;
+            vertical-align: middle;
+            line-height: 1.4;
+        }
+        .badge-soon {
+            display: inline-block;
+            font-size: 0.6rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            padding: 0.15rem 0.45rem;
+            border-radius: 8px;
+            background: rgba(74,146,146,0.12);
+            color: var(--teal);
+            margin-left: 0.4rem;
+            vertical-align: middle;
+            line-height: 1.4;
+        }
+        /* White-context variants (on dark cards) */
+        .pillar-card-gold .badge-soon,
+        .pillar-card-main .badge-soon {
+            background: rgba(74,146,146,0.25);
+            color: #7ec8c8;
+        }
+        .pillar-card-gold .badge-pro,
+        .pillar-card-main .badge-pro {
+            background: rgba(242,107,58,0.22);
+            color: #f5a07a;
+        }
+
+        /* ── SOCIAL PROOF STRIP (replaces demo section) ── */
+        .proof-section {
+            background: var(--cream-warm);
+            padding: 5rem 2rem;
+            border-top: 1px solid var(--border);
+            border-bottom: 1px solid var(--border);
+        }
+        .proof-inner {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        .proof-header {
+            margin-bottom: 3rem;
+        }
+        .proof-header h2 {
+            font-family: var(--font-display);
+            font-size: 2.25rem;
+            font-weight: 600;
+            color: var(--navy);
+            line-height: 1.15;
+            margin-bottom: 0.75rem;
+            letter-spacing: -0.015em;
+        }
+        .proof-header p {
+            font-size: 1rem;
+            color: var(--text-body);
+            line-height: 1.65;
+            max-width: 520px;
+        }
+        .proof-stat-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.5rem;
+            margin-top: 2.5rem;
+            padding-top: 2.5rem;
+            border-top: 1px solid var(--border);
+        }
+        .proof-stat {
+            text-align: left;
+        }
+        .proof-stat-num {
+            font-family: var(--font-display);
+            font-size: 2.5rem;
+            font-weight: 600;
+            color: var(--navy);
+            line-height: 1;
+            margin-bottom: 0.3rem;
+        }
+        .proof-stat-label {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            line-height: 1.45;
+        }
+        @media (max-width: 960px) {
+            .proof-stat-row { grid-template-columns: 1fr 1fr; }
+        }
+        @media (max-width: 600px) {
+            .proof-section { padding: 4rem 1.25rem; }
+            .proof-header h2 { font-size: 1.75rem; }
+            .proof-stat-row { grid-template-columns: 1fr 1fr; gap: 1rem; }
+        }
+
+        /* ── SEQUENTIAL DEMO SECTION ── */
+        .seq-demo-section {
+            background: var(--navy-dark);
+            padding: 6rem 2rem 5rem;
+            position: relative;
+            overflow: hidden;
+        }
+        .seq-demo-section::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--teal) 0%, var(--orange) 100%);
+        }
+        .seq-demo-inner {
+            max-width: 860px;
+            margin: 0 auto;
+        }
+        .seq-demo-intro {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+        .eyebrow-light {
+            font-size: 0.78rem;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: var(--teal-light);
+            display: block;
+            margin-bottom: 0.75rem;
+        }
+        .seq-demo-intro h2 {
+            font-family: var(--font-display);
+            font-size: 2.75rem;
+            font-weight: 700;
+            color: white;
+            letter-spacing: -0.025em;
+            line-height: 1.1;
+            margin-bottom: 0.75rem;
+        }
+        .seq-demo-intro p {
+            font-size: 1.05rem;
+            color: rgba(255,255,255,0.75);
+            max-width: 480px;
+            margin: 0 auto;
+        }
+        /* Step progress dots */
+        .seq-step-dots {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0;
+            margin-bottom: 2.5rem;
+        }
+        .seq-step-dot {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.1);
+            border: 2px solid rgba(255,255,255,0.15);
+            color: rgba(255,255,255,0.35);
+            font-size: 0.72rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.35s, border-color 0.35s, color 0.35s;
+            position: relative;
+            z-index: 1;
+            flex-shrink: 0;
+        }
+        .seq-step-dot.active {
+            background: var(--teal);
+            border-color: var(--teal);
+            color: white;
+        }
+        .seq-step-dot.done {
+            background: rgba(74,146,146,0.4);
+            border-color: rgba(74,146,146,0.5);
+            color: rgba(255,255,255,0.6);
+        }
+        .seq-step-connector {
+            width: 40px;
+            height: 2px;
+            background: rgba(255,255,255,0.1);
+            transition: background 0.35s;
+        }
+        .seq-step-connector.done { background: rgba(74,146,146,0.4); }
+        /* Step label below dots */
+        .seq-step-label {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        .seq-step-mode {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            font-size: 0.75rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            padding: 0.3rem 0.75rem;
+            border-radius: 20px;
+            margin-bottom: 0.4rem;
+        }
+        .seq-step-mode.mode-form {
+            background: rgba(242,107,58,0.15);
+            color: var(--orange-light);
+            border: 1px solid rgba(242,107,58,0.25);
+        }
+        .seq-step-mode.mode-convo {
+            background: rgba(74,146,146,0.18);
+            color: #93d5d5;
+            border: 1px solid rgba(74,146,146,0.3);
+        }
+        .seq-step-title {
+            display: block;
+            font-size: 1rem;
+            font-weight: 600;
+            color: rgba(255,255,255,0.85);
+            margin-top: 0.35rem;
+        }
+        /* Main step container */
+        .seq-step-panel {
+            display: none;
+            animation: seqFadeIn 0.4s ease forwards;
+        }
+        .seq-step-panel.active { display: block; }
+        @keyframes seqFadeIn {
+            from { opacity: 0; transform: translateY(12px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ── Form card (steps 1, 3, 5) ── */
+        .seq-form-card {
+            background: #0d1f45;
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 16px;
+            padding: 2rem;
+        }
+        /* Mood row */
+        .seq-mood-row {
+            display: flex;
+            gap: 0.6rem;
+            flex-wrap: wrap;
+            margin-bottom: 1.5rem;
+        }
+        .seq-mood-btn {
+            background: rgba(255,255,255,0.06);
+            border: 1.5px solid rgba(255,255,255,0.12);
+            border-radius: 20px;
+            color: rgba(255,255,255,0.7);
+            font-family: var(--font-body);
+            font-size: 0.875rem;
+            padding: 0.45rem 1rem;
+            cursor: pointer;
+            transition: background 0.2s, border-color 0.2s, color 0.2s;
+        }
+        .seq-mood-btn:hover { background: rgba(255,255,255,0.1); color: white; }
+        .seq-mood-btn.selected {
+            background: rgba(74,146,146,0.2);
+            border-color: var(--teal);
+            color: white;
+        }
+        .seq-label {
+            font-size: 0.78rem;
+            font-weight: 700;
+            letter-spacing: 0.07em;
+            text-transform: uppercase;
+            color: rgba(255,255,255,0.58);
+            margin-bottom: 0.75rem;
+            display: block;
+        }
+        /* Task picker */
+        .seq-task-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .seq-task-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            background: rgba(255,255,255,0.04);
+            border: 1.5px solid rgba(255,255,255,0.08);
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            cursor: pointer;
+            transition: background 0.2s, border-color 0.2s;
+        }
+        .seq-task-item:hover { background: rgba(255,255,255,0.07); }
+        .seq-task-item.checked {
+            background: rgba(74,146,146,0.1);
+            border-color: rgba(74,146,146,0.35);
+        }
+        .seq-task-check {
+            width: 18px;
+            height: 18px;
+            border-radius: 6px;
+            border: 1.5px solid rgba(255,255,255,0.25);
+            background: transparent;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s, border-color 0.2s;
+        }
+        .seq-task-item.checked .seq-task-check {
+            background: var(--teal);
+            border-color: var(--teal);
+        }
+        .seq-task-check-tick {
+            display: none;
+            color: white;
+            font-size: 11px;
+            line-height: 1;
+        }
+        .seq-task-item.checked .seq-task-check-tick { display: block; }
+        .seq-task-text {
+            font-size: 0.9rem;
+            color: rgba(255,255,255,0.8);
+        }
+        /* Step-3 breakdown */
+        .seq-breakdown-card {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.09);
+            border-radius: 10px;
+            padding: 1.25rem;
+            margin-top: 1.25rem;
+        }
+        .seq-breakdown-task {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: rgba(255,255,255,0.9);
+            margin-bottom: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .seq-steps-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 0.45rem;
+        }
+        .seq-step-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.65rem;
+            font-size: 0.875rem;
+            color: rgba(255,255,255,0.7);
+            padding: 0.4rem 0;
+            opacity: 0;
+            transform: translateX(-8px);
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+        .seq-step-item.visible { opacity: 1; transform: translateX(0); }
+        .seq-step-num {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: rgba(74,146,146,0.2);
+            border: 1px solid rgba(74,146,146,0.4);
+            color: var(--teal-light);
+            font-size: 0.7rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            margin-top: 1px;
+        }
+        /* Step-5 recap */
+        .seq-recap-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
+        }
+        .seq-recap-stat {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 10px;
+            padding: 1rem;
+            text-align: center;
+        }
+        .seq-recap-num {
+            font-family: var(--font-display);
+            font-size: 2rem;
+            font-weight: 600;
+            line-height: 1;
+            margin-bottom: 0.25rem;
+        }
+        .seq-recap-num.gold { color: var(--orange-light); }
+        .seq-recap-num.teal { color: var(--teal-light); }
+        .seq-recap-num.white { color: rgba(255,255,255,0.85); }
+        .seq-recap-label {
+            font-size: 0.75rem;
+            color: rgba(255,255,255,0.62);
+            line-height: 1.3;
+        }
+        .seq-recap-msg {
+            background: rgba(242,107,58,0.08);
+            border: 1px solid rgba(242,107,58,0.18);
+            border-radius: 10px;
+            padding: 1rem 1.25rem;
+            font-size: 0.9rem;
+            color: rgba(255,255,255,0.75);
+            line-height: 1.55;
+            margin-bottom: 1.25rem;
+        }
+        .seq-recap-msg strong { color: var(--orange-light); }
+
+        /* ── Chat panel (steps 2, 4) ── */
+        .seq-chat-card {
+            background: #0d1f45;
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 16px;
+            overflow: hidden;
+        }
+        .seq-chat-messages {
+            min-height: 260px;
+            max-height: 360px;
+            overflow-y: auto;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            scroll-behavior: smooth;
+        }
+        .seq-chat-msg {
+            display: flex;
+            gap: 0.75rem;
+            align-items: flex-start;
+        }
+        .seq-chat-msg.buddy-msg { flex-direction: row; }
+        .seq-chat-msg.user-msg  { flex-direction: row-reverse; }
+        .seq-chat-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            font-size: 0.8rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            background: var(--teal);
+            color: white;
+        }
+        .seq-chat-msg.user-msg .seq-chat-avatar {
+            background: var(--orange);
+            color: white;
+        }
+        .seq-chat-bubble {
+            padding: 0.75rem 1rem;
+            border-radius: 12px;
+            font-size: 0.92rem;
+            line-height: 1.55;
+            max-width: 80%;
+            opacity: 0;
+            transform: translateY(6px);
+            transition: opacity 0.35s ease, transform 0.35s ease;
+        }
+        .seq-chat-bubble.visible { opacity: 1; transform: translateY(0); }
+        .seq-chat-msg.buddy-msg .seq-chat-bubble {
+            background: rgba(255,255,255,0.07);
+            color: rgba(255,255,255,0.9);
+            border-bottom-left-radius: 4px;
+        }
+        .seq-chat-msg.user-msg .seq-chat-bubble {
+            background: var(--teal);
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+        /* Typing indicator in chat */
+        .seq-typing-row {
+            display: flex;
+            gap: 0.75rem;
+            align-items: flex-start;
+        }
+        .seq-typing-bubble {
+            background: rgba(255,255,255,0.07);
+            border-radius: 12px;
+            border-bottom-left-radius: 4px;
+            padding: 0.85rem 1.1rem;
+            display: flex;
+            gap: 4px;
+            align-items: center;
+            opacity: 0;
+            transition: opacity 0.25s;
+        }
+        .seq-typing-bubble.visible { opacity: 1; }
+        .seq-typing-dot {
+            width: 6px;
+            height: 6px;
+            background: rgba(255,255,255,0.45);
+            border-radius: 50%;
+            animation: seqTypingBounce 1.2s infinite;
+        }
+        .seq-typing-dot:nth-child(2) { animation-delay: 0.2s; }
+        .seq-typing-dot:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes seqTypingBounce {
+            0%, 60%, 100% { opacity: 0.3; transform: translateY(0); }
+            30%            { opacity: 1;   transform: translateY(-3px); }
+        }
+        /* Task split animation panel */
+        .seq-parse-panel {
+            padding: 0.75rem 1.5rem 1.25rem;
+            border-top: 1px solid rgba(255,255,255,0.06);
+            display: none;
+        }
+        .seq-parse-panel.visible { display: block; }
+        .seq-parse-label {
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--teal-light);
+            margin-bottom: 0.65rem;
+        }
+        .seq-parsed-tasks {
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+        .seq-parsed-task {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            font-size: 0.875rem;
+            color: rgba(255,255,255,0.8);
+            padding: 0.5rem 0.75rem;
+            background: rgba(255,255,255,0.05);
+            border-left: 2px solid var(--teal);
+            border-radius: 0 6px 6px 0;
+            opacity: 0;
+            transform: translateX(-10px);
+            transition: opacity 0.35s ease, transform 0.35s ease;
+        }
+        .seq-parsed-task.visible { opacity: 1; transform: translateX(0); }
+
+        /* ── Advance button ── */
+        .seq-advance-row {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 1.5rem;
+        }
+        .seq-advance-btn {
+            background: var(--teal);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-family: var(--font-body);
+            font-size: 0.9rem;
+            font-weight: 600;
+            padding: 0.65rem 1.4rem;
+            cursor: pointer;
+            transition: background 0.2s, opacity 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+        .seq-advance-btn:hover { background: var(--teal-light); }
+        .seq-advance-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+        /* Final CTA after step 5 */
+        .seq-final-cta {
+            display: none;
+            text-align: center;
+            margin-top: 2rem;
+            padding-top: 2rem;
+            border-top: 1px solid rgba(255,255,255,0.08);
+        }
+        .seq-final-cta.visible { display: block; }
+        .seq-final-cta p {
+            font-size: 1rem;
+            color: rgba(255,255,255,0.65);
+            margin-bottom: 1rem;
+        }
+        .seq-final-cta .seq-cta-btn {
+            display: inline-block;
+            background: var(--orange);
+            color: white;
+            font-weight: 700;
+            font-size: 1rem;
+            padding: 0.85rem 2rem;
+            border-radius: 8px;
+            text-decoration: none;
+            transition: opacity 0.2s;
+        }
+        .seq-final-cta .seq-cta-btn:hover { opacity: 0.88; }
+        .seq-restart-link {
+            display: block;
+            margin-top: 0.75rem;
+            font-size: 0.82rem;
+            color: rgba(255,255,255,0.55);
+            cursor: pointer;
+            text-decoration: underline;
+            background: none;
+            border: none;
+            font-family: var(--font-body);
+        }
+        .seq-restart-link:hover { color: rgba(255,255,255,0.8); }
+        /* Responsive */
+        @media (max-width: 600px) {
+            .seq-demo-section { padding: 4rem 1.25rem; }
+            .seq-demo-intro h2 { font-size: 2rem; }
+            .seq-recap-grid { grid-template-columns: repeat(3, 1fr); gap: 0.5rem; }
+            .seq-step-connector { width: 24px; }
+            .seq-chat-messages { min-height: 220px; }
+        }
+
+        /* ── SCANNABLE BENEFITS GRID ── */
+        .benefits-section {
+            background: var(--cream);
+            padding: 7rem 2rem 5rem;
+        }
+        .benefits-inner {
+            max-width: 1120px;
+            margin: 0 auto;
+        }
+        .benefits-header {
+            margin-bottom: 3.5rem;
+        }
+        .benefits-header h2 {
+            font-family: var(--font-display);
+            font-size: 2.75rem;
+            font-weight: 600;
+            color: var(--navy);
+            line-height: 1.1;
+            letter-spacing: -0.02em;
+            margin-top: 0.75rem;
+        }
+        .benefits-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.5rem;
+            margin-bottom: 3rem;
+        }
+        .benefit-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 2.25rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.85rem;
+            transition: box-shadow 0.2s, transform 0.2s;
+        }
+        .benefit-card:hover {
+            box-shadow: var(--shadow-md);
+            transform: translateY(-2px);
+        }
+        .benefit-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .benefit-icon-tasks { background: rgba(1,30,92,0.08); color: var(--navy); }
+        .benefit-icon-money { background: rgba(242,107,58,0.12); color: var(--orange); }
+        .benefit-icon-buddy { background: rgba(74,146,146,0.12); color: var(--teal); }
+        .benefit-tag {
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-muted);
+        }
+        .benefit-card h3 {
+            font-family: var(--font-display);
+            font-size: 1.35rem;
+            font-weight: 600;
+            color: var(--navy);
+            line-height: 1.2;
+            letter-spacing: -0.01em;
+        }
+        .benefit-card p {
+            font-size: 0.92rem;
+            color: var(--text-body);
+            line-height: 1.7;
+            flex: 1;
+        }
+        .benefit-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 0.45rem;
+            padding-top: 0.5rem;
+            border-top: 1px solid var(--border);
+            margin-top: auto;
+        }
+        .benefit-list li {
+            font-size: 0.82rem;
+            color: var(--text-body);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .benefit-list li::before {
+            content: '';
+            width: 4px; height: 4px;
+            background: var(--teal);
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+        .benefits-cta-row {
+            display: flex;
+            align-items: center;
+            gap: 2rem;
+            flex-wrap: wrap;
+        }
+        .benefits-science-link {
+            font-size: 0.875rem;
+            color: var(--text-body);
+            text-decoration: none;
+            font-weight: 500;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 1px;
+            transition: color 0.15s, border-color 0.15s;
+        }
+        .benefits-science-link:hover { color: var(--navy); border-color: var(--navy); }
+        @media (max-width: 960px) {
+            .benefits-grid { grid-template-columns: 1fr; gap: 1rem; }
+            .benefits-section { padding: 5rem 2rem 4rem; }
+        }
+        @media (max-width: 600px) {
+            .benefits-section { padding: 4rem 1.25rem 3rem; }
+            .benefits-header h2 { font-size: 2rem; }
+        }
+    </style>
+    <!-- Design system (inherits existing tokens) -->
+    <link rel="stylesheet" href="/css/design-system.css">
+    <!-- Structured Data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "SoftwareApplication",
+          "name": "FocusLedger",
+          "url": "https://focusledger.net",
+          "description": "An ADHD-native personal command center combining task management, expense tracking, impulse spending detection, and news — all in one tab.",
+          "applicationCategory": "ProductivityApplication",
+          "operatingSystem": "Web",
+          "offers": [
+            { "@type": "Offer", "name": "Free", "price": "0", "priceCurrency": "USD" },
+            { "@type": "Offer", "name": "Autopilot", "price": "9.99", "priceCurrency": "USD" }
+          ],
+          "creator": { "@type": "Person", "name": "Sean Hendler", "jobTitle": "CPA, Founder" }
+        },
+        {
+          "@type": "Organization",
+          "name": "FocusLedger",
+          "url": "https://focusledger.net",
+          "logo": "https://focusledger.net/icons/fl-icon.png"
+        }
+      ]
+    }
+    </script>
+    <!-- Google Identity Services -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body>
+
+<!-- Google One Tap config -->
+<div id="g_id_onload"
+     data-client_id="1016507011974-09skpvssf4i2jgn3rdt4ncegh5menm21.apps.googleusercontent.com"
+     data-context="signup"
+     data-ux_mode="popup"
+     data-callback="handleGoogleOneTap"
+     data-auto_prompt="false"
+     data-itp_support="true"></div>
+
+<!-- ── NAV ── -->
+<nav>
+    <div class="nav-inner">
+        <a href="/" class="logo">
+            <img src="/icons/fl-icon.png" class="logo-icon" alt="FocusLedger">
+            FocusLedger
+        </a>
+        <div class="nav-links">
+            <span class="nav-links-pages">
+                <a href="/adhd-tax">ADHD Tax Calc</a>
+                <a href="/science">The Science</a>
+                <a href="/pricing">Pricing</a>
+                <a href="#try-buddy">Try Buddy</a>
+                <a href="/login" id="navAuthLink">Log In</a>
+            </span>
+            <a href="/signup" id="navCtaLink" class="nav-cta">Start Free</a>
+            <button class="nav-hamburger" id="navHamburger" aria-label="Open menu">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                    <line x1="3" y1="6" x2="21" y2="6"></line>
+                    <line x1="3" y1="12" x2="21" y2="12"></line>
+                    <line x1="3" y1="18" x2="21" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+    </div>
+</nav>
+
+<!-- Mobile drawer -->
+<div class='nav-mobile-overlay' id='navMobileOverlay'>
+    <div class='nav-mobile-drawer'>
+        <div class='nav-mobile-drawer-header'>
+            <button class='nav-mobile-close' id='navMobileClose' aria-label='Close menu'>
+                <svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.5' stroke-linecap='round'>
+                    <line x1='18' y1='6' x2='6' y2='18'></line>
+                    <line x1='6' y1='6' x2='18' y2='18'></line>
+                </svg>
+            </button>
+        </div>
+        <div class='nav-mobile-links'>
+            <a href='/adhd-tax'>ADHD Tax Calc</a>
+            <a href='/science'>The Science</a>
+            <a href='/pricing'>Pricing</a>
+            <a href='/contact'>Contact</a>
+            <a href='/login' id='mobileNavAuthLink'>Log In</a>
+            <a href='/signup' id='mobileNavCtaLink' class='nav-mobile-cta'>Start Free</a>
+        </div>
+    </div>
+</div>
+
+<!-- ════════════════════════════════════════
+     HERO — left-aligned, calm, single CTA
+     ════════════════════════════════════════ -->
+<section class="hero">
+    <div class="hero-inner">
+        <div class="hero-text">
+            <h1>Stop letting yourself down.</h1>
+
+            <p class="hero-sub">Finally, an app built for the way your ADHD brain actually works — one tab for tasks, spending, and routines, with AI that kicks in where willpower runs out.</p>
+
+            <div class="hero-cta-wrap">
+                <!-- Single primary CTA -->
+                <div id="google-signin-hero"></div>
+                <div class="cta-secondary-row">
+                    <a href="/signup" id="heroEmailLink">Sign up with email →</a>
+                    <a href="/login">Already have an account →</a>
+                </div>
+            </div>
+
+            <div class="hero-trust">
+                <div class="trust-item">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                    Free forever
+                </div>
+                <div class="trust-item">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                    No credit card
+                </div>
+                <div class="trust-item">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                    Voice input
+                </div>
+                <div class="trust-item">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                    Impulse spending alerts
+                </div>
+                <a href="/science" style="display:flex;align-items:center;gap:0.4rem;font-size:0.8rem;color:var(--text-muted);font-weight:500;text-decoration:none;border-bottom:1px solid var(--border);padding-bottom:1px;transition:color 0.15s,border-color 0.15s;" onmouseover="this.style.color='var(--navy)';this.style.borderColor='var(--navy)'" onmouseout="this.style.color='var(--text-muted)';this.style.borderColor='var(--border)'">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+                    Built on peer-reviewed ADHD research
+                </a>
+            </div>
+        </div>
+
+        <!-- Hero visual mockup -->
+        <div class="hero-visual" aria-hidden="true">
+            <div class="hero-mockup">
+                <div class="mockup-topbar">
+                    <div class="mkdot"></div>
+                    <div class="mkdot"></div>
+                    <div class="mkdot"></div>
+                    <div class="mkurl">focusledger.net · your dashboard</div>
+                </div>
+                <div class="mockup-body">
+                    <div class="mk-row">
+                        <div class="mk-card">
+                            <div class="mk-section-label">Today's tasks</div>
+                            <div class="mk-task">
+                                <div class="mk-check done"></div>
+                                <span class="mk-task-text done">Call dentist</span>
+                            </div>
+                            <div class="mk-task">
+                                <div class="mk-check done"></div>
+                                <span class="mk-task-text done">Pay electric bill</span>
+                            </div>
+                            <div class="mk-task">
+                                <div class="mk-check"></div>
+                                <span class="mk-task-text">File Q2 receipts</span>
+                            </div>
+                            <div class="mk-task">
+                                <div class="mk-check"></div>
+                                <span class="mk-task-text">Review subscription audit</span>
+                            </div>
+                        </div>
+                        <div class="mk-card">
+                            <div class="mk-section-label">This month</div>
+                            <div class="mk-stat">
+                                <div class="mk-amount">$1,847</div>
+                                <div class="mk-unit">tracked spending</div>
+                            </div>
+                            <div class="mk-stat" style="margin-top:0.6rem;">
+                                <div class="mk-amount" style="color:var(--orange);font-size:0.85rem;">3 impulse flags</div>
+                                <div class="mk-unit">this week</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mk-card">
+                        <div class="mk-section-label">Accountabilibuddy</div>
+                        <div class="mk-alert">
+                            <div class="mk-alert-dot"></div>
+                            <div class="mk-alert-text">You've avoided "File Q2 receipts" for 6 days — and spent $148 on Amazon this week. See a connection?</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ════════════════════════════════════════
+     BUDDY LIVE DEMO — anonymous conversation (moved above fold)
+     ════════════════════════════════════════ -->
+<!-- ════════════════════════════════════════
+     SEQUENTIAL DEMO — 5-step alternating flow
+     ════════════════════════════════════════ -->
+<section class="seq-demo-section" id="try-buddy">
+    <div class="seq-demo-inner">
+        <div class="seq-demo-intro reveal">
+            <span class="eyebrow eyebrow-light">See how it works</span>
+            <h2>Form. Chat. Form. Chat. Repeat.</h2>
+            <p>FocusLedger alternates between quick forms and real Buddy conversations — structure when you need it, coaching when you don't.</p>
+        </div>
+
+        <!-- Progress dots -->
+        <div class="seq-step-dots" id="seqStepDots">
+            <div class="seq-step-dot active" data-step="0">1</div>
+            <div class="seq-step-connector" id="seqConn0"></div>
+            <div class="seq-step-dot" data-step="1">2</div>
+            <div class="seq-step-connector" id="seqConn1"></div>
+            <div class="seq-step-dot" data-step="2">3</div>
+            <div class="seq-step-connector" id="seqConn2"></div>
+            <div class="seq-step-dot" data-step="3">4</div>
+            <div class="seq-step-connector" id="seqConn3"></div>
+            <div class="seq-step-dot" data-step="4">5</div>
+        </div>
+
+        <!-- Step label -->
+        <div class="seq-step-label" id="seqStepLabel">
+            <span class="seq-step-mode mode-form" id="seqStepMode">⚡ Quick Form</span>
+            <span class="seq-step-title" id="seqStepTitle">Morning Check-In</span>
+        </div>
+
+        <!-- ── STEP 1: Quick Form — Morning Check-In ── -->
+        <div class="seq-step-panel active" id="seqStep0">
+            <div class="seq-form-card">
+                <span class="seq-label">How are you feeling?</span>
+                <div class="seq-mood-row" id="seqMoodRow">
+                    <button class="seq-mood-btn" data-mood="focused">🎯 Focused</button>
+                    <button class="seq-mood-btn" data-mood="scattered">🌀 Scattered</button>
+                    <button class="seq-mood-btn" data-mood="tired">😴 Tired</button>
+                    <button class="seq-mood-btn" data-mood="anxious">😬 Anxious</button>
+                    <button class="seq-mood-btn" data-mood="good">😊 Good</button>
+                </div>
+                <span class="seq-label">Pick your top 3 for today</span>
+                <div class="seq-task-list" id="seqTaskPicker">
+                    <div class="seq-task-item" data-task="Call the insurance company">
+                        <div class="seq-task-check"><span class="seq-task-check-tick">✓</span></div>
+                        <span class="seq-task-text">Call the insurance company</span>
+                    </div>
+                    <div class="seq-task-item" data-task="Pay rent — due Friday">
+                        <div class="seq-task-check"><span class="seq-task-check-tick">✓</span></div>
+                        <span class="seq-task-text">Pay rent — due Friday</span>
+                    </div>
+                    <div class="seq-task-item" data-task="Finish Q2 report">
+                        <div class="seq-task-check"><span class="seq-task-check-tick">✓</span></div>
+                        <span class="seq-task-text">Finish Q2 report</span>
+                    </div>
+                    <div class="seq-task-item" data-task="Schedule dentist appointment">
+                        <div class="seq-task-check"><span class="seq-task-check-tick">✓</span></div>
+                        <span class="seq-task-text">Schedule dentist appointment</span>
+                    </div>
+                    <div class="seq-task-item" data-task="Meal prep for the week">
+                        <div class="seq-task-check"><span class="seq-task-check-tick">✓</span></div>
+                        <span class="seq-task-text">Meal prep for the week</span>
+                    </div>
+                </div>
+                <div class="seq-advance-row">
+                    <button class="seq-advance-btn" id="seqStep0Btn" disabled>
+                        Next: Brain Dump with Buddy →
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── STEP 2: Conversation — Buddy Brain Dump ── -->
+        <div class="seq-step-panel" id="seqStep1">
+            <div class="seq-chat-card">
+                <div class="seq-chat-messages" id="seqChat1Messages"></div>
+                <!-- Parsed tasks panel -->
+                <div class="seq-parse-panel" id="seqParsePanel">
+                    <div class="seq-parse-label">Buddy heard 3 things</div>
+                    <div class="seq-parsed-tasks" id="seqParsedTasks"></div>
+                </div>
+            </div>
+            <div class="seq-advance-row">
+                <button class="seq-advance-btn" id="seqStep1Btn" disabled>
+                    Next: Break It Down →
+                </button>
+            </div>
+        </div>
+
+        <!-- ── STEP 3: Quick Form — Task Breakdown ── -->
+        <div class="seq-step-panel" id="seqStep2">
+            <div class="seq-form-card">
+                <span class="seq-label">AI Break-It-Down</span>
+                <p style="font-size:0.875rem;color:rgba(255,255,255,0.55);margin-bottom:1.25rem;">"Pay rent" sounds simple. For ADHD brains, it's not. Buddy splits it into steps small enough to actually start.</p>
+                <div class="seq-breakdown-card">
+                    <div class="seq-breakdown-task">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--teal-light)" stroke-width="2.5"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                        Pay rent — due Friday
+                    </div>
+                    <ul class="seq-steps-list" id="seqBreakdownSteps">
+                        <li class="seq-step-item"><span class="seq-step-num">1</span>Open banking app — check current balance</li>
+                        <li class="seq-step-item"><span class="seq-step-num">2</span>Find landlord's payment details (email/app)</li>
+                        <li class="seq-step-item"><span class="seq-step-num">3</span>Initiate transfer for rent amount</li>
+                        <li class="seq-step-item"><span class="seq-step-num">4</span>Screenshot confirmation — save for records</li>
+                    </ul>
+                </div>
+                <div class="seq-advance-row">
+                    <button class="seq-advance-btn" id="seqStep2Btn">
+                        Next: Buddy Check-In →
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── STEP 4: Conversation — Buddy Check-In ── -->
+        <div class="seq-step-panel" id="seqStep3">
+            <div class="seq-chat-card">
+                <div class="seq-chat-messages" id="seqChat2Messages"></div>
+            </div>
+            <div class="seq-advance-row">
+                <button class="seq-advance-btn" id="seqStep3Btn" disabled>
+                    Next: Evening Recap →
+                </button>
+            </div>
+        </div>
+
+        <!-- ── STEP 5: Quick Form — Evening Recap ── -->
+        <div class="seq-step-panel" id="seqStep4">
+            <div class="seq-form-card">
+                <span class="seq-label">Today's recap</span>
+                <div class="seq-recap-grid">
+                    <div class="seq-recap-stat">
+                        <div class="seq-recap-num gold" id="seqRecapDone">0</div>
+                        <div class="seq-recap-label">tasks done</div>
+                    </div>
+                    <div class="seq-recap-stat">
+                        <div class="seq-recap-num teal">3</div>
+                        <div class="seq-recap-label">planned</div>
+                    </div>
+                    <div class="seq-recap-stat">
+                        <div class="seq-recap-num white">🔥</div>
+                        <div class="seq-recap-label">streak</div>
+                    </div>
+                </div>
+                <div class="seq-recap-msg" id="seqRecapMsg">
+                    You locked in your plan, broke a task into steps, and checked in with Buddy. <strong>That's the whole system working.</strong> Tomorrow it gets smarter.
+                </div>
+            </div>
+        </div>
+
+        <!-- Final CTA -->
+        <div class="seq-final-cta" id="seqFinalCta">
+            <p>This is FocusLedger every day. Yours, free — no credit card.</p>
+            <a href="/signup" class="seq-cta-btn">Start free — takes 30 seconds</a>
+            <button class="seq-restart-link" id="seqRestartBtn">↺ Watch it again</button>
+        </div>
+    </div>
+</section>
+
+<!-- ════════════════════════════════════════
+     SCANNABLE BENEFITS — three cards
+     ════════════════════════════════════════ -->
+<section class="benefits-section reveal">
+    <div class="benefits-inner">
+        <div class="benefits-header">
+            <span class="eyebrow eyebrow-dark">What it does</span>
+            <h2>Three systems.<br>One tab.</h2>
+        </div>
+        <div class="benefits-grid">
+            <div class="benefit-card">
+                <div class="benefit-icon benefit-icon-tasks">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                </div>
+                <span class="benefit-tag">Tasks</span>
+                <h3>Break it down until it's startable.</h3>
+                <p>"File taxes" isn't a task — it's a project. FocusLedger breaks it into steps small enough to actually begin, then tracks what you've been avoiding.</p>
+                <ul class="benefit-list">
+                    <li>AI-powered step breakdown <span class="badge-pro">Autopilot</span></li>
+                    <li>Voice input &amp; smart reminders</li>
+                    <li>Avoidance pattern detection</li>
+                </ul>
+            </div>
+            <div class="benefit-card">
+                <div class="benefit-icon benefit-icon-money">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                </div>
+                <span class="benefit-tag">Money</span>
+                <h3>Impulse spending has a pattern.</h3>
+                <p>When you avoid a hard task, your brain seeks relief. FocusLedger is the only app that connects your spending spikes to your avoidance patterns — automatically.</p>
+                <ul class="benefit-list">
+                    <li>Bank sync via Plaid <span class="badge-pro">Autopilot</span></li>
+                    <li>Impulse spending detection <span class="badge-pro">Autopilot</span></li>
+                    <li>Manual expense tracking (always free)</li>
+                </ul>
+            </div>
+            <div class="benefit-card">
+                <div class="benefit-icon benefit-icon-buddy">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                </div>
+                <span class="benefit-tag">Accountabilibuddy</span>
+                <h3>The morning ritual that actually sticks.</h3>
+                <p>Two minutes. Pick your mood, see your top 3 tasks — curated by what's overdue, what aligns with your values, and what you've been avoiding.</p>
+                <ul class="benefit-list">
+                    <li>Mood-aware daily plan (3 tasks max)</li>
+                    <li>Evening recap — zero guilt</li>
+                    <li>Coaching Habit methodology</li>
+                </ul>
+            </div>
+        </div>
+        <div class="benefits-cta-row">
+            <a href="/signup" class="btn-primary">Start free — no credit card</a>
+            <a href="/science" class="benefits-science-link">Built on peer-reviewed ADHD research →</a>
+        </div>
+    </div>
+</section>
+
+<!-- ════════════════════════════════════════
+     FREE DOWNLOADS — lead magnet CTAs
+     ════════════════════════════════════════ -->
+<section class="lm-section reveal">
+    <div class="lm-inner">
+        <div class="lm-header">
+            <span class="eyebrow eyebrow-dark">Free Resources</span>
+            <h2>Start here. Take it with you.</h2>
+            <p>Two printable resources, built on ADHD science — free to download, no signup required.</p>
+        </div>
+        <div class="lm-grid">
+            <div class="lm-card lm-card-science">
+                <div class="lm-card-icon">📋</div>
+                <div class="lm-card-body">
+                    <span class="lm-card-tag">Free Download</span>
+                    <h3>ADHD Science Cheat Sheet</h3>
+                    <p>The peer-reviewed research behind ADHD executive function — why most tools fail, and what actually works. Printable one-pager.</p>
+                    <ul class="lm-card-list">
+                        <li>4 evidence-based mechanisms</li>
+                        <li>Cited studies with effect sizes</li>
+                        <li>Actionable takeaways per mechanism</li>
+                    </ul>
+                    <a href="/assets/adhd-science-cheatsheet.html" class="lm-card-btn lead-magnet-link" data-lead-type="science_cheat_sheet">
+                        Get the Cheat Sheet →
+                    </a>
+                </div>
+            </div>
+            <div class="lm-card lm-card-daily3">
+                <div class="lm-card-icon">📅</div>
+                <div class="lm-card-body">
+                    <span class="lm-card-tag">Free Download</span>
+                    <h3>Daily Three Template</h3>
+                    <p>The morning ritual that doubles task follow-through. Print it, use it daily. No app needed.</p>
+                    <ul class="lm-card-list">
+                        <li>Mood + energy check-in</li>
+                        <li>3 task slots with time blocks</li>
+                        <li>Evening recap prompts</li>
+                    </ul>
+                    <a href="/assets/daily-three-template.html" class="lm-card-btn lead-magnet-link" data-lead-type="daily_three">
+                        Get the Template →
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+
+<!-- ════════════════════════════════════════
+     PRICING
+     ════════════════════════════════════════ -->
+<section class="pricing-section reveal" id="pricing">
+    <div class="pricing-inner">
+        <div class="pricing-intro">
+            <span class="eyebrow eyebrow-dark">Pricing</span>
+            <h2>Start free. Upgrade when it clicks.</h2>
+            <p>No credit card required for the free tier. Cancel Autopilot anytime.</p>
+        </div>
+        <div class="pricing-cards">
+            <div class="price-card">
+                <div class="price-name">Free</div>
+                <div class="price-num">$0</div>
+                <div class="price-period">forever — no credit card</div>
+                <ul class="price-features">
+                    <li class="yes">Up to 10 active tasks</li>
+                    <li class="yes">AI task breakdown</li>
+                    <li class="yes">Manual spending tracker</li>
+                    <li class="yes">Journal &amp; ideas capture</li>
+                    <li class="yes">Values &amp; alignment check-in</li>
+                    <li class="yes">Morning launch routine</li>
+                    <li class="no">Bank sync (Plaid) — <em>Autopilot</em></li>
+                    <li class="no">Impulse spending alerts — <em>Autopilot</em></li>
+                </ul>
+                <a href="/signup" class="price-btn price-btn-free">Start Free</a>
+            </div>
+            <div class="price-card featured">
+                <div class="price-badge">Most Popular</div>
+                <div class="price-name">Autopilot</div>
+                <div class="price-num">$9.99<span>/mo</span></div>
+                <div class="price-period">billed monthly &middot; <a href="/pricing" style="font-size:0.78rem;color:var(--navy);text-decoration:none;">or $100/year</a></div>
+                <ul class="price-features">
+                    <li class="yes">Everything in Free</li>
+                    <li class="yes">Unlimited tasks &amp; recurring</li>
+                    <li class="yes">Bank &amp; credit card sync (Plaid)</li>
+                    <li class="yes">AI task breakdown</li>
+                    <li class="yes">Impulse spending detection</li>
+                    <li class="yes">Full spending analytics</li>
+                    <li class="yes">Subscription audit</li>
+                    <li class="yes">Values alignment nudges</li>
+                    <li class="yes">Priority support</li>
+                </ul>
+                <a href="/pricing" class="price-btn price-btn-pro">Go Autopilot — $9.99/mo</a>
+            </div>
+            <div class="price-card featured">
+                <div class="price-badge">New</div>
+                <div class="price-name">Tandem</div>
+                <div class="price-num">$14.99<span>/mo</span></div>
+                <div class="price-period">or $149/year &middot; 14-day free trial</div>
+                <ul class="price-features">
+                    <li class="yes">Everything in Autopilot</li>
+                    <li class="yes">Link with your partner</li>
+                    <li class="yes">Privacy-first household sharing</li>
+                    <li class="yes">Buddy-mediated accountability</li>
+                    <li class="yes">One subscription covers both</li>
+                </ul>
+                <a href="/signup?plan=tandem" class="price-btn price-btn-tandem">Start Tandem — 14 days free</a>
+            </div>
+        </div>
+        <div class="pricing-compare">
+            <a href="/pricing">See full feature comparison →</a>
+        </div>
+    </div>
+</section>
+
+<!-- ════════════════════════════════════════
+     iOS APP COMING SOON
+     ════════════════════════════════════════ -->
+<section class="ios-section reveal" id="ios-app">
+    <div class="ios-inner">
+        <div class="ios-content">
+            <span class="eyebrow eyebrow-amber">Coming to iPhone</span>
+            <h2>Everything you love.<br>Now in your pocket.</h2>
+            <p class="ios-lead">Siri Shortcuts. Home screen widgets. Face ID. Push nudges for overdue tasks. The full FocusLedger experience, native on iOS — built for how ADHD brains actually move through the day.</p>
+            <ul class="ios-features">
+                <li>
+                    <span class="ios-feat-icon">🔊</span>
+                    <div>
+                        <strong>Siri Shortcuts</strong>
+                        <span>"Hey Siri, what's my focus today?"</span>
+                    </div>
+                </li>
+                <li>
+                    <span class="ios-feat-icon">📱</span>
+                    <div>
+                        <strong>Home Screen Widget</strong>
+                        <span>Your top 3 tasks, always visible</span>
+                    </div>
+                </li>
+                <li>
+                    <span class="ios-feat-icon">🔒</span>
+                    <div>
+                        <strong>Face ID Login</strong>
+                        <span>In the app in under a second</span>
+                    </div>
+                </li>
+                <li>
+                    <span class="ios-feat-icon">🔔</span>
+                    <div>
+                        <strong>Smart Push Notifications</strong>
+                        <span>Deadline nudges, not noise</span>
+                    </div>
+                </li>
+            </ul>
+            <div class="ios-waitlist-form" id="iosWaitlistForm">
+                <p class="ios-waitlist-label">Get notified when it drops.</p>
+                <div class="ios-input-row">
+                    <input
+                        type="email"
+                        id="iosWaitlistEmail"
+                        placeholder="your@email.com"
+                        autocomplete="email"
+                        aria-label="Email address for iOS waitlist"
+                    />
+                    <button id="iosWaitlistBtn" class="ios-notify-btn">Notify Me</button>
+                </div>
+                <p class="ios-waitlist-status" id="iosWaitlistStatus" aria-live="polite"></p>
+            </div>
+        </div>
+        <div class="ios-mockup" aria-hidden="true">
+            <div class="ios-phone-frame">
+                <div class="ios-phone-notch"></div>
+                <div class="ios-phone-screen">
+                    <div class="ios-screen-header">
+                        <span class="ios-screen-greeting">Good morning ☀️</span>
+                        <span class="ios-screen-date">Mon, May 18</span>
+                    </div>
+                    <div class="ios-screen-tasks">
+                        <div class="ios-task-item ios-task-done">
+                            <span class="ios-task-check">✓</span>
+                            <span>Review budget</span>
+                        </div>
+                        <div class="ios-task-item">
+                            <span class="ios-task-check ios-task-check-empty"></span>
+                            <span>Meal prep — step 1</span>
+                        </div>
+                        <div class="ios-task-item">
+                            <span class="ios-task-check ios-task-check-empty"></span>
+                            <span>Call insurance</span>
+                        </div>
+                    </div>
+                    <div class="ios-screen-widget">
+                        <div class="ios-widget-label">Buddy</div>
+                        <div class="ios-widget-msg">"You're on a 3-day streak. Keep it up 🔥"</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<style>
+/* ── iOS COMING SOON SECTION ── */
+.ios-section {
+    background: linear-gradient(145deg, #1a0a3a 0%, #2d1060 60%, #1a0a3a 100%);
+    padding: 96px 24px;
+    overflow: hidden;
+    position: relative;
+}
+.ios-section::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+        radial-gradient(ellipse 60% 50% at 70% 50%, rgba(201, 168, 76, 0.12) 0%, transparent 70%),
+        radial-gradient(ellipse 40% 60% at 15% 80%, rgba(74, 146, 146, 0.1) 0%, transparent 60%);
+    pointer-events: none;
+}
+.ios-inner {
+    max-width: 1100px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 64px;
+    align-items: center;
+    position: relative;
+    z-index: 1;
+}
+.eyebrow-amber {
+    background: linear-gradient(90deg, #f5c842, #e8a020);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+.ios-content h2 {
+    font-family: var(--font-display);
+    font-size: clamp(2rem, 4vw, 3rem);
+    font-weight: 700;
+    color: #faf8f4;
+    margin: 12px 0 20px;
+    line-height: 1.2;
+}
+.ios-lead {
+    color: rgba(250, 248, 244, 0.75);
+    font-size: 1.05rem;
+    line-height: 1.7;
+    margin-bottom: 32px;
+    max-width: 480px;
+}
+.ios-features {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    margin-bottom: 40px;
+}
+.ios-features li {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+}
+.ios-feat-icon {
+    font-size: 1.4rem;
+    flex-shrink: 0;
+    margin-top: 1px;
+}
+.ios-features li div {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.ios-features li strong {
+    color: #faf8f4;
+    font-size: 0.95rem;
+    font-weight: 600;
+}
+.ios-features li span {
+    color: rgba(250, 248, 244, 0.6);
+    font-size: 0.85rem;
+}
+/* Waitlist form */
+.ios-waitlist-form {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 16px;
+    padding: 24px;
+    backdrop-filter: blur(8px);
+}
+.ios-waitlist-label {
+    color: rgba(250, 248, 244, 0.85);
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin-bottom: 14px;
+}
+.ios-input-row {
+    display: flex;
+    gap: 10px;
+}
+.ios-input-row input[type="email"] {
+    flex: 1;
+    padding: 12px 16px;
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 10px;
+    background: rgba(255,255,255,0.08);
+    color: #faf8f4;
+    font-size: 0.95rem;
+    font-family: var(--font-body);
+    outline: none;
+    transition: border-color 0.2s;
+    min-width: 0;
+}
+.ios-input-row input[type="email"]::placeholder {
+    color: rgba(250, 248, 244, 0.35);
+}
+.ios-input-row input[type="email"]:focus {
+    border-color: #f5c842;
+}
+.ios-notify-btn {
+    padding: 12px 22px;
+    background: linear-gradient(135deg, #f5c842, #e8a020);
+    color: #1a0a3a;
+    border: none;
+    border-radius: 10px;
+    font-size: 0.9rem;
+    font-weight: 700;
+    font-family: var(--font-body);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: opacity 0.2s, transform 0.1s;
+}
+.ios-notify-btn:hover { opacity: 0.9; }
+.ios-notify-btn:active { transform: scale(0.97); }
+.ios-notify-btn:disabled { opacity: 0.5; cursor: default; }
+.ios-waitlist-status {
+    margin-top: 10px;
+    font-size: 0.85rem;
+    min-height: 1.2em;
+    transition: color 0.2s;
+}
+.ios-waitlist-status.success { color: #6ee7b7; }
+.ios-waitlist-status.error   { color: #fca5a5; }
+/* Phone mockup */
+.ios-mockup {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+.ios-phone-frame {
+    width: 240px;
+    height: 490px;
+    background: linear-gradient(145deg, #2a2a3a, #1a1a2a);
+    border-radius: 44px;
+    border: 2px solid rgba(255,255,255,0.15);
+    box-shadow:
+        0 0 0 1px rgba(0,0,0,0.5),
+        0 40px 80px rgba(0,0,0,0.5),
+        inset 0 1px 0 rgba(255,255,255,0.1);
+    position: relative;
+    overflow: hidden;
+    padding: 16px 12px 12px;
+}
+.ios-phone-notch {
+    width: 80px;
+    height: 22px;
+    background: #1a1a2a;
+    border-radius: 0 0 14px 14px;
+    margin: 0 auto 12px;
+    position: relative;
+    z-index: 2;
+}
+.ios-phone-screen {
+    height: calc(100% - 50px);
+    background: linear-gradient(160deg, #faf8f4 0%, #f0ece3 100%);
+    border-radius: 28px;
+    padding: 16px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    overflow: hidden;
+}
+.ios-screen-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 10px;
+    border-bottom: 1px solid rgba(0,0,0,0.06);
+}
+.ios-screen-greeting {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #011e5c;
+}
+.ios-screen-date {
+    font-size: 0.65rem;
+    color: #8a8a95;
+}
+.ios-screen-tasks {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.ios-task-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.72rem;
+    color: #18181b;
+}
+.ios-task-done {
+    opacity: 0.45;
+    text-decoration: line-through;
+}
+.ios-task-check {
+    width: 18px;
+    height: 18px;
+    border-radius: 5px;
+    background: #4a9292;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.6rem;
+    color: white;
+    flex-shrink: 0;
+}
+.ios-task-check-empty {
+    background: transparent;
+    border: 1.5px solid var(--orange);
+}
+.ios-screen-widget {
+    margin-top: auto;
+    background: linear-gradient(135deg, #011e5c, #1a3a7a);
+    border-radius: 14px;
+    padding: 12px;
+}
+.ios-widget-label {
+    font-size: 0.6rem;
+    font-weight: 700;
+    color: var(--orange);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 4px;
+}
+.ios-widget-msg {
+    font-size: 0.68rem;
+    color: rgba(250,248,244,0.85);
+    line-height: 1.5;
+}
+/* Responsive */
+@media (max-width: 900px) {
+    .ios-inner {
+        grid-template-columns: 1fr;
+        gap: 48px;
+    }
+    .ios-mockup {
+        order: -1;
+    }
+    .ios-lead { max-width: none; }
+}
+@media (max-width: 480px) {
+    .ios-section { padding: 72px 20px; }
+    .ios-input-row { flex-direction: column; }
+    .ios-notify-btn { width: 100%; }
+    .ios-phone-frame { width: 200px; height: 410px; }
+}
+
+/* ── FREE DOWNLOADS / LEAD MAGNETS SECTION ── */
+.lm-section {
+    background: var(--cream-deep);
+    padding: 5rem 2rem;
+    border-top: 1px solid var(--border);
+}
+.lm-inner {
+    max-width: 960px;
+    margin: 0 auto;
+    text-align: center;
+}
+.lm-header {
+    margin-bottom: 3rem;
+}
+.lm-header h2 {
+    font-family: var(--font-display);
+    font-size: 2.5rem;
+    font-weight: 600;
+    color: var(--text-main);
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+    margin: 0.6rem 0 0.75rem;
+}
+.lm-header p {
+    font-size: 1rem;
+    color: var(--text-body);
+    line-height: 1.6;
+    max-width: 500px;
+    margin: 0 auto;
+}
+.lm-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    text-align: left;
+}
+.lm-card {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.75rem;
+    display: flex;
+    gap: 1rem;
+    transition: box-shadow 0.2s;
+}
+.lm-card:hover {
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+}
+.lm-card-icon {
+    font-size: 1.8rem;
+    flex-shrink: 0;
+    margin-top: 0.1rem;
+}
+.lm-card-body { flex: 1; }
+.lm-card-tag {
+    display: inline-block;
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--orange);
+    background: rgba(242,107,58,0.1);
+    border: 1px solid rgba(242,107,58,0.22);
+    padding: 0.2rem 0.5rem;
+    border-radius: 8px;
+    margin-bottom: 0.6rem;
+}
+.lm-card-body h3 {
+    font-family: var(--font-display);
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--navy);
+    margin-bottom: 0.5rem;
+    line-height: 1.25;
+}
+.lm-card-body p {
+    font-size: 0.82rem;
+    color: var(--text-body);
+    line-height: 1.55;
+    margin-bottom: 0.75rem;
+}
+.lm-card-list {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 1rem;
+}
+.lm-card-list li {
+    font-size: 0.78rem;
+    color: var(--text-body);
+    padding: 0.2rem 0;
+    padding-left: 1rem;
+    position: relative;
+}
+.lm-card-list li::before {
+    content: '✓';
+    position: absolute;
+    left: 0;
+    color: var(--teal);
+    font-weight: 700;
+}
+.lm-card-btn {
+    display: inline-block;
+    background: var(--navy);
+    color: white;
+    font-size: 0.85rem;
+    font-weight: 600;
+    padding: 0.6rem 1.25rem;
+    border-radius: 10px;
+    text-decoration: none;
+    letter-spacing: 0.01em;
+    transition: background 0.15s;
+}
+.lm-card-btn:hover { background: var(--navy-dark); }
+
+@media (max-width: 640px) {
+    .lm-grid { grid-template-columns: 1fr; }
+    .lm-section { padding: 3rem 1.25rem; }
+}
+</style>
+
+<script>
+(function() {
+    'use strict';
+
+    var form     = document.getElementById('iosWaitlistForm');
+    var emailEl  = document.getElementById('iosWaitlistEmail');
+    var btn      = document.getElementById('iosWaitlistBtn');
+    var statusEl = document.getElementById('iosWaitlistStatus');
+
+    if (!form || !emailEl || !btn || !statusEl) return;
+
+    function setStatus(msg, type) {
+        statusEl.textContent = msg;
+        statusEl.className = 'ios-waitlist-status ' + (type || '');
+    }
+
+    btn.addEventListener('click', function() {
+        var email = (emailEl.value || '').trim();
+
+        if (!email) {
+            setStatus('Enter your email address.', 'error');
+            emailEl.focus();
+            return;
+        }
+        var emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            setStatus('That doesn\'t look like a valid email.', 'error');
+            emailEl.focus();
+            return;
+        }
+
+        btn.disabled = true;
+        btn.textContent = 'Adding you…';
+        setStatus('', '');
+
+        fetch('/api/waitlist', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: email, source: 'ios_waitlist' })
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.success && data.alreadyRegistered) {
+                setStatus('You\'re already on the list! We\'ll reach out when it drops.', 'success');
+            } else if (data.success) {
+                setStatus('You\'re on the list! We\'ll let you know when it drops. 🎉', 'success');
+                emailEl.value = '';
+            } else {
+                setStatus(data.message || 'Something went wrong. Try again.', 'error');
+            }
+        })
+        .catch(function() {
+            setStatus('Connection error. Please try again.', 'error');
+        })
+        .finally(function() {
+            btn.disabled = false;
+            btn.textContent = 'Notify Me';
+        });
+    });
+
+    // Submit on Enter key in email field
+    emailEl.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') { btn.click(); }
+    });
+})();
+</script>
+
+<!-- ════════════════════════════════════════
+     FINAL CTA
+     ════════════════════════════════════════ -->
+<section class="final-cta reveal">
+    <div class="final-cta-inner">
+        <span class="eyebrow eyebrow-gold">One tab. Starts now.</span>
+        <h2>Start free.<br>Executive function, <em>handled.</em></h2>
+        <p>20 minutes of setup. A lifetime of knowing where you stand.</p>
+        <a href="/signup" class="btn-primary btn-primary-gold">Start Free — takes 2 minutes</a>
+        <div class="final-cta-trust">
+            <span>No credit card</span>
+            <span>·</span>
+            <span>Your data stays yours</span>
+            <span>·</span>
+            <span>No ads. No data brokering. Ever.</span>
+            <span>·</span>
+            <span>Cancel anytime</span>
+        </div>
+    </div>
+</section>
+
+<!-- ── FOOTER ── -->
+<footer>
+    <div class="footer-inner">
+        <div class="footer-logo">
+            <img src="/icons/fl-icon.png" alt="FocusLedger">
+            FocusLedger
+        </div>
+        <nav class="footer-nav">
+            <a href="/pricing">Pricing</a>
+            <a href="/story">Story</a>
+            <a href="/changelog">Changelog</a>
+            <a href="/contact">Contact</a>
+            <a href="/privacy">Privacy</a>
+            <a href="/terms">Terms</a>
+        </nav>
+        <div class="footer-legal">Built for ADHD brains. 2026 FocusLedger.</div>
+        <div class="footer-privacy-badge">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            Encrypted &bull; Never sold &bull; You control everything
+        </div>
+    </div>
+</footer>
+
+<script src="/js/analytics.js"></script>
+<script>
+(function() {
+    'use strict';
+
+    // Smooth scroll for anchor links
+    document.querySelectorAll('a[href^="#"]').forEach(function(anchor) {
+        anchor.addEventListener('click', function(e) {
+            var targetId = anchor.getAttribute('href').substring(1);
+            var target = document.getElementById(targetId);
+            if (target) {
+                e.preventDefault();
+                target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        });
+    });
+
+    // Scroll reveal
+    var reveals = document.querySelectorAll('.reveal');
+    if (reveals.length > 0 && window.IntersectionObserver) {
+        var revealObserver = new IntersectionObserver(function(entries) {
+            entries.forEach(function(entry) {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                    revealObserver.unobserve(entry.target);
+                }
+            });
+        }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
+        reveals.forEach(function(el) { revealObserver.observe(el); });
+    } else {
+        // Fallback: show all
+        reveals.forEach(function(el) { el.classList.add('visible'); });
+    }
+
+    // Mobile hamburger
+    var hamburgerBtn = document.getElementById('navHamburger');
+    var mobileOverlay = document.getElementById('navMobileOverlay');
+    var mobileClose = document.getElementById('navMobileClose');
+    if (hamburgerBtn && mobileOverlay) {
+        hamburgerBtn.addEventListener('click', function() {
+            mobileOverlay.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        });
+        function closeMobileMenu() {
+            mobileOverlay.classList.remove('active');
+            document.body.style.overflow = '';
+        }
+        if (mobileClose) mobileClose.addEventListener('click', closeMobileMenu);
+        mobileOverlay.addEventListener('click', function(e) {
+            if (e.target === mobileOverlay) closeMobileMenu();
+        });
+        mobileOverlay.querySelectorAll('a').forEach(function(link) {
+            link.addEventListener('click', closeMobileMenu);
+        });
+    }
+})();
+</script>
+
+<!-- Landing page analytics — track visits + funnel entry + scroll depth + lead magnet -->
+<script>
+(function() {
+    if (typeof FLA === 'undefined') return;
+
+    // ── Page view + landing funnel event ─────────────────────────────────
+    FLA.trackPage('landing');
+    FLA.trackEvent('funnel_landing_visit');
+
+    // ── Lead magnet click tracking ───────────────────────────────────────
+    // Fire on click of any element with class .lead-magnet-link (Science Cheat
+    // Sheet, Daily Three PDF, etc.). Add class="lead-magnet-link" to those links.
+    // data-lead-type attribute included for segmentation (e.g. science_cheat_sheet).
+    document.addEventListener('click', function(e) {
+        var el = e.target.closest('.lead-magnet-link');
+        if (!el) return;
+        var leadType = el.getAttribute('data-lead-type') || 'unknown';
+        FLA.trackEvent('funnel_lead_magnet_click', { lead_type: leadType });
+    });
+
+    // ── Scroll depth tracking (25 / 50 / 75 / 100%) ─────────────────────
+    var scrollMilestones = [0.25, 0.50, 0.75, 1.0];
+    var reachedMilestones = new Set();
+
+    function checkScrollDepth() {
+        var docHeight = document.documentElement.scrollHeight;
+        var winHeight = window.innerHeight;
+        var scrollTop = window.scrollY || document.documentElement.scrollTop;
+        if (docHeight <= winHeight) return; // single-screen page, no scroll
+
+        var pct = (scrollTop + winHeight) / docHeight;
+        scrollMilestones.forEach(function(milestone) {
+            var key = String(milestone);
+            if (pct >= milestone && !reachedMilestones.has(key)) {
+                reachedMilestones.add(key);
+                var eventName = 'funnel_scroll_' + (milestone * 100).toFixed(0);
+                FLA.trackEvent(eventName);
+            }
+        });
+    }
+
+    // Throttle to avoid flooding events on fast scroll
+    var scrollThrottleTimer = null;
+    window.addEventListener('scroll', function() {
+        if (scrollThrottleTimer) return;
+        scrollThrottleTimer = setTimeout(function() {
+            scrollThrottleTimer = null;
+            checkScrollDepth();
+        }, 200);
+    }, { passive: true });
+
+    // Check immediately in case page loads mid-scroll (e.g. fragment link)
+    checkScrollDepth();
+})();
+</script>
+
+<script>
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function() {
+        navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' }).catch(function() {});
+    });
+    navigator.serviceWorker.addEventListener('message', function(e) {
+        if (e.data && e.data.type === 'SW_UPDATED') window.location.reload();
+    });
+}
+</script>
+
+<script>
+/* UTM attribution capture — runs on every landing page load.
+   Persists UTM params + document.referrer in localStorage so they survive
+   the Google OAuth full-page redirect. Only written once (first touch). */
+(function() {
+    try {
+        var params = new URLSearchParams(window.location.search);
+        var utmKeys = ['utm_source','utm_medium','utm_campaign','utm_content','utm_term'];
+        var hasUtm = utmKeys.some(function(k) { return params.get(k); });
+        // Only overwrite stored UTMs if new UTM params are present on this load
+        if (hasUtm) {
+            var data = {};
+            utmKeys.forEach(function(k) { if (params.get(k)) data[k] = params.get(k); });
+            data.signup_referrer = document.referrer || '';
+            localStorage.setItem('fl_attribution', JSON.stringify(data));
+        } else if (!localStorage.getItem('fl_attribution') && document.referrer) {
+            // No UTMs but first visit with a referrer — record it for organic attribution
+            localStorage.setItem('fl_attribution', JSON.stringify({ signup_referrer: document.referrer }));
+        }
+    } catch(e) {}
+})();
+</script>
+
+<script>
+/* Google Sign-In: render button + One Tap */
+(function() {
+    'use strict';
+
+    function updateEmailLinkCopy(gsiRendered) {
+        var emailLink = document.getElementById('heroEmailLink');
+        if (!emailLink) return;
+        emailLink.textContent = gsiRendered ? 'Or sign up with email \u2192' : 'Sign up with email \u2192';
+    }
+
+    function initGoogleSignIn() {
+        if (typeof google === 'undefined' || !google.accounts) {
+            updateEmailLinkCopy(false);
+            return;
+        }
+        var onloadEl = document.getElementById('g_id_onload');
+        var clientId = onloadEl && onloadEl.getAttribute('data-client_id');
+        if (!clientId) { updateEmailLinkCopy(false); return; }
+
+        google.accounts.id.initialize({
+            client_id: clientId,
+            callback: function(response) {
+                var body = { credential: response.credential };
+                try { var attr = JSON.parse(localStorage.getItem('fl_attribution') || 'null'); if (attr) body.attribution = attr; } catch(e) {}
+                fetch('/api/auth/google/one-tap', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                }).then(function(res) { return res.json(); })
+                  .then(function(data) {
+                      if (data.success && data.token) {
+                          localStorage.setItem('fl_token', data.token);
+                          if (data.isNewUser) {
+                              localStorage.removeItem('fl_attribution');
+                              localStorage.setItem('fl_just_signed_up', '1');
+                              if (typeof FLA !== 'undefined') FLA.trackEvent('funnel_signup_complete');
+                              if (typeof fbq === 'function') fbq('track', 'Lead');
+                          }
+                          // Route through check-in flow; it self-gates (skips if already done today)
+                          window.location.href = '/app/checkin';
+                      }
+                  }).catch(function() {});
+            }
+        });
+
+        var heroBtn = document.getElementById('google-signin-hero');
+        if (heroBtn) {
+            google.accounts.id.renderButton(heroBtn, {
+                theme: 'outline',
+                size: 'large',
+                text: 'signup_with',
+                shape: 'rectangular',
+                logo_alignment: 'left',
+                width: 280
+            });
+        }
+
+        var checks = 0;
+        var gsiCheck = setInterval(function() {
+            checks++;
+            var container = document.getElementById('google-signin-hero');
+            if (container && container.children.length > 0) {
+                clearInterval(gsiCheck);
+                updateEmailLinkCopy(true);
+            } else if (checks >= 10) {
+                clearInterval(gsiCheck);
+                updateEmailLinkCopy(false);
+            }
+        }, 300);
+
+        setTimeout(function() { google.accounts.id.prompt(); }, 1500);
+    }
+
+    window.handleGoogleOneTap = function(response) {
+        var body = { credential: response.credential };
+        try { var attr = JSON.parse(localStorage.getItem('fl_attribution') || 'null'); if (attr) body.attribution = attr; } catch(e) {}
+        fetch('/api/auth/google/one-tap', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        }).then(function(res) { return res.json(); })
+          .then(function(data) {
+              if (data.success && data.token) {
+                  localStorage.setItem('fl_token', data.token);
+                  if (data.isNewUser) {
+                      localStorage.removeItem('fl_attribution');
+                      localStorage.setItem('fl_just_signed_up', '1');
+                      if (typeof FLA !== 'undefined') FLA.trackEvent('funnel_signup_complete');
+                      if (typeof fbq === 'function') fbq('track', 'Lead');
+                  }
+                  // Route through check-in flow; it self-gates (skips if already done today)
+                  window.location.href = '/app/checkin';
+              }
+          }).catch(function() {});
+    };
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initGoogleSignIn);
+    } else {
+        initGoogleSignIn();
+    }
+})();
+</script>
+
+<script>
+/* ── Sequential Demo — 5-step alternating form/convo flow ─────────────────── */
+(function() {
+    'use strict';
+
+    /* ── State ── */
+    var currentStep = 0;
+    var selectedMood = null;
+    var checkedTasks = [];
+    var parsedTasks = ['Call mom back', 'Pay rent', 'Figure out dinner']; // Step 2 parsed
+    var step1Complete = false;
+    var step4Done = false; // Step 4 convo finished
+
+    /* ── DOM refs ── */
+    var stepDots    = document.querySelectorAll('.seq-step-dot');
+    var connectors  = [
+        document.getElementById('seqConn0'),
+        document.getElementById('seqConn1'),
+        document.getElementById('seqConn2'),
+        document.getElementById('seqConn3')
+    ];
+    var stepModeEl  = document.getElementById('seqStepMode');
+    var stepTitleEl = document.getElementById('seqStepTitle');
+    var finalCta    = document.getElementById('seqFinalCta');
+    var recapDoneEl = document.getElementById('seqRecapDone');
+
+    var STEP_META = [
+        { mode: 'form',  modeLabel: '⚡ Quick Form',    title: 'Morning Check-In' },
+        { mode: 'convo', modeLabel: '💬 Buddy Convo',   title: 'Brain Dump' },
+        { mode: 'form',  modeLabel: '⚡ Quick Form',    title: 'Break It Down' },
+        { mode: 'convo', modeLabel: '💬 Buddy Convo',   title: 'Buddy Check-In' },
+        { mode: 'form',  modeLabel: '⚡ Quick Form',    title: 'Evening Recap' }
+    ];
+
+    /* ── Helpers ── */
+    function updateProgressUI(step) {
+        stepDots.forEach(function(dot, i) {
+            dot.classList.remove('active', 'done');
+            if (i < step)  dot.classList.add('done');
+            if (i === step) dot.classList.add('active');
+        });
+        connectors.forEach(function(conn, i) {
+            if (conn) {
+                conn.classList.toggle('done', i < step);
+            }
+        });
+        var meta = STEP_META[step];
+        if (stepModeEl) {
+            stepModeEl.textContent = meta.modeLabel;
+            stepModeEl.className = 'seq-step-mode ' + (meta.mode === 'form' ? 'mode-form' : 'mode-convo');
+        }
+        if (stepTitleEl) stepTitleEl.textContent = meta.title;
+    }
+
+    function showStep(step) {
+        document.querySelectorAll('.seq-step-panel').forEach(function(p, i) {
+            p.classList.toggle('active', i === step);
+        });
+        updateProgressUI(step);
+        currentStep = step;
+    }
+
+    function scrollToDemo() {
+        var sec = document.getElementById('try-buddy');
+        if (sec) sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    /* ── Step 1: Mood + Task Picker ── */
+    var moodBtns = document.querySelectorAll('.seq-mood-btn');
+    moodBtns.forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            moodBtns.forEach(function(b) { b.classList.remove('selected'); });
+            btn.classList.add('selected');
+            selectedMood = btn.dataset.mood;
+            checkStep1Ready();
+        });
+    });
+
+    var taskItems = document.querySelectorAll('#seqTaskPicker .seq-task-item');
+    taskItems.forEach(function(item) {
+        item.addEventListener('click', function() {
+            var task = item.dataset.task;
+            if (item.classList.contains('checked')) {
+                item.classList.remove('checked');
+                checkedTasks = checkedTasks.filter(function(t) { return t !== task; });
+            } else if (checkedTasks.length < 3) {
+                item.classList.add('checked');
+                checkedTasks.push(task);
+            }
+            checkStep1Ready();
+        });
+    });
+
+    function checkStep1Ready() {
+        var btn = document.getElementById('seqStep0Btn');
+        if (!btn) return;
+        var ready = selectedMood && checkedTasks.length >= 1;
+        btn.disabled = !ready;
+    }
+
+    var step0Btn = document.getElementById('seqStep0Btn');
+    if (step0Btn) {
+        step0Btn.addEventListener('click', function() {
+            showStep(1);
+            scrollToDemo();
+            setTimeout(runChat1, 400);
+        });
+    }
+
+    /* ── Step 2: Buddy Brain Dump conversation ── */
+    var CHAT1_SCRIPT = [
+        { role: 'buddy', text: "Okay — what's bouncing around in your head right now? Just brain-dump it. Don't filter." },
+        { role: 'user',  text: "I need to call mom, pay rent, and figure out dinner" },
+        { role: 'buddy', text: "Sounds like a lot bouncing around. Let me sort that out…" },
+        { role: 'buddy', text: null, action: 'showParsed' },
+        { role: 'buddy', text: "Got it — three things locked in. That's a solid start. 💪" }
+    ];
+
+    function makeTypingRow() {
+        var row = document.createElement('div');
+        row.className = 'seq-typing-row';
+        var av = document.createElement('div');
+        av.className = 'seq-chat-avatar';
+        av.textContent = 'B';
+        var bub = document.createElement('div');
+        bub.className = 'seq-typing-bubble';
+        for (var i = 0; i < 3; i++) {
+            var d = document.createElement('div');
+            d.className = 'seq-typing-dot';
+            bub.appendChild(d);
+        }
+        row.appendChild(av);
+        row.appendChild(bub);
+        return { row: row, bubble: bub };
+    }
+
+    function appendChatMsg(containerId, role, text) {
+        var container = document.getElementById(containerId);
+        if (!container) return;
+        var wrap = document.createElement('div');
+        wrap.className = 'seq-chat-msg ' + (role === 'buddy' ? 'buddy-msg' : 'user-msg');
+        var av = document.createElement('div');
+        av.className = 'seq-chat-avatar';
+        av.textContent = role === 'buddy' ? 'B' : 'Y';
+        var bub = document.createElement('div');
+        bub.className = 'seq-chat-bubble';
+        bub.textContent = text;
+        wrap.appendChild(av);
+        wrap.appendChild(bub);
+        container.appendChild(wrap);
+        container.scrollTop = container.scrollHeight;
+        requestAnimationFrame(function() {
+            requestAnimationFrame(function() {
+                bub.classList.add('visible');
+            });
+        });
+    }
+
+    function runChatScript(containerId, script, onDone) {
+        var index = 0;
+        function next() {
+            if (index >= script.length) {
+                if (onDone) onDone();
+                return;
+            }
+            var item = script[index];
+            index++;
+            if (item.action === 'showParsed') {
+                showParsedTasks();
+                setTimeout(next, 600);
+                return;
+            }
+            var delay = item.role === 'user' ? 600 : 0;
+            if (item.role === 'buddy') {
+                // Show typing first
+                var container = document.getElementById(containerId);
+                var typingObj = makeTypingRow();
+                if (container) {
+                    container.appendChild(typingObj.row);
+                    container.scrollTop = container.scrollHeight;
+                }
+                setTimeout(function() {
+                    typingObj.bubble.classList.add('visible');
+                    setTimeout(function() {
+                        if (container) container.removeChild(typingObj.row);
+                        if (item.text) appendChatMsg(containerId, 'buddy', item.text);
+                        setTimeout(next, 700);
+                    }, 1100);
+                }, 80);
+            } else {
+                setTimeout(function() {
+                    appendChatMsg(containerId, 'user', item.text);
+                    setTimeout(next, 500);
+                }, delay);
+            }
+        }
+        next();
+    }
+
+    function showParsedTasks() {
+        var panel = document.getElementById('seqParsePanel');
+        var container = document.getElementById('seqParsedTasks');
+        if (!panel || !container) return;
+        panel.classList.add('visible');
+        parsedTasks.forEach(function(task, i) {
+            var el = document.createElement('div');
+            el.className = 'seq-parsed-task';
+            el.textContent = task;
+            container.appendChild(el);
+            setTimeout(function() {
+                el.classList.add('visible');
+            }, 120 * i + 80);
+        });
+    }
+
+    var chat1Started = false;
+    function runChat1() {
+        if (chat1Started) return;
+        chat1Started = true;
+        runChatScript('seqChat1Messages', CHAT1_SCRIPT, function() {
+            var btn = document.getElementById('seqStep1Btn');
+            if (btn) btn.disabled = false;
+        });
+    }
+
+    var step1Btn = document.getElementById('seqStep1Btn');
+    if (step1Btn) {
+        step1Btn.addEventListener('click', function() {
+            showStep(2);
+            scrollToDemo();
+            setTimeout(runBreakdown, 400);
+        });
+    }
+
+    /* ── Step 3: Task Breakdown ── */
+    var breakdownStarted = false;
+    function runBreakdown() {
+        if (breakdownStarted) return;
+        breakdownStarted = true;
+        var items = document.querySelectorAll('#seqBreakdownSteps .seq-step-item');
+        items.forEach(function(item, i) {
+            setTimeout(function() {
+                item.classList.add('visible');
+            }, 350 * i + 200);
+        });
+    }
+
+    var step2Btn = document.getElementById('seqStep2Btn');
+    if (step2Btn) {
+        step2Btn.addEventListener('click', function() {
+            showStep(3);
+            scrollToDemo();
+            setTimeout(runChat2, 400);
+        });
+    }
+
+    /* ── Step 4: Buddy Check-In conversation ── */
+    var CHAT2_SCRIPT = [
+        { role: 'buddy', text: "You broke 'pay rent' into steps — how are you feeling about it now?" },
+        { role: 'user',  text: "Actually way less overwhelming. I can do step 1 right now." },
+        { role: 'buddy', text: "That's the whole point. The task didn't get smaller — your brain did. Go do step 1. I'll be here." }
+    ];
+
+    var chat2Started = false;
+    function runChat2() {
+        if (chat2Started) return;
+        chat2Started = true;
+        runChatScript('seqChat2Messages', CHAT2_SCRIPT, function() {
+            var btn = document.getElementById('seqStep3Btn');
+            if (btn) btn.disabled = false;
+        });
+    }
+
+    var step3Btn = document.getElementById('seqStep3Btn');
+    if (step3Btn) {
+        step3Btn.addEventListener('click', function() {
+            showStep(4);
+            scrollToDemo();
+            setTimeout(runRecap, 400);
+        });
+    }
+
+    /* ── Step 5: Evening Recap ── */
+    var recapStarted = false;
+    function runRecap() {
+        if (recapStarted) return;
+        recapStarted = true;
+        // Count checked tasks from step 1
+        var done = checkedTasks.length || 2;
+        if (recapDoneEl) {
+            var count = 0;
+            var interval = setInterval(function() {
+                count++;
+                recapDoneEl.textContent = count;
+                if (count >= done) {
+                    clearInterval(interval);
+                    // Show final CTA
+                    setTimeout(function() {
+                        if (finalCta) finalCta.classList.add('visible');
+                    }, 800);
+                }
+            }, 300);
+        } else if (finalCta) {
+            setTimeout(function() { finalCta.classList.add('visible'); }, 1200);
+        }
+    }
+
+    /* ── Restart ── */
+    var restartBtn = document.getElementById('seqRestartBtn');
+    if (restartBtn) {
+        restartBtn.addEventListener('click', function() {
+            // Reset all state
+            selectedMood = null;
+            checkedTasks = [];
+            chat1Started = false;
+            chat2Started = false;
+            breakdownStarted = false;
+            recapStarted = false;
+
+            // Reset UI
+            moodBtns.forEach(function(b) { b.classList.remove('selected'); });
+            taskItems.forEach(function(i) { i.classList.remove('checked'); });
+
+            var s0btn = document.getElementById('seqStep0Btn');
+            if (s0btn) s0btn.disabled = true;
+
+            var s1btn = document.getElementById('seqStep1Btn');
+            if (s1btn) s1btn.disabled = true;
+
+            var s3btn = document.getElementById('seqStep3Btn');
+            if (s3btn) s3btn.disabled = true;
+
+            // Clear chat containers
+            ['seqChat1Messages', 'seqChat2Messages'].forEach(function(id) {
+                var el = document.getElementById(id);
+                if (el) el.innerHTML = '';
+            });
+
+            // Clear parsed tasks
+            var parsePanel = document.getElementById('seqParsePanel');
+            if (parsePanel) parsePanel.classList.remove('visible');
+            var parsedEl = document.getElementById('seqParsedTasks');
+            if (parsedEl) parsedEl.innerHTML = '';
+
+            // Reset breakdown steps
+            document.querySelectorAll('#seqBreakdownSteps .seq-step-item').forEach(function(i) {
+                i.classList.remove('visible');
+            });
+
+            // Reset recap
+            if (recapDoneEl) recapDoneEl.textContent = '0';
+            if (finalCta) finalCta.classList.remove('visible');
+
+            showStep(0);
+            scrollToDemo();
+        });
+    }
+
+    /* ── Smooth scroll for "Try Buddy" nav links ── */
+    document.querySelectorAll('a[href="#try-buddy"]').forEach(function(el) {
+        el.addEventListener('click', function(e) {
+            e.preventDefault();
+            var target = document.getElementById('try-buddy');
+            if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+    });
+
+    /* ── IntersectionObserver: auto-start Step 1 hint on first view ── */
+    var demoSection = document.getElementById('try-buddy');
+    if (demoSection && 'IntersectionObserver' in window) {
+        var demoObserver = new IntersectionObserver(function(entries) {
+            entries.forEach(function(entry) {
+                if (entry.isIntersecting) {
+                    // Lightly pulse the first mood button to guide the user
+                    var firstMood = document.querySelector('.seq-mood-btn');
+                    if (firstMood) {
+                        firstMood.style.transition = 'background 0.2s, border-color 0.3s';
+                        setTimeout(function() {
+                            firstMood.style.borderColor = 'rgba(74,146,146,0.6)';
+                            setTimeout(function() {
+                                firstMood.style.borderColor = '';
+                            }, 1200);
+                        }, 600);
+                    }
+                    demoObserver.disconnect();
+                }
+            });
+        }, { threshold: 0.3 });
+        demoObserver.observe(demoSection);
+    }
+
+    /* ── Init ── */
+    updateProgressUI(0);
+
+})();
+</script>
+<script>
+(function(){
+    var nav = document.querySelector('nav');
+    function onScroll() {
+        nav.classList.toggle('nav-scrolled', window.scrollY > 20);
+    }
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+})();
+</script>
+</body>
+</html>
