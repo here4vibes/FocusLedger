@@ -26,23 +26,38 @@ const isGoogleAuthConfigured = () => !!(GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET
 // ============================================================
 const STATE_SECRET = process.env.JWT_SECRET || 'focusledger-auth-state';
 
-function signState(returnTo) {
-  const payload = `${returnTo}:${Date.now()}`;
-  const sig = crypto.createHmac('sha256', STATE_SECRET).update(payload).digest('hex').slice(0, 16);
-  return Buffer.from(`${payload}:${sig}`).toString('base64url');
+// Trusted hosts for post-OAuth redirect — prevents open redirect
+const TRUSTED_REDIRECT_HOSTS = new Set([
+  'focusledger.net',
+  'www.focusledger.net',
+  'focusledger-mwn3.onrender.com',
+  'focusledger.polsia.app',
+  'localhost:3000',
+]);
+if (process.env.ALLOWED_ORIGIN) {
+  try { TRUSTED_REDIRECT_HOSTS.add(new URL(process.env.ALLOWED_ORIGIN).host); } catch {}
+}
+
+// State format: {returnTo}~{host}~{ts}~{sig}  (~ avoids colon clash with localhost:port)
+function signState(returnTo, host) {
+  const ts = Date.now();
+  const data = `${returnTo}~${host}~${ts}`;
+  const sig = crypto.createHmac('sha256', STATE_SECRET).update(data).digest('hex').slice(0, 16);
+  return Buffer.from(`${data}~${sig}`).toString('base64url');
 }
 
 function verifyState(state) {
   try {
     const raw = Buffer.from(state, 'base64url').toString();
-    const parts = raw.split(':');
-    if (parts.length !== 3) return null;
-    const [returnTo, ts, sig] = parts;
+    const parts = raw.split('~');
+    if (parts.length !== 4) return null;
+    const [returnTo, host, ts, sig] = parts;
     if (Date.now() - Number(ts) > 600000) return null;
     const expected = crypto.createHmac('sha256', STATE_SECRET)
-      .update(`${returnTo}:${ts}`).digest('hex').slice(0, 16);
+      .update(`${returnTo}~${host}~${ts}`).digest('hex').slice(0, 16);
     if (sig !== expected) return null;
-    return returnTo;
+    const safeHost = TRUSTED_REDIRECT_HOSTS.has(host) ? host : 'focusledger.net';
+    return { returnTo, host: safeHost };
   } catch {
     return null;
   }
@@ -299,7 +314,8 @@ module.exports = function(pool, loginLimiter, signupLimiter) {
     }
 
     const returnTo = (req.query.return_to === 'signup') ? 'signup' : 'login';
-    const state = signState(returnTo);
+    const host = req.headers.host || 'focusledger.net';
+    const state = signState(returnTo, host);
 
     const url = new URL('https://accounts.google.com/o/oauth2/v2/auth');
     url.searchParams.set('client_id',     GOOGLE_CLIENT_ID);
@@ -325,22 +341,25 @@ module.exports = function(pool, loginLimiter, signupLimiter) {
       return res.redirect('/login?google_error=invalid_callback');
     }
 
-    const returnTo = verifyState(state);
-    if (!returnTo) {
+    const stateData = verifyState(state);
+    if (!stateData) {
       return res.redirect('/login?google_error=invalid_state');
     }
+    const { returnTo, host } = stateData;
+    const proto = host.startsWith('localhost') ? 'http' : 'https';
+    const base  = `${proto}://${host}`;
 
     try {
       const tokens = await exchangeGoogleCode(code);
       if (tokens.error) {
         console.error('[auth/google/callback] Token exchange failed:', tokens.error, tokens.error_description || '');
-        return res.redirect(`/${returnTo}?google_error=${encodeURIComponent(tokens.error)}`);
+        return res.redirect(`${base}/${returnTo}?google_error=${encodeURIComponent(tokens.error)}`);
       }
 
       const userInfo = await getGoogleUserInfo(tokens.access_token);
       if (!userInfo || !userInfo.email) {
         console.error('[auth/google/callback] Failed to get user info:', userInfo);
-        return res.redirect(`/${returnTo}?google_error=userinfo_failed`);
+        return res.redirect(`${base}/${returnTo}?google_error=userinfo_failed`);
       }
 
       const googleId   = userInfo.id || null;
@@ -360,7 +379,7 @@ module.exports = function(pool, loginLimiter, signupLimiter) {
         const existing = existingByEmail.rows[0];
 
         if (existing.google_id && existing.google_id !== googleId) {
-          return res.redirect('/login?google_error=email_taken');
+          return res.redirect(`${base}/login?google_error=email_taken`);
         }
 
         const newAuthMethod = existing.password_hash ? 'both' : 'google';
@@ -413,10 +432,10 @@ module.exports = function(pool, loginLimiter, signupLimiter) {
       // Phase 2: Establish HttpOnly session cookie alongside JWT
       establishSession(req, user);
 
-      res.redirect(`/${returnTo}?google_token=${encodeURIComponent(token)}&google_email=${encodeURIComponent(email)}${accountLinked ? '&google_linked=1' : ''}`);
+      res.redirect(`${base}/${returnTo}?google_token=${encodeURIComponent(token)}&google_email=${encodeURIComponent(email)}${accountLinked ? '&google_linked=1' : ''}`);
     } catch (err) {
       console.error('[auth/google/callback] Error:', err);
-      res.redirect(`/${returnTo}?google_error=server_error`);
+      res.redirect(`${base}/${returnTo}?google_error=server_error`);
     }
   });
 
