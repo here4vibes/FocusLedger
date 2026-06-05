@@ -46,8 +46,8 @@
             display: flex; align-items: center; justify-content: space-between;
         }
         .page-header-left { display: flex; align-items: center; gap: 0.75rem; }
-        .logo { font-family: 'Space Grotesk', sans-serif; font-size: 1.2rem; font-weight: 700; color: white; text-decoration: none; display: flex; align-items: center; gap: 0.4rem; }
-        .logo-dot { width: 10px; height: 10px; background: var(--orange); border-radius: 2px; transform: rotate(45deg); }
+        .logo { font-family: 'Space Grotesk', sans-serif; font-size: 1.2rem; font-weight: 700; color: white; text-decoration: none; display: flex; align-items: center; gap: 0.5rem; }
+        .logo-img { height: 26px; width: auto; display: block; flex-shrink: 0; }
         .back-btn { font-size: 0.82rem; color: rgba(255,255,255,0.72); text-decoration: none; display: flex; align-items: center; gap: 0.3rem; transition: color 0.2s; }
         .back-btn:hover { color: white; }
         .page-header-right { display: flex; align-items: center; gap: 0.5rem; }
@@ -505,7 +505,7 @@
     <header class="page-header">
         <div class="page-header-left">
             <a href="/app/tasks" class="logo">
-                <span class="logo-dot"></span>
+                <img src="/icons/fl-icon.svg" class="logo-img" alt="">
                 FocusLedger
             </a>
             <span class="pro-badge" id="proBadge">AUTOPILOT</span>

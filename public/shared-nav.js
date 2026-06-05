@@ -13,10 +13,10 @@
   // Primary tabs — exactly 4, shown in bottom nav (mobile) and sidebar top section (desktop)
   // Routes use /app/* namespace for true isolation — each tab is its own route, not a CSS toggle
   const NAV_ITEMS = [
-    { label: 'Tasks',    href: '/app/tasks', icon: '✅' },
-    { label: 'Money',    href: '/app/money', icon: '💲' },
-    { label: 'Vault',    href: '/app/vault', icon: '🗄️' },
-    { label: 'Buddy',    href: '/app/buddy', icon: '🤝' },
+    { label: 'Tasks',  href: '/app/tasks', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 12l2 2 4-4"/></svg>' },
+    { label: 'Money',  href: '/app/money', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>' },
+    { label: 'Vault',  href: '/app/vault', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>' },
+    { label: 'Buddy',  href: '/app/buddy', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>' },
   ];
 
   // Secondary links — shown in hamburger slide-out (mobile) and sidebar bottom section (desktop)
@@ -84,7 +84,7 @@
     var iconEl = document.createElement('span');
     iconEl.className = 'shared-nav-icon';
     iconEl.setAttribute('aria-hidden', 'true');
-    iconEl.textContent = item.icon;
+    iconEl.innerHTML = item.icon;
 
     var labelEl = document.createElement('span');
     labelEl.className = 'shared-nav-label';
@@ -124,7 +124,7 @@
     // Brand header
     var brand = document.createElement('div');
     brand.className = 'shared-sidebar-brand';
-    brand.innerHTML = '<img src="/icons/fl-icon.svg" style="height:28px;width:auto;display:block;flex-shrink:0;filter:brightness(0) invert(1) sepia(1) saturate(3) hue-rotate(10deg)" alt=""> <span style="font-weight:700;color:rgba(255,255,255,0.95)">Focus</span><span style="font-weight:400;color:#f0b429">Ledger</span>';
+    brand.innerHTML = '<img src="/icons/fl-icon.svg" style="height:28px;width:auto;display:block;flex-shrink:0" alt=""> <span style="font-weight:700;color:rgba(255,255,255,0.95)">Focus</span><span style="font-weight:400;color:#f0b429">Ledger</span>';
     brand.style.display = 'flex';
     brand.style.alignItems = 'center';
     brand.style.gap = '0.5rem';
