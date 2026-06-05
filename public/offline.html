@@ -144,15 +144,14 @@
         <div class="diamond"></div>
     </div>
 
-    <!-- De Botton: calm possibility, not failure or absence. McLuhan: the offline state is neutral. -->
-    <h1>You're offline <span class="status-dot"></span></h1>
-    <p>No connection right now. Your tasks and spending are saved locally.</p>
+    <h1 id="heading">Connecting… <span class="status-dot"></span></h1>
+    <p id="subtext">Reaching the server — this takes up to 30 seconds on a cold start. Hang tight.</p>
 
-    <div class="cached-notice">
+    <div class="cached-notice" id="notice">
         Everything you've captured is here. Reconnect whenever you're ready to sync.
     </div>
 
-    <button class="btn" onclick="tryReconnect()">
+    <button class="btn" id="retryBtn" onclick="tryReconnect()">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
             <path d="M23 4v6h-6"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
         </svg>
@@ -162,17 +161,39 @@
     <div class="footer">FocusLedger — Tasks &amp; Money, Together</div>
 
     <script>
+        var attempts = 0;
+
         function tryReconnect() {
-            if (navigator.onLine) {
-                window.location.href = '/app';
-            } else {
-                window.location.reload();
+            window.location.href = document.referrer && document.referrer.includes(location.host)
+                ? document.referrer
+                : '/app';
+        }
+
+        // Auto-retry up to 3 times (covers Render cold-start wake time)
+        function autoRetry() {
+            if (!navigator.onLine) {
+                document.getElementById('heading').textContent = "You're offline";
+                document.getElementById('subtext').textContent = 'No connection right now. Your tasks and spending are saved locally.';
+                return;
+            }
+            attempts++;
+            if (attempts <= 3) {
+                fetch('/health', { cache: 'no-store' })
+                    .then(r => { if (r.ok) tryReconnect(); else scheduleRetry(); })
+                    .catch(scheduleRetry);
             }
         }
 
-        // Auto-redirect when connection restored
+        function scheduleRetry() {
+            setTimeout(autoRetry, 8000);
+        }
+
+        // Start auto-retry after 3 seconds
+        setTimeout(autoRetry, 3000);
+
+        // Also redirect immediately when connection is restored
         window.addEventListener('online', () => {
-            setTimeout(() => { window.location.href = '/app'; }, 500);
+            setTimeout(tryReconnect, 500);
         });
     </script>
 </body>
