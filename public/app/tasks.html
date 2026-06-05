@@ -46,8 +46,8 @@
             display: flex; align-items: center; justify-content: space-between;
         }
         .page-header-left { display: flex; align-items: center; gap: 0.75rem; }
-        .logo { font-family: 'Space Grotesk', sans-serif; font-size: 1.2rem; font-weight: 700; color: white; text-decoration: none; display: flex; align-items: center; gap: 0.4rem; }
-        .logo-dot { width: 10px; height: 10px; background: var(--orange); border-radius: 2px; transform: rotate(45deg); }
+        .logo { font-family: 'Space Grotesk', sans-serif; font-size: 1.2rem; font-weight: 700; color: white; text-decoration: none; display: flex; align-items: center; gap: 0.5rem; }
+        .logo-img { height: 26px; width: auto; display: block; flex-shrink: 0; }
         .back-btn { font-size: 0.82rem; color: rgba(255,255,255,0.72); text-decoration: none; display: flex; align-items: center; gap: 0.3rem; transition: color 0.2s; }
         .back-btn:hover { color: white; }
         .page-header-right { display: flex; align-items: center; gap: 0.5rem; }
@@ -505,7 +505,7 @@
     <header class="page-header">
         <div class="page-header-left">
             <a href="/app/tasks" class="logo">
-                <span class="logo-dot"></span>
+                <img src="/icons/fl-icon.svg" class="logo-img" alt="">
                 FocusLedger
             </a>
             <span class="pro-badge" id="proBadge">AUTOPILOT</span>
@@ -1101,7 +1101,7 @@
                 Tasks
             </a>
             <a href="/app/money" class="bottom-tab">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="2" x2="12" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
                 Money
             </a>
             <a href="/app/vault" class="bottom-tab">

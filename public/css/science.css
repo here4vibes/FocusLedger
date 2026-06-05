@@ -57,56 +57,6 @@ body {
     -webkit-font-smoothing: antialiased;
 }
 
-/* ── NAV ── */
-nav {
-    background: var(--navy);
-    position: sticky;
-    top: 0;
-    z-index: 200;
-}
-.nav-inner {
-    padding: 0 2rem;
-    height: 64px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    max-width: 1200px;
-    margin: 0 auto;
-}
-.logo {
-    font-family: var(--font-body);
-    font-size: 1.25rem;
-    font-weight: 700;
-    color: white;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    text-decoration: none;
-    letter-spacing: -0.01em;
-}
-.logo-icon { height: 26px; width: auto; display: block; flex-shrink: 0; }
-.nav-links {
-    display: flex;
-    align-items: center;
-    gap: 0.25rem;
-}
-.nav-links a {
-    color: rgba(255,255,255,0.75);
-    text-decoration: none;
-    font-size: 0.9rem;
-    font-weight: 500;
-    padding: 0.5rem 0.85rem;
-    border-radius: 3px;
-    transition: all 0.18s;
-}
-.nav-links a:hover { color: white; background: rgba(255,255,255,0.08); }
-.nav-cta {
-    background: var(--gold) !important;
-    color: #1a1a1a !important;
-    font-weight: 600 !important;
-}
-.nav-cta:hover { opacity: 0.9 !important; }
-
 /* ── HERO ── */
 .hero {
     background: var(--navy);

@@ -9,8 +9,7 @@ const rateLimit = require('express-rate-limit');
 const ALLOWED_ORIGINS = [
   'https://focusledger.polsia.app',
   'https://focusledger.net',
-  'https://www.focusledger.net',
-  'https://focusledger-mwn3.onrender.com'
+  'https://www.focusledger.net'
 ];
 if (process.env.ALLOWED_ORIGIN && !ALLOWED_ORIGINS.includes(process.env.ALLOWED_ORIGIN)) {
   ALLOWED_ORIGINS.push(process.env.ALLOWED_ORIGIN);

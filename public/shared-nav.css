@@ -3,14 +3,14 @@
 
 :root {
   --nav-brand: #011e5c;
-  --nav-brand-light: rgba(1,30,92,0.08);
-  --nav-brand-active: #F26B3A;
-  --nav-bg: rgba(250,248,244,0.92);
-  --nav-border: rgba(0,0,0,0.06);
-  --nav-text: rgba(1,30,92,0.45);
-  --nav-text-active: #011e5c;
-  --nav-text-hover: #011e5c;
-  --nav-height: 68px;
+  --nav-brand-light: rgba(255,255,255,0.08);
+  --nav-brand-active: #c9a84c;
+  --nav-bg: #011e5c;
+  --nav-border: rgba(255,255,255,0.08);
+  --nav-text: rgba(255,255,255,0.55);
+  --nav-text-active: #c9a84c;
+  --nav-text-hover: rgba(255,255,255,0.9);
+  --nav-height: 60px;
   --nav-sidebar-width: 210px;
   --nav-z: 1000;
   --menu-z: 1100;
@@ -144,13 +144,10 @@ body[data-nav-shell="desktop"] #shared-bottom-nav {
   right: 0;
   height: var(--nav-height);
   background: var(--nav-bg);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-top: 1px solid var(--nav-border);
   z-index: var(--nav-z);
   display: flex;
   align-items: stretch;
-  box-shadow: 0 -1px 0 rgba(0,0,0,0.05), 0 -4px 20px rgba(0,0,0,0.06);
+  box-shadow: 0 -4px 20px rgba(0,0,0,0.3);
   /* safe area inset for iOS home indicator */
   padding-bottom: env(safe-area-inset-bottom, 0);
 }
@@ -188,7 +185,7 @@ body[data-nav-shell="desktop"] #shared-bottom-nav {
 }
 
 .shared-nav-item.active .shared-nav-icon {
-  background: rgba(1,30,92,0.08);
+  background: rgba(201,168,76,0.15);
 }
 
 .shared-nav-icon {
@@ -198,9 +195,13 @@ body[data-nav-shell="desktop"] #shared-bottom-nav {
   align-items: center;
   justify-content: center;
   border-radius: 13px;
-  font-size: 19px;
   line-height: 1;
   transition: background 0.2s ease, transform 0.2s var(--spring);
+}
+
+.shared-nav-icon svg {
+  width: 22px;
+  height: 22px;
 }
 
 .shared-nav-item.active .shared-nav-icon {
@@ -494,8 +495,9 @@ body.shared-nav-active {
   .shared-nav-label {
     font-size: 9px;
   }
-  .shared-nav-icon {
-    font-size: 16px;
+  .shared-nav-icon svg {
+    width: 18px;
+    height: 18px;
   }
 }
 
@@ -594,7 +596,7 @@ body.shared-nav-active {
   }
 
   .shared-nav-item.active {
-    background: rgba(242,107,58,0.10);
+    background: rgba(201,168,76,0.12);
     color: var(--nav-text-active);
     font-weight: 600;
   }
@@ -618,10 +620,17 @@ body.shared-nav-active {
   .shared-nav-icon {
     width: 24px;
     height: 24px;
-    font-size: 17px;
     border-radius: 6px;
     flex-shrink: 0;
     transition: transform 0.15s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .shared-nav-icon svg {
+    width: 18px;
+    height: 18px;
   }
 
   .shared-nav-label {

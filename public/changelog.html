@@ -22,8 +22,7 @@
     <!-- Canonical -->
     <link rel="canonical" href="https://focusledger.net/changelog">
     <!-- Favicon -->
-    <link rel="icon" type="image/png" sizes="32x32" href="/icons/fl-icon.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="/icons/fl-icon.png">
+    <link rel="icon" type="image/svg+xml" href="/icons/fl-icon.svg">
     <link rel="apple-touch-icon" sizes="180x180" href="/icons/fl-icon.png">
     <!-- Shared pages stylesheet -->
     <link rel="stylesheet" href="/css/pages.css">
@@ -77,64 +76,6 @@
             line-height: 1.7;
             overflow-x: hidden;
         }
-
-        /* ── Navigation ──────────────────────────────────────────── */
-        nav {
-            background: var(--trust-blue);
-            position: sticky;
-            top: 0;
-            z-index: 200;
-            height: 64px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0 2rem;
-        }
-        .nav-logo {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            text-decoration: none;
-            color: white;
-            font-size: 1.05rem;
-            font-weight: 600;
-            letter-spacing: -0.01em;
-        }
-        .nav-logo .logo-dot {
-            width: 8px; height: 8px;
-            background: var(--gold);
-            border-radius: 50%;
-            display: inline-block;
-        }
-        .logo-icon {
-            height: 26px;
-            width: auto;
-            display: block;
-            flex-shrink: 0;
-        }
-        .nav-links {
-            display: flex;
-            align-items: center;
-            gap: 1.5rem;
-        }
-        .nav-links a {
-            color: rgba(255,255,255,0.82);
-            text-decoration: none;
-            font-size: 0.88rem;
-            transition: color 0.2s;
-        }
-        .nav-links a:hover { color: white; }
-        .nav-cta {
-            background: var(--gold);
-            color: #1a1a1a !important;
-            font-weight: 600;
-            padding: 0.5rem 1.25rem;
-            border-radius: var(--btn-radius);
-            text-decoration: none;
-            font-size: 0.88rem;
-            transition: opacity 0.2s;
-        }
-        .nav-cta:hover { opacity: 0.88; color: #1a1a1a; }
 
         /* ── Page Header ─────────────────────────────────────────── */
         .page-header {
@@ -346,8 +287,6 @@
 
         /* ── Responsive ──────────────────────────────────────────── */
         @media (max-width: 600px) {
-            nav { padding: 0 1rem; }
-            .nav-links a:not(.nav-cta) { display: none; }
             .page-header { padding: 3rem 1.25rem 2.5rem; }
             .content-wrap { padding: 2rem 1.25rem 5rem; }
             .entry { padding: 1rem 1rem; gap: 1rem; }
@@ -359,18 +298,8 @@
 <body>
 
 <!-- Navigation -->
-<nav>
-    <a href="/" class="nav-logo">
-        <img src="/icons/fl-icon.png" class="logo-icon" alt="">FocusLedger
-    </a>
-    <div class="nav-links">
-        <a href="/story">About</a>
-        <a href="/changelog">Changelog</a>
-        <a href="/pricing">Pricing</a>
-        <a href="/app">App</a>
-        <a href="/signup" class="nav-cta">Try free</a>
-    </div>
-    
+<script src="/js/public-nav.js"></script>
+
 <!-- Page Header -->
 <header class="page-header">
     <div class="tag">
@@ -383,6 +312,59 @@
 
 <!-- Changelog Content -->
 <main class="content-wrap">
+
+    <!-- June 2026 -->
+    <div class="month-group">
+        <div class="month-label">June 2026</div>
+        <div class="changelog-list">
+
+            <div class="entry">
+                <div class="entry-date">
+                    <span class="entry-day">05</span>
+                    <span class="entry-month">Jun</span>
+                </div>
+                <div class="entry-body">
+                    <div class="entry-title">Brain+scaffold logo — new visual identity</div>
+                    <div class="entry-desc">Replaced the placeholder icon with a custom brain+scaffold SVG logo across all 40+ pages: favicons, PWA manifest, public nav, and in-app nav. The scaffold structure around the brain is intentional — it reflects the cognitive scaffolding concept from <a href="/science">the science page</a>: external structure reduces the working-memory load that makes task initiation hard for ADHD brains.</div>
+                    <div class="entry-badge design">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                        Design
+                    </div>
+                </div>
+            </div>
+
+            <div class="entry">
+                <div class="entry-date">
+                    <span class="entry-day">05</span>
+                    <span class="entry-month">Jun</span>
+                </div>
+                <div class="entry-body">
+                    <div class="entry-title">Unified public-site navigation</div>
+                    <div class="entry-desc">All 11 public pages (science, pricing, story, changelog, adhd-tax, contact, login, signup, privacy, terms, landing) now share a single nav injected by <code>public-nav.js</code>. Consistent cream background, brain logo + wordmark, auth-aware links (Log In → Dashboard when signed in), and a mobile drawer. Reducing context-switching between page styles maps to <a href="/science">reduced cognitive load</a> — a ADHD-native UX principle.</div>
+                    <div class="entry-badge improvement">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+                        Improvement
+                    </div>
+                </div>
+            </div>
+
+            <div class="entry">
+                <div class="entry-date">
+                    <span class="entry-day">05</span>
+                    <span class="entry-month">Jun</span>
+                </div>
+                <div class="entry-body">
+                    <div class="entry-title">In-app nav — dark navy + SVG icons + gold active state</div>
+                    <div class="entry-desc">The in-app bottom navigation (Tasks / Money / Vault / Buddy) moved from a cream frosted-glass bar to the dark navy palette used throughout the app. Emoji icons replaced with clean SVG line icons; the active tab gets a gold accent pill. Money tab corrected from a clock icon to a dollar-sign icon. High-contrast, unambiguous iconography is a direct application of the <a href="/science">reduced-distraction design principle</a> — ADHD brains benefit from salient, consistent visual anchors.</div>
+                    <div class="entry-badge design">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                        Design
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
 
     <!-- May 2026 -->
     <div class="month-group">
