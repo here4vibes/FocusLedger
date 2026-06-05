@@ -108,6 +108,7 @@ Before any shared CSS change ships, verify all of the following:
 3. **Desktop viewport check (≥ 900px)** — Open `/app` at 1280px and 1440px. Verify the left sidebar renders, task cards use the warm-white background, and no new horizontal scrollbar appears.
 4. **No new horizontal overflow** — Check `overflow-x: hidden` on body and `max-width` constraints on `.page-content-wrapper`. A removed `border` can change element width calculations — verify no layout reflows.
 5. **Sidebar/nav renders correctly** — Verify the 200px left sidebar (desktop) and 60px bottom bar (mobile) both function. Check `shared-nav.css` and `public/shared-nav.js` — these are shared across all 17 app pages.
+6. **Update changelog.html** — Every feature, improvement, or fix that ships must get a dated entry in `public/changelog.html`. Format: `<div class="entry">` with day/month + title + 1–2 sentence description + badge (new/improvement/fix/design). If the feature is ADHD-relevant, end the description with a science tie-in: "This maps to [concept] from the [science page](/science) — [1-sentence explanation]." Use the June 2026 section as a template for new month sections.
 
 ---
 
