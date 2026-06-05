@@ -144,8 +144,8 @@
     </div>
 
     <!-- De Botton: calm possibility, not failure or absence. McLuhan: the offline state is neutral. -->
-    <h1>You're offline <span class="status-dot"></span></h1>
-    <p>No connection right now. Your tasks and spending are saved locally.</p>
+    <h1 id="offlineHeading">Connecting… <span class="status-dot"></span></h1>
+    <p id="offlineSubtitle">Checking connection — this may take a moment on first load.</p>
 
     <div class="cached-notice">
         Everything you've captured is here. Reconnect whenever you're ready to sync.
@@ -173,6 +173,26 @@
         window.addEventListener('online', () => {
             setTimeout(() => { window.location.href = '/app'; }, 500);
         });
+
+        // Auto-retry by polling /health up to 3 times (covers Render cold starts)
+        var retries = 0;
+        var maxRetries = 3;
+        function pollHealth() {
+            if (retries >= maxRetries) {
+                document.getElementById('offlineHeading').textContent = "You're offline ";
+                document.getElementById('offlineSubtitle').textContent = 'No connection right now. Your tasks and spending are saved locally.';
+                return;
+            }
+            retries++;
+            fetch('/health', { cache: 'no-store' })
+                .then(function(r) { if (r.ok) window.location.href = '/app'; else setTimeout(pollHealth, 8000); })
+                .catch(function() { setTimeout(pollHealth, 8000); });
+        }
+        if (navigator.onLine !== false) setTimeout(pollHealth, 3000);
+        else {
+            document.getElementById('offlineHeading').textContent = "You're offline ";
+            document.getElementById('offlineSubtitle').textContent = 'No connection right now. Your tasks and spending are saved locally.';
+        }
     </script>
 </body>
 </html>
