@@ -164,28 +164,41 @@ async function cacheFirst(request) {
 // SW ever reaches the origin — defeating network-first. 'no-store' forces
 // fetch to bypass the HTTP cache entirely so every navigation gets a
 // guaranteed-fresh response from the server.
+// WHY retry: Render free tier cold-starts take up to 30s. One retry after
+// a short wait lets the server finish waking before we fall back to offline.
 async function navigationHandler(request) {
+  const attempt = async () => fetch(request, { cache: 'no-store' });
+  let response;
   try {
-    const response = await fetch(request, { cache: 'no-store' });
-    if (response.ok) {
-      const cache = await caches.open(CACHE_VERSION);
-      cache.put(request, response.clone());
+    response = await attempt();
+  } catch {
+    // First attempt failed — wait 8s then retry (covers Render cold-start)
+    await new Promise(r => setTimeout(r, 8000));
+    try {
+      response = await attempt();
+    } catch {
+      response = null;
     }
-    return response;
-  } catch (err) {
-    // Try cached version first
-    const cached = await caches.match(request);
-    if (cached) return cached;
-
-    // Fall back to offline page
-    const offlinePage = await caches.match(OFFLINE_URL);
-    if (offlinePage) return offlinePage;
-
-    return new Response('<h1>You are offline</h1>', {
-      status: 503,
-      headers: { 'Content-Type': 'text/html' }
-    });
   }
+
+  if (response && response.ok) {
+    const cache = await caches.open(CACHE_VERSION);
+    cache.put(request, response.clone());
+    return response;
+  }
+  if (response) return response; // non-ok but valid (e.g. 401, 404) — pass through
+
+  // Both attempts failed — try cached version, then offline page
+  const cached = await caches.match(request);
+  if (cached) return cached;
+
+  const offlinePage = await caches.match(OFFLINE_URL);
+  if (offlinePage) return offlinePage;
+
+  return new Response('<h1>You are offline</h1>', {
+    status: 503,
+    headers: { 'Content-Type': 'text/html' }
+  });
 }
 
 // ─── Push Notifications ────────────────────────────────────────────────────
