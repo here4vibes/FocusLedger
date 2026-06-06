@@ -156,10 +156,10 @@ module.exports = function(pool) {
   // ── GET /api/expenses ────────────────────────────────────────────────────────
   router.get('/', async (req, res) => {
     try {
-      const { period } = req.query;
+      const { period, start, end } = req.query;
       const tz = await fetchUserTimezone(pool, req.user.id);
       const localDate = getUserLocalDate(tz);
-      const expenses = await getExpenses(pool, req.user.id, period || 'week', localDate);
+      const expenses = await getExpenses(pool, req.user.id, period || 'week', localDate, start, end);
       res.json({ success: true, expenses });
     } catch (err) {
       console.error('[Expenses] Error fetching expenses:', err);

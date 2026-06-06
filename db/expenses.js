@@ -169,11 +169,14 @@ async function importPlaidExpense(pool, params) {
  * @param {string} [localDate] — YYYY-MM-DD in user's timezone; used instead of CURRENT_DATE
  * @returns {Promise<object[]>}
  */
-async function getExpenses(pool, userId, period, localDate) {
+async function getExpenses(pool, userId, period, localDate, startDate, endDate) {
   let dateFilter = '';
   const params = [userId];
 
-  if (period === 'month') {
+  if (period === 'custom' && startDate && endDate) {
+    dateFilter = `AND e.expense_date >= $2 AND e.expense_date <= $3`;
+    params.push(startDate, endDate);
+  } else if (period === 'month') {
     // WHY param: CURRENT_DATE is UTC on Neon — month boundary must use user's local date
     const refDate = localDate || new Date().toISOString().split('T')[0];
     dateFilter = `AND e.expense_date >= date_trunc('month', $2::date)`;

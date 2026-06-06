@@ -617,7 +617,7 @@ let tasks        = [];
 let values       = [];
 let expenses     = [];
 let editingId    = null;
-let pendingSlot  = null;  // { dateStr, slot } when creating via click
+let pendingSlot  = null;  // { dateStr, slot, taskId } when creating via click or task drop
 
 // ── API ──────────────────────────────────────────────────────────
 async function api(method, path, body) {
@@ -783,6 +783,7 @@ function renderSlots() {
     row.addEventListener('drop', e => {
       e.preventDefault(); row.classList.remove('drag-over');
       const taskId    = e.dataTransfer.getData('task_id');
+      if (!taskId) return; // block reschedule — handled by renderBlocks listener
       const taskTitle = e.dataTransfer.getData('task_title');
       const taskValId = e.dataTransfer.getData('task_value_id');
       openModal({ dateStr, slot: s, taskId, taskTitle, taskValueId: taskValId });
@@ -975,7 +976,7 @@ setInterval(() => {
 // ── Modal ─────────────────────────────────────────────────────────
 function openModal({ dateStr, slot, taskId, taskTitle, taskValueId } = {}) {
   editingId = null;
-  pendingSlot = { dateStr: dateStr || toDateStr(currentDate), slot };
+  pendingSlot = { dateStr: dateStr || toDateStr(currentDate), slot, taskId: taskId || null };
 
   document.getElementById('modalHdr').textContent = 'Add Time Block';
   document.getElementById('blockTitle').value = taskTitle || '';
@@ -1044,7 +1045,9 @@ document.getElementById('modalSave').addEventListener('click', async () => {
     await api('PATCH', `/time-blocks/${editingId}`, { title, start_time: start, end_time: end, value_id: valueId });
   } else {
     const dateStr = pendingSlot?.dateStr || toDateStr(currentDate);
-    await api('POST', '/time-blocks', { title, start_time: start, end_time: end, value_id: valueId, block_date: dateStr });
+    const body = { title, start_time: start, end_time: end, value_id: valueId, block_date: dateStr };
+    if (pendingSlot?.taskId) body.task_id = pendingSlot.taskId;
+    await api('POST', '/time-blocks', body);
   }
   closeModal();
   reloadDay();
