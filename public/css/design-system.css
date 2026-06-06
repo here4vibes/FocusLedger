@@ -254,36 +254,36 @@ select:focus-visible {
   background: var(--text-muted);
 }
 
-/* ── 7. Landing Nav ───────────────────────────────────────────────────── */
-body > nav:not(#fl-public-nav) {
-  background: var(--brand-primary) !important;
-  max-width: 100% !important;
-  padding: 0 2rem !important;
-  height: 64px !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: space-between !important;
-  position: sticky !important;
-  top: 0 !important;
-  z-index: var(--z-nav) !important;
+/* ── 7. Landing Nav (landing-old.html only — scoped to #fl-landing-nav) ── */
+#fl-landing-nav {
+  background: var(--brand-primary);
+  max-width: 100%;
+  padding: 0 2rem;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: var(--z-nav);
 }
-body > nav:not(#fl-public-nav) .logo { color: white !important; }
-body > nav:not(#fl-public-nav) .logo-dot { background: var(--brand-accent) !important; }
-body > nav:not(#fl-public-nav) > div a { color: rgba(255,255,255,0.82) !important; }
-body > nav:not(#fl-public-nav) > div a:hover { color: white !important; }
-body > nav:not(#fl-public-nav) #navCtaLink,
-body > nav:not(#fl-public-nav) a[href="/signup"] {
-  background: var(--brand-accent) !important;
-  color: #1a1a1a !important;
-  border-radius: var(--btn-radius) !important;
-  box-shadow: none !important;
-  font-weight: 600 !important;
-  padding: 0.55rem 1.25rem !important;
+#fl-landing-nav .logo { color: white; }
+#fl-landing-nav .logo-dot { background: var(--brand-accent); }
+#fl-landing-nav > div a { color: rgba(255,255,255,0.82); }
+#fl-landing-nav > div a:hover { color: white; }
+#fl-landing-nav #navCtaLink,
+#fl-landing-nav a[href="/signup"] {
+  background: var(--brand-accent);
+  color: #1a1a1a;
+  border-radius: var(--btn-radius);
+  box-shadow: none;
+  font-weight: 600;
+  padding: 0.55rem 1.25rem;
 }
-body > nav:not(#fl-public-nav) #navCtaLink:hover,
-body > nav:not(#fl-public-nav) a[href="/signup"]:hover {
-  opacity: 0.9 !important;
-  color: #1a1a1a !important;
+#fl-landing-nav #navCtaLink:hover,
+#fl-landing-nav a[href="/signup"]:hover {
+  opacity: 0.9;
+  color: #1a1a1a;
 }
 
 /* ── 8. Portal Nav ────────────────────────────────────────────────────── */
