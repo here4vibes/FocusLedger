@@ -5347,6 +5347,7 @@
             return api('GET', url).then(function(data) {
                 state.tasks = data.tasks || [];
                 renderTasks();
+                maybeShowWelcome();
             }).catch(function() {
                 state.tasks = [];
                 renderTasks();
@@ -9738,6 +9739,59 @@
         fetchCategories();
         refreshAll();
 
+        // ========================================
+        // WELCOME MODAL
+        // ========================================
+        var _welcomeShown = false;
+
+        function maybeShowWelcome() {
+            if (_welcomeShown) return;
+            if (localStorage.getItem('fl_welcomed')) return;
+            if (state.tasks.length > 0) return;
+            _welcomeShown = true;
+
+            // Personalise headline from JWT payload (name already in token — no extra fetch)
+            try {
+                var payload = JSON.parse(atob(token.split('.')[1].replace(/-/g,'+').replace(/_/g,'/')));
+                var firstName = (payload.name || '').split(' ')[0];
+                if (firstName) document.getElementById('welcomeHeadline').textContent = 'Welcome, ' + firstName + '.';
+            } catch(e) {}
+
+            var overlay = document.getElementById('welcomeOverlay');
+            overlay.style.display = 'flex';
+            // Animate card up
+            var card = document.getElementById('welcomeCard');
+            card.style.transform = 'translateY(100%)';
+            card.style.transition = 'transform 0.35s cubic-bezier(0.32,0.72,0,1)';
+            requestAnimationFrame(function() {
+                requestAnimationFrame(function() { card.style.transform = 'translateY(0)'; });
+            });
+        }
+
+        function dismissWelcome() {
+            localStorage.setItem('fl_welcomed', '1');
+            var overlay = document.getElementById('welcomeOverlay');
+            var card = document.getElementById('welcomeCard');
+            card.style.transform = 'translateY(100%)';
+            setTimeout(function() { overlay.style.display = 'none'; }, 320);
+        }
+
+        document.getElementById('welcomeSkipBtn').addEventListener('click', dismissWelcome);
+        document.getElementById('welcomeAddTaskBtn').addEventListener('click', function() {
+            dismissWelcome();
+            // Open the task form and focus the input
+            setTimeout(function() {
+                var card = document.getElementById('taskFormCard');
+                var btn = document.getElementById('toggleTaskFormBtn');
+                if (card && card.style.display === 'none') {
+                    card.style.display = 'block';
+                    if (btn) btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Hide form';
+                }
+                var input = document.getElementById('taskInput');
+                if (input) { input.focus(); card && card.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+            }, 350);
+        });
+
         // Show welcome toast when demo tasks were imported from the landing page
         (function() {
             try {
@@ -11153,6 +11207,46 @@
             }
         });
     </script>
+
+    <!-- Welcome Modal -->
+    <div id="welcomeOverlay" style="display:none;position:fixed;inset:0;z-index:9000;background:rgba(1,30,92,0.55);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);display:flex;align-items:flex-end;justify-content:center;padding:0;" aria-modal="true" role="dialog">
+        <div id="welcomeCard" style="background:#fff;width:100%;max-width:480px;border-radius:24px 24px 0 0;padding:2rem 1.5rem 2.5rem;box-shadow:0 -8px 40px rgba(1,30,92,0.18);display:flex;flex-direction:column;align-items:center;text-align:center;gap:0;">
+            <!-- Logo -->
+            <div style="width:56px;height:56px;background:var(--navy);border-radius:14px;display:flex;align-items:center;justify-content:center;margin-bottom:1.25rem;">
+                <svg width="28" height="28" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="16" cy="14" r="8" fill="#F26B3A" opacity="0.15"/>
+                    <path d="M10 14c0-3.314 2.686-6 6-6s6 2.686 6 6c0 2.21-1.194 4.14-2.97 5.18L19 22h-6l-.03-2.82C11.194 18.14 10 16.21 10 14z" fill="#F26B3A"/>
+                    <rect x="13" y="22" width="6" height="1.5" rx="0.75" fill="#F26B3A" opacity="0.7"/>
+                    <rect x="14" y="24" width="4" height="1.5" rx="0.75" fill="#F26B3A" opacity="0.4"/>
+                </svg>
+            </div>
+            <!-- Headline -->
+            <h2 id="welcomeHeadline" style="font-family:'Space Grotesk',sans-serif;font-size:1.5rem;font-weight:700;color:var(--navy);margin-bottom:0.5rem;line-height:1.2;">Welcome to FocusLedger</h2>
+            <p style="color:var(--text-muted);font-size:0.95rem;line-height:1.55;margin-bottom:1.5rem;max-width:320px;">Your ADHD command center — tasks, money, and a coach that keeps you moving forward.</p>
+            <!-- Three pillars -->
+            <div style="width:100%;background:var(--cream);border-radius:14px;padding:1rem 1.25rem;margin-bottom:1.75rem;display:flex;flex-direction:column;gap:0.75rem;text-align:left;">
+                <div style="display:flex;align-items:center;gap:0.75rem;">
+                    <span style="font-size:1.1rem;">✓</span>
+                    <span style="font-size:0.88rem;color:var(--text-dark);"><strong>Your values are set</strong> — Health, Relationships, Career &amp; more</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:0.75rem;">
+                    <span style="font-size:1.1rem;">✓</span>
+                    <span style="font-size:0.88rem;color:var(--text-dark);"><strong>Spending categories are ready</strong> — connect a bank anytime</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:0.75rem;">
+                    <span style="font-size:1.1rem;">✓</span>
+                    <span style="font-size:0.88rem;color:var(--text-dark);"><strong>Buddy is waiting</strong> — your daily check-in coach</span>
+                </div>
+            </div>
+            <!-- CTA -->
+            <button id="welcomeAddTaskBtn" style="width:100%;background:var(--orange);color:#fff;border:none;border-radius:14px;padding:1rem;font-family:'Space Grotesk',sans-serif;font-size:1rem;font-weight:700;cursor:pointer;letter-spacing:0.01em;margin-bottom:0.75rem;min-height:52px;transition:opacity 0.15s;">
+                + Add my first task
+            </button>
+            <button id="welcomeSkipBtn" style="background:none;border:none;color:var(--text-muted);font-size:0.88rem;cursor:pointer;padding:0.25rem 0.5rem;">
+                Skip for now
+            </button>
+        </div>
+    </div>
 
     <!-- Bug Report Modal -->
     <div class='bug-report-overlay' id='bugReportOverlay'>
