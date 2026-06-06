@@ -1,0 +1,47 @@
+name: Smoke Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  smoke:
+    name: Nav smoke tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Install only Chromium — sufficient for CSS color assertions
+      - name: Install Playwright browsers
+        run: npx playwright install chromium --with-deps
+
+      # On pushes to main, Render takes ~2 min to deploy.
+      # Wait so the smoke tests hit the freshly deployed code.
+      - name: Wait for Render deploy
+        if: github.event_name == 'push'
+        run: sleep 150
+
+      - name: Run nav smoke tests
+        run: npm run test:smoke
+        env:
+          BASE_URL: https://focusledger.net
+
+      - name: Upload failure screenshots
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-failures
+          path: test-results/
+          retention-days: 7
