@@ -10834,6 +10834,14 @@
 
             api('GET', '/daily-brief').then(function(data) {
                 if (!data.success) return;
+
+                if (data.locked) {
+                    briefEl.textContent = data.message;
+                    statsEl.innerHTML = '<div class="dbc-stat"><a href="' + data.unlock_action + '" style="color:#c9a84c;text-decoration:none;font-weight:600;">Do tonight\'s check-in →</a></div>';
+                    card.classList.add('dbc-visible');
+                    return;
+                }
+
                 briefEl.textContent = data.brief;
                 var bits = [];
                 if (data.tasks_due_today > 0)

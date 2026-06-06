@@ -25,6 +25,36 @@ module.exports = function (pool) {
       weekStart.setUTCDate(d.getUTCDate() - dow + (dow === 0 ? -6 : 1));
       const weekStartStr = weekStart.toISOString().slice(0, 10);
 
+      // Gate: requires evening Buddy check-in from yesterday
+      const yesterday = new Date(d);
+      yesterday.setUTCDate(d.getUTCDate() - 1);
+      const yesterdayStr = yesterday.toISOString().slice(0, 10);
+
+      const [gateRow, userRow] = await Promise.all([
+        pool.query(
+          `SELECT 1 FROM buddy_checkins WHERE user_id = $1 AND type = 'evening'
+           AND (created_at AT TIME ZONE $2)::date = $3::date LIMIT 1`,
+          [userId, tz, yesterdayStr]
+        ).catch(() => ({ rows: [] })),
+        pool.query('SELECT created_at FROM users WHERE id = $1', [userId])
+          .catch(() => ({ rows: [] })),
+      ]);
+
+      const hadCheckin = gateRow.rows.length > 0;
+      const accountAgeDays = userRow.rows[0]
+        ? (Date.now() - new Date(userRow.rows[0].created_at).getTime()) / 86400000
+        : 999;
+
+      if (!hadCheckin && accountAgeDays >= 2) {
+        return res.json({
+          success: true,
+          locked: true,
+          reason: 'evening_checkin',
+          message: 'Complete your evening check-in to unlock tomorrow\'s brief',
+          unlock_action: '/buddy',
+        });
+      }
+
       const [tasksRes, overdueRes, expenseRes, streakRes, doneRes] = await Promise.all([
         pool.query(
           'SELECT id, title FROM tasks WHERE user_id = $1 AND is_completed = false AND due_date = $2 ORDER BY created_at ASC LIMIT 5',

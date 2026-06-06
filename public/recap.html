@@ -214,6 +214,14 @@
   <p>Building your summary…</p>
 </div>
 
+<!-- Locked -->
+<div class="error-state" id="lockedState" style="display:none;">
+  <p style="font-size:2.5rem;margin-bottom:0.75rem;">🔒</p>
+  <p style="margin-bottom:0.5rem;font-weight:700;font-family:'Space Grotesk',sans-serif;font-size:1.1rem;" id="lockedMsg"></p>
+  <p style="font-size:0.875rem;color:var(--text-muted);margin-bottom:1.25rem;">Classify your spending — then your Executive Summary unlocks.</p>
+  <a id="lockedAction" href="/money" style="display:inline-block;background:var(--navy);color:white;text-decoration:none;padding:0.75rem 1.5rem;border-radius:10px;font-weight:600;font-family:'Space Grotesk',sans-serif;font-size:0.9rem;">Review expenses →</a>
+</div>
+
 <!-- Error -->
 <div class="error-state" id="errorState" style="display:none;">
   <p style="font-size:2rem;margin-bottom:0.75rem;">⚠️</p>
@@ -378,6 +386,16 @@
   fetch('/api/weekly-recap', { headers: auth })
     .then(function(r) { return r.json(); })
     .then(function(d) {
+      document.getElementById('loadingState').style.display = 'none';
+      if (d.locked) {
+        var ls = document.getElementById('lockedState');
+        var lm = document.getElementById('lockedMsg');
+        var la = document.getElementById('lockedAction');
+        if (lm) lm.textContent = d.message;
+        if (la && d.unlock_action) la.href = d.unlock_action;
+        ls.style.display = '';
+        return;
+      }
       if (!d.success) throw new Error(d.message);
       render(d);
     })

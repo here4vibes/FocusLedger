@@ -28,6 +28,27 @@ module.exports = function (pool) {
       const ws = weekStart.toISOString().slice(0, 10);
       const we = weekEnd.toISOString().slice(0, 10);
 
+      // Gate: requires at least one classified expense this week
+      // Only applies if the user has expenses at all (i.e. bank connected or manual entries)
+      const [classifiedRow, anyExpenseRow] = await Promise.all([
+        pool.query(
+          'SELECT 1 FROM expenses WHERE user_id = $1 AND expense_date >= $2 AND is_impulse IS NOT NULL LIMIT 1',
+          [userId, ws]
+        ).catch(() => ({ rows: [] })),
+        pool.query('SELECT 1 FROM expenses WHERE user_id = $1 LIMIT 1', [userId])
+          .catch(() => ({ rows: [] })),
+      ]);
+
+      if (anyExpenseRow.rows.length > 0 && classifiedRow.rows.length === 0) {
+        return res.json({
+          success: true,
+          locked: true,
+          reason: 'spending_classification',
+          message: 'Review at least one expense this week to unlock your Executive Summary',
+          unlock_action: '/money',
+        });
+      }
+
       const [tasksRes, expensesRes, streakRes, checkinRes, impulseRes, focusRes] = await Promise.all([
         pool.query(
           "SELECT COUNT(*) AS n FROM tasks WHERE user_id = $1 AND is_completed = true AND (updated_at AT TIME ZONE $2)::date BETWEEN $3::date AND $4::date",
