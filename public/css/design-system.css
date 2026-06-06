@@ -255,7 +255,7 @@ select:focus-visible {
 }
 
 /* ── 7. Landing Nav ───────────────────────────────────────────────────── */
-body > nav {
+body > nav:not(#fl-public-nav) {
   background: var(--brand-primary) !important;
   max-width: 100% !important;
   padding: 0 2rem !important;
@@ -267,12 +267,12 @@ body > nav {
   top: 0 !important;
   z-index: var(--z-nav) !important;
 }
-body > nav .logo { color: white !important; }
-body > nav .logo-dot { background: var(--brand-accent) !important; }
-body > nav > div a { color: rgba(255,255,255,0.82) !important; }
-body > nav > div a:hover { color: white !important; }
-body > nav #navCtaLink,
-body > nav a[href="/signup"] {
+body > nav:not(#fl-public-nav) .logo { color: white !important; }
+body > nav:not(#fl-public-nav) .logo-dot { background: var(--brand-accent) !important; }
+body > nav:not(#fl-public-nav) > div a { color: rgba(255,255,255,0.82) !important; }
+body > nav:not(#fl-public-nav) > div a:hover { color: white !important; }
+body > nav:not(#fl-public-nav) #navCtaLink,
+body > nav:not(#fl-public-nav) a[href="/signup"] {
   background: var(--brand-accent) !important;
   color: #1a1a1a !important;
   border-radius: var(--btn-radius) !important;
@@ -280,8 +280,8 @@ body > nav a[href="/signup"] {
   font-weight: 600 !important;
   padding: 0.55rem 1.25rem !important;
 }
-body > nav #navCtaLink:hover,
-body > nav a[href="/signup"]:hover {
+body > nav:not(#fl-public-nav) #navCtaLink:hover,
+body > nav:not(#fl-public-nav) a[href="/signup"]:hover {
   opacity: 0.9 !important;
   color: #1a1a1a !important;
 }
