@@ -8,7 +8,7 @@
  */
 const { defineConfig, devices } = require('@playwright/test');
 
-const BASE_URL = process.env.BASE_URL || 'https://focusledger.net';
+const BASE_URL = process.env.BASE_URL || 'https://focusledger.polsia.app';
 
 module.exports = defineConfig({
   testDir: './tests/smoke',
