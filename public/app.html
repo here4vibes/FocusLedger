@@ -4239,6 +4239,43 @@
             .momentum-score-card { margin: 0 1rem 1rem; }
         }
 
+        /* ── Daily Brief Card ────────────────────────────────────────────────── */
+        .daily-brief-card {
+            display: none;
+            background: linear-gradient(135deg, var(--navy) 0%, #0a2d80 100%);
+            border-radius: 14px;
+            padding: 1rem 1.25rem;
+            margin-bottom: 1rem;
+            color: white;
+            position: relative;
+        }
+        .daily-brief-card.dbc-visible { display: block; }
+        .dbc-eyebrow {
+            font-size: 0.68rem; font-weight: 700; letter-spacing: 0.1em;
+            text-transform: uppercase; color: rgba(255,255,255,0.5);
+            margin-bottom: 0.35rem;
+        }
+        .dbc-brief { font-size: 0.92rem; line-height: 1.5; color: white; margin-bottom: 0.75rem; }
+        .dbc-stats { display: flex; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 0.75rem; }
+        .dbc-stat { font-size: 0.8rem; color: rgba(255,255,255,0.7); }
+        .dbc-stat strong { color: white; }
+        .dbc-footer {
+            display: flex; align-items: center; justify-content: space-between;
+            border-top: 1px solid rgba(255,255,255,0.12); padding-top: 0.65rem;
+        }
+        .dbc-recap-link {
+            font-size: 0.8rem; color: #c9a84c; text-decoration: none;
+            font-weight: 600; display: flex; align-items: center; gap: 0.3rem;
+        }
+        .dbc-recap-link:hover { color: #e0bc6a; }
+        .dbc-dismiss {
+            position: absolute; top: 0.65rem; right: 0.75rem;
+            background: none; border: none; cursor: pointer;
+            color: rgba(255,255,255,0.35); font-size: 1rem; line-height: 1; padding: 0.2rem;
+        }
+        .dbc-dismiss:hover { color: rgba(255,255,255,0.6); }
+        @media (max-width: 900px) { .daily-brief-card { margin: 0 1rem 1rem; } }
+
         /* ── Task Notes ─────────────────────────────────────────────────────── */
         .task-notes-section { margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px dashed var(--border); }
 
@@ -4568,6 +4605,20 @@
     <!-- Shown for new users with no score yet -->
     <div class="adulting-score-setup" id="adultingScoreSetup">
         🌿 <a href="/app/life">Set up your Life section</a> to see your Adulting Score
+    </div>
+
+    <!-- DAILY BRIEF CARD — personalized morning context + Executive Summary link -->
+    <div class="daily-brief-card" id="dailyBriefCard" role="status" aria-label="Today's brief">
+        <button class="dbc-dismiss" id="dbcDismiss" aria-label="Dismiss">✕</button>
+        <div class="dbc-eyebrow">Today's Brief</div>
+        <div class="dbc-brief" id="dbcBrief"></div>
+        <div class="dbc-stats" id="dbcStats"></div>
+        <div class="dbc-footer">
+            <a href="/recap" class="dbc-recap-link">
+                View Executive Summary
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            </a>
+        </div>
     </div>
 
     <!-- MOMENTUM SCORE CARD — salutogenic: measures what's working today -->
@@ -10763,6 +10814,40 @@
                 });
             }).catch(function(){});
         });
+
+        // ───── Daily Brief card ───────────────────────────────────────────
+        (function loadDailyBrief() {
+            var TODAY = new Date().toISOString().slice(0, 10);
+            var DISMISS_KEY = 'fl_brief_dismissed_' + TODAY;
+            if (localStorage.getItem(DISMISS_KEY)) return;
+
+            var card    = document.getElementById('dailyBriefCard');
+            var briefEl = document.getElementById('dbcBrief');
+            var statsEl = document.getElementById('dbcStats');
+            var dismiss = document.getElementById('dbcDismiss');
+            if (!card) return;
+
+            dismiss.addEventListener('click', function() {
+                localStorage.setItem(DISMISS_KEY, '1');
+                card.classList.remove('dbc-visible');
+            });
+
+            api('GET', '/daily-brief').then(function(data) {
+                if (!data.success) return;
+                briefEl.textContent = data.brief;
+                var bits = [];
+                if (data.tasks_due_today > 0)
+                    bits.push('<div class="dbc-stat"><strong>' + data.tasks_due_today + '</strong> due today</div>');
+                if (data.overdue_count > 0)
+                    bits.push('<div class="dbc-stat" style="color:#FCA5A5"><strong>' + data.overdue_count + '</strong> overdue</div>');
+                if (data.best_streak)
+                    bits.push('<div class="dbc-stat">🔥 <strong>' + data.best_streak.days + '</strong>-day streak</div>');
+                if (data.week_spending > 0)
+                    bits.push('<div class="dbc-stat">💸 <strong>$' + Math.round(data.week_spending) + '</strong> this week</div>');
+                statsEl.innerHTML = bits.join('');
+                card.classList.add('dbc-visible');
+            }).catch(function() {});
+        })();
 
         // ───── Adulting Score home widget ─────────────────────────────────
         // Fetches today's health score and animates the small ring widget above the dashboard.
