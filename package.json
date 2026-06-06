@@ -31,6 +31,7 @@
     "testTimeout": 10000
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.101.0",
     "@prisma/client": "^5.22.0",
     "@sentry/node": "^8.0.0",
     "apn": "^2.2.0",

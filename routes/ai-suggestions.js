@@ -12,7 +12,7 @@
  */
 
 const express = require('express');
-const OpenAI = require('openai');
+const { complete } = require('../lib/claude-client');
 const { authenticateToken } = require('../middleware/auth');
 const { checkProStatus } = require('../middleware/proUtils');
 const { fetchUserTimezone, getUserLocalDate, getUserLocalHour } = require('../lib/timezone');
@@ -170,36 +170,25 @@ Active tasks (don't duplicate these): ${activeTasks}${spendingNote}${avoidNote}
 
 Generate ${batchSize} personalized, highly specific task suggestions tied to their values. Make them feel like a thoughtful friend who knows them well.`;
 
-    const openai = new OpenAI({
-      baseURL: process.env.OPENAI_BASE_URL,
-      apiKey: process.env.OPENAI_API_KEY,
-    });
-
     const timeoutPromise = new Promise((_, reject) =>
       setTimeout(() => reject(new Error('llm_timeout')), LLM_TIMEOUT_MS)
     );
 
-    const completionPromise = openai.chat.completions.create({
-      model: 'gpt-4o-mini',
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt }
-      ],
-      max_tokens: 600,
-      temperature: 0.85,
+    const completionPromise = complete({
+      system: systemPrompt,
+      messages: [{ role: 'user', content: userPrompt }],
+      maxTokens: 600,
     });
 
-    let completion;
+    let raw;
     try {
-      completion = await Promise.race([completionPromise, timeoutPromise]);
+      raw = await Promise.race([completionPromise, timeoutPromise]);
     } catch (raceErr) {
       if (raceErr.message === 'llm_timeout') {
         return { suggestions: [], reason: 'timeout' };
       }
       throw raceErr;
     }
-
-    const raw = (completion.choices[0].message.content || '').trim();
     let parsed = [];
 
     try {

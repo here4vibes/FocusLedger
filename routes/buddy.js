@@ -34,7 +34,7 @@
 const express = require('express');
 const { authenticateToken } = require('../middleware/auth');
 const { chatMessages } = require('../lib/polsia-ai');
-const { extractTasks, detectCompletions } = require('../lib/taskParsingService');
+const { extractTasks, detectCompletions, extractPassiveCapture } = require('../lib/taskParsingService');
 const {
   runPatternDetection,
   getMidDayCheckinType,
@@ -416,8 +416,8 @@ module.exports = function(pool) {
       });
       contextHistory.push({ role: 'user', content: message.trim() });
 
-      // Run AI reply + completion detection in parallel
-      const [aiResult, completionMatches] = await Promise.all([
+      // Run AI reply + completion detection + passive capture in parallel
+      const [aiResult, completionMatches, passiveCapture] = await Promise.all([
         (async () => {
           try {
             const messages = [{ role: 'system', content: systemPrompt }].concat(contextHistory);
@@ -428,7 +428,8 @@ module.exports = function(pool) {
             return { reply: getFallbackBuddyReply(userTurns), error: true };
           }
         })(),
-        detectCompletions(message.trim(), activeTasks)
+        detectCompletions(message.trim(), activeTasks),
+        extractPassiveCapture(message.trim()).catch(() => ({ tasks: [], expenses: [] })),
       ]);
 
       let buddyReply = aiResult.reply;
@@ -500,7 +501,14 @@ module.exports = function(pool) {
         });
       }
 
-      res.json({ success: true, reply: buddyReply, turn: userTurns, isComplete, detectedMood, autoCompleted });
+      // Filter captured tasks: skip titles that closely match what was just auto-completed
+      const completedTitles = new Set(autoCompleted.map(t => t.title.toLowerCase()));
+      const capturedTasks = (passiveCapture.tasks || []).filter(
+        t => !completedTitles.has((t.title || '').toLowerCase())
+      );
+      const capturedExpenses = passiveCapture.expenses || [];
+
+      res.json({ success: true, reply: buddyReply, turn: userTurns, isComplete, detectedMood, autoCompleted, capturedTasks, capturedExpenses });
     } catch (err) {
       console.error('[buddy] POST /conversation error:', err.message);
       res.status(500).json({ success: false, message: 'Conversation error' });

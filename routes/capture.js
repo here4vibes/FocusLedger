@@ -10,7 +10,7 @@
 
 const express = require('express');
 const router = express.Router();
-const OpenAI = require('openai');
+const { getClient } = require('../lib/claude-client');
 const { authenticateToken } = require('../middleware/auth');
 const rateLimit = require('express-rate-limit');
 
@@ -68,9 +68,6 @@ Rules:
 - If text is not task-like, still extract what you can
 - raw_text is your full transcription of everything visible`;
 
-function getClient() {
-  return new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-}
 
 function detectMode(base64Image, hint) {
   // Client can hint; 'auto' falls back to 'note' (receipts usually explicit)
@@ -99,27 +96,22 @@ module.exports = function() {
       const resolvedMode = detectMode(image, mode);
       const prompt = resolvedMode === 'receipt' ? RECEIPT_PROMPT : NOTE_PROMPT;
 
-      const client = getClient();
-      const response = await client.chat.completions.create({
-        model: 'gpt-4o',
+      const response = await getClient().messages.create({
+        model: 'claude-haiku-4-5',
         max_tokens: 800,
         messages: [{
           role: 'user',
           content: [
             { type: 'text', text: prompt },
             {
-              type: 'image_url',
-              image_url: {
-                url: `data:${mimeType};base64,${image}`,
-                detail: 'high'
-              }
+              type: 'image',
+              source: { type: 'base64', media_type: mimeType, data: image }
             }
           ]
         }],
-        response_format: { type: 'json_object' }
       });
 
-      const raw = response.choices[0].message.content;
+      const raw = response.content[0].text;
       let parsed;
       try {
         parsed = JSON.parse(raw);

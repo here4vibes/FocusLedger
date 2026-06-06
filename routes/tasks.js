@@ -4,7 +4,7 @@ const { checkProStatus } = require('../middleware/proUtils');
 // WHY removed: sendNudgePushNotifications was called as a side effect of GET /nudges,
 // causing duplicate push notifications on every page load. Task deadline notifications
 // are now handled by a scheduled job (taskDeadlineNudge.js) with proper dedup.
-const OpenAI = require('openai');
+const { complete } = require('../lib/claude-client');
 const { matchTaskToValue } = require('../lib/auto-tagger');
 const { fetchUserTimezone, getUserLocalDate } = require('../lib/timezone');
 const { actionableDateFilter } = require('../lib/task-filters');
@@ -188,43 +188,25 @@ module.exports = function(pool) {
         return res.json({ success: true, suggestions: [], skip: false, is_pro: false });
       }
 
-      // Call OpenAI with 3s timeout
-      const openai = new OpenAI({
-        baseURL: process.env.OPENAI_BASE_URL,
-        apiKey: process.env.OPENAI_API_KEY,
-      });
-
       const timeoutPromise = new Promise((_, reject) =>
         setTimeout(() => reject(new Error('timeout')), 3000)
       );
 
-      const completionPromise = openai.chat.completions.create({
-        model: 'gpt-4o-mini',
-        messages: [
-          {
-            role: 'system',
-            content: 'You are a task decomposition assistant helping people with ADHD break down tasks into concrete steps. Generate 3-5 short, specific, actionable steps. Each step must: start with an action verb, be under 10 words, be concrete not vague. Return ONLY a valid JSON array of strings, nothing else. Example: ["Open bank website and log in", "Navigate to transfers section", "Enter amount and recipient", "Confirm and save confirmation number"]'
-          },
-          {
-            role: 'user',
-            content: 'Task: "' + trimmedTitle + '"\n\nGenerate 3-5 actionable steps as a JSON array.'
-          }
-        ],
-        max_tokens: 250,
-        temperature: 0.6,
+      const completionPromise = complete({
+        system: 'You are a task decomposition assistant helping people with ADHD break down tasks into concrete steps. Generate 3-5 short, specific, actionable steps. Each step must: start with an action verb, be under 10 words, be concrete not vague. Return ONLY a valid JSON array of strings, nothing else. Example: ["Open bank website and log in", "Navigate to transfers section", "Enter amount and recipient", "Confirm and save confirmation number"]',
+        messages: [{ role: 'user', content: `Task: "${trimmedTitle}"\n\nGenerate 3-5 actionable steps as a JSON array.` }],
+        maxTokens: 250,
       });
 
-      let completion;
+      let content;
       try {
-        completion = await Promise.race([completionPromise, timeoutPromise]);
+        content = await Promise.race([completionPromise, timeoutPromise]);
       } catch (raceErr) {
         if (raceErr.message === 'timeout') {
           return res.json({ success: true, suggestions: [], skip: true, reason: 'timeout' });
         }
         throw raceErr;
       }
-
-      const content = (completion.choices[0].message.content || '').trim();
       let suggestions = [];
 
       try {
@@ -266,39 +248,22 @@ module.exports = function(pool) {
         return res.json({ success: true, duration_minutes: null });
       }
 
-      const openai = new OpenAI({
-        baseURL: process.env.OPENAI_BASE_URL,
-        apiKey: process.env.OPENAI_API_KEY,
-      });
-
       const timeoutPromise = new Promise((_, reject) =>
         setTimeout(() => reject(new Error('timeout')), 4000)
       );
 
-      const completionPromise = openai.chat.completions.create({
-        model: 'gpt-4o-mini',
-        messages: [
-          {
-            role: 'system',
-            content: 'You are a task time estimator. Given a task title, estimate how long it will take in minutes. Be realistic. Common ranges: quick tasks 5-15 min, medium tasks 30-60 min, complex tasks 90-180 min. Return ONLY a JSON object: {"minutes": <integer>}. No explanation.'
-          },
-          {
-            role: 'user',
-            content: `Task: "${title.trim()}"\nHow many minutes will this take?`
-          }
-        ],
-        max_tokens: 50,
-        temperature: 0.3,
+      const completionPromise = complete({
+        system: 'You are a task time estimator. Given a task title, estimate how long it will take in minutes. Be realistic. Common ranges: quick tasks 5-15 min, medium tasks 30-60 min, complex tasks 90-180 min. Return ONLY valid JSON: {"minutes": <integer>}. No explanation.',
+        messages: [{ role: 'user', content: `Task: "${title.trim()}"\nHow many minutes will this take?` }],
+        maxTokens: 50,
       });
 
-      let completion;
+      let content;
       try {
-        completion = await Promise.race([completionPromise, timeoutPromise]);
+        content = await Promise.race([completionPromise, timeoutPromise]);
       } catch {
         return res.json({ success: true, duration_minutes: null });
       }
-
-      const content = (completion.choices[0].message.content || '').trim();
       let minutes = null;
       try {
         const cleaned = content.replace(/^```(?:json)?\n?|\n?```$/g, '').trim();
@@ -515,23 +480,14 @@ module.exports = function(pool) {
         if (!durationMins) {
           setImmediate(async () => {
             try {
-              const openai = new OpenAI({
-                baseURL: process.env.OPENAI_BASE_URL,
-                apiKey: process.env.OPENAI_API_KEY,
-              });
-              const completion = await Promise.race([
-                openai.chat.completions.create({
-                  model: 'gpt-4o-mini',
-                  messages: [
-                    { role: 'system', content: 'Estimate task duration in minutes. Return ONLY JSON: {"minutes": <integer>}. Ranges: quick 5-15, medium 30-60, complex 90-180. No explanation.' },
-                    { role: 'user', content: `Task: "${task.title}"` }
-                  ],
-                  max_tokens: 50,
-                  temperature: 0.3,
+              const raw = await Promise.race([
+                complete({
+                  system: 'Estimate task duration in minutes. Return ONLY valid JSON: {"minutes": <integer>}. Ranges: quick 5-15, medium 30-60, complex 90-180. No explanation.',
+                  messages: [{ role: 'user', content: `Task: "${task.title}"` }],
+                  maxTokens: 50,
                 }),
                 new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 5000))
               ]);
-              const raw = (completion.choices[0].message.content || '').trim().replace(/^```(?:json)?\n?|\n?```$/g, '').trim();
               const parsed = JSON.parse(raw);
               if (parsed && typeof parsed.minutes === 'number' && parsed.minutes > 0) {
                 const mins = Math.min(Math.round(parsed.minutes), 480);

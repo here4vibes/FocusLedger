@@ -20,7 +20,7 @@
  */
 
 const express = require('express');
-const OpenAI = require('openai');
+const { complete } = require('../lib/claude-client');
 const { authenticateToken } = require('../middleware/auth');
 
 const _CONFIDENCE_HIGH = 0.85;   // Suggest auto-complete (comment reference only; threshold enforced in AI prompt)
@@ -34,13 +34,6 @@ module.exports = function(pool) {
   // ─────────────────────────────────────────────────────────────
   // Helpers
   // ─────────────────────────────────────────────────────────────
-
-  function getOpenAI() {
-    return new OpenAI({
-      baseURL: process.env.OPENAI_BASE_URL,
-      apiKey: process.env.OPENAI_API_KEY,
-    });
-  }
 
   /**
    * Fetch user's active tasks for matching
@@ -82,8 +75,6 @@ module.exports = function(pool) {
    * Returns array of matches with AI-assigned confidence, match_type, etc.
    */
   async function runAIMatching(journalContent, activeTasks) {
-    const openai = getOpenAI();
-
     const taskList = activeTasks.length > 0
       ? activeTasks.map((t, i) =>
           `${i}: [id=${t.id}] "${t.title}"${t.description ? ` (${t.description.slice(0, 80)})` : ''}`
@@ -165,22 +156,15 @@ Analyze the journal and return the JSON response.`;
 
     let raw = '';
     try {
-      const completion = await Promise.race([
-        openai.chat.completions.create({
-          model: 'gpt-4o-mini',
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: userPrompt }
-          ],
-          max_tokens: 1500,
-          temperature: 0.2,
-          response_format: { type: 'json_object' },
-          task: 'journal-entry-analysis'
+      raw = await Promise.race([
+        complete({
+          system: systemPrompt,
+          messages: [{ role: 'user', content: userPrompt }],
+          maxTokens: 1500,
         }),
         timeoutPromise
       ]);
 
-      raw = (completion.choices[0].message.content || '').trim();
       // Strip markdown code fences if the model wraps JSON in ```json ... ```
       if (raw.startsWith('```')) {
         raw = raw.replace(/^```(?:json|JSON)?\s*\n?/, '').replace(/\n?```\s*$/, '');
