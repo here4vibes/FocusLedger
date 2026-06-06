@@ -36,7 +36,7 @@ jobs:
       - name: Run nav smoke tests
         run: npm run test:smoke
         env:
-          BASE_URL: https://focusledger.net
+          BASE_URL: https://focusledger.polsia.app
 
       - name: Upload failure screenshots
         if: failure()
