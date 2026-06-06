@@ -188,6 +188,45 @@
             30% { transform: translateY(-5px); }
         }
 
+        /* ── Passive capture cards ── */
+        .capture-card {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-left: 36px;
+            background: rgba(201,168,76,0.1);
+            border: 1px solid rgba(201,168,76,0.28);
+            border-radius: 12px;
+            padding: 0.45rem 0.75rem;
+            font-size: 0.85rem;
+            animation: fadeUp 0.25s ease;
+        }
+        .capture-card-icon { flex-shrink: 0; font-size: 0.95rem; }
+        .capture-card-label { flex: 1; color: rgba(255,255,255,0.82); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .capture-add-btn {
+            flex-shrink: 0;
+            background: rgba(201,168,76,0.25);
+            border: 1px solid rgba(201,168,76,0.45);
+            color: #c9a84c;
+            border-radius: 8px;
+            padding: 0.2rem 0.6rem;
+            font-size: 0.78rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        .capture-add-btn:disabled { opacity: 0.5; cursor: default; }
+        .capture-dismiss-btn {
+            flex-shrink: 0;
+            background: none;
+            border: none;
+            color: rgba(255,255,255,0.3);
+            font-size: 1rem;
+            cursor: pointer;
+            padding: 0 0.1rem;
+            line-height: 1;
+        }
+
         /* ── Input area ── */
         .input-wrap {
             padding: 0.65rem 1.25rem 1rem;
@@ -756,6 +795,71 @@
         if (chat) chat.scrollTop = chat.scrollHeight;
     }
 
+    // ── Passive capture cards ─────────────────────────────────────────────────
+    function renderCaptureCards(tasks, expenses) {
+        var items = [];
+        (tasks || []).forEach(function(t) {
+            if (t && t.title) items.push({ type: 'task', icon: '📝', label: t.title, data: t });
+        });
+        (expenses || []).forEach(function(e) {
+            if (e && e.amount > 0) {
+                items.push({ type: 'expense', icon: '💰', label: '$' + parseFloat(e.amount).toFixed(2) + ' — ' + (e.description || ''), data: e });
+            }
+        });
+        if (!items.length) return;
+
+        setTimeout(function() {
+            var chat = el('chatArea');
+            items.forEach(function(item) {
+                var card = document.createElement('div');
+                card.className = 'capture-card';
+                card.innerHTML =
+                    '<span class="capture-card-icon">' + item.icon + '</span>' +
+                    '<span class="capture-card-label">' + escHtml(item.label) + '</span>' +
+                    '<button class="capture-add-btn">' + (item.type === 'task' ? 'Add' : 'Log') + '</button>' +
+                    '<button class="capture-dismiss-btn">✕</button>';
+
+                var addBtn = card.querySelector('.capture-add-btn');
+                var dismissBtn = card.querySelector('.capture-dismiss-btn');
+
+                dismissBtn.onclick = function() { card.remove(); };
+
+                addBtn.onclick = function() {
+                    addBtn.disabled = true;
+                    addBtn.textContent = '…';
+                    var endpoint = item.type === 'task' ? '/api/tasks' : '/api/expenses';
+                    var body = item.type === 'task'
+                        ? { title: item.data.title, due_date: item.data.due_date || null, source: 'buddy' }
+                        : { amount: item.data.amount, note: item.data.description, category: item.data.category || 'other', is_impulse: null };
+
+                    apiFetch(endpoint, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(body)
+                    })
+                    .then(function(r) { return r.json(); })
+                    .then(function(d) {
+                        if (d.success) {
+                            addBtn.textContent = '✓';
+                            addBtn.style.cssText = 'background:rgba(80,200,120,0.25);border-color:rgba(80,200,120,0.45);color:#50c878';
+                            setTimeout(function() { card.remove(); }, 1000);
+                        } else {
+                            addBtn.disabled = false;
+                            addBtn.textContent = item.type === 'task' ? 'Add' : 'Log';
+                        }
+                    })
+                    .catch(function() {
+                        addBtn.disabled = false;
+                        addBtn.textContent = item.type === 'task' ? 'Add' : 'Log';
+                    });
+                };
+
+                chat.appendChild(card);
+            });
+            scrollChat();
+        }, 350);
+    }
+
     // ── Send message ──────────────────────────────────────────────────────────
     var inputEl = el('userInput');
     var sendBtn = el('sendBtn');
@@ -810,6 +914,10 @@
                 appendBuddyMessage(data.reply || 'Got it.');
                 if (window.FLHaptics) FLHaptics.buddyMessage();
                 if (data.detectedMood) state.detectedMood = data.detectedMood;
+
+                if ((data.capturedTasks && data.capturedTasks.length) || (data.capturedExpenses && data.capturedExpenses.length)) {
+                    renderCaptureCards(data.capturedTasks, data.capturedExpenses);
+                }
 
                 if (data.isComplete) {
                     state.isComplete = true;
