@@ -289,7 +289,7 @@ module.exports = function(pool, loginLimiter, signupLimiter) {
   router.get('/me', authenticateToken, async (req, res) => {
     try {
       const result = await pool.query(
-        'SELECT id, email, name, created_at, subscription_plan, subscription_status, auth_method, avatar_url FROM users WHERE id = $1',
+        'SELECT id, email, name, created_at, subscription_plan, subscription_status, auth_method, avatar_url, hourly_rate FROM users WHERE id = $1',
         [req.user.id]
       );
 
@@ -882,6 +882,22 @@ module.exports = function(pool, loginLimiter, signupLimiter) {
     } catch (err) {
       console.error('[migrate-demo-session] Error:', err.message);
       res.status(500).json({ success: false, message: 'Migration failed' });
+    }
+  });
+
+  // PATCH /api/auth/hourly-rate — save user's hourly rate for spending-in-work-hours context
+  router.patch('/hourly-rate', authenticateToken, async (req, res) => {
+    try {
+      const raw = req.body.hourly_rate;
+      const rate = raw === null || raw === '' ? null : parseFloat(raw);
+      if (rate !== null && (isNaN(rate) || rate < 0 || rate > 10000)) {
+        return res.status(400).json({ success: false, message: 'Hourly rate must be between 0 and 10000' });
+      }
+      await pool.query('UPDATE users SET hourly_rate = $1 WHERE id = $2', [rate, req.user.id]);
+      res.json({ success: true, hourly_rate: rate });
+    } catch (err) {
+      console.error('[auth/hourly-rate]', err.message);
+      res.status(500).json({ success: false, message: 'Failed to update hourly rate' });
     }
   });
 

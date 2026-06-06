@@ -979,6 +979,25 @@
             <p id="tzDetected" style="font-size:0.78rem;color:var(--text-muted);margin-top:0.5rem;"></p>
         </div>
 
+        <!-- HOURLY RATE — for spending-in-work-hours context -->
+        <div class="settings-section" id="hourlyRateSection">
+            <h2>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                Spending Perspective
+            </h2>
+            <p style="font-size:0.875rem;color:var(--text-muted);margin-bottom:1rem">Set your hourly rate to see spending in hours of work. "$47 at Target · 1.6h of work" hits differently than a dollar amount alone.</p>
+            <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">
+                <div style="position:relative;flex:1;min-width:140px;max-width:220px;">
+                    <span style="position:absolute;left:0.75rem;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:0.9rem;pointer-events:none;">$</span>
+                    <input type="number" id="hourlyRateInput" min="0" max="10000" step="0.01" placeholder="e.g. 35.00"
+                        style="width:100%;padding:0.55rem 0.75rem 0.55rem 1.5rem;border:1px solid var(--border);border-radius:8px;font-size:0.9rem;font-family:system-ui,sans-serif;outline:none;min-height:44px;">
+                </div>
+                <span style="font-size:0.875rem;color:var(--text-muted);white-space:nowrap;">/ hour</span>
+                <button id="saveHourlyRateBtn" style="padding:0.55rem 1.1rem;background:var(--navy);color:white;border:none;border-radius:8px;font-size:0.875rem;font-weight:600;cursor:pointer;min-height:44px;white-space:nowrap;">Save</button>
+            </div>
+            <p id="hourlyRateStatus" style="font-size:0.8rem;color:#22C55E;margin-top:0.5rem;display:none;"></p>
+        </div>
+
         <!-- NOTIFICATIONS SECTION -->
         <div class="settings-section" id="notificationsSection">
             <h2>
@@ -2394,6 +2413,40 @@
                 alreadyMsg.style.display = 'block';
             });
         })();
+    </script>
+    <!-- Hourly Rate -->
+    <script>
+    (function() {
+      var token = localStorage.getItem('fl_token');
+      if (!token) return;
+      var input = document.getElementById('hourlyRateInput');
+      var saveBtn = document.getElementById('saveHourlyRateBtn');
+      var status = document.getElementById('hourlyRateStatus');
+      if (!input || !saveBtn) return;
+
+      // Load existing rate
+      fetch('/api/auth/me', { headers: { 'Authorization': 'Bearer ' + token } })
+        .then(function(r) { return r.json(); })
+        .then(function(d) { if (d.user?.hourly_rate) input.value = parseFloat(d.user.hourly_rate).toFixed(2); })
+        .catch(function() {});
+
+      saveBtn.addEventListener('click', function() {
+        var rate = input.value.trim() === '' ? null : parseFloat(input.value);
+        saveBtn.disabled = true;
+        fetch('/api/auth/hourly-rate', {
+          method: 'PATCH',
+          headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ hourly_rate: rate })
+        }).then(function(r) { return r.json(); }).then(function(d) {
+          saveBtn.disabled = false;
+          if (d.success) {
+            status.textContent = rate ? 'Saved — spending alerts will now show hours of work.' : 'Cleared.';
+            status.style.display = 'block';
+            setTimeout(function() { status.style.display = 'none'; }, 3000);
+          }
+        }).catch(function() { saveBtn.disabled = false; });
+      });
+    })();
     </script>
     <!-- Location Save -->
     <script>
