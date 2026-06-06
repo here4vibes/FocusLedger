@@ -208,7 +208,7 @@ render env list --service focusledger
 Never hardcode. All secrets live in `.env` locally and in Render's environment dashboard. Known vars:
 - `DATABASE_URL` — Neon connection string
 - `SESSION_SECRET` — Express session
-- `OPENAI_API_KEY` — AI features
+- `ANTHROPIC_API_KEY` — AI features (Claude via Anthropic SDK)
 - `PLAID_CLIENT_ID`, `PLAID_SECRET`, `PLAID_ENV` — Plaid integration
 - `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` — Stripe
 - `RESEND_API_KEY` — email delivery

@@ -7,8 +7,7 @@
  */
 
 process.env.JWT_SECRET = 'test-jwt-secret-for-focusledger';
-process.env.OPENAI_API_KEY = 'test-key';
-process.env.OPENAI_BASE_URL = 'https://api.openai.com/v1';
+process.env.ANTHROPIC_API_KEY = 'test-key';
 
 // Mock @prisma/client before any requires
 const mockPrisma = {
@@ -45,18 +44,11 @@ jest.mock('../middleware/proUtils', () => ({
   checkProStatus: jest.fn().mockResolvedValue(false),
 }));
 
-// Mock OpenAI to avoid real API calls
-jest.mock('openai', () => {
-  return jest.fn().mockImplementation(() => ({
-    chat: {
-      completions: {
-        create: jest.fn().mockResolvedValue({
-          choices: [{ message: { content: JSON.stringify({ minutes: 30 }) } }],
-        }),
-      },
-    },
-  }));
-});
+// Mock claude-client to avoid real API calls
+jest.mock('./lib/claude-client', () => ({
+  complete: jest.fn().mockResolvedValue(JSON.stringify({ minutes: 30 })),
+  getClient: jest.fn(),
+}));
 
 const request = require('supertest');
 const { generateToken } = require('../middleware/auth');
