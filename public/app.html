@@ -4619,6 +4619,12 @@
                 </div>
             </div>
 
+            <!-- Camera capture for handwritten notes -->
+            <button id="scanNoteBtn" onclick="openNoteCapture()" style="display:inline-flex;align-items:center;gap:0.4rem;background:var(--surface);border:1.5px solid var(--border);border-radius:10px;padding:0.5rem 0.9rem;font-size:0.85rem;font-weight:600;color:var(--text-dark);cursor:pointer;min-height:40px;margin-bottom:0.5rem;transition:background 0.15s;">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                Capture note
+            </button>
+
             <!-- New task button — expands the inline form -->
             <button class="show-tasks-btn" id="toggleTaskFormBtn" style="margin-bottom:0.75rem;">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -11207,6 +11213,194 @@
             }
         });
     </script>
+
+    <script>
+    // ── Note capture (handwritten note → tasks) ───────────────────────
+    (function() {
+        var _extracted = [];
+
+        window.openNoteCapture = function() {
+            document.getElementById('noteCaptureFileInput').click();
+        };
+
+        function showNoteSheet() {
+            var overlay = document.getElementById('noteCaptureOverlay');
+            overlay.style.display = 'flex';
+            requestAnimationFrame(function() {
+                requestAnimationFrame(function() {
+                    document.getElementById('noteCaptureSheet').style.transform = 'translateY(0)';
+                });
+            });
+        }
+
+        function closeNoteCapture() {
+            var sheet = document.getElementById('noteCaptureSheet');
+            sheet.style.transform = 'translateY(100%)';
+            setTimeout(function() {
+                document.getElementById('noteCaptureOverlay').style.display = 'none';
+                showNoteStep(null);
+            }, 320);
+        }
+
+        function showNoteStep(step) {
+            ['noteCaptureProcessing','noteCaptureConfirm','noteCaptureError'].forEach(function(id) {
+                document.getElementById(id).style.display = 'none';
+            });
+            if (step) document.getElementById(step).style.display = (step === 'noteCaptureProcessing') ? 'block' : 'block';
+        }
+
+        document.getElementById('noteCaptureFileInput').addEventListener('change', function(e) {
+            var file = e.target.files && e.target.files[0];
+            if (!file) return;
+            e.target.value = '';
+            showNoteSheet();
+            showNoteStep('noteCaptureProcessing');
+
+            var reader = new FileReader();
+            reader.onload = function(ev) {
+                var base64 = ev.target.result.split(',')[1];
+                var tkn = localStorage.getItem('fl_token') || '';
+                fetch('/api/capture', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + tkn },
+                    body: JSON.stringify({ image: base64, mode: 'note', mimeType: file.type || 'image/jpeg' })
+                })
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (!data.success || !data.data) {
+                        document.getElementById('noteCaptureErrorMsg').textContent = data.message || 'Couldn\'t read the note';
+                        showNoteStep('noteCaptureError');
+                        return;
+                    }
+                    _extracted = data.data.tasks || [];
+                    renderNoteTaskList(_extracted);
+                    var rawEl = document.getElementById('noteRawText');
+                    if (data.data.raw_text) {
+                        rawEl.textContent = '"' + data.data.raw_text + '"';
+                        rawEl.style.display = 'block';
+                    } else {
+                        rawEl.style.display = 'none';
+                    }
+                    showNoteStep('noteCaptureConfirm');
+                })
+                .catch(function() {
+                    document.getElementById('noteCaptureErrorMsg').textContent = 'Network error — please try again';
+                    showNoteStep('noteCaptureError');
+                });
+            };
+            reader.readAsDataURL(file);
+        });
+
+        function renderNoteTaskList(tasks) {
+            var list = document.getElementById('noteTaskList');
+            list.innerHTML = '';
+            tasks.forEach(function(task, i) {
+                var row = document.createElement('div');
+                row.style.cssText = 'display:flex;align-items:flex-start;gap:0.6rem;background:var(--cream-dark);border-radius:10px;padding:0.65rem 0.75rem;';
+                var cb = document.createElement('input');
+                cb.type = 'checkbox';
+                cb.checked = true;
+                cb.id = 'noteTask_' + i;
+                cb.style.cssText = 'margin-top:3px;width:16px;height:16px;accent-color:var(--orange);flex-shrink:0;cursor:pointer;';
+                var label = document.createElement('label');
+                label.htmlFor = 'noteTask_' + i;
+                label.style.cssText = 'flex:1;font-size:0.88rem;color:var(--text-dark);cursor:pointer;line-height:1.4;';
+                label.textContent = task.title;
+                if (task.due_date) {
+                    var badge = document.createElement('span');
+                    badge.style.cssText = 'display:inline-block;margin-left:0.4rem;font-size:0.72rem;background:rgba(242,107,58,0.12);color:var(--orange);border-radius:6px;padding:0.1rem 0.4rem;font-weight:600;';
+                    badge.textContent = task.due_date;
+                    label.appendChild(badge);
+                }
+                row.appendChild(cb);
+                row.appendChild(label);
+                list.appendChild(row);
+            });
+        }
+
+        document.getElementById('noteAddAllBtn').addEventListener('click', function() {
+            var tkn = localStorage.getItem('fl_token') || '';
+            var selected = _extracted.filter(function(_, i) {
+                var cb = document.getElementById('noteTask_' + i);
+                return cb && cb.checked;
+            });
+            if (!selected.length) { closeNoteCapture(); return; }
+
+            var btn = document.getElementById('noteAddAllBtn');
+            btn.disabled = true;
+            btn.textContent = 'Adding…';
+
+            Promise.all(selected.map(function(task) {
+                return fetch('/api/tasks', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + tkn },
+                    body: JSON.stringify({
+                        title: task.title,
+                        due_date: task.due_date || undefined,
+                        description: task.notes || undefined
+                    })
+                }).then(function(r) { return r.json(); });
+            })).then(function(results) {
+                var saved = results.filter(function(r) { return r.success; }).length;
+                closeNoteCapture();
+                if (typeof fetchTasks === 'function') fetchTasks();
+                var t = document.createElement('div');
+                t.textContent = '✓ ' + saved + ' task' + (saved === 1 ? '' : 's') + ' added from your note';
+                t.style.cssText = 'position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:var(--navy);color:white;padding:0.65rem 1.25rem;border-radius:10px;font-size:0.85rem;font-weight:500;z-index:9999;white-space:nowrap;';
+                document.body.appendChild(t);
+                setTimeout(function() { t.remove(); }, 2800);
+            }).catch(function() {
+                btn.disabled = false;
+                btn.textContent = 'Add selected tasks';
+            });
+        });
+
+        document.getElementById('noteCaptureClose').addEventListener('click', closeNoteCapture);
+        document.getElementById('noteRetryBtn').addEventListener('click', function() {
+            closeNoteCapture();
+            setTimeout(function() { document.getElementById('noteCaptureFileInput').click(); }, 350);
+        });
+        document.getElementById('noteCancelBtn').addEventListener('click', closeNoteCapture);
+        document.getElementById('noteCaptureOverlay').addEventListener('click', function(e) {
+            if (e.target === document.getElementById('noteCaptureOverlay')) closeNoteCapture();
+        });
+    })();
+    </script>
+
+    <!-- Note Capture Modal -->
+    <div id="noteCaptureOverlay" style="display:none;position:fixed;inset:0;z-index:8500;background:rgba(1,30,92,0.55);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);align-items:flex-end;justify-content:center;padding:0;">
+        <div id="noteCaptureSheet" style="background:#fff;width:100%;max-width:480px;border-radius:24px 24px 0 0;padding:1.5rem 1.5rem 2.5rem;box-shadow:0 -8px 40px rgba(1,30,92,0.18);transform:translateY(100%);transition:transform 0.32s cubic-bezier(0.32,0.72,0,1);max-height:85vh;overflow-y:auto;">
+
+            <!-- Processing -->
+            <div id="noteCaptureProcessing" style="display:none;text-align:center;padding:2rem 0;">
+                <div style="width:48px;height:48px;border:3px solid #e8e5e0;border-top-color:var(--orange);border-radius:50%;animation:noteSpin 0.8s linear infinite;margin:0 auto 1rem;"></div>
+                <div style="font-family:'Space Grotesk',sans-serif;font-weight:600;color:var(--navy);">Reading your note…</div>
+                <div style="font-size:0.82rem;color:var(--text-muted);margin-top:0.35rem;">AI is extracting tasks</div>
+            </div>
+
+            <!-- Task confirm list -->
+            <div id="noteCaptureConfirm" style="display:none;">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
+                    <h3 style="font-family:'Space Grotesk',sans-serif;font-size:1rem;font-weight:700;color:var(--navy);">Tasks found</h3>
+                    <button id="noteCaptureClose" style="background:none;border:none;font-size:1.2rem;color:var(--text-muted);cursor:pointer;padding:0.25rem;">✕</button>
+                </div>
+                <div id="noteRawText" style="background:var(--cream-dark);border-radius:10px;padding:0.65rem 0.85rem;font-size:0.78rem;color:var(--text-muted);margin-bottom:1rem;font-style:italic;display:none;"></div>
+                <div id="noteTaskList" style="display:flex;flex-direction:column;gap:0.6rem;margin-bottom:1.25rem;"></div>
+                <button id="noteAddAllBtn" style="width:100%;background:var(--orange);color:#fff;border:none;border-radius:14px;padding:0.9rem;font-family:'Space Grotesk',sans-serif;font-size:1rem;font-weight:700;cursor:pointer;min-height:48px;">Add selected tasks</button>
+            </div>
+
+            <!-- Error -->
+            <div id="noteCaptureError" style="display:none;text-align:center;padding:1.5rem 0;">
+                <div style="font-size:2rem;margin-bottom:0.75rem;">📝</div>
+                <div id="noteCaptureErrorMsg" style="font-family:'Space Grotesk',sans-serif;font-weight:600;color:var(--navy);margin-bottom:0.5rem;">Couldn't read the note</div>
+                <div style="font-size:0.85rem;color:var(--text-muted);margin-bottom:1.25rem;">Try better lighting or flatten the paper.</div>
+                <button id="noteRetryBtn" style="background:var(--navy);color:#fff;border:none;border-radius:12px;padding:0.75rem 1.5rem;font-size:0.9rem;font-weight:600;cursor:pointer;">Try again</button>
+                <button id="noteCancelBtn" style="background:none;border:none;color:var(--text-muted);font-size:0.88rem;cursor:pointer;margin-left:1rem;">Cancel</button>
+            </div>
+        </div>
+    </div>
+    <input type="file" id="noteCaptureFileInput" accept="image/*" capture="environment" style="display:none;">
+    <style>@keyframes noteSpin { to { transform: rotate(360deg); } }</style>
 
     <!-- Welcome Modal -->
     <div id="welcomeOverlay" style="display:none;position:fixed;inset:0;z-index:9000;background:rgba(1,30,92,0.55);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);display:flex;align-items:flex-end;justify-content:center;padding:0;" aria-modal="true" role="dialog">
