@@ -664,6 +664,57 @@ async function deleteStep(req, res) {
   }
 }
 
+// ── Re-entry Brief ────────────────────────────────────────────────────────────
+const REENTRY_THRESHOLD_DAYS = 5;
+
+async function getReentryBrief(req, res) {
+  try {
+    const taskId = parseInt(req.params.id);
+    const userId = req.user.id;
+    if (isNaN(taskId)) return res.status(400).json({ success: false, message: 'Invalid task id' });
+
+    const task = await prisma.task.findFirst({
+      where: { id: taskId, user_id: userId },
+      select: { id: true, title: true, notes: true, created_at: true, is_completed: true },
+    });
+    if (!task) return res.status(404).json({ success: false, message: 'Task not found' });
+
+    const [lastSession, nextSubstep] = await Promise.all([
+      prisma.focus_session.findFirst({
+        where: { task_id: taskId },
+        orderBy: { started_at: 'desc' },
+        select: { started_at: true, actual_duration_seconds: true },
+      }),
+      prisma.task_substep.findFirst({
+        where: { task_id: taskId, is_completed: false },
+        orderBy: { sort_order: 'asc' },
+        select: { title: true },
+      }),
+    ]);
+
+    const now = new Date();
+    const referenceDate = lastSession ? new Date(lastSession.started_at) : new Date(task.created_at);
+    const daysSince = (now - referenceDate) / (1000 * 60 * 60 * 24);
+
+    if (daysSince < REENTRY_THRESHOLD_DAYS) {
+      return res.json({ success: true, brief: null });
+    }
+
+    return res.json({
+      success: true,
+      brief: {
+        lastWorkedOn: lastSession ? lastSession.started_at : null,
+        daysSince: Math.floor(daysSince),
+        lastNote: task.notes ? task.notes.slice(0, 150) : null,
+        nextSubstep: nextSubstep ? nextSubstep.title : null,
+      },
+    });
+  } catch (err) {
+    console.error('[tasks-prisma] getReentryBrief error:', err);
+    res.status(500).json({ success: false, message: 'Failed to load brief' });
+  }
+}
+
 // ── Mount on Express Router ───────────────────────────────────────────────────
 module.exports = function() {
   const router = require('express').Router();
@@ -676,6 +727,9 @@ module.exports = function() {
   router.post('/suggest-steps', suggestSteps);
   router.post('/suggest-duration', suggestDuration);
   router.post('/', createTask);
+
+  // Must be before /:id to avoid Express treating "reentry-brief" as the id param
+  router.get('/:id/reentry-brief', getReentryBrief);
 
   router.get('/:id', getTask);
   router.patch('/:id', updateTask);

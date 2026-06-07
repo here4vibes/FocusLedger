@@ -32,3 +32,8 @@ command = "node jobs/movementBreakCheck.js"
 name = "pattern-detection"
 schedule = "0 3 * * 0"
 command = "node jobs/patternDetectionJob.js"
+
+[[crons]]
+name = "cold-start-nudge"
+schedule = "0 9 * * *"
+command = "node jobs/coldStartNudge.js"
