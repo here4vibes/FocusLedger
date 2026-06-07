@@ -34,7 +34,7 @@
 const express = require('express');
 const { authenticateToken } = require('../middleware/auth');
 const { chatMessages } = require('../lib/polsia-ai');
-const { extractTasks, detectCompletions, extractPassiveCapture } = require('../lib/taskParsingService');
+const { extractTasks, detectCompletions, extractPassiveCapture, isBrainDump, extractBrainDump } = require('../lib/taskParsingService');
 const {
   runPatternDetection,
   getMidDayCheckinType,
@@ -393,6 +393,60 @@ module.exports = function(pool) {
       );
       const sessionCount      = (sessionResult.rows[0] && sessionResult.rows[0].session_count) || 0;
       const hookRestartCount  = (sessionResult.rows[0] && sessionResult.rows[0].buddy_hook_restart_count) || 0;
+
+      // ── Brain dump fast path ─────────────────────────────────────────────
+      // Detect before the normal AI reply to avoid double-spending AI tokens.
+      if (isBrainDump(message.trim(), userTurns)) {
+        const userValues = activeTasks.length
+          ? [] // values fetched separately below if needed
+          : [];
+        const { tasks: dumpTasks, summary: dumpSummary } = await extractBrainDump(message.trim(), userValues);
+
+        // Auto-create actionable tasks (do_today + do_soon); park the rest
+        const created = [];
+        for (const t of dumpTasks) {
+          try {
+            const priority = t.category === 'do_today' ? 'high' : t.category === 'do_soon' ? 'medium' : 'low';
+            const ins = await pool.query(
+              `INSERT INTO tasks (user_id, title, priority, value_id, is_completed, created_at)
+               VALUES ($1, $2, $3, $4, false, NOW()) RETURNING id, title`,
+              [userId, (t.title || '').slice(0, 200), priority, t.value_id || null]
+            );
+            if (ins.rows[0]) created.push({ ...ins.rows[0], category: t.category });
+          } catch (_) { /* skip individual task errors */ }
+        }
+
+        const doToday  = created.filter(t => t.category === 'do_today');
+        const doSoon   = created.filter(t => t.category === 'do_soon');
+        const parked   = created.filter(t => t.category === 'parked');
+
+        let buddyReply = dumpSummary + '\n\n';
+        if (doToday.length)  buddyReply += `✅ **Do Today (${doToday.length}):** ${doToday.map(t => t.title).join(', ')}\n`;
+        if (doSoon.length)   buddyReply += `📋 **Do Soon (${doSoon.length}):** ${doSoon.map(t => t.title).join(', ')}\n`;
+        if (parked.length)   buddyReply += `🗂 **Parked (${parked.length}):** ${parked.map(t => t.title).join(', ')}\n`;
+        buddyReply += '\nAll added to your task list. Want to start on anything from the Do Today pile?';
+
+        const buddyTurn = nextTurn + 1;
+        await pool.query(
+          `INSERT INTO buddy_conversations (user_id, session_date, turn, role, message)
+           VALUES ($1, $2, $3, 'buddy', $4)`,
+          [userId, today, buddyTurn, buddyReply]
+        );
+
+        return res.json({
+          success: true,
+          reply: buddyReply,
+          turn: userTurns,
+          isComplete: false,
+          detectedMood: null,
+          autoCompleted: [],
+          capturedTasks: [],
+          capturedExpenses: [],
+          isBrainDump: true,
+          brainDumpTasks: created,
+        });
+      }
+      // ── End brain dump fast path ─────────────────────────────────────────
 
       // Passive completion detection — run in parallel with AI reply generation
       // greetingContext passed from client (populated from /session-status response)
