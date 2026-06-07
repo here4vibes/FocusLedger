@@ -12,11 +12,15 @@ const { validateTimezone, fetchUserTimezone, getUserLocalDate } = require('../li
 // Google OAuth Configuration (Auth Scopes)
 // Uses the same GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET as Gmail linking
 // but with minimal scopes: email + profile (no mail.readonly)
-// Redirect URI: https://focusledger.net/auth/google/callback
+//
+// Callback URL is computed dynamically from the request host so the OAuth
+// flow stays on whichever domain the user initiated from.
+// Both domains must be registered in Google Cloud Console:
+//   https://focusledger.net/api/auth/google/callback
+//   https://focusledger-mwn3.onrender.com/api/auth/google/callback
 // ============================================================
 const GOOGLE_CLIENT_ID      = (process.env.GOOGLE_CLIENT_ID || '').trim();
 const GOOGLE_CLIENT_SECRET = (process.env.GOOGLE_CLIENT_SECRET || '').trim();
-const GOOGLE_AUTH_REDIRECT  = (process.env.GOOGLE_AUTH_REDIRECT_URI || 'https://focusledger.net/auth/google-auth/callback').trim();
 const GOOGLE_AUTH_SCOPE    = 'openid email https://www.googleapis.com/auth/userinfo.profile';
 
 const isGoogleAuthConfigured = () => !!(GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET);
@@ -26,23 +30,44 @@ const isGoogleAuthConfigured = () => !!(GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET
 // ============================================================
 const STATE_SECRET = process.env.JWT_SECRET || 'focusledger-auth-state';
 
-function signState(returnTo) {
-  const payload = `${returnTo}:${Date.now()}`;
-  const sig = crypto.createHmac('sha256', STATE_SECRET).update(payload).digest('hex').slice(0, 16);
-  return Buffer.from(`${payload}:${sig}`).toString('base64url');
+// Trusted hosts — used to validate dynamic OAuth callback URLs and open-redirect guard
+const TRUSTED_REDIRECT_HOSTS = new Set([
+  'focusledger.net',
+  'www.focusledger.net',
+  'focusledger-mwn3.onrender.com',
+  'localhost:3000',
+]);
+if (process.env.ALLOWED_ORIGIN) {
+  try { TRUSTED_REDIRECT_HOSTS.add(new URL(process.env.ALLOWED_ORIGIN).host); } catch {}
+}
+
+// Compute the Google OAuth callback URL for a given host.
+// Both domains must be registered in Google Cloud Console as authorized redirect URIs.
+function getGoogleCallbackUrl(host) {
+  const proto = host.startsWith('localhost') ? 'http' : 'https';
+  return `${proto}://${host}/api/auth/google/callback`;
+}
+
+// State format: {returnTo}~{host}~{ts}~{sig}  (~ avoids colon clash with localhost:port)
+function signState(returnTo, host) {
+  const ts = Date.now();
+  const data = `${returnTo}~${host}~${ts}`;
+  const sig = crypto.createHmac('sha256', STATE_SECRET).update(data).digest('hex').slice(0, 16);
+  return Buffer.from(`${data}~${sig}`).toString('base64url');
 }
 
 function verifyState(state) {
   try {
     const raw = Buffer.from(state, 'base64url').toString();
-    const parts = raw.split(':');
-    if (parts.length !== 3) return null;
-    const [returnTo, ts, sig] = parts;
+    const parts = raw.split('~');
+    if (parts.length !== 4) return null;
+    const [returnTo, host, ts, sig] = parts;
     if (Date.now() - Number(ts) > 600000) return null;
     const expected = crypto.createHmac('sha256', STATE_SECRET)
-      .update(`${returnTo}:${ts}`).digest('hex').slice(0, 16);
+      .update(`${returnTo}~${host}~${ts}`).digest('hex').slice(0, 16);
     if (sig !== expected) return null;
-    return returnTo;
+    const safeHost = TRUSTED_REDIRECT_HOSTS.has(host) ? host : 'focusledger.net';
+    return { returnTo, host: safeHost };
   } catch {
     return null;
   }
@@ -51,7 +76,7 @@ function verifyState(state) {
 // ============================================================
 // Token helpers — raw HTTP to Google's endpoints
 // ============================================================
-async function exchangeGoogleCode(code) {
+async function exchangeGoogleCode(code, callbackUrl) {
   const res = await fetch('https://oauth2.googleapis.com/token', {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -59,7 +84,7 @@ async function exchangeGoogleCode(code) {
       code,
       client_id:     GOOGLE_CLIENT_ID,
       client_secret: GOOGLE_CLIENT_SECRET,
-      redirect_uri:  GOOGLE_AUTH_REDIRECT,
+      redirect_uri:  callbackUrl,
       grant_type:    'authorization_code'
     })
   });
@@ -299,15 +324,18 @@ module.exports = function(pool, loginLimiter, signupLimiter) {
     }
 
     const returnTo = (req.query.return_to === 'signup') ? 'signup' : 'login';
-    const state = signState(returnTo);
+    const rawHost = req.headers.host || 'focusledger.net';
+    const host = TRUSTED_REDIRECT_HOSTS.has(rawHost) ? rawHost : 'focusledger.net';
+    const callbackUrl = getGoogleCallbackUrl(host);
+    const state = signState(returnTo, host);
 
     const url = new URL('https://accounts.google.com/o/oauth2/v2/auth');
     url.searchParams.set('client_id',     GOOGLE_CLIENT_ID);
-    url.searchParams.set('redirect_uri',  GOOGLE_AUTH_REDIRECT);
+    url.searchParams.set('redirect_uri',  callbackUrl);
     url.searchParams.set('response_type', 'code');
     url.searchParams.set('scope',         GOOGLE_AUTH_SCOPE);
     url.searchParams.set('state',         state);
-    url.searchParams.set('prompt',         'select_account');
+    url.searchParams.set('prompt',        'select_account');
 
     res.json({ success: true, url: url.toString() });
   });
@@ -325,13 +353,15 @@ module.exports = function(pool, loginLimiter, signupLimiter) {
       return res.redirect('/login?google_error=invalid_callback');
     }
 
-    const returnTo = verifyState(state);
-    if (!returnTo) {
+    const stateData = verifyState(state);
+    if (!stateData) {
       return res.redirect('/login?google_error=invalid_state');
     }
+    const { returnTo, host } = stateData;
+    const callbackUrl = getGoogleCallbackUrl(host);
 
     try {
-      const tokens = await exchangeGoogleCode(code);
+      const tokens = await exchangeGoogleCode(code, callbackUrl);
       if (tokens.error) {
         console.error('[auth/google/callback] Token exchange failed:', tokens.error, tokens.error_description || '');
         return res.redirect(`/${returnTo}?google_error=${encodeURIComponent(tokens.error)}`);
