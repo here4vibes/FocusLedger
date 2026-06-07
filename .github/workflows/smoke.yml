@@ -36,10 +36,8 @@ jobs:
         if: github.event_name == 'push'
         run: sleep 150
 
-      - name: Run nav smoke tests
+      - name: Run nav smoke tests (both URLs)
         run: npm run test:smoke
-        env:
-          BASE_URL: https://focusledger.net
 
       - name: Upload failure screenshots
         if: failure()
