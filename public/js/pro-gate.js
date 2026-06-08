@@ -8,12 +8,10 @@
  *   FLProGate.show({ feature: 'Bank Sync', description: 'Connect your bank to auto-import transactions.' });
  *
  * One modal per DOM; rendered lazily on first call. Dismissable, no guilt.
+ * Checkout is handled via PricingService (pricing-service.js) — no hardcoded links here.
  */
 (function(global) {
   'use strict';
-
-  var MONTHLY_LINK = 'https://buy.stripe.com/8x200i6m784y4bS0KZcs800';
-  var ANNUAL_LINK  = 'https://buy.stripe.com/4gM14m7qb0C60ZGbpDcs801';
 
   var _modalEl = null;
   var _isAnnual = false;
@@ -50,7 +48,7 @@
     ].join('');
     document.head.appendChild(style);
 
-    // Markup
+    // Markup — CTA is a button; checkout handled by PricingService below
     var div = document.createElement('div');
     div.className = 'fl-pro-gate-overlay';
     div.id = 'flProGateOverlay';
@@ -68,7 +66,7 @@
         '</div>',
         '<div class="fl-pg-price"><sup>$</sup><span id="flPgPriceNum">9.99</span></div>',
         '<div class="fl-pg-period" id="flPgPeriod">per month, billed monthly</div>',
-        '<a href="' + MONTHLY_LINK + '" class="fl-pg-cta" id="flPgCta">Switch to Autopilot — $9.99/mo</a>',
+        '<button class="fl-pg-cta" id="flPgCta">Switch to Autopilot — $9.99/mo</button>',
         '<button class="fl-pg-dismiss" id="flPgDismiss">Maybe later</button>',
       '</div>'
     ].join('');
@@ -93,14 +91,12 @@
         ml.classList.remove('active'); al.classList.add('active');
         num.textContent = '8.33';
         per.textContent = 'per month, billed as $100/year — save ~$20';
-        cta.href = ANNUAL_LINK;
         cta.textContent = 'Switch to Autopilot — $100/year';
       } else {
         sw.classList.remove('annual');
         ml.classList.add('active'); al.classList.remove('active');
         num.textContent = '9.99';
         per.textContent = 'per month, billed monthly — cancel anytime';
-        cta.href = MONTHLY_LINK;
         cta.textContent = 'Switch to Autopilot — $9.99/mo';
       }
     }
@@ -111,6 +107,16 @@
     document.getElementById('flPgClose').addEventListener('click', close);
     document.getElementById('flPgDismiss').addEventListener('click', close);
     _modalEl.addEventListener('click', function(e) { if (e.target === _modalEl) close(); });
+
+    // CTA uses PricingService when available, falls back to navigation
+    document.getElementById('flPgCta').addEventListener('click', function() {
+      var billing = _isAnnual ? 'annual' : 'monthly';
+      if (global.PricingService) {
+        PricingService.checkout('autopilot', billing, this);
+      } else {
+        window.location.href = '/pricing';
+      }
+    });
   }
 
   /**
@@ -127,14 +133,12 @@
     if (title) title.textContent = opts.feature ? opts.feature + ' is an Autopilot feature' : 'This is an Autopilot feature';
     if (desc)  desc.textContent  = opts.description || 'Switch to Autopilot to unlock this and everything else we ship.';
     _isAnnual = false;
-    // Reset toggle to monthly on each show
-    var sw = document.getElementById('flPgSwitch');
-    if (sw) { sw.classList.remove('annual'); }
-    var ml = document.getElementById('flPgMonthly'); if (ml) { ml.classList.add('active'); }
-    var al = document.getElementById('flPgAnnual');  if (al) { al.classList.remove('active'); }
+    var sw  = document.getElementById('flPgSwitch');  if (sw)  sw.classList.remove('annual');
+    var ml  = document.getElementById('flPgMonthly'); if (ml)  { ml.classList.add('active'); }
+    var al  = document.getElementById('flPgAnnual');  if (al)  { al.classList.remove('active'); }
     var num = document.getElementById('flPgPriceNum'); if (num) num.textContent = '9.99';
     var per = document.getElementById('flPgPeriod');   if (per) per.textContent = 'per month, billed monthly — cancel anytime';
-    var cta = document.getElementById('flPgCta');      if (cta) { cta.href = MONTHLY_LINK; cta.textContent = 'Switch to Autopilot — $9.99/mo'; }
+    var cta = document.getElementById('flPgCta');      if (cta) cta.textContent = 'Switch to Autopilot — $9.99/mo';
     _modalEl.classList.add('visible');
     document.body.style.overflow = 'hidden';
   }
