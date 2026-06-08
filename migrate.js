@@ -24,6 +24,11 @@ const { Pool } = require('pg');
 const fs = require('fs');
 const path = require('path');
 
+if (!process.env.DATABASE_URL) {
+  console.log('[migrate] DATABASE_URL not set — skipping (build phase)');
+  process.exit(0);
+}
+
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL
 });
