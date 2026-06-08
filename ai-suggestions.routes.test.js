@@ -19,27 +19,18 @@ const express = require('express');
 const { generateToken } = require('../middleware/auth');
 
 // ─────────────────────────────────────────────────────────────
-// Mock OpenAI — always succeed with controlled response
+// Mock claude-client — always succeed with controlled response
 // ─────────────────────────────────────────────────────────────
-jest.mock('openai', () => {
-  return jest.fn().mockImplementation(() => ({
-    chat: {
-      completions: {
-        create: jest.fn().mockResolvedValue({
-          choices: [{
-            message: {
-              content: JSON.stringify([
-                { title: 'Drink a glass of water now', value_name: 'Health', steps: [] },
-                { title: 'Text your sister today', value_name: 'Family', steps: ['Open messages', 'Write a quick note'] },
-                { title: 'Review your monthly budget', value_name: 'Finance', steps: [] }
-              ])
-            }
-          }]
-        })
-      }
-    }
-  }));
-});
+const mockComplete = jest.fn().mockResolvedValue(JSON.stringify([
+  { title: 'Drink a glass of water now', value_name: 'Health', steps: [] },
+  { title: 'Text your sister today', value_name: 'Family', steps: ['Open messages', 'Write a quick note'] },
+  { title: 'Review your monthly budget', value_name: 'Finance', steps: [] }
+]));
+
+jest.mock('./lib/claude-client', () => ({
+  complete: mockComplete,
+  getClient: jest.fn(),
+}));
 
 function makeToken(userId = 1) {
   return generateToken({ id: userId, email: `user${userId}@test.com`, name: 'Test' });
@@ -143,10 +134,8 @@ describe('GET /api/ai-suggestions', () => {
     expect(res.status).toBe(200);
     expect(res.body.suggestions).toHaveLength(1);
     expect(res.body.suggestions[0].suggestion_title).toBe('Drink a glass of water now');
-    // Should not call OpenAI (no generation needed)
-    const OpenAI = require('openai');
-    const openaiInstance = new OpenAI();
-    expect(openaiInstance.chat.completions.create).not.toHaveBeenCalled();
+    // Should not call Claude (no generation needed — served from cache)
+    expect(mockComplete).not.toHaveBeenCalled();
   });
 
   test('gracefully returns empty array on unexpected error', async () => {

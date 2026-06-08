@@ -4,7 +4,7 @@
 const { prisma } = require('../lib/prisma');
 const { checkProStatus } = require('../middleware/proUtils');
 const { fetchUserTimezone, getUserLocalDate } = require('../lib/timezone');
-const OpenAI = require('openai');
+const { complete } = require('../lib/claude-client');
 
 // ── Helpers: time string ↔ Date conversion (Prisma @db.Time returns Date) ───
 // DB stores time as 'time without time zone'; Prisma maps it to DateTime @db.Time.
@@ -223,26 +223,19 @@ async function suggestSteps(req, res) {
     try { isPro = await checkProStatus(prisma, userId); } catch (_e) { isPro = false; }
     if (!isPro) return res.json({ success: true, suggestions: [], skip: false, is_pro: false });
 
-    const openai = new OpenAI({ baseURL: process.env.OPENAI_BASE_URL, apiKey: process.env.OPENAI_API_KEY });
-
-    let completion;
+    let content;
     try {
-      completion = await Promise.race([
-        openai.chat.completions.create({
-          model: 'gpt-4o-mini',
-          messages: [
-            { role: 'system', content: 'You are a task decomposition assistant helping people with ADHD break down tasks into concrete steps. Generate 3-5 short, specific, actionable steps. Each step must: start with an action verb, be under 10 words, be concrete not vague. Return ONLY a valid JSON array of strings, nothing else. Example: ["Open bank website and log in", "Navigate to transfers section", "Enter amount and recipient", "Confirm and save confirmation number"]' },
-            { role: 'user', content: `Task: "${trimmedTitle}"\n\nGenerate 3-5 actionable steps as a JSON array.` },
-          ],
-          max_tokens: 250, temperature: 0.6,
+      content = await Promise.race([
+        complete({
+          system: 'You are a task decomposition assistant helping people with ADHD break down tasks into concrete steps. Generate 3-5 short, specific, actionable steps. Each step must: start with an action verb, be under 10 words, be concrete not vague. Return ONLY a valid JSON array of strings, nothing else. Example: ["Open bank website and log in", "Navigate to transfers section", "Enter amount and recipient", "Confirm and save confirmation number"]',
+          messages: [{ role: 'user', content: `Task: "${trimmedTitle}"\n\nGenerate 3-5 actionable steps as a JSON array.` }],
+          maxTokens: 250,
         }),
         new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 3000)),
       ]);
     } catch {
       return res.json({ success: true, suggestions: [], skip: true, reason: 'timeout' });
     }
-
-    const content = (completion.choices[0].message.content || '').trim();
     let suggestions = [];
     try {
       const cleaned = content.replace(/^```(?:json)?\n?|\n?```$/g, '').trim();
@@ -268,23 +261,17 @@ async function suggestDuration(req, res) {
     const { title } = req.body;
     if (!title?.trim() || title.trim().length < 3) return res.json({ success: true, duration_minutes: null });
 
-    const openai = new OpenAI({ baseURL: process.env.OPENAI_BASE_URL, apiKey: process.env.OPENAI_API_KEY });
-    let completion;
+    let content;
     try {
-      completion = await Promise.race([
-        openai.chat.completions.create({
-          model: 'gpt-4o-mini',
-          messages: [
-            { role: 'system', content: 'You are a task time estimator. Given a task title, estimate how long it will take in minutes. Be realistic. Common ranges: quick tasks 5-15 min, medium tasks 30-60 min, complex tasks 90-180 min. Return ONLY a JSON object: {"minutes": <integer>}. No explanation.' },
-            { role: 'user', content: `Task: "${title.trim()}"\nHow many minutes will this take?` },
-          ],
-          max_tokens: 50, temperature: 0.3,
+      content = await Promise.race([
+        complete({
+          system: 'You are a task time estimator. Given a task title, estimate how long it will take in minutes. Be realistic. Common ranges: quick tasks 5-15 min, medium tasks 30-60 min, complex tasks 90-180 min. Return ONLY valid JSON: {"minutes": <integer>}. No explanation.',
+          messages: [{ role: 'user', content: `Task: "${title.trim()}"\nHow many minutes will this take?` }],
+          maxTokens: 50,
         }),
         new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 4000)),
       ]);
     } catch { return res.json({ success: true, duration_minutes: null }); }
-
-    const content = (completion.choices[0].message.content || '').trim();
     let minutes = null;
     try {
       const cleaned = content.replace(/^```(?:json)?\n?|\n?```$/g, '').trim();
@@ -343,8 +330,17 @@ async function createTask(req, res) {
         }
       }
     } catch (subErr) {
-      console.error('[tasks-prisma] subscription check failed:', subErr.message);
-      return res.status(500).json({ success: false, message: 'Unable to verify subscription status.', code: 'SUBSCRIPTION_CHECK_FAILED' });
+      // WHY fall-through: subscription DB errors must not block task creation.
+      // Treat as free-tier so the 10-task cap still applies (safe default).
+      console.error('[tasks-prisma] subscription check failed, treating as free:', subErr.message);
+      try {
+        const activeCount = await prisma.task.count({ where: { user_id: userId, is_completed: false } });
+        if (activeCount >= 10) {
+          return res.status(402).json({ success: false, message: 'You have 10 active tasks — the free plan cap. Finish a few, or open it up with Autopilot.', code: 'TASK_LIMIT_REACHED', upgrade_required: true });
+        }
+      } catch {
+        // If even the count fails (full DB outage), let creation proceed and let Prisma surface the real error below
+      }
     }
 
     // Auto-tag to value
@@ -400,19 +396,14 @@ async function createTask(req, res) {
     if (!durationMins) {
       setImmediate(async () => {
         try {
-          const openai = new OpenAI({ baseURL: process.env.OPENAI_BASE_URL, apiKey: process.env.OPENAI_API_KEY });
-          const completion = await Promise.race([
-            openai.chat.completions.create({
-              model: 'gpt-4o-mini',
-              messages: [
-                { role: 'system', content: 'Estimate task duration in minutes. Return ONLY JSON: {"minutes": <integer>}. Ranges: quick 5-15, medium 30-60, complex 90-180. No explanation.' },
-                { role: 'user', content: `Task: "${title.trim()}"` },
-              ],
-              max_tokens: 50, temperature: 0.3,
+          const raw = await Promise.race([
+            complete({
+              system: 'Estimate task duration in minutes. Return ONLY valid JSON: {"minutes": <integer>}. Ranges: quick 5-15, medium 30-60, complex 90-180. No explanation.',
+              messages: [{ role: 'user', content: `Task: "${title.trim()}"` }],
+              maxTokens: 50,
             }),
             new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 5000)),
           ]);
-          const raw = (completion.choices[0].message.content || '').trim().replace(/^```(?:json)?\n?|\n?```$/g, '').trim();
           const parsed = JSON.parse(raw);
           if (parsed && typeof parsed.minutes === 'number' && parsed.minutes > 0) {
             await prisma.task.update({ where: { id: task.id }, data: { duration_minutes: Math.min(Math.round(parsed.minutes), 480), duration_source: 'ai' } });
@@ -682,6 +673,57 @@ async function deleteStep(req, res) {
   }
 }
 
+// ── Re-entry Brief ────────────────────────────────────────────────────────────
+const REENTRY_THRESHOLD_DAYS = 5;
+
+async function getReentryBrief(req, res) {
+  try {
+    const taskId = parseInt(req.params.id);
+    const userId = req.user.id;
+    if (isNaN(taskId)) return res.status(400).json({ success: false, message: 'Invalid task id' });
+
+    const task = await prisma.task.findFirst({
+      where: { id: taskId, user_id: userId },
+      select: { id: true, title: true, notes: true, created_at: true, is_completed: true },
+    });
+    if (!task) return res.status(404).json({ success: false, message: 'Task not found' });
+
+    const [lastSession, nextSubstep] = await Promise.all([
+      prisma.focus_session.findFirst({
+        where: { task_id: taskId },
+        orderBy: { started_at: 'desc' },
+        select: { started_at: true, actual_duration_seconds: true },
+      }),
+      prisma.task_substep.findFirst({
+        where: { task_id: taskId, is_completed: false },
+        orderBy: { sort_order: 'asc' },
+        select: { title: true },
+      }),
+    ]);
+
+    const now = new Date();
+    const referenceDate = lastSession ? new Date(lastSession.started_at) : new Date(task.created_at);
+    const daysSince = (now - referenceDate) / (1000 * 60 * 60 * 24);
+
+    if (daysSince < REENTRY_THRESHOLD_DAYS) {
+      return res.json({ success: true, brief: null });
+    }
+
+    return res.json({
+      success: true,
+      brief: {
+        lastWorkedOn: lastSession ? lastSession.started_at : null,
+        daysSince: Math.floor(daysSince),
+        lastNote: task.notes ? task.notes.slice(0, 150) : null,
+        nextSubstep: nextSubstep ? nextSubstep.title : null,
+      },
+    });
+  } catch (err) {
+    console.error('[tasks-prisma] getReentryBrief error:', err);
+    res.status(500).json({ success: false, message: 'Failed to load brief' });
+  }
+}
+
 // ── Mount on Express Router ───────────────────────────────────────────────────
 module.exports = function() {
   const router = require('express').Router();
@@ -694,6 +736,9 @@ module.exports = function() {
   router.post('/suggest-steps', suggestSteps);
   router.post('/suggest-duration', suggestDuration);
   router.post('/', createTask);
+
+  // Must be before /:id to avoid Express treating "reentry-brief" as the id param
+  router.get('/:id/reentry-brief', getReentryBrief);
 
   router.get('/:id', getTask);
   router.patch('/:id', updateTask);

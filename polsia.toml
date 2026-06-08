@@ -27,3 +27,13 @@ command = "node jobs/evening-checkin.js"
 name = "movement-break-check"
 schedule = "*/15 * * * *"
 command = "node jobs/movementBreakCheck.js"
+
+[[crons]]
+name = "pattern-detection"
+schedule = "0 3 * * 0"
+command = "node jobs/patternDetectionJob.js"
+
+[[crons]]
+name = "cold-start-nudge"
+schedule = "0 9 * * *"
+command = "node jobs/coldStartNudge.js"

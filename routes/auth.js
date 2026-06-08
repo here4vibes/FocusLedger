@@ -12,15 +12,11 @@ const { validateTimezone, fetchUserTimezone, getUserLocalDate } = require('../li
 // Google OAuth Configuration (Auth Scopes)
 // Uses the same GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET as Gmail linking
 // but with minimal scopes: email + profile (no mail.readonly)
-//
-// Callback URL is computed dynamically from the request host so the OAuth
-// flow stays on whichever domain the user initiated from.
-// Both domains must be registered in Google Cloud Console:
-//   https://focusledger.net/api/auth/google/callback
-//   https://focusledger-mwn3.onrender.com/api/auth/google/callback
+// Redirect URI: https://focusledger.net/auth/google/callback
 // ============================================================
 const GOOGLE_CLIENT_ID      = (process.env.GOOGLE_CLIENT_ID || '').trim();
 const GOOGLE_CLIENT_SECRET = (process.env.GOOGLE_CLIENT_SECRET || '').trim();
+const GOOGLE_AUTH_REDIRECT  = (process.env.GOOGLE_AUTH_REDIRECT_URI || 'https://focusledger.net/auth/google-auth/callback').trim();
 const GOOGLE_AUTH_SCOPE    = 'openid email https://www.googleapis.com/auth/userinfo.profile';
 
 const isGoogleAuthConfigured = () => !!(GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET);
@@ -30,22 +26,16 @@ const isGoogleAuthConfigured = () => !!(GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET
 // ============================================================
 const STATE_SECRET = process.env.JWT_SECRET || 'focusledger-auth-state';
 
-// Trusted hosts — used to validate dynamic OAuth callback URLs and open-redirect guard
+// Trusted hosts for post-OAuth redirect — prevents open redirect
 const TRUSTED_REDIRECT_HOSTS = new Set([
   'focusledger.net',
   'www.focusledger.net',
   'focusledger-mwn3.onrender.com',
+  'focusledger.polsia.app',
   'localhost:3000',
 ]);
 if (process.env.ALLOWED_ORIGIN) {
   try { TRUSTED_REDIRECT_HOSTS.add(new URL(process.env.ALLOWED_ORIGIN).host); } catch {}
-}
-
-// Compute the Google OAuth callback URL for a given host.
-// Both domains must be registered in Google Cloud Console as authorized redirect URIs.
-function getGoogleCallbackUrl(host) {
-  const proto = host.startsWith('localhost') ? 'http' : 'https';
-  return `${proto}://${host}/api/auth/google/callback`;
 }
 
 // State format: {returnTo}~{host}~{ts}~{sig}  (~ avoids colon clash with localhost:port)
@@ -76,7 +66,7 @@ function verifyState(state) {
 // ============================================================
 // Token helpers — raw HTTP to Google's endpoints
 // ============================================================
-async function exchangeGoogleCode(code, callbackUrl) {
+async function exchangeGoogleCode(code) {
   const res = await fetch('https://oauth2.googleapis.com/token', {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -84,7 +74,7 @@ async function exchangeGoogleCode(code, callbackUrl) {
       code,
       client_id:     GOOGLE_CLIENT_ID,
       client_secret: GOOGLE_CLIENT_SECRET,
-      redirect_uri:  callbackUrl,
+      redirect_uri:  GOOGLE_AUTH_REDIRECT,
       grant_type:    'authorization_code'
     })
   });
@@ -299,7 +289,7 @@ module.exports = function(pool, loginLimiter, signupLimiter) {
   router.get('/me', authenticateToken, async (req, res) => {
     try {
       const result = await pool.query(
-        'SELECT id, email, name, created_at, subscription_plan, subscription_status, auth_method, avatar_url FROM users WHERE id = $1',
+        'SELECT id, email, name, created_at, subscription_plan, subscription_status, auth_method, avatar_url, hourly_rate FROM users WHERE id = $1',
         [req.user.id]
       );
 
@@ -324,18 +314,16 @@ module.exports = function(pool, loginLimiter, signupLimiter) {
     }
 
     const returnTo = (req.query.return_to === 'signup') ? 'signup' : 'login';
-    const rawHost = req.headers.host || 'focusledger.net';
-    const host = TRUSTED_REDIRECT_HOSTS.has(rawHost) ? rawHost : 'focusledger.net';
-    const callbackUrl = getGoogleCallbackUrl(host);
+    const host = req.headers.host || 'focusledger.net';
     const state = signState(returnTo, host);
 
     const url = new URL('https://accounts.google.com/o/oauth2/v2/auth');
     url.searchParams.set('client_id',     GOOGLE_CLIENT_ID);
-    url.searchParams.set('redirect_uri',  callbackUrl);
+    url.searchParams.set('redirect_uri',  GOOGLE_AUTH_REDIRECT);
     url.searchParams.set('response_type', 'code');
     url.searchParams.set('scope',         GOOGLE_AUTH_SCOPE);
     url.searchParams.set('state',         state);
-    url.searchParams.set('prompt',        'select_account');
+    url.searchParams.set('prompt',         'select_account');
 
     res.json({ success: true, url: url.toString() });
   });
@@ -358,19 +346,20 @@ module.exports = function(pool, loginLimiter, signupLimiter) {
       return res.redirect('/login?google_error=invalid_state');
     }
     const { returnTo, host } = stateData;
-    const callbackUrl = getGoogleCallbackUrl(host);
+    const proto = host.startsWith('localhost') ? 'http' : 'https';
+    const base  = `${proto}://${host}`;
 
     try {
-      const tokens = await exchangeGoogleCode(code, callbackUrl);
+      const tokens = await exchangeGoogleCode(code);
       if (tokens.error) {
         console.error('[auth/google/callback] Token exchange failed:', tokens.error, tokens.error_description || '');
-        return res.redirect(`/${returnTo}?google_error=${encodeURIComponent(tokens.error)}`);
+        return res.redirect(`${base}/${returnTo}?google_error=${encodeURIComponent(tokens.error)}`);
       }
 
       const userInfo = await getGoogleUserInfo(tokens.access_token);
       if (!userInfo || !userInfo.email) {
         console.error('[auth/google/callback] Failed to get user info:', userInfo);
-        return res.redirect(`/${returnTo}?google_error=userinfo_failed`);
+        return res.redirect(`${base}/${returnTo}?google_error=userinfo_failed`);
       }
 
       const googleId   = userInfo.id || null;
@@ -390,7 +379,7 @@ module.exports = function(pool, loginLimiter, signupLimiter) {
         const existing = existingByEmail.rows[0];
 
         if (existing.google_id && existing.google_id !== googleId) {
-          return res.redirect('/login?google_error=email_taken');
+          return res.redirect(`${base}/login?google_error=email_taken`);
         }
 
         const newAuthMethod = existing.password_hash ? 'both' : 'google';
@@ -443,10 +432,10 @@ module.exports = function(pool, loginLimiter, signupLimiter) {
       // Phase 2: Establish HttpOnly session cookie alongside JWT
       establishSession(req, user);
 
-      res.redirect(`/${returnTo}?google_token=${encodeURIComponent(token)}&google_email=${encodeURIComponent(email)}${accountLinked ? '&google_linked=1' : ''}`);
+      res.redirect(`${base}/${returnTo}?google_token=${encodeURIComponent(token)}&google_email=${encodeURIComponent(email)}${accountLinked ? '&google_linked=1' : ''}`);
     } catch (err) {
       console.error('[auth/google/callback] Error:', err);
-      res.redirect(`/${returnTo}?google_error=server_error`);
+      res.redirect(`${base}/${returnTo}?google_error=server_error`);
     }
   });
 
@@ -893,6 +882,22 @@ module.exports = function(pool, loginLimiter, signupLimiter) {
     } catch (err) {
       console.error('[migrate-demo-session] Error:', err.message);
       res.status(500).json({ success: false, message: 'Migration failed' });
+    }
+  });
+
+  // PATCH /api/auth/hourly-rate — save user's hourly rate for spending-in-work-hours context
+  router.patch('/hourly-rate', authenticateToken, async (req, res) => {
+    try {
+      const raw = req.body.hourly_rate;
+      const rate = raw === null || raw === '' ? null : parseFloat(raw);
+      if (rate !== null && (isNaN(rate) || rate < 0 || rate > 10000)) {
+        return res.status(400).json({ success: false, message: 'Hourly rate must be between 0 and 10000' });
+      }
+      await pool.query('UPDATE users SET hourly_rate = $1 WHERE id = $2', [rate, req.user.id]);
+      res.json({ success: true, hourly_rate: rate });
+    } catch (err) {
+      console.error('[auth/hourly-rate]', err.message);
+      res.status(500).json({ success: false, message: 'Failed to update hourly rate' });
     }
   });
 

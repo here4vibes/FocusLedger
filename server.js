@@ -184,6 +184,7 @@ app.use('/api/admin',           require('./routes/admin')(pool));
 app.use('/api/email',           require('./routes/email')(pool));
 app.use('/api/ai-suggestions',  require('./routes/ai-suggestions')(pool));
 app.use('/api/ai',               require('./routes/ai')(pool));
+app.use('/api/capture',          require('./routes/capture')());
 app.use('/api/notifications',   require('./routes/notifications')(pool));
 app.use('/api/v1/notifications', require('./routes/notifications-v1'));
 app.use('/api/v1/spending-sessions', require('./routes/spending-sessions')(pool));
@@ -203,6 +204,8 @@ app.use('/api/work-hours',      require('./routes/work-hours')(pool));
 app.use('/api/account-deletion', require('./routes/account-deletion')(pool));
 app.use('/api/email-to-tasks',  require('./routes/email-to-tasks')(pool));
 app.use('/api/buddy-demo',      require('./routes/buddy-demo')(pool));
+app.use('/api/daily-brief',     require('./routes/daily-brief')(pool));
+app.use('/api/weekly-recap',    require('./routes/weekly-recap')(pool));
 app.use('/api/evening',         require('./routes/evening-checkin')(pool));
 app.use('/api/partnerships',    require('./routes/partnerships')(pool));
 app.use('/api/siri',            require('./routes/siri')(pool));
@@ -226,16 +229,11 @@ const promoRoutes = require('./routes/promo-codes')(pool);
 app.use('/api/admin/promo-codes', promoRoutes.adminRouter);
 app.use('/api/promo',             promoRoutes.promoRouter);
 
-// Inbound email webhook — no auth, Resend posts here
-// WHY: webhook must be accessible without JWT; the /api/inbox/* sub-routes under
-//      this same factory function enforce admin auth separately.
+// Inbound email webhook — no auth (/api/inbox/* sub-routes enforce admin auth separately).
 const inboundEmailRouter = require('./routes/inbound-email')(pool);
-app.use('/api/webhooks/resend-inbound', (req, res, next) => {
-  // Route only POST / to the webhook handler
-  req.url = '/webhook';
-  inboundEmailRouter(req, res, next);
-});
+app.use('/api/webhooks/resend-inbound', (req, res, next) => { req.url = '/webhook'; inboundEmailRouter(req, res, next); });
 app.use('/api/inbox',           inboundEmailRouter);
+app.use('/api/webhooks/plaid',  require('./routes/plaid-webhook')(pool));
 
 // =============================================================================
 // 5b. API 404 CATCH-ALL — return JSON, not Express's default HTML error page

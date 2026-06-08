@@ -234,4 +234,14 @@ function schedulePlaidDailySync(pool) {
   console.log('[PlaidDailySync] Scheduled — runs every hour, syncs items stale > 23h');
 }
 
-module.exports = { schedulePlaidDailySync };
+async function syncItemByPlaidId(pool, plaidItemId) {
+  const plaidDb = require('./db/plaid');
+  const item = await plaidDb.getItemByPlaidItemId(pool, plaidItemId);
+  if (!item) return { userId: null, added: 0 };
+  const plaid = getPlaidClient();
+  if (!plaid) return { userId: item.user_id, added: 0 };
+  const added = await syncOneItem(pool, plaid, item);
+  return { userId: item.user_id, added };
+}
+
+module.exports = { schedulePlaidDailySync, syncItemByPlaidId };

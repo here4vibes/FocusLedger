@@ -418,10 +418,19 @@ async function getCategoriesMap(pool) {
   return map;
 }
 
+async function getItemByPlaidItemId(pool, plaidItemId) {
+  const result = await pool.query(
+    'SELECT * FROM plaid_items WHERE item_id = $1',
+    [plaidItemId]
+  );
+  return result.rows[0] || null;
+}
+
 module.exports = {
   // plaid_items
   getItemsForUser,
   getItemById,
+  getItemByPlaidItemId,
   getRawItemsForUser,
   getAllItems,
   insertItem,

@@ -39,9 +39,7 @@ module.exports = defineConfig({
     // ── focusledger.net ───────────────────────────────────────────────────────
     {
       name: 'primary-mobile',
-      // WHY: iPhone 13 device defaults to WebKit which is not installed in CI.
-      // Chromium with mobile viewport gives equivalent layout coverage.
-      use: { ...devices['iPhone 13'], browserName: 'chromium', baseURL: PRIMARY_URL },
+      use: { ...devices['iPhone 13'], baseURL: PRIMARY_URL },
     },
     {
       name: 'primary-desktop',
@@ -51,8 +49,7 @@ module.exports = defineConfig({
     // ── focusledger-mwn3.onrender.com ─────────────────────────────────────────
     {
       name: 'render-mobile',
-      // WHY: same as primary-mobile — Chromium instead of WebKit for CI compatibility.
-      use: { ...devices['iPhone 13'], browserName: 'chromium', baseURL: RENDER_URL },
+      use: { ...devices['iPhone 13'], baseURL: RENDER_URL },
     },
     {
       name: 'render-desktop',

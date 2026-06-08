@@ -65,6 +65,7 @@
     breakdownMode: false,
     completedExpanded: false,
     expandedTasks: {},    // taskId → true for expanded (detail view)
+    reentryBriefs: {},   // taskId → brief object (cached)
     notesExpanded: {},
     editingDueDateTaskId: null,
     editingDurationTaskId: null,
@@ -293,6 +294,26 @@
     // ── Expanded detail view ───────────────────────────────────────────────
     if (isExpanded) {
       html += '<div class="task-expanded-content">';
+
+      // Re-entry brief (shown when task hasn't been worked on in 5+ days)
+      var brief = state.reentryBriefs && state.reentryBriefs[String(task.id)];
+      if (brief) {
+        html += '<div class="task-reentry-brief">';
+        html += '<div class="reentry-brief-header">&#8617; Welcome back to this task</div>';
+        if (brief.lastWorkedOn) {
+          var daysAgo = brief.daysSince === 1 ? '1 day ago' : brief.daysSince + ' days ago';
+          html += '<div class="reentry-brief-row">Last focus session: <strong>' + daysAgo + '</strong></div>';
+        } else {
+          html += '<div class="reentry-brief-row">No focus sessions yet</div>';
+        }
+        if (brief.lastNote) {
+          html += '<div class="reentry-brief-row">Last note: <em>' + escapeHtml(brief.lastNote) + '</em></div>';
+        }
+        if (brief.nextSubstep) {
+          html += '<div class="reentry-brief-row">Next micro-step: <strong>' + escapeHtml(brief.nextSubstep) + '</strong></div>';
+        }
+        html += '</div>';
+      }
 
       // Detail header with close button
       html += '<div class="task-detail-header">';
@@ -766,18 +787,24 @@
         var id = actionEl.getAttribute('data-id');
         var task = state.tasks.find(function(t) { return String(t.id) === String(id); });
         state.expandedTasks[String(id)] = !state.expandedTasks[String(id)];
-        if (task && !task.steps) {
-          // Fetch task with steps
-          flApi('GET', '/tasks/' + id).then(function(data) {
-            if (data.task) {
-              var idx = state.tasks.findIndex(function(t) { return String(t.id) === String(id); });
-              if (idx >= 0) state.tasks[idx] = data.task;
-            }
-            renderTaskList();
-          }).catch(function() { renderTaskList(); });
-        } else {
-          renderTaskList();
-        }
+        var isNowExpanded = !!state.expandedTasks[String(id)];
+
+        var stepsPromise = (task && !task.steps)
+          ? flApi('GET', '/tasks/' + id).then(function(data) {
+              if (data.task) {
+                var idx = state.tasks.findIndex(function(t) { return String(t.id) === String(id); });
+                if (idx >= 0) state.tasks[idx] = data.task;
+              }
+            }).catch(function() {})
+          : Promise.resolve();
+
+        var briefPromise = (isNowExpanded && !state.reentryBriefs[String(id)])
+          ? flApi('GET', '/tasks/' + id + '/reentry-brief')
+              .then(function(data) { if (data.brief) state.reentryBriefs[String(id)] = data.brief; })
+              .catch(function() {})
+          : Promise.resolve();
+
+        Promise.all([stepsPromise, briefPromise]).then(function() { renderTaskList(); });
         return;
       }
 

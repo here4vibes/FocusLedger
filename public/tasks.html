@@ -499,6 +499,23 @@
             gap: 0.5rem;
         }
 
+        .task-reentry-brief {
+            background: rgba(201,168,76,0.08);
+            border-left: 3px solid var(--orange, #c9a84c);
+            border-radius: 6px;
+            padding: 0.55rem 0.75rem;
+            font-size: 0.79rem;
+            color: var(--text-muted, #6b6b6b);
+        }
+        .reentry-brief-header {
+            font-weight: 600;
+            color: var(--orange, #c9a84c);
+            font-size: 0.77rem;
+            margin-bottom: 0.25rem;
+            letter-spacing: 0.01em;
+        }
+        .reentry-brief-row { line-height: 1.55; }
+
         .task-notes-row {
             display: flex;
             flex-direction: column;
@@ -890,7 +907,7 @@
 </div>
 
 <!-- Load shared nav JS -->
-<script src="/js/shared-nav.js"></script>
+<script src="/shared-nav.js"></script>
 <!-- Load task page component -->
 <script src="/js/pages/tasks-page.js"></script>
 

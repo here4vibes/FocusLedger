@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="color-scheme" content="light">
+  <title>Executive Summary — FocusLedger</title>
+  <link rel="manifest" href="/manifest.json">
+  <link rel="icon" type="image/svg+xml" href="/icons/fl-icon.svg">
+  <link rel="apple-touch-icon" sizes="180x180" href="/icons/fl-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700;800&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --navy: #011e5c;
+      --gold: #c9a84c;
+      --cream: #faf9f7;
+      --cream-dark: #f0ede7;
+      --text-dark: #1a1a1a;
+      --text-muted: #6b6b6b;
+      --border: #e0dbd2;
+      --teal: #0891B2;
+      --green: #22C55E;
+      --red: #E07A5F;
+    }
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--cream-dark);
+      min-height: 100vh;
+      padding: 1.5rem 1rem 6rem;
+      color: var(--text-dark);
+    }
+    h1, h2, h3 { font-family: 'Space Grotesk', sans-serif; }
+
+    /* ── Top nav ─────────────────────────────────────── */
+    .top-bar {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 1.5rem; max-width: 480px; margin-left: auto; margin-right: auto;
+    }
+    .back-link {
+      display: flex; align-items: center; gap: 0.35rem; font-size: 0.875rem;
+      color: var(--text-muted); text-decoration: none; padding: 0.4rem 0;
+    }
+    .back-link:hover { color: var(--navy); }
+
+    /* ── The Card ────────────────────────────────────── */
+    .card-wrap { max-width: 480px; margin: 0 auto; }
+
+    .recap-card {
+      background: var(--navy);
+      border-radius: 24px;
+      padding: 2rem 1.75rem 1.75rem;
+      color: white;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Subtle grid texture */
+    .recap-card::before {
+      content: '';
+      position: absolute; inset: 0;
+      background-image: repeating-linear-gradient(
+        0deg, rgba(255,255,255,0.03) 0, rgba(255,255,255,0.03) 1px, transparent 1px, transparent 40px
+      ), repeating-linear-gradient(
+        90deg, rgba(255,255,255,0.03) 0, rgba(255,255,255,0.03) 1px, transparent 1px, transparent 40px
+      );
+      pointer-events: none;
+    }
+
+    .card-header {
+      display: flex; align-items: flex-start; justify-content: space-between;
+      margin-bottom: 1.75rem;
+    }
+    .card-eyebrow {
+      font-size: 0.7rem; font-weight: 700; letter-spacing: 0.12em;
+      text-transform: uppercase; color: var(--gold); margin-bottom: 0.25rem;
+    }
+    .card-title {
+      font-size: 1.5rem; font-weight: 800; line-height: 1.15; color: white;
+    }
+    .card-date { font-size: 0.8rem; color: rgba(255,255,255,0.5); margin-top: 0.3rem; }
+
+    .fl-badge {
+      display: flex; align-items: center; gap: 0.3rem; flex-shrink: 0;
+      background: rgba(255,255,255,0.07); border-radius: 8px;
+      padding: 0.3rem 0.6rem;
+    }
+    .fl-dot { width: 8px; height: 8px; background: var(--gold); border-radius: 2px; transform: rotate(45deg); }
+    .fl-badge-text { font-size: 0.7rem; color: rgba(255,255,255,0.5); font-family: 'Space Grotesk', sans-serif; font-weight: 600; }
+
+    /* ── Big stats row ───────────────────────────────── */
+    .stats-row {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: 0.75rem; margin-bottom: 1.5rem;
+    }
+    .stat-block {
+      background: rgba(255,255,255,0.07);
+      border-radius: 14px; padding: 1rem 0.75rem;
+      text-align: center;
+    }
+    .stat-num {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 1.75rem; font-weight: 800; line-height: 1;
+      color: white; margin-bottom: 0.25rem;
+    }
+    .stat-num.gold { color: var(--gold); }
+    .stat-num.green { color: #4ADE80; }
+    .stat-label { font-size: 0.72rem; color: rgba(255,255,255,0.5); line-height: 1.3; }
+
+    /* ── Spending breakdown ──────────────────────────── */
+    .breakdown-section { margin-bottom: 1.25rem; }
+    .breakdown-label {
+      font-size: 0.7rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+      color: rgba(255,255,255,0.4); margin-bottom: 0.75rem;
+    }
+    .breakdown-row {
+      display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.5rem;
+    }
+    .breakdown-name { font-size: 0.82rem; color: rgba(255,255,255,0.7); width: 110px; flex-shrink: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .breakdown-bar-wrap { flex: 1; height: 6px; background: rgba(255,255,255,0.1); border-radius: 99px; overflow: hidden; }
+    .breakdown-bar { height: 100%; background: var(--gold); border-radius: 99px; transition: width 0.8s ease; }
+    .breakdown-amt { font-size: 0.78rem; color: rgba(255,255,255,0.55); width: 44px; text-align: right; flex-shrink: 0; }
+
+    /* ── Activity pills ──────────────────────────────── */
+    .pills-row { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1.5rem; }
+    .pill {
+      display: flex; align-items: center; gap: 0.35rem;
+      background: rgba(255,255,255,0.08); border-radius: 99px;
+      padding: 0.35rem 0.75rem; font-size: 0.8rem; color: rgba(255,255,255,0.75);
+    }
+    .pill-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--gold); flex-shrink: 0; }
+
+    /* ── Card footer ─────────────────────────────────── */
+    .card-footer {
+      display: flex; align-items: center; justify-content: space-between;
+      padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.1);
+    }
+    .footer-brand { font-size: 0.72rem; color: rgba(255,255,255,0.35); }
+    .footer-brand strong { color: rgba(255,255,255,0.55); }
+
+    /* ── Share button ────────────────────────────────── */
+    .share-section {
+      max-width: 480px; margin: 1.25rem auto 0;
+      display: flex; flex-direction: column; gap: 0.75rem;
+    }
+    .btn-share {
+      display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+      background: var(--navy); color: white;
+      border: none; border-radius: 14px; padding: 1rem;
+      font-size: 0.95rem; font-weight: 700; font-family: 'Space Grotesk', sans-serif;
+      cursor: pointer; width: 100%; transition: opacity 0.15s;
+    }
+    .btn-share:active { opacity: 0.85; }
+    .btn-copy {
+      display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+      background: white; color: var(--navy);
+      border: 1.5px solid var(--border); border-radius: 14px; padding: 0.85rem;
+      font-size: 0.875rem; font-weight: 600; font-family: 'Space Grotesk', sans-serif;
+      cursor: pointer; width: 100%; transition: background 0.15s;
+    }
+    .btn-copy:active { background: var(--cream-dark); }
+    .copy-toast {
+      text-align: center; font-size: 0.82rem; color: var(--green);
+      display: none; animation: fadeIn 0.2s ease;
+    }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* ── Loading ─────────────────────────────────────── */
+    .loading-state {
+      text-align: center; padding: 4rem 1rem; color: var(--text-muted);
+    }
+    .loading-spinner {
+      width: 36px; height: 36px; border: 3px solid var(--border);
+      border-top-color: var(--navy); border-radius: 50%;
+      animation: spin 0.8s linear infinite; margin: 0 auto 1rem;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Error ───────────────────────────────────────── */
+    .error-state { text-align: center; padding: 3rem 1rem; }
+    .error-state a { color: var(--teal); text-decoration: none; }
+
+    /* ── Week nav ────────────────────────────────────── */
+    .week-nav {
+      display: flex; align-items: center; justify-content: center; gap: 1rem;
+      max-width: 480px; margin: 0 auto 1rem;
+    }
+    .week-nav-btn {
+      background: none; border: 1.5px solid var(--border); border-radius: 8px;
+      padding: 0.4rem 0.75rem; font-size: 0.82rem; cursor: pointer;
+      color: var(--text-muted); font-family: 'DM Sans', sans-serif;
+      transition: border-color 0.15s;
+    }
+    .week-nav-btn:hover { border-color: var(--navy); color: var(--navy); }
+    .week-nav-btn:disabled { opacity: 0.3; cursor: default; }
+    .week-label { font-size: 0.85rem; color: var(--text-muted); font-weight: 500; }
+  </style>
+</head>
+<body>
+
+<div class="top-bar">
+  <a href="/home" class="back-link">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+    Back
+  </a>
+  <span style="font-size:0.875rem;font-weight:600;color:var(--navy);font-family:'Space Grotesk',sans-serif;">Executive Summary</span>
+  <div style="width:44px;"></div>
+</div>
+
+<!-- Loading -->
+<div class="loading-state" id="loadingState">
+  <div class="loading-spinner"></div>
+  <p>Building your summary…</p>
+</div>
+
+<!-- Locked -->
+<div class="error-state" id="lockedState" style="display:none;">
+  <p style="font-size:2.5rem;margin-bottom:0.75rem;">🔒</p>
+  <p style="margin-bottom:0.5rem;font-weight:700;font-family:'Space Grotesk',sans-serif;font-size:1.1rem;" id="lockedMsg"></p>
+  <p style="font-size:0.875rem;color:var(--text-muted);margin-bottom:1.25rem;">Classify your spending — then your Executive Summary unlocks.</p>
+  <a id="lockedAction" href="/money" style="display:inline-block;background:var(--navy);color:white;text-decoration:none;padding:0.75rem 1.5rem;border-radius:10px;font-weight:600;font-family:'Space Grotesk',sans-serif;font-size:0.9rem;">Review expenses →</a>
+</div>
+
+<!-- Error -->
+<div class="error-state" id="errorState" style="display:none;">
+  <p style="font-size:2rem;margin-bottom:0.75rem;">⚠️</p>
+  <p style="margin-bottom:0.5rem;font-weight:600;">Couldn't load your summary</p>
+  <a href="/home">Return home</a>
+</div>
+
+<!-- Content -->
+<div id="content" style="display:none;">
+  <div class="card-wrap">
+
+    <div class="recap-card" id="recapCard">
+      <div class="card-header">
+        <div>
+          <div class="card-eyebrow">Executive Summary</div>
+          <div class="card-title" id="cardName">Your week</div>
+          <div class="card-date" id="cardDate"></div>
+        </div>
+        <div class="fl-badge">
+          <div class="fl-dot"></div>
+          <span class="fl-badge-text">FocusLedger</span>
+        </div>
+      </div>
+
+      <!-- Big 3 stats -->
+      <div class="stats-row">
+        <div class="stat-block">
+          <div class="stat-num gold" id="statTasks">—</div>
+          <div class="stat-label">Tasks<br>done</div>
+        </div>
+        <div class="stat-block">
+          <div class="stat-num" id="statSpend">—</div>
+          <div class="stat-label">Spent<br>this week</div>
+        </div>
+        <div class="stat-block">
+          <div class="stat-num green" id="statStreak">—</div>
+          <div class="stat-label" id="statStreakLabel">Day<br>streak</div>
+        </div>
+      </div>
+
+      <!-- Spending breakdown -->
+      <div class="breakdown-section" id="breakdownSection" style="display:none;">
+        <div class="breakdown-label">Where money went</div>
+        <div id="breakdownRows"></div>
+      </div>
+
+      <!-- Activity pills -->
+      <div class="pills-row" id="pillsRow"></div>
+
+      <!-- Card footer -->
+      <div class="card-footer">
+        <span class="footer-brand"><strong>focusledger.net</strong> · ADHD-native command center</span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Share actions -->
+  <div class="share-section">
+    <button class="btn-share" id="btnShare" style="display:none;">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+      Share
+    </button>
+    <button class="btn-copy" id="btnCopy">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+      Copy summary text
+    </button>
+    <p class="copy-toast" id="copyToast">Copied to clipboard!</p>
+  </div>
+</div>
+
+<script src="/js/analytics.js" defer></script>
+<script>
+(function () {
+  var token = localStorage.getItem('fl_token');
+  if (!token) { window.location.href = '/login'; return; }
+  var auth = { 'Authorization': 'Bearer ' + token };
+
+  var data = null;
+
+  function fmt(n) { return '$' + parseFloat(n).toFixed(0); }
+
+  function fmtDate(iso) {
+    var d = new Date(iso + 'T12:00:00Z');
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
+  }
+
+  function render(d) {
+    data = d;
+    document.getElementById('loadingState').style.display = 'none';
+    document.getElementById('content').style.display = '';
+
+    // Header
+    var nameEl = document.getElementById('cardName');
+    nameEl.textContent = d.name ? d.name + '’s week' : 'Your week';
+    document.getElementById('cardDate').textContent =
+      fmtDate(d.week_start) + ' – ' + fmtDate(d.week_end);
+
+    // Big stats
+    document.getElementById('statTasks').textContent = d.tasks_completed;
+    document.getElementById('statSpend').textContent = fmt(d.total_spending);
+    if (d.streak && d.streak.days > 0) {
+      document.getElementById('statStreak').textContent = '🔥' + d.streak.days;
+      document.getElementById('statStreakLabel').textContent = 'Day\nstreak';
+    } else {
+      document.getElementById('statStreak').textContent = '—';
+    }
+
+    // Spending breakdown (top 4 categories)
+    var breakdown = (d.spending_breakdown || []).slice(0, 4);
+    if (breakdown.length > 0) {
+      var maxAmt = Math.max.apply(null, breakdown.map(function(r) { return r.total; }));
+      var rowsEl = document.getElementById('breakdownRows');
+      rowsEl.innerHTML = breakdown.map(function(r) {
+        var pct = maxAmt > 0 ? Math.round((r.total / maxAmt) * 100) : 0;
+        return '<div class="breakdown-row">' +
+          '<div class="breakdown-name">' + escHtml(r.category || 'Other') + '</div>' +
+          '<div class="breakdown-bar-wrap"><div class="breakdown-bar" style="width:' + pct + '%"></div></div>' +
+          '<div class="breakdown-amt">' + fmt(r.total) + '</div>' +
+          '</div>';
+      }).join('');
+      document.getElementById('breakdownSection').style.display = '';
+    }
+
+    // Activity pills
+    var pills = [];
+    if (d.buddy_checkins > 0) pills.push(d.buddy_checkins + ' Buddy check-in' + (d.buddy_checkins > 1 ? 's' : ''));
+    if (d.focus_sessions > 0) pills.push(d.focus_sessions + ' focus session' + (d.focus_sessions > 1 ? 's' : '') +
+      (d.focus_minutes > 0 ? ' · ' + d.focus_minutes + 'm' : ''));
+    if (d.impulse_count > 0) pills.push(d.impulse_count + ' impulse flagged');
+    if (d.streak && d.streak.routine) pills.push(d.streak.routine);
+
+    var pillsEl = document.getElementById('pillsRow');
+    pillsEl.innerHTML = pills.map(function(p) {
+      return '<div class="pill"><div class="pill-dot"></div><span>' + escHtml(p) + '</span></div>';
+    }).join('');
+
+    // Share button
+    if (navigator.share) document.getElementById('btnShare').style.display = '';
+
+    if (typeof FLA !== 'undefined') FLA.trackPage('executive_summary');
+  }
+
+  function escHtml(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  function buildShareText(d) {
+    var lines = [];
+    lines.push('📊 My Executive Summary — ' + fmtDate(d.week_start) + '–' + fmtDate(d.week_end));
+    lines.push('');
+    lines.push('✅ ' + d.tasks_completed + ' tasks completed');
+    lines.push('💸 ' + fmt(d.total_spending) + ' spent');
+    if (d.streak && d.streak.days > 0) lines.push('🔥 ' + d.streak.days + '-day streak');
+    if (d.buddy_checkins > 0) lines.push('🤝 ' + d.buddy_checkins + ' Buddy check-in' + (d.buddy_checkins > 1 ? 's' : ''));
+    lines.push('');
+    lines.push('Built with FocusLedger — focusledger.net');
+    return lines.join('\n');
+  }
+
+  // Load data
+  fetch('/api/weekly-recap', { headers: auth })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      document.getElementById('loadingState').style.display = 'none';
+      if (d.locked) {
+        var ls = document.getElementById('lockedState');
+        var lm = document.getElementById('lockedMsg');
+        var la = document.getElementById('lockedAction');
+        if (lm) lm.textContent = d.message;
+        if (la && d.unlock_action) la.href = d.unlock_action;
+        ls.style.display = '';
+        return;
+      }
+      if (!d.success) throw new Error(d.message);
+      render(d);
+    })
+    .catch(function() {
+      document.getElementById('loadingState').style.display = 'none';
+      document.getElementById('errorState').style.display = '';
+    });
+
+  // Share
+  document.getElementById('btnShare').addEventListener('click', function() {
+    if (!data || !navigator.share) return;
+    navigator.share({
+      title: 'My Executive Summary',
+      text: buildShareText(data),
+      url: window.location.href,
+    }).catch(function() {});
+  });
+
+  // Copy text
+  document.getElementById('btnCopy').addEventListener('click', function() {
+    if (!data) return;
+    var text = buildShareText(data);
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(text).then(function() {
+        var t = document.getElementById('copyToast');
+        t.style.display = 'block';
+        setTimeout(function() { t.style.display = 'none'; }, 2500);
+      });
+    }
+  });
+})();
+</script>
+</body>
+</html>

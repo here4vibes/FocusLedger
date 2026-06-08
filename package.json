@@ -15,6 +15,7 @@
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:debug": "playwright test --debug",
+    "test:smoke": "playwright test --config=playwright.smoke.config.js",
     "test:visual": "playwright test --config=playwright.visual.config.js",
     "test:visual:update": "playwright test --config=playwright.visual.config.js --update-snapshots",
     "monitor:post-deploy": "node scripts/post-deploy-monitor.js",
@@ -31,6 +32,7 @@
     "testTimeout": 10000
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.101.0",
     "@prisma/client": "^5.22.0",
     "@sentry/node": "^8.0.0",
     "apn": "^2.2.0",

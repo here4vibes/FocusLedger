@@ -2,7 +2,7 @@
 const { defineConfig, devices } = require('@playwright/test');
 const path = require('path');
 
-const BASE_URL = process.env.BASE_URL || 'https://focusledger.polsia.app';
+const BASE_URL = process.env.BASE_URL || 'https://focusledger.net';
 
 module.exports = defineConfig({
   testDir: './tests/e2e/tests',

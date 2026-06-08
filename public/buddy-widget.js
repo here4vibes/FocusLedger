@@ -861,10 +861,22 @@
       persistPosition(newX, newY);
     }
 
+    function onTouchCancel() {
+      // WHY: touchcancel fires instead of touchend when iOS interrupts a touch
+      // (incoming call, alert, back gesture). Without this, touchDragging stays true
+      // and the document touchmove handler calls e.preventDefault() on every
+      // subsequent touch, silently blocking all click synthesis site-wide.
+      touchDragging = false;
+      touchMoved = false;
+      bubble.classList.remove('dragging');
+      bubble.classList.add('idle');
+    }
+
     // Attach — { passive: false } on ALL touch listeners (required for preventDefault)
     bubble.addEventListener('touchstart', onTouchStart, { passive: false });
     document.addEventListener('touchmove', onTouchMove, { passive: false });
     document.addEventListener('touchend', onTouchEnd, { passive: false });
+    document.addEventListener('touchcancel', onTouchCancel);
 
     // Mouse only on desktop (not touch)
     bubble.addEventListener('mousedown', onMouseDown);

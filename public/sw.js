@@ -165,26 +165,38 @@ async function cacheFirst(request) {
 // fetch to bypass the HTTP cache entirely so every navigation gets a
 // guaranteed-fresh response from the server.
 async function navigationHandler(request) {
+  const attemptFetch = () => fetch(request, { cache: 'no-store' });
   try {
-    const response = await fetch(request, { cache: 'no-store' });
+    const response = await attemptFetch();
     if (response.ok) {
       const cache = await caches.open(CACHE_VERSION);
       cache.put(request, response.clone());
     }
     return response;
   } catch (err) {
-    // Try cached version first
-    const cached = await caches.match(request);
-    if (cached) return cached;
+    // Render free-tier cold starts can take up to 30s — retry once after 8s
+    try {
+      await new Promise(resolve => setTimeout(resolve, 8000));
+      const retryResponse = await attemptFetch();
+      if (retryResponse.ok) {
+        const cache = await caches.open(CACHE_VERSION);
+        cache.put(request, retryResponse.clone());
+      }
+      return retryResponse;
+    } catch (retryErr) {
+      // Try cached version first
+      const cached = await caches.match(request);
+      if (cached) return cached;
 
-    // Fall back to offline page
-    const offlinePage = await caches.match(OFFLINE_URL);
-    if (offlinePage) return offlinePage;
+      // Fall back to offline page
+      const offlinePage = await caches.match(OFFLINE_URL);
+      if (offlinePage) return offlinePage;
 
-    return new Response('<h1>You are offline</h1>', {
-      status: 503,
-      headers: { 'Content-Type': 'text/html' }
-    });
+      return new Response('<h1>You are offline</h1>', {
+        status: 503,
+        headers: { 'Content-Type': 'text/html' }
+      });
+    }
   }
 }
 

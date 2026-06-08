@@ -11,3 +11,8 @@ npm-debug.log*
 coverage/
 prisma/generated/
 focusledger.zip
+
+# Playwright test output
+test-results/
+smoke-report/
+playwright-report/
