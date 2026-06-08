@@ -10,6 +10,7 @@
 <link rel="icon" type="image/svg+xml" href="/icons/fl-icon.svg">
     <link rel="apple-touch-icon" sizes="180x180" href="/icons/fl-icon.png">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="color-scheme" content="light">
     <title>FocusLedger - Settings</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1456,9 +1457,9 @@
                 </li>
             </ul>
 
-            <a href="https://buy.stripe.com/8x200i6m784y4bS0KZcs800" class="btn-upgrade-modal" id="um-checkoutBtn" target="_self">
+            <button class="btn-upgrade-modal" id="um-checkoutBtn">
                 Switch to Autopilot — $9.99/mo
-            </a>
+            </button>
             <button class="upgrade-dismiss-link" id="upgradeModalDismiss">Maybe later</button>
         </div>
     </div>
@@ -1494,9 +1495,6 @@
         function authHeaders() {
             return { 'Authorization': 'Bearer ' + (localStorage.getItem('fl_token') || ''), 'Content-Type': 'application/json' };
         }
-
-        var MONTHLY_LINK = 'https://buy.stripe.com/8x200i6m784y4bS0KZcs800';
-        var ANNUAL_LINK = 'https://buy.stripe.com/4gM14m7qb0C60ZGbpDcs801';
 
         function loadSubscriptionData() {
             fetch('/api/subscription/status', { headers: authHeaders() })
@@ -1796,30 +1794,26 @@
         window.addEventListener('load', function() { if (typeof PlaidService !== 'undefined') PlaidService.loadBankSyncStatus('bankStatus', { showUpgradeButton: true }); });
 
         // ── Upgrade Modal ────────────────────────────────────────────────────────
-        var MONTHLY_LINK_MODAL = 'https://buy.stripe.com/8x200i6m784y4bS0KZcs800';
-        var ANNUAL_LINK_MODAL = 'https://buy.stripe.com/4gM14m7qb0C60ZGbpDcs801';
         var umIsAnnual = false;
 
         function updateUpgradeModalPricing() {
-            var priceNum = document.getElementById('um-priceNum');
+            var priceNum    = document.getElementById('um-priceNum');
             var pricePeriod = document.getElementById('um-pricePeriod');
             var checkoutBtn = document.getElementById('um-checkoutBtn');
             var monthlyLabel = document.getElementById('um-monthlyLabel');
-            var annualLabel = document.getElementById('um-annualLabel');
-            var switchEl = document.getElementById('um-billingSwitch');
+            var annualLabel  = document.getElementById('um-annualLabel');
+            var switchEl     = document.getElementById('um-billingSwitch');
             if (!priceNum) return;
             if (umIsAnnual) {
-                priceNum.textContent = '8.33';
+                priceNum.textContent    = '8.33';
                 pricePeriod.textContent = 'per month, billed as $100/year — save ~$20';
-                checkoutBtn.href = ANNUAL_LINK_MODAL;
                 checkoutBtn.textContent = 'Switch to Autopilot — $100/year';
                 monthlyLabel.classList.remove('active');
                 annualLabel.classList.add('active');
                 switchEl.classList.add('annual');
             } else {
-                priceNum.textContent = '9.99';
+                priceNum.textContent    = '9.99';
                 pricePeriod.textContent = 'per month, billed monthly — cancel anytime';
-                checkoutBtn.href = MONTHLY_LINK_MODAL;
                 checkoutBtn.textContent = 'Switch to Autopilot — $9.99/mo';
                 monthlyLabel.classList.add('active');
                 annualLabel.classList.remove('active');
@@ -2975,8 +2969,8 @@
                     + '🤝 Your 14-day free trial includes Buddy-mediated accountability + partner visibility. Subscribe to keep it after the trial.'
                     + '</p>'
                     + '<div style="display:flex;gap:8px;flex-wrap:wrap;">'
-                    + '<a href="https://buy.stripe.com/5kQ3cudOzfx07o43Xbcs802" target="_blank" style="padding:8px 14px;background:var(--navy);color:#fff;border-radius:8px;font-size:0.83rem;font-weight:600;text-decoration:none;">$14.99/mo</a>'
-                    + '<a href="https://buy.stripe.com/4gM8wOaCnesW37OctHcs803" target="_blank" style="padding:8px 14px;background:transparent;color:var(--navy);border:1.5px solid var(--navy);border-radius:8px;font-size:0.83rem;font-weight:600;text-decoration:none;">$149/yr — save 17%</a>'
+                    + '<button onclick="PricingService.checkout(\'tandem\',\'monthly\',this)" style="padding:8px 14px;background:var(--navy);color:#fff;border:none;border-radius:8px;font-size:0.83rem;font-weight:600;cursor:pointer;">$14.99/mo</button>'
+                    + '<button onclick="PricingService.checkout(\'tandem\',\'annual\',this)"  style="padding:8px 14px;background:transparent;color:var(--navy);border:1.5px solid var(--navy);border-radius:8px;font-size:0.83rem;font-weight:600;cursor:pointer;">$149/yr — save 17%</button>'
                     + '</div></div>';
             }
         } else {
@@ -2987,8 +2981,8 @@
                 + 'Buddy-mediated accountability, partner dashboard, shared task visibility, and the "Tell Buddy" concern feature.'
                 + '</p>'
                 + '<div style="display:flex;gap:8px;flex-wrap:wrap;">'
-                + '<a href="https://buy.stripe.com/5kQ3cudOzfx07o43Xbcs802" target="_blank" style="padding:8px 16px;background:var(--orange,#c9a84c);color:#011e5c;border-radius:8px;font-size:0.83rem;font-weight:700;text-decoration:none;">$14.99/mo</a>'
-                + '<a href="https://buy.stripe.com/4gM8wOaCnesW37OctHcs803" target="_blank" style="padding:8px 16px;background:rgba(255,255,255,0.12);color:#fff;border:1px solid rgba(255,255,255,0.25);border-radius:8px;font-size:0.83rem;font-weight:600;text-decoration:none;">$149/yr</a>'
+                + '<button onclick="PricingService.checkout(\'tandem\',\'monthly\',this)" style="padding:8px 16px;background:var(--orange,#c9a84c);color:#011e5c;border:none;border-radius:8px;font-size:0.83rem;font-weight:700;cursor:pointer;">$14.99/mo</button>'
+                + '<button onclick="PricingService.checkout(\'tandem\',\'annual\',this)"  style="padding:8px 16px;background:rgba(255,255,255,0.12);color:#fff;border:1px solid rgba(255,255,255,0.25);border-radius:8px;font-size:0.83rem;font-weight:600;cursor:pointer;">$149/yr</button>'
                 + '</div>'
                 + '<p style="margin-top:10px;font-size:0.75rem;color:rgba(255,255,255,0.5);">If one partner subscribes, both get access.</p>'
                 + '</div>';
@@ -3380,6 +3374,19 @@
     </script>
     <!-- Shared Plaid Link service -->
     <script src="/js/services/plaid-service.js"></script>
+    <!-- Pricing: checkout via PricingService (email prefill, dynamic sessions) -->
+    <script src="/js/services/pricing-service.js"></script>
+    <script>
+    (function() {
+        var checkoutBtn = document.getElementById('um-checkoutBtn');
+        if (checkoutBtn) {
+            checkoutBtn.addEventListener('click', function() {
+                var billing = (typeof umIsAnnual !== 'undefined' && umIsAnnual) ? 'annual' : 'monthly';
+                PricingService.checkout('autopilot', billing, checkoutBtn);
+            });
+        }
+    })();
+    </script>
     <!-- Haptics: settings page toggle feedback -->
     <script src="/js/haptics.js"></script>
     <!-- Analytics -->

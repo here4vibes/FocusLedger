@@ -1,25 +1,76 @@
 // Subscription management: status, activation, webhook, cancel/reactivate.
-// Owns: app_subscription table, Stripe link references, Pro activation flow.
+// Owns: app_subscription table, Stripe checkout flow, Pro activation.
 // Does NOT own: Pro status checks (see middleware/proUtils.js), payment processing (Polsia Stripe).
 const express = require('express');
 const { authenticateToken, verifyToken } = require('../middleware/auth');
 const { sendEmail } = require('../lib/emailService');
 const { proWelcomeTemplate } = require('../lib/emailTemplates');
+const { PLANS } = require('../config/pricing');
 
 const FREE_TASK_LIMIT = 10;
 
-// Stripe recurring subscription links — success_url includes {CHECKOUT_SESSION_ID} for activation
-// WHY recurring: one-time payment links required users to re-checkout every month.
-// These are proper subscriptions — Stripe handles billing automatically.
-// WHY new links (2026-05-16): old links created Stripe products named "Pro"; these create
-// products named "Autopilot" so Stripe receipts, invoices, and customer portal match the rebrand.
+// WHY lazy init: STRIPE_SECRET_KEY may not be present in all environments (CI, dev without .env).
+// When price IDs are also set, POST /checkout creates real Checkout Sessions with email pre-fill.
+// When price IDs are absent, falls back to buy.stripe.com payment links + ?prefilled_email param.
+let stripeClient = null;
+function getStripe() {
+  if (!stripeClient && process.env.STRIPE_SECRET_KEY) {
+    stripeClient = require('stripe')(process.env.STRIPE_SECRET_KEY);
+  }
+  return stripeClient;
+}
+
+// Legacy: kept for backward compat with any code that still imports STRIPE_LINKS directly.
+// New code should use PLANS from config/pricing.js.
 const STRIPE_LINKS = {
-  monthly: 'https://buy.stripe.com/8x200i6m784y4bS0KZcs800',
-  annual: 'https://buy.stripe.com/4gM14m7qb0C60ZGbpDcs801'
+  monthly: PLANS.autopilot.stripe.link_monthly,
+  annual:  PLANS.autopilot.stripe.link_annual,
 };
 
 module.exports = function(pool) {
   const router = express.Router();
+
+  // POST /checkout — create a Stripe Checkout Session (or return a prefilled payment link).
+  // When STRIPE_SECRET_KEY + STRIPE_PRICE_* env vars are set, creates a real Checkout Session
+  // so the user's email is pre-filled and user_id is attached as metadata.
+  // When price IDs are absent, returns a buy.stripe.com link with ?prefilled_email appended.
+  router.post('/checkout', authenticateToken, async (req, res) => {
+    try {
+      const { plan, billing } = req.body;
+      if (!['autopilot', 'tandem'].includes(plan))   return res.status(400).json({ success: false, message: 'Invalid plan' });
+      if (!['monthly', 'annual'].includes(billing))  return res.status(400).json({ success: false, message: 'Invalid billing' });
+
+      const planConfig = PLANS[plan];
+      const priceId    = planConfig.stripe[`price_${billing}`];
+      const baseLink   = planConfig.stripe[`link_${billing}`];
+      const userEmail  = req.user.email || '';
+      const stripe     = getStripe();
+
+      if (stripe && priceId) {
+        const appUrl = (process.env.APP_URL || 'https://focusledger.net').replace(/\/$/, '');
+        const session = await stripe.checkout.sessions.create({
+          mode: 'subscription',
+          customer_email: userEmail,
+          line_items: [{ price: priceId, quantity: 1 }],
+          success_url: `${appUrl}/api/subscription/activate?session_id={CHECKOUT_SESSION_ID}`,
+          cancel_url: `${appUrl}/pricing`,
+          metadata: { user_id: String(req.user.id), plan, billing },
+          allow_promotion_codes: true,
+          billing_address_collection: 'auto',
+        });
+        return res.json({ success: true, url: session.url });
+      }
+
+      // Fallback: payment link with prefilled email
+      const url = userEmail
+        ? `${baseLink}?prefilled_email=${encodeURIComponent(userEmail)}`
+        : baseLink;
+      return res.json({ success: true, url });
+    } catch (err) {
+      console.error('[subscription/checkout]', err.message);
+      res.status(500).json({ success: false, message: 'Could not create checkout session' });
+    }
+  });
 
   // GET subscription status + task limits (requires auth)
   router.get('/status', authenticateToken, async (req, res) => {
