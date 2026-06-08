@@ -699,7 +699,7 @@
                     Priority support
                 </li>
             </ul>
-            <a href="#" class="btn-plan pro" id="proBtn">Switch to Autopilot</a>
+            <button class="btn-plan pro" id="proBtn">Switch to Autopilot</button>
         </div>
 
         <!-- TANDEM PLAN -->
@@ -740,7 +740,7 @@
                     <span>14-day free trial for <strong>both</strong> partners</span>
                 </li>
             </ul>
-            <a href="/signup?plan=tandem" class="btn-plan tandem" id="tandemBtn">Start Tandem Trial</a>
+            <button class="btn-plan tandem" id="tandemBtn">Start Tandem Trial</button>
         </div>
 
     </div>
@@ -820,11 +820,12 @@
         <p>FocusLedger &mdash; Built by <a href="https://polsia.com">Polsia</a> &middot; <a href="/story">About</a> &middot; <a href="/changelog">Changelog</a> &middot; <a href="/terms">Terms of Service</a> &middot; <a href="/privacy">Privacy Policy</a></p>
     </div>
 
+    <script src="/js/services/pricing-service.js"></script>
     <script>
     (function() {
         'use strict';
 
-        // FAQ accordion — event delegation for reliable cross-browser/mobile behavior
+        // FAQ accordion
         document.addEventListener('click', function(e) {
             var q = e.target.closest('.faq-q');
             if (!q) return;
@@ -834,21 +835,20 @@
         });
 
         var isAnnual = false;
-        var MONTHLY_LINK = 'https://buy.stripe.com/8x200i6m784y4bS0KZcs800';
-        var ANNUAL_LINK = 'https://buy.stripe.com/4gM14m7qb0C60ZGbpDcs801';
-
-        var billingSwitch = document.getElementById('billingSwitch');
-        var monthlyLabel = document.getElementById('monthlyLabel');
-        var annualLabel = document.getElementById('annualLabel');
-        var proPriceAmount = document.getElementById('proPriceAmount');
-        var proPricePeriod = document.getElementById('proPricePeriod');
-        var proPriceNote = document.getElementById('proPriceNote');
-        var proBtn = document.getElementById('proBtn');
-        var tandemPriceAmount = document.getElementById('tandemPriceAmount');
-        var tandemPricePeriod = document.getElementById('tandemPricePeriod');
-        var tandemPriceNote = document.getElementById('tandemPriceNote');
+        var proBtn    = document.getElementById('proBtn');
+        var tandemBtn = document.getElementById('tandemBtn');
 
         function updatePricing() {
+            var proPriceAmount  = document.getElementById('proPriceAmount');
+            var proPricePeriod  = document.getElementById('proPricePeriod');
+            var proPriceNote    = document.getElementById('proPriceNote');
+            var tandemAmount    = document.getElementById('tandemPriceAmount');
+            var tandemPeriod    = document.getElementById('tandemPricePeriod');
+            var tandemNote      = document.getElementById('tandemPriceNote');
+            var billingSwitch   = document.getElementById('billingSwitch');
+            var monthlyLabel    = document.getElementById('monthlyLabel');
+            var annualLabel     = document.getElementById('annualLabel');
+
             if (isAnnual) {
                 billingSwitch.classList.add('annual');
                 monthlyLabel.classList.remove('active');
@@ -856,10 +856,9 @@
                 proPriceAmount.textContent = '8.33';
                 proPricePeriod.textContent = '/month';
                 proPriceNote.innerHTML = 'Billed as $100/year. <span class="strike">$119.88</span>';
-                proBtn.href = ANNUAL_LINK;
-                tandemPriceAmount.textContent = '12.42';
-                tandemPricePeriod.textContent = '/month';
-                tandemPriceNote.innerHTML = 'Billed as $149/year. <span class="strike">$179.88</span>';
+                tandemAmount.textContent = '12.42';
+                tandemPeriod.textContent = '/month';
+                tandemNote.innerHTML = 'Billed as $149/year. <span class="strike">$179.88</span>';
             } else {
                 billingSwitch.classList.remove('annual');
                 monthlyLabel.classList.add('active');
@@ -867,42 +866,54 @@
                 proPriceAmount.textContent = '9.99';
                 proPricePeriod.textContent = '/month';
                 proPriceNote.textContent = 'Billed monthly. Cancel anytime.';
-                proBtn.href = MONTHLY_LINK;
-                tandemPriceAmount.textContent = '14.99';
-                tandemPricePeriod.textContent = '/month';
-                tandemPriceNote.textContent = 'Billed monthly. Cancel anytime.';
+                tandemAmount.textContent = '14.99';
+                tandemPeriod.textContent = '/month';
+                tandemNote.textContent = 'Billed monthly. Cancel anytime.';
             }
         }
 
-        billingSwitch.addEventListener('click', function() {
-            isAnnual = !isAnnual;
-            updatePricing();
-        });
-        monthlyLabel.addEventListener('click', function() {
-            isAnnual = false;
-            updatePricing();
-        });
-        annualLabel.addEventListener('click', function() {
-            isAnnual = true;
-            updatePricing();
-        });
+        document.getElementById('billingSwitch').addEventListener('click', function() { isAnnual = !isAnnual; updatePricing(); });
+        document.getElementById('monthlyLabel').addEventListener('click',  function() { isAnnual = false;      updatePricing(); });
+        document.getElementById('annualLabel').addEventListener('click',   function() { isAnnual = true;       updatePricing(); });
 
-        // Initialize
         updatePricing();
 
-        // Check if already Pro — show "You're on Pro" instead
-        fetch('/api/subscription/status')
-            .then(function(r) { return r.json(); })
-            .then(function(data) {
-                if (data.success && data.subscription && data.subscription.is_pro) {
-                    proBtn.textContent = 'You\'re on Autopilot';
-                    proBtn.href = '/settings';
-                    proBtn.classList.remove('pro');
-                    proBtn.style.background = 'var(--green)';
-                    proBtn.style.color = 'white';
-                }
-            })
-            .catch(function() {});
+        // Wire checkout buttons through PricingService (handles auth + email prefill)
+        if (proBtn) {
+            proBtn.addEventListener('click', function() {
+                PricingService.checkout('autopilot', isAnnual ? 'annual' : 'monthly', proBtn);
+            });
+        }
+        if (tandemBtn) {
+            tandemBtn.addEventListener('click', function() {
+                PricingService.checkout('tandem', isAnnual ? 'annual' : 'monthly', tandemBtn);
+            });
+        }
+
+        // Check if already subscribed — swap button state
+        var token = localStorage.getItem('token');
+        if (token) {
+            fetch('/api/subscription/status', { headers: { Authorization: 'Bearer ' + token } })
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (!data.success) return;
+                    if (data.subscription && data.subscription.is_pro && proBtn) {
+                        proBtn.textContent = "You're on Autopilot";
+                        proBtn.onclick = function() { window.location.href = '/settings'; };
+                        proBtn.classList.remove('pro');
+                        proBtn.style.background = 'var(--green)';
+                        proBtn.style.color = 'white';
+                    }
+                    if (data.subscription && data.subscription.is_tandem && tandemBtn) {
+                        tandemBtn.textContent = "You're on Tandem";
+                        tandemBtn.onclick = function() { window.location.href = '/settings'; };
+                        tandemBtn.classList.remove('tandem');
+                        tandemBtn.style.background = 'var(--green)';
+                        tandemBtn.style.color = 'white';
+                    }
+                })
+                .catch(function() {});
+        }
     })();
     </script>
 
