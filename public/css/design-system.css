@@ -10,6 +10,7 @@
 
 /* ── 1. Design Tokens ─────────────────────────────────────────────────── */
 :root {
+  color-scheme: light dark;
   /* ── Brand Palette ──────────────────────────────── */
   --brand-primary:     #011e5c;   /* Trust Blue — header, nav, CTA */
   --brand-primary-mid: #02287a;   /* Trust Blue mid — hover states */
