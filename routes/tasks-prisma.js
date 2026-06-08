@@ -134,7 +134,7 @@ async function listTasks(req, res) {
 async function getSummary(req, res) {
   try {
     const userId = req.user.id;
-    const tz = await fetchUserTimezone(prisma.pool, userId);
+    const tz = await fetchUserTimezone(prisma, userId);
     const localToday = getUserLocalDate(tz);
 
     const [all] = await prisma.$queryRaw`
@@ -347,7 +347,7 @@ async function createTask(req, res) {
     let autoValueId = null;
     try {
       const { matchTaskToValue } = require('../lib/auto-tagger');
-      autoValueId = await matchTaskToValue(prisma.pool, userId, title.trim());
+      autoValueId = await matchTaskToValue(prisma, userId, title.trim());
     } catch (e) {
       console.warn('[tasks-prisma] auto-tag failed:', e.message);
     }

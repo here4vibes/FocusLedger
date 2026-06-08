@@ -63,7 +63,7 @@ async function getSummary(req, res) {
   try {
     const userId = req.user.id;
     const period = req.query.period || 'week';
-    const tz = await fetchUserTimezone(prisma.pool, userId);
+    const tz = await fetchUserTimezone(prisma, userId);
     const localDate = getUserLocalDate(tz);
     const summary = await getSpendingSummary(userId, period, localDate);
     res.json({ success: true, summary });
@@ -77,7 +77,7 @@ async function getSummary(req, res) {
 async function getToday(req, res) {
   try {
     const userId = req.user.id;
-    const tz = await fetchUserTimezone(prisma.pool, userId);
+    const tz = await fetchUserTimezone(prisma, userId);
     const localDate = getUserLocalDate(tz);
     const spend = await getTodaySpend(userId, localDate);
     res.json({ success: true, ...spend });
@@ -91,7 +91,7 @@ async function getToday(req, res) {
 async function getUntriaged(req, res) {
   try {
     const userId = req.user.id;
-    const tz = await fetchUserTimezone(prisma.pool, userId);
+    const tz = await fetchUserTimezone(prisma, userId);
     const localDate = getUserLocalDate(tz);
     const expenses = await getUntriagedExpenses(userId, localDate);
     res.json({ success: true, expenses, count: expenses.length });
@@ -106,7 +106,7 @@ async function listExpenses(req, res) {
   try {
     const userId = req.user.id;
     const period = req.query.period || 'week';
-    const tz = await fetchUserTimezone(prisma.pool, userId);
+    const tz = await fetchUserTimezone(prisma, userId);
     const localDate = getUserLocalDate(tz);
     const expenses = await getExpenses(userId, period, localDate);
     res.json({ success: true, expenses });
@@ -131,7 +131,7 @@ async function addExpense(req, res) {
                        : is_impulse === false || is_impulse === 'false' ? false
                        : null;
 
-    const tz = await fetchUserTimezone(prisma.pool, userId);
+    const tz = await fetchUserTimezone(prisma, userId);
     const localDate = getUserLocalDate(tz);
     const expense = await createExpense({
       userId,
@@ -242,7 +242,7 @@ async function getAggregate(req, res) {
 async function getTodaySession(req, res) {
   try {
     const userId = req.user.id;
-    const tz = await fetchUserTimezone(prisma.pool, userId);
+    const tz = await fetchUserTimezone(prisma, userId);
     const today = getUserLocalDate(tz);
     const todayStart = new Date(today + 'T00:00:00Z');
     const todayEnd = new Date(today + 'T23:59:59Z');

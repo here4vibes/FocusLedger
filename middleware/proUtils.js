@@ -93,7 +93,7 @@ async function checkProStatus(pool, userId) {
     // Fall back to Stripe subscription
     const subResult = await queryRaw(
       pool,
-      'SELECT plan, status FROM app_subscription WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1',
+      'SELECT plan, status FROM app_subscription WHERE user_id = $1 ORDER BY id DESC LIMIT 1',
       [userId]
     );
 
