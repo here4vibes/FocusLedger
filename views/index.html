@@ -45,6 +45,10 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Load design-system BEFORE the inline styles so the inline :root values
+         cascade after and override design-system's dark-mode variable overrides.
+         The landing page is intentionally light-only. -->
+    <link rel="stylesheet" href="/css/design-system.css">
     <style>
         @import url('https://api.fontshare.com/v2/css?f[]=satoshi@400,500,600,700&display=swap');
 
@@ -1954,8 +1958,6 @@
             .benefits-header h2 { font-size: 2rem; }
         }
     </style>
-    <!-- Design system (inherits existing tokens) -->
-    <link rel="stylesheet" href="/css/design-system.css">
     <!-- Structured Data -->
     <script type="application/ld+json">
     {
