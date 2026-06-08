@@ -254,6 +254,8 @@
     }
 
     // Meta row: value tag + duration + time hint
+    // Built here, emitted OUTSIDE .task-card-main below so it sits below the
+    // title row at full card width and never overflows on long value names.
     var meta = '';
     if (taskVal) {
       meta += '<span class="task-card-meta-tag" style="color:' + escapeHtml(taskVal.color || '#c9a84c') + ';">' +
@@ -275,7 +277,7 @@
       if (meta) meta += '<span class="meta-sep">·</span>';
       meta += '<span class="task-card-meta-tag ' + timeHint.cls + '">' + escapeHtml(timeHint.label) + '</span>';
     }
-    if (meta) html += '<div class="task-card-meta">' + meta + '</div>';
+    // (meta emitted below, outside .task-card-main)
 
     // Edit due date inline
     if (editingDue) {
@@ -447,6 +449,9 @@
     }
 
     html += '</div>'; // .task-card-main
+
+    // Meta row sits outside the flex row so it gets full card width
+    if (meta) html += '<div class="task-card-meta">' + meta + '</div>';
 
     // Action row (hidden in expanded view, shown collapsed)
     if (!isExpanded) {
