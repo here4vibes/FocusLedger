@@ -330,8 +330,17 @@ async function createTask(req, res) {
         }
       }
     } catch (subErr) {
-      console.error('[tasks-prisma] subscription check failed:', subErr.message);
-      return res.status(500).json({ success: false, message: 'Unable to verify subscription status.', code: 'SUBSCRIPTION_CHECK_FAILED' });
+      // WHY fall-through: subscription DB errors must not block task creation.
+      // Treat as free-tier so the 10-task cap still applies (safe default).
+      console.error('[tasks-prisma] subscription check failed, treating as free:', subErr.message);
+      try {
+        const activeCount = await prisma.task.count({ where: { user_id: userId, is_completed: false } });
+        if (activeCount >= 10) {
+          return res.status(402).json({ success: false, message: 'You have 10 active tasks — the free plan cap. Finish a few, or open it up with Autopilot.', code: 'TASK_LIMIT_REACHED', upgrade_required: true });
+        }
+      } catch {
+        // If even the count fails (full DB outage), let creation proceed and let Prisma surface the real error below
+      }
     }
 
     // Auto-tag to value
