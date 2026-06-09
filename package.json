@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "server.js",
   "scripts": {
-    "start": "npm run db:generate && node server.js",
+    "start": "node migrate.js && npm run db:generate && node server.js",
     "dev": "npm run db:generate && node server.js",
     "build": "npm run lint && npm test && npm run db:generate && npm run migrate",
     "migrate": "node migrate.js",
