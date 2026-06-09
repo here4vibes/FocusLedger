@@ -1130,7 +1130,7 @@ function selectCat(slug) {
     b.classList.toggle('selected', b.dataset.slug === slug);
   });
   var t = document.getElementById('submitToast');
-  if (t) { t.textContent = '✓ ' + slug + ' selected'; t.style.color = '#5BA4A4'; t.classList.add('visible'); setTimeout(function(){ t.classList.remove('visible'); t.textContent = '✓ Logged!'; t.style.color = ''; }, 1200); }
+  if (t) { t.textContent = '✓ ' + slug + ' selected'; t.style.color = '#5BA4A4'; t.classList.add('visible'); setTimeout(function(){ t.classList.remove('visible'); t.textContent = '✓ Logged!'; t.style.color = ''; }, 3000); }
 }
 
 function setImpulse(isImpulse) {
@@ -1285,6 +1285,8 @@ async function submitExpense() {
   const amount = parseFloat(document.getElementById('amountInput').value);
   if (!amount || amount <= 0) {
     document.getElementById('amountInput').focus();
+    var t = document.getElementById('submitToast');
+    if (t) { t.textContent = 'Enter an amount first ($)'; t.style.color = '#E07A5F'; t.classList.add('visible'); setTimeout(function(){ t.classList.remove('visible'); t.textContent = '✓ Logged!'; t.style.color = ''; }, 2500); }
     return;
   }
 
