@@ -159,6 +159,28 @@ app.get('/health', async (req, res) => {
   }
 });
 
+// Temporary diagnostic — shows tasks.id column state and migration history
+app.get('/api/debug/tasks-schema', async (req, res) => {
+  try {
+    const [colRes, trigRes, migRes, nullRes, seqRes] = await Promise.all([
+      pool.query(`SELECT column_default, is_nullable, identity_generation FROM information_schema.columns WHERE table_schema='public' AND table_name='tasks' AND column_name='id'`),
+      pool.query(`SELECT trigger_name FROM information_schema.triggers WHERE event_object_table='tasks' AND trigger_name='tasks_auto_id'`),
+      pool.query(`SELECT name, applied_at FROM _migrations ORDER BY applied_at DESC LIMIT 10`),
+      pool.query(`SELECT COUNT(*)::int AS cnt FROM tasks WHERE id IS NULL`),
+      pool.query(`SELECT sequencename, last_value FROM pg_sequences WHERE sequencename='tasks_id_seq'`),
+    ]);
+    res.json({
+      id_column: colRes.rows[0],
+      trigger_installed: trigRes.rows.length > 0,
+      null_id_tasks: nullRes.rows[0].cnt,
+      sequence: seqRes.rows[0] || null,
+      recent_migrations: migRes.rows,
+    });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // =============================================================================
 // 5. API ROUTES
 // =============================================================================
