@@ -661,6 +661,10 @@
             if (state.sort === 'due_date') params.set('sort', 'due_date');
             const data = await api('GET', '/api/tasks?' + params.toString());
             if (data.success) {
+                const nullTasks = (data.tasks || []).filter(t => t.id == null);
+                if (nullTasks.length > 0) {
+                    showToast('[tasks] ' + nullTasks.length + ' null-ID task(s): "' + nullTasks.map(t => t.title).join('", "').slice(0, 60) + '"');
+                }
                 state.tasks = data.tasks;
                 renderTasks();
             } else {
@@ -813,6 +817,10 @@
 
     // ── Toggle task ────────────────────────────────────────────────────────────
     async function toggleTask(taskId) {
+        if (!taskId || taskId === 'null' || taskId === 'undefined') {
+            showToast('[toggle] bad ID "' + taskId + '" — task may be missing from DB. Refresh the page.');
+            return;
+        }
         try {
             const data = await api('PATCH', '/api/tasks/' + taskId + '/toggle');
             if (data.success) {
