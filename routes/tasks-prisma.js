@@ -357,45 +357,53 @@ async function createTask(req, res) {
       ? parseInt(recurrence_day)
       : null;
 
-    // Build INSERT dynamically to skip columns that may not exist in older DB schemas
-    const cols = ['user_id', 'title', 'priority', 'source'];
-    const vals = [userId, title.trim(), priority || 'medium', source || 'manual'];
-    let idx = vals.length;
+    // Build INSERT dynamically — strip unknown columns one-by-one on 42703.
+    // This handles any schema drift without requiring a migration first.
+    const allCols = ['user_id', 'title', 'priority', 'source'];
+    const allVals = [userId, title.trim(), priority || 'medium', source || 'manual'];
 
-    function addCol(col, val) {
-      cols.push(col);
-      vals.push(val);
-      idx++;
-    }
-
-    if (description)           addCol('description', description);
-    if (due_date)              addCol('due_date', due_date);
-    if (due_time)              addCol('due_time', due_time);
-    if (merchant_hint)         addCol('merchant_hint', merchant_hint);
-    if (expected_amount != null) addCol('expected_amount', parseFloat(expected_amount));
-    if (autoValueId != null)   addCol('value_id', autoValueId);
-    if (durationMins != null)  addCol('duration_minutes', durationMins);
-    if (durationMins != null)  addCol('duration_source', 'manual');
-    if (is_household != null)  addCol('is_household', Boolean(is_household));
-    if (is_shared_with_partner != null) addCol('is_shared_with_partner', Boolean(is_shared_with_partner));
-    addCol('recurrence_type', recType);
-    if (recDay != null)        addCol('recurrence_day', recDay);
-
-    const placeholders = vals.map((_, i) => `$${i + 1}`).join(', ');
-    const insertSql = `INSERT INTO tasks (${cols.join(', ')}) VALUES (${placeholders}) RETURNING *`;
+    if (description)             { allCols.push('description');            allVals.push(description); }
+    if (due_date)                { allCols.push('due_date');               allVals.push(due_date); }
+    if (due_time)                { allCols.push('due_time');               allVals.push(due_time); }
+    if (merchant_hint)           { allCols.push('merchant_hint');          allVals.push(merchant_hint); }
+    if (expected_amount != null) { allCols.push('expected_amount');        allVals.push(parseFloat(expected_amount)); }
+    if (autoValueId != null)     { allCols.push('value_id');               allVals.push(autoValueId); }
+    if (durationMins != null)    { allCols.push('duration_minutes');       allVals.push(durationMins); }
+    if (durationMins != null)    { allCols.push('duration_source');        allVals.push('manual'); }
+    if (is_household != null)    { allCols.push('is_household');           allVals.push(Boolean(is_household)); }
+    if (is_shared_with_partner != null) { allCols.push('is_shared_with_partner'); allVals.push(Boolean(is_shared_with_partner)); }
+    allCols.push('recurrence_type'); allVals.push(recType);
+    if (recDay != null)          { allCols.push('recurrence_day');         allVals.push(recDay); }
 
     let taskRow;
-    try {
-      const { rows } = await pool.query(insertSql, vals);
-      taskRow = rows[0];
-    } catch (insertErr) {
-      if (insertErr.code === '42703') {
-        // Retry with minimal columns if an optional column doesn't exist
-        const minSql = `INSERT INTO tasks (user_id, title, priority, source) VALUES ($1, $2, $3, $4) RETURNING *`;
-        const { rows } = await pool.query(minSql, [userId, title.trim(), priority || 'medium', source || 'manual']);
-        taskRow = rows[0];
-      } else {
-        throw insertErr;
+    {
+      let insertCols = [...allCols];
+      let insertVals = [...allVals];
+      // The core columns (user_id + title) must always stay; everything else is strippable.
+      while (true) {
+        const ph = insertVals.map((_, i) => `$${i + 1}`).join(', ');
+        try {
+          const { rows } = await pool.query(
+            `INSERT INTO tasks (${insertCols.join(', ')}) VALUES (${ph}) RETURNING *`,
+            insertVals
+          );
+          taskRow = rows[0];
+          break;
+        } catch (err) {
+          if (err.code !== '42703') throw err;
+          // Extract the bad column name from "column "xyz" of relation "tasks" does not exist"
+          const m = err.message.match(/column "([^"]+)" of relation/);
+          const badCol = m ? m[1] : null;
+          const pos = badCol ? insertCols.indexOf(badCol) : -1;
+          if (pos <= 1) {
+            // Can't strip — core columns are missing (real schema problem)
+            console.error('[tasks] cannot strip column:', err.message);
+            throw err;
+          }
+          console.warn(`[tasks] column "${badCol}" missing, retrying without it`);
+          insertCols.splice(pos, 1);
+          insertVals.splice(pos, 1);
+        }
       }
     }
 
