@@ -1903,6 +1903,7 @@ function attachSwipeToCard(card, expenseId, amount) {
         category: category,
         note: merchant || null,
         expense_date: date,
+        is_impulse: false,
       })
     })
     .then(function(r) { return r.json(); })

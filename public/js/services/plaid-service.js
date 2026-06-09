@@ -129,7 +129,7 @@
   // ── Disconnect ──────────────────────────────────────────────────────────────
 
   function disconnectBankAccount(itemId) {
-    fetch('/api/money/items/' + itemId, { method: 'DELETE', headers: authHeaders() })
+    fetch('/api/plaid/items/' + itemId, { method: 'DELETE', headers: authHeaders() })
     .then(function (r) { return r.json(); })
     .then(function (data) {
       if (data.success) {

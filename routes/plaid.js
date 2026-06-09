@@ -511,13 +511,17 @@ module.exports = function(pool) {
         console.error('[Plaid] create-link-token: Plaid client not initialized — PLAID_CLIENT_ID or PLAID_SECRET missing');
         return res.status(503).json({ success: false, message: 'Bank sync is being set up.' });
       }
-      const response = await plaid.linkTokenCreate({
+      const linkTokenParams = {
         user: { client_user_id: String(userId) },
         client_name: 'FocusLedger',
         products: ['transactions'],
         country_codes: ['US'],
         options: { language: 'en' },
-      });
+      };
+      if (process.env.PLAID_WEBHOOK_URL) {
+        linkTokenParams.webhook = process.env.PLAID_WEBHOOK_URL;
+      }
+      const response = await plaid.linkTokenCreate(linkTokenParams);
       res.json({ success: true, link_token: response.data.link_token });
     } catch (err) {
       const plaidErr = err.response?.data || err.message;
