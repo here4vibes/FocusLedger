@@ -87,24 +87,29 @@ async function listTasks(req, res) {
       ? 'ORDER BY t.is_completed ASC, t.due_date ASC NULLS LAST, t.due_time ASC NULLS LAST, t.created_at DESC'
       : 'ORDER BY t.is_completed ASC, t.created_at DESC';
 
-    const sql = `
-      SELECT t.*,
-        COALESCE(json_agg(json_build_object(
-          'id', s.id, 'task_id', s.task_id, 'title', s.title,
-          'is_completed', s.is_completed, 'sort_order', s.sort_order,
-          'completed_at', s.completed_at, 'created_at', s.created_at
-        ) ORDER BY s.sort_order) FILTER (WHERE s.id IS NOT NULL), '[]') AS steps,
-        COUNT(s.id) FILTER (WHERE s.id IS NOT NULL)::int AS total_steps,
-        COUNT(s.id) FILTER (WHERE s.is_completed)::int AS completed_steps
-      FROM tasks t
-      LEFT JOIN task_steps s ON s.task_id = t.id
-      ${whereClause}
-      GROUP BY t.id
-      ${orderClause}
-    `;
-
-    const { rows } = await res.locals._pool.query(sql, [userId]);
-    const enriched = rows.map(normTask);
+    const pool = res.locals._pool;
+    const { rows } = await pool.query(
+      `SELECT * FROM tasks t ${whereClause} ${orderClause}`,
+      [userId]
+    );
+    // Fetch all steps for these tasks in one query, merge in JS
+    const taskIds = rows.map(r => r.id);
+    const stepsRows = taskIds.length
+      ? (await pool.query(
+          'SELECT * FROM task_steps WHERE task_id = ANY($1) ORDER BY sort_order',
+          [taskIds]
+        )).rows
+      : [];
+    const stepsByTask = {};
+    for (const s of stepsRows) {
+      (stepsByTask[s.task_id] = stepsByTask[s.task_id] || []).push(s);
+    }
+    const enriched = rows.map(t => normTask({
+      ...t,
+      steps: stepsByTask[t.id] || [],
+      total_steps: (stepsByTask[t.id] || []).length,
+      completed_steps: (stepsByTask[t.id] || []).filter(s => s.is_completed).length,
+    }));
     res.json({ success: true, tasks: enriched });
   } catch (err) {
     console.error('[tasks] list error:', err);
@@ -284,22 +289,16 @@ async function getTask(req, res) {
     const userId = req.user.id;
     const pool = res.locals._pool;
 
-    const sql = `
-      SELECT t.*,
-        COALESCE(json_agg(json_build_object(
-          'id', s.id, 'task_id', s.task_id, 'title', s.title,
-          'is_completed', s.is_completed, 'sort_order', s.sort_order,
-          'completed_at', s.completed_at, 'created_at', s.created_at
-        ) ORDER BY s.sort_order) FILTER (WHERE s.id IS NOT NULL), '[]') AS steps
-      FROM tasks t
-      LEFT JOIN task_steps s ON s.task_id = t.id
-      WHERE t.id = $1 AND t.user_id = $2
-      GROUP BY t.id
-    `;
-
-    const { rows } = await pool.query(sql, [parseInt(id), userId]);
+    const { rows } = await pool.query(
+      'SELECT * FROM tasks WHERE id = $1 AND user_id = $2',
+      [parseInt(id), userId]
+    );
     if (!rows.length) return res.status(404).json({ success: false, message: 'Task not found' });
-    res.json({ success: true, task: normTask(rows[0]) });
+    const steps = (await pool.query(
+      'SELECT * FROM task_steps WHERE task_id = $1 ORDER BY sort_order',
+      [parseInt(id)]
+    )).rows;
+    res.json({ success: true, task: normTask({ ...rows[0], steps }) });
   } catch (err) {
     console.error('[tasks] get error:', err);
     res.status(500).json({ success: false, message: 'Failed to fetch task' });
@@ -418,23 +417,13 @@ async function createTask(req, res) {
       }
     }
 
-    // Re-fetch with steps
-    const fetchSql = `
-      SELECT t.*,
-        COALESCE(json_agg(json_build_object(
-          'id', s.id, 'task_id', s.task_id, 'title', s.title,
-          'is_completed', s.is_completed, 'sort_order', s.sort_order,
-          'completed_at', s.completed_at, 'created_at', s.created_at
-        ) ORDER BY s.sort_order) FILTER (WHERE s.id IS NOT NULL), '[]') AS steps
-      FROM tasks t
-      LEFT JOIN task_steps s ON s.task_id = t.id
-      WHERE t.id = $1
-      GROUP BY t.id
-    `;
-    const { rows: fullRows } = await pool.query(fetchSql, [taskRow.id]);
-    const fullTask = fullRows[0] || taskRow;
+    // Re-fetch with steps (no GROUP BY — avoids 42803 when tasks.id lacks PK constraint)
+    const createdSteps = (await pool.query(
+      'SELECT * FROM task_steps WHERE task_id = $1 ORDER BY sort_order',
+      [taskRow.id]
+    )).rows;
 
-    res.status(201).json({ success: true, task: normTask(fullTask) });
+    res.status(201).json({ success: true, task: normTask({ ...taskRow, steps: createdSteps }) });
 
     // Fire-and-forget: AI duration suggestion
     if (!durationMins) {
