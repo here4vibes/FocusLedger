@@ -628,9 +628,8 @@ module.exports = function(pool) {
 
       const cols = ['user_id', 'amount', 'description', 'expense_date', 'source'];
       const vals = [userId, parseFloat(tx.amount), tx.description || tx.merchant_name || 'Unknown', expDate, 'plaid'];
-      let idx = vals.length;
-      if (tx.category_id != null) { cols.push('category_id'); vals.push(tx.category_id); idx++; }
-      if (tx.transaction_id) { cols.push('plaid_transaction_id'); vals.push(tx.transaction_id); idx++; }
+      if (tx.category_id != null) { cols.push('category_id'); vals.push(tx.category_id); }
+      if (tx.transaction_id) { cols.push('plaid_transaction_id'); vals.push(tx.transaction_id); }
 
       const ph = vals.map((_, i) => `$${i + 1}`).join(', ');
       const { rows: expRows } = await pool.query(
@@ -683,9 +682,8 @@ module.exports = function(pool) {
 
           const cols = ['user_id', 'amount', 'description', 'expense_date', 'source'];
           const vals = [userId, parseFloat(tx.amount), tx.description || tx.merchant_name || 'Unknown', expDate, 'plaid'];
-          let idx = vals.length;
-          if (tx.category_id != null) { cols.push('category_id'); vals.push(tx.category_id); idx++; }
-          if (tx.transaction_id) { cols.push('plaid_transaction_id'); vals.push(tx.transaction_id); idx++; }
+          if (tx.category_id != null) { cols.push('category_id'); vals.push(tx.category_id); }
+          if (tx.transaction_id) { cols.push('plaid_transaction_id'); vals.push(tx.transaction_id); }
 
           const ph = vals.map((_, i) => `$${i + 1}`).join(', ');
           const { rows: expRows } = await pool.query(
