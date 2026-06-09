@@ -432,6 +432,28 @@
         }
         .modal-cancel:hover { border-color: var(--navy); color: var(--navy); }
 
+        /* ── Recurrence pills ───────────────────────────────────────────── */
+        .recur-pills { display: flex; gap: 0.35rem; flex-wrap: wrap; }
+        .recur-pill {
+            padding: 0.28rem 0.7rem; border-radius: 20px;
+            border: 1.5px solid var(--border); background: white;
+            font-family: 'DM Sans', sans-serif; font-size: 0.78rem; font-weight: 500;
+            color: var(--text-muted); cursor: pointer; transition: all 0.15s;
+        }
+        .recur-pill:hover { border-color: var(--green); color: var(--green); }
+        .recur-pill.active { background: var(--green); border-color: var(--green); color: white; font-weight: 600; }
+        .recur-day-row {
+            display: none; align-items: center; gap: 0.5rem; margin-top: 0.5rem;
+        }
+        .recur-day-row.visible { display: flex; }
+        .recur-day-row label { font-size: 0.78rem; color: var(--text-muted); white-space: nowrap; }
+        .recur-day-row select {
+            flex: 1; padding: 0.42rem 0.65rem; border: 1.5px solid var(--border); border-radius: 8px;
+            font-family: 'DM Sans', sans-serif; font-size: 0.85rem; color: var(--text-dark);
+            background: white; outline: none; cursor: pointer;
+        }
+        .recur-day-row select:focus { border-color: var(--orange); }
+
         /* ── Toast ──────────────────────────────────────────────────────── */
         .toast {
             position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%) translateY(20px);
@@ -640,6 +662,20 @@
             <div class="modal-field">
                 <label>Notes</label>
                 <textarea id="editNotes" placeholder="Any extra details?"></textarea>
+            </div>
+            <div class="modal-field">
+                <label>Repeat</label>
+                <div class="recur-pills" id="recurPills">
+                    <button class="recur-pill active" data-val="none">Off</button>
+                    <button class="recur-pill" data-val="daily">Daily</button>
+                    <button class="recur-pill" data-val="weekdays">Weekdays</button>
+                    <button class="recur-pill" data-val="weekly">Weekly</button>
+                    <button class="recur-pill" data-val="monthly">Monthly</button>
+                </div>
+                <div class="recur-day-row" id="recurDayRow">
+                    <label id="recurDayLabel">On</label>
+                    <select id="recurDay"></select>
+                </div>
             </div>
             <div class="modal-actions">
                 <button class="modal-save" id="modalSave">Save</button>
@@ -1013,6 +1049,52 @@
         if (!document.querySelector('.ai-card')) document.getElementById('aiSection').style.display = 'none';
     };
 
+    // ── Recurrence helpers ──────────────────────────────────────────────────────
+    const DOW_NAMES = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+
+    function updateRecurDayRow(type, selectedDay) {
+        const row = document.getElementById('recurDayRow');
+        const label = document.getElementById('recurDayLabel');
+        const sel = document.getElementById('recurDay');
+        sel.innerHTML = '';
+        if (type === 'weekly') {
+            label.textContent = 'On';
+            for (let i = 0; i < 7; i++) {
+                const o = document.createElement('option');
+                o.value = i; o.textContent = DOW_NAMES[i];
+                if (i === (selectedDay ?? 1)) o.selected = true;
+                sel.appendChild(o);
+            }
+            row.classList.add('visible');
+        } else if (type === 'monthly') {
+            label.textContent = 'Day';
+            for (let i = 1; i <= 31; i++) {
+                const o = document.createElement('option');
+                o.value = i; o.textContent = i;
+                if (i === (selectedDay ?? 1)) o.selected = true;
+                sel.appendChild(o);
+            }
+            row.classList.add('visible');
+        } else {
+            row.classList.remove('visible');
+        }
+    }
+
+    function setActivePill(type) {
+        document.querySelectorAll('#recurPills .recur-pill').forEach(p => {
+            p.classList.toggle('active', p.dataset.val === type);
+        });
+    }
+
+    // Pill click listeners
+    document.getElementById('recurPills').addEventListener('click', (e) => {
+        const pill = e.target.closest('.recur-pill');
+        if (!pill) return;
+        const type = pill.dataset.val;
+        setActivePill(type);
+        updateRecurDayRow(type, null);
+    });
+
     // ── Edit modal ──────────────────────────────────────────────────────────────
     function openEditModal(taskId) {
         const task = state.tasks.find(t => t.id == taskId);
@@ -1025,6 +1107,9 @@
         document.getElementById('editDueDate').value = task.due_date ? String(task.due_date).split('T')[0] : '';
         document.getElementById('editDueTime').value = task.due_time || '';
         document.getElementById('editNotes').value = task.notes || '';
+        const rtype = task.recurrence_type || 'none';
+        setActivePill(rtype);
+        updateRecurDayRow(rtype, task.recurrence_day ?? null);
         document.getElementById('editModal').classList.add('open');
         document.getElementById('editTitle').focus();
     }
@@ -1040,11 +1125,16 @@
 
     document.getElementById('modalSave').addEventListener('click', async () => {
         if (!state.editingId) return;
+        const rtype = document.querySelector('#recurPills .recur-pill.active')?.dataset.val || 'none';
+        const needsDay = rtype === 'weekly' || rtype === 'monthly';
+        const rday = needsDay ? parseInt(document.getElementById('recurDay').value) : null;
         const data = {
             title: document.getElementById('editTitle').value.trim(),
             due_date: document.getElementById('editDueDate').value || null,
             due_time: document.getElementById('editDueTime').value || null,
             notes: document.getElementById('editNotes').value || null,
+            recurrence_type: rtype,
+            recurrence_day: rday,
         };
         if (!data.title) { showToast('Title is required'); return; }
         const result = await api('PATCH', '/api/tasks/' + state.editingId, data);

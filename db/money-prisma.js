@@ -8,14 +8,14 @@
 // Map FocusLedger slugs → legacy category table names
 const SLUG_TO_NAME = {
   housing:       'Housing',
-  bills:         'Bills & Utilities',
+  bills:         'Bills',
   groceries:     'Groceries',
-  food_delivery: 'Food & Dining',
+  food_delivery: 'Food & Delivery',
   subscriptions: 'Subscriptions',
   shopping:      'Shopping',
   transport:     'Transport',
   health:        'Health',
-  fun:           'Entertainment',
+  fun:           'Fun',
   other:         'Other',
 };
 
