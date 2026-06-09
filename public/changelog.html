@@ -321,6 +321,21 @@
 
             <div class="entry">
                 <div class="entry-date">
+                    <span class="entry-day">09</span>
+                    <span class="entry-month">Jun</span>
+                </div>
+                <div class="entry-body">
+                    <div class="entry-title">Money dashboard unlock — race condition fix + DB-backed unlock state</div>
+                    <div class="entry-desc">Fixed a race condition where the "This Week" (day 3) and "Top Categories" (day 7) dashboard cards would never unlock because the dashboard init loaded them in parallel before the first-transaction date was seeded. Unlock state now fetches your actual first expense date directly from the database (instead of a localStorage estimate), so the progress bars are accurate across devices and after cache clears. Evening Swipe unlock also now cross-references triaged expense history from the DB rather than localStorage alone.</div>
+                    <div class="entry-badge fix">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+                        Fix
+                    </div>
+                </div>
+            </div>
+
+            <div class="entry">
+                <div class="entry-date">
                     <span class="entry-day">06</span>
                     <span class="entry-month">Jun</span>
                 </div>
