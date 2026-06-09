@@ -295,6 +295,19 @@ app.use((err, req, res, next) => {
 
 const { purgeExpiredStash } = require('./db/email-to-tasks');
 
+// Run migrations before accepting traffic — works regardless of how Render invokes the process
+if (process.env.DATABASE_URL) {
+  try {
+    require('child_process').execFileSync(
+      process.execPath,
+      [require('path').join(__dirname, 'migrate.js')],
+      { stdio: 'inherit', env: process.env, timeout: 60000 }
+    );
+  } catch (e) {
+    console.error('[server] migration script exited with error — server will start anyway:', e.message);
+  }
+}
+
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);
   newsRouteFactory.startRssCron(pool);
