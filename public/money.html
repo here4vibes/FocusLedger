@@ -589,9 +589,13 @@ const CATS = [
 ];
 
 const CAT_ICON_MAP = {
-  'Food & Dining':'🍕','Groceries':'🛒','Shopping':'🛍️','Bills & Utilities':'📄',
-  'Entertainment':'🎮','Health':'🏥','Transport':'🚗','Housing':'🏠',
+  // DB category names (current)
+  'Food & Delivery':'🍕','Groceries':'🛒','Shopping':'🛍️','Bills':'📄',
+  'Fun':'🎮','Health':'🏥','Transport':'🚗','Housing':'🏠',
   'Subscriptions':'🔄','Other':'📦',
+  // Legacy names (kept for any old records)
+  'Food & Dining':'🍕','Bills & Utilities':'📄','Entertainment':'🎮',
+  // Slugs
   food_delivery:'🍕',groceries:'🛒',shopping:'🛍️',bills:'📄',fun:'🎮',
   health:'🏥',transport:'🚗',housing:'🏠',subscriptions:'🔄',other:'📦',
 };
@@ -620,6 +624,7 @@ document.addEventListener('DOMContentLoaded', () => {
   loadNudgeConfig();
   loadSpendingAlerts();
   checkUntriaged();
+  loadExpenses(currentPeriod);
 
   // Watch amount input for reflection card trigger
   document.getElementById('amountInput').addEventListener('input', onAmountChange);
@@ -1080,8 +1085,8 @@ async function loadCategoriesCard() {
 // ─── Evening swipe completion ────────────────────────────────────────────────
 async function markEveningSwipeDone() {
   try {
-    const session = await api('/api/v1/spending-sessions/today');
-    if (session.success && session.session && session.complete) {
+    const session = await api('/api/money/spending-sessions/today');
+    if (session.success && session.session && session.session.complete) {
       localStorage.setItem('fl_evening_swipe_done', 'true');
     }
   } catch (e) { /* silent */ }
@@ -1461,9 +1466,6 @@ function renderExpenses(expenses) {
         <div class="exp-amount">${fmt(e.amount)}</div>
       </div>`;
   }).join('');
-
-  // Also update dashboard cards when expenses load
-  initDashboard();
 }
 
 function setPeriod(period, btn) {
@@ -1576,10 +1578,10 @@ function guessSlugFromCategory(catName) {
   if (!catName) return 'other';
   const n = catName.toLowerCase();
   if (n.includes('groc') || n.includes('supermarket')) return 'groceries';
-  if (n.includes('food') || n.includes('dining') || n.includes('restaurant')) return 'food_delivery';
+  if (n.includes('food') || n.includes('dining') || n.includes('restaurant') || n.includes('delivery')) return 'food_delivery';
   if (n.includes('shop') || n.includes('amazon') || n.includes('cloth')) return 'shopping';
   if (n.includes('bill') || n.includes('util')) return 'bills';
-  if (n.includes('enter') || n.includes('recreat')) return 'fun';
+  if (n.includes('fun') || n.includes('enter') || n.includes('recreat')) return 'fun';
   if (n.includes('health') || n.includes('medical')) return 'health';
   if (n.includes('transport') || n.includes('travel')) return 'transport';
   if (n.includes('housing') || n.includes('rent') || n.includes('mortgage')) return 'housing';
@@ -1885,28 +1887,27 @@ function attachSwipeToCard(card, expenseId, amount) {
     if (!amount || amount <= 0) { document.getElementById('cfAmount').focus(); return; }
 
     var tkn = localStorage.getItem('fl_token') || '';
-    fetch('/api/expenses', {
+    fetch('/api/money/expenses', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + tkn },
       body: JSON.stringify({
         amount: amount,
         category: category,
-        description: merchant || category,
+        note: merchant || null,
         expense_date: date,
-        source: 'manual'
       })
     })
     .then(function(r) { return r.json(); })
     .then(function(data) {
       if (data.success) {
         closeCapture();
-        // Show success toast and reload expenses
         var t = document.createElement('div');
         t.textContent = '✓ Receipt logged — $' + amount.toFixed(2);
         t.style.cssText = 'position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:#011e5c;color:white;padding:0.65rem 1.25rem;border-radius:10px;font-size:0.85rem;font-weight:500;z-index:9999;white-space:nowrap;';
         document.body.appendChild(t);
         setTimeout(function() { t.remove(); }, 2800);
-        if (typeof loadExpenses === 'function') loadExpenses();
+        if (typeof loadExpenses === 'function') loadExpenses(currentPeriod);
+        if (typeof initDashboard === 'function') initDashboard();
       }
     })
     .catch(function() {});
