@@ -174,13 +174,69 @@ function parseNaturalLanguage(text) {
     clean = clean.replace(pat, '').trim();
   }
 
+  // Parse and strip recurrence phrase from title
+  const recurrence = parseRecurrence(clean);
+  if (recurrence) {
+    clean = clean.replace(new RegExp(recurrence.phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i'), '').replace(/\s{2,}/g, ' ').trim();
+  }
+
   return {
     parsed: {
       date: dateResult?.date || null,
       time: timeStr || null,
+      recurrence: recurrence,
     },
     remaining: clean,
   };
+}
+
+/**
+ * Detect recurrence patterns in task title text.
+ * Returns { type, day, label, phrase } or null.
+ *   type: 'daily' | 'weekdays' | 'weekly' | 'monthly'
+ *   day:  0-6 (JS day-of-week) for weekly, null otherwise
+ *   label: human-readable chip text
+ *   phrase: the matched text to strip from the title
+ */
+const RECUR_DAY_MAP = { sunday:0, sun:0, monday:1, mon:1, tuesday:2, tue:2, wednesday:3, wed:3, thursday:4, thu:4, friday:5, fri:5, saturday:6, sat:6 };
+const RECUR_DAY_NAMES = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+
+function parseRecurrence(text) {
+  const t = text.toLowerCase();
+
+  // "every day" / "daily"
+  const dailyM = t.match(/\b(every\s+day|daily)\b/);
+  if (dailyM) return { type: 'daily', day: null, label: '🔄 Daily', phrase: dailyM[0] };
+
+  // "every weekday" / "weekdays" / "each weekday"
+  const wdM = t.match(/\b(every\s+weekday|each\s+weekday|weekdays)\b/);
+  if (wdM) return { type: 'weekdays', day: null, label: '🔄 Weekdays', phrase: wdM[0] };
+
+  // "every monday" / "each friday" / "mondays" / "tuesdays" etc.
+  const dayNamePat = /\b(?:every|each)\s+(sun|mon|tue|wed|thu|fri|sat|sunday|monday|tuesday|wednesday|thursday|friday|saturday)\b/;
+  const dayPluralPat = /\b(sundays?|mondays?|tuesdays?|wednesdays?|thursdays?|fridays?|saturdays?)\b/;
+  const everyDayM = t.match(dayNamePat);
+  if (everyDayM) {
+    const key = everyDayM[1].toLowerCase();
+    const dayNum = RECUR_DAY_MAP[key];
+    if (dayNum !== undefined) return { type: 'weekly', day: dayNum, label: '🔄 Every ' + RECUR_DAY_NAMES[dayNum], phrase: everyDayM[0] };
+  }
+  const pluralDayM = t.match(dayPluralPat);
+  if (pluralDayM) {
+    const key = pluralDayM[1].toLowerCase().replace(/s$/, '');
+    const dayNum = RECUR_DAY_MAP[key];
+    if (dayNum !== undefined) return { type: 'weekly', day: dayNum, label: '🔄 Every ' + RECUR_DAY_NAMES[dayNum], phrase: pluralDayM[0] };
+  }
+
+  // "every week" / "weekly"
+  const weekM = t.match(/\b(every\s+week|weekly)\b/);
+  if (weekM) return { type: 'weekly', day: null, label: '🔄 Weekly', phrase: weekM[0] };
+
+  // "every month" / "monthly" / "once a month"
+  const monthM = t.match(/\b(every\s+month|monthly|once\s+a\s+month)\b/);
+  if (monthM) return { type: 'monthly', day: null, label: '🔄 Monthly', phrase: monthM[0] };
+
+  return null;
 }
 
 /**
