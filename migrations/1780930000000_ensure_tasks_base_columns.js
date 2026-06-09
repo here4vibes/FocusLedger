@@ -34,5 +34,19 @@ module.exports = {
 
     await client.query(`CREATE INDEX IF NOT EXISTS idx_tasks_user_completed ON tasks (user_id, is_completed)`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_tasks_user_due       ON tasks (user_id, due_date)`);
+
+    // Add primary key if missing — required for GROUP BY t.id to work with SELECT t.*
+    // Safe: DO block checks pg_constraint before trying to add
+    await client.query(`
+      DO $$
+      BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM pg_constraint
+          WHERE conrelid = 'tasks'::regclass AND contype = 'p'
+        ) THEN
+          ALTER TABLE tasks ADD PRIMARY KEY (id);
+        END IF;
+      END$$
+    `);
   },
 };

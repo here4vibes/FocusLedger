@@ -341,21 +341,19 @@ async function recategorizeTransaction(pool, plaidTxId, userId, categorySlug) {
 
 // Get Plaid items with accounts for a user (for Account Summary card)
 async function getPlaidItemsWithAccounts(pool, userId) {
+  // Avoid GROUP BY pi.id (fails with 42803 if id lacks PK constraint) — two queries + JS merge
   const { rows: items } = await pool.query(
-    `SELECT pi.*, json_agg(
-       json_build_object('id', pa.id, 'name', pa.name, 'type', pa.type, 'subtype', pa.subtype, 'mask', pa.mask)
-     ) FILTER (WHERE pa.id IS NOT NULL) AS plaid_accounts
-     FROM plaid_items pi
-     LEFT JOIN plaid_accounts pa ON pa.plaid_item_id = pi.id
-     WHERE pi.user_id = $1
-     GROUP BY pi.id
-     ORDER BY pi.created_at DESC`,
+    'SELECT * FROM plaid_items WHERE user_id = $1 ORDER BY created_at DESC',
     [userId]
   );
-  return items.map(item => ({
-    ...item,
-    plaid_accounts: item.plaid_accounts || [],
-  }));
+  if (!items.length) return [];
+  const { rows: accounts } = await pool.query(
+    'SELECT * FROM plaid_accounts WHERE plaid_item_id = ANY($1)',
+    [items.map(i => i.id)]
+  );
+  const accByItem = {};
+  for (const a of accounts) (accByItem[a.plaid_item_id] = accByItem[a.plaid_item_id] || []).push(a);
+  return items.map(item => ({ ...item, plaid_accounts: accByItem[item.id] || [] }));
 }
 
 // Upsert a plaid_item (called after token exchange)
