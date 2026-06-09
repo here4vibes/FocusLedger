@@ -108,7 +108,8 @@ async function listTasks(req, res) {
     res.json({ success: true, tasks: enriched });
   } catch (err) {
     console.error('[tasks] list error:', err);
-    res.status(500).json({ success: false, message: 'Failed to fetch tasks' });
+    const detail = err.code ? `[${err.code}]` : (err.message || '').slice(0, 60);
+    res.status(500).json({ success: false, message: `Failed to fetch tasks ${detail}`.trim() });
   }
 }
 
@@ -459,7 +460,9 @@ async function createTask(req, res) {
     }
   } catch (err) {
     console.error('[tasks] create error:', err);
-    res.status(500).json({ success: false, message: 'Failed to create task' });
+    // Temporarily expose error code in toast so we can diagnose production failures
+    const detail = err.code ? `[${err.code}]` : (err.message || '').slice(0, 60);
+    res.status(500).json({ success: false, message: `Failed to create task ${detail}`.trim() });
   }
 }
 
