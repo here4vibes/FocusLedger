@@ -807,13 +807,18 @@
 
     // ── Toggle task ────────────────────────────────────────────────────────────
     async function toggleTask(taskId) {
-        const data = await api('PATCH', '/api/tasks/' + taskId + '/toggle');
-        if (data.success) {
-            // Animate checkbox
-            const check = document.querySelector('.task-checkbox[data-id="' + taskId + '"]');
-            if (check) check.classList.add('done');
-            setTimeout(() => fetchTasks(), 400);
-            fetchSummary();
+        try {
+            const data = await api('PATCH', '/api/tasks/' + taskId + '/toggle');
+            if (data.success) {
+                const check = document.querySelector('.task-checkbox[data-id="' + taskId + '"]');
+                if (check) check.classList.add('done');
+                setTimeout(() => fetchTasks(), 400);
+                fetchSummary();
+            } else {
+                showToast(data.message || 'Could not complete task');
+            }
+        } catch {
+            showToast('Network error — try again');
         }
     }
 
@@ -1109,7 +1114,7 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
                 Vault
             </a>
-            <a href="/app/buddy" class="bottom-tab">
+            <a href="/app/buddy" class="bottom-tab" id="navBuddyTab">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
                 Buddy
             </a>
@@ -1133,6 +1138,14 @@
 
         buildMobileNav();
 
+        // Wire Buddy nav tab to open panel instead of navigating
+        document.getElementById('navBuddyTab').addEventListener('click', function(e) {
+            if (typeof window.openBuddyPanel === 'function') {
+                e.preventDefault();
+                window.openBuddyPanel();
+            }
+        });
+
         // Wire date parser to FAB system
         window._qaParse = parseNaturalLanguage;
         window._qaChipLabel = chipLabel;
@@ -1149,5 +1162,6 @@
 
     init();
     </script>
+    <script src="/buddy-widget.js"></script>
 </body>
 </html>

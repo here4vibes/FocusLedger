@@ -25,18 +25,8 @@
 
   // ── State ──────────────────────────────────────────────────────────────
 
-  let bubbleEl = null;
-  let dragGhost = null;
   let panelOverlay = null;
   let panelEl = null;
-  let isDragging = false;
-  let dragStartX = 0;
-  let dragStartY = 0;
-  let dragMoved = false; // track if finger moved > threshold during a touch drag
-  let bubbleStartX = 20;
-  let bubbleStartY = -80;
-  let lastTapTime = 0;
-  let lastTouchTapTime = 0; // separate double-tap tracking for touch events
   let panelOpen = false;
   let authToken = null;
   let userId = null;
@@ -393,6 +383,7 @@
     var overlay = document.createElement('div');
     overlay.id = 'bw-panel-overlay';
     overlay.setAttribute('aria-hidden', 'true');
+    overlay.style.pointerEvents = 'none'; // safe default even if CSS hasn't loaded yet
     document.body.appendChild(overlay);
     overlay.addEventListener('click', closePanel);
 
@@ -469,17 +460,10 @@
     if (panelOpen) return;
     panelOpen = true;
 
-    bubbleEl.classList.remove('idle');
-    bubbleEl.classList.add('active');
-    bubbleEl.setAttribute('aria-expanded', 'true');
     panelOverlay.classList.add('open');
+    panelOverlay.style.pointerEvents = 'auto';
     panelEl.classList.add('open');
     panelOverlay.setAttribute('aria-hidden', 'false');
-
-    // Clear notification on open
-    bubbleEl.classList.remove('has-notification');
-    bubbleEl.querySelector('#bw-notif-badge').textContent = '0';
-    bubbleEl.classList.remove('has-badge');
 
     // Show context prompt if available
     showContextPrompt();
@@ -501,10 +485,8 @@
     if (!panelOpen) return;
     panelOpen = false;
 
-    bubbleEl.classList.remove('active');
-    bubbleEl.classList.add('idle');
-    bubbleEl.setAttribute('aria-expanded', 'false');
     panelOverlay.classList.remove('open');
+    panelOverlay.style.pointerEvents = 'none';
     panelEl.classList.remove('open');
     panelOverlay.setAttribute('aria-hidden', 'true');
   }
@@ -941,22 +923,7 @@
     try {
       var res = await api('/api/buddy-widget/notification-count');
       if (!res.success) return;
-
-      var badge = bubbleEl.querySelector('#bw-notif-badge');
-      var count = res.count || 0;
-
-      if (count > 0) {
-        badge.textContent = count > 9 ? '9+' : String(count);
-        bubbleEl.classList.add('has-badge');
-        bubbleEl.classList.add('has-notification');
-      } else {
-        badge.textContent = '0';
-        bubbleEl.classList.remove('has-badge');
-        // Keep has-notification if there's a new buddy message
-        if (!res.hasBuddyMessage) {
-          bubbleEl.classList.remove('has-notification');
-        }
-      }
+      // Notification badge removed with floating bubble — no-op, kept for API health check
     } catch {}
   }
 
@@ -1004,24 +971,14 @@
 
     injectStylesheet();
 
-    var prefs = await loadPreferences();
-    if (prefs === null) return;
-
-    bubbleEl = buildBubble();
-    dragGhost = buildDragGhost();
     var parts = buildPanel();
     panelOverlay = parts.overlay;
     panelEl = parts.panel;
 
-    document.body.appendChild(bubbleEl);
+    // Expose for nav tap integration — Buddy tab calls window.openBuddyPanel()
+    window.openBuddyPanel = openPanel;
 
-    setupDrag(bubbleEl);
-    setupTap(bubbleEl);
     setupTaskCompletionListener();
-
-    setTimeout(function () {
-      if (bubbleEl) bubbleEl.classList.remove('entering');
-    }, 500);
 
     // Detect context on init (async, non-blocking)
     detectContext();

@@ -81,6 +81,17 @@
     a.className = className + (isActive(item.href) ? ' active' : '');
     a.setAttribute('aria-current', isActive(item.href) ? 'page' : null);
 
+    // Buddy tab: open panel instead of navigating when widget is loaded
+    if (item.label === 'Buddy') {
+      a.addEventListener('click', function (e) {
+        if (typeof window.openBuddyPanel === 'function') {
+          e.preventDefault();
+          window.openBuddyPanel();
+        }
+        // else: fall through to normal navigation (/app/buddy)
+      });
+    }
+
     var iconEl = document.createElement('span');
     iconEl.className = 'shared-nav-icon';
     iconEl.setAttribute('aria-hidden', 'true');
