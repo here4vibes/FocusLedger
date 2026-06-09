@@ -964,42 +964,49 @@
   // ── Init ───────────────────────────────────────────────────────────
 
   async function init() {
-    pageUrl = window.location.pathname;
+    try {
+      pageUrl = window.location.pathname;
 
-    if (!isLoggedIn()) return;
-    if (isExcludedPage()) return;
+      if (!isLoggedIn()) { window.__buddyReady = false; window.__buddySkip = 'not-logged-in'; return; }
+      if (isExcludedPage()) { window.__buddyReady = false; window.__buddySkip = 'excluded-page'; return; }
 
-    injectStylesheet();
+      injectStylesheet();
 
-    var parts = buildPanel();
-    panelOverlay = parts.overlay;
-    panelEl = parts.panel;
+      var parts = buildPanel();
+      panelOverlay = parts.overlay;
+      panelEl = parts.panel;
 
-    // Expose for nav tap integration — Buddy tab calls window.openBuddyPanel()
-    window.openBuddyPanel = openPanel;
+      // Expose for nav tap integration — Buddy tab calls window.openBuddyPanel()
+      window.openBuddyPanel = openPanel;
+      window.__buddyReady = true;
 
-    setupTaskCompletionListener();
+      setupTaskCompletionListener();
 
-    // Detect context on init (async, non-blocking)
-    detectContext();
+      // Detect context on init (async, non-blocking)
+      detectContext();
 
-    // Check notifications on init + every 60s
-    checkNotifications();
-    setInterval(checkNotifications, 60000);
+      // Check notifications on init + every 60s
+      checkNotifications();
+      setInterval(checkNotifications, 60000);
 
-    // Track first money visit
-    checkFirstMoneyVisit();
+      // Track first money visit
+      checkFirstMoneyVisit();
 
-    // Keyboard shortcut: Escape to close
-    document.addEventListener('keydown', function (e) {
-      if ((e.key === 'Escape' || e.key === 'Esc') && panelOpen) {
-        closePanel();
-      }
-    });
+      // Keyboard shortcut: Escape to close
+      document.addEventListener('keydown', function (e) {
+        if ((e.key === 'Escape' || e.key === 'Esc') && panelOpen) {
+          closePanel();
+        }
+      });
 
-    window.addEventListener('popstate', function () {
-      if (panelOpen) closePanel();
-    });
+      window.addEventListener('popstate', function () {
+        if (panelOpen) closePanel();
+      });
+    } catch(e) {
+      window.__buddyReady = false;
+      window.__buddyError = e.message;
+      console.error('[buddy-widget] init failed:', e);
+    }
   }
 
   if (document.readyState === 'loading') {
