@@ -1,10 +1,9 @@
-// Phase 3B: Plaid integration backed by Prisma.
+// Phase 3B: Plaid integration backed by pg.Pool (Prisma removed).
 // Owns: Plaid Link flow, token exchange, transaction sync, bill detection, task matching.
 // Does NOT own: auth middleware, expense CRUD (routes/money-prisma.js).
 const express = require('express');
 const crypto = require('crypto');
 const { checkProStatus } = require('../middleware/proUtils');
-const { prisma } = require('../lib/prisma');
 
 // ── Auth: session cookie (fl_sid) OR Bearer JWT ──────────────────────────────
 function requireAuth(req, res, next) {
@@ -19,6 +18,7 @@ function requireAuth(req, res, next) {
     res.status(401).json({ success: false, message: 'Invalid or expired token' });
   }
 }
+
 const {
   upsertPlaidItem,
   deletePlaidItem,
@@ -252,7 +252,7 @@ function getPlaidClient() {
 }
 
 // ── Sync transactions ────────────────────────────────────────────────────────
-async function syncTransactions(item) {
+async function syncTransactions(pool, item) {
   const plaid = getPlaidClient();
   if (!plaid) return 0;
 
@@ -262,8 +262,8 @@ async function syncTransactions(item) {
   let added = 0;
   const billCandidates = [];
 
-  const accountMap = await getAccountMap(item.id);
-  const categoriesByName = await getCategoriesMap();
+  const accountMap = await getAccountMap(pool, item.id);
+  const categoriesByName = await getCategoriesMap(pool);
 
   while (hasMore) {
     const response = await plaid.transactionsSync({ access_token: accessToken, cursor: cursor || undefined, count: 100 });
@@ -280,7 +280,7 @@ async function syncTransactions(item) {
         ? `${tx.personal_finance_category.primary}/${tx.personal_finance_category.detailed}`
         : (tx.category ? tx.category.join(' > ') : null);
 
-      await insertPlaidTransaction({
+      await insertPlaidTransaction(pool, {
         plaidAccountId, userId: item.user_id, transactionId: tx.transaction_id,
         amount: tx.amount, description: tx.merchant_name || tx.name || 'Unknown',
         merchantName: tx.merchant_name || null, categoryId: category?.id || null,
@@ -291,9 +291,10 @@ async function syncTransactions(item) {
     }
 
     for (const removedTx of removed) {
-      await prisma.plaid_transaction.deleteMany({
-        where: { transaction_id: removedTx.transaction_id, user_id: item.user_id, is_confirmed: false },
-      });
+      await pool.query(
+        'DELETE FROM plaid_transactions WHERE transaction_id = $1 AND user_id = $2 AND is_confirmed = false',
+        [removedTx.transaction_id, item.user_id]
+      );
     }
 
     cursor = next_cursor;
@@ -301,19 +302,19 @@ async function syncTransactions(item) {
     if (!hasMore) break;
   }
 
-  await updateItemCursor(item.id, cursor);
+  await updateItemCursor(pool, item.id, cursor);
   console.log(`[Plaid] Synced item ${item.id} for user ${item.user_id}: ${added} new transactions`);
 
   if (billCandidates.length > 0) {
-    detectAndCreateBillTasks(item.user_id, billCandidates).catch(e => console.error('[BillTasks] Error:', e.message));
+    detectAndCreateBillTasks(pool, item.user_id, billCandidates).catch(e => console.error('[BillTasks] Error:', e.message));
   }
   return added;
 }
 
 // ── Bill detection + auto-task creation ──────────────────────────────────────
-async function detectAndCreateBillTasks(userId, newTransactionData) {
+async function detectAndCreateBillTasks(pool, userId, newTransactionData) {
   if (!newTransactionData || newTransactionData.length === 0) return;
-  const disabledMerchants = await getDisabledMerchantKeys(userId);
+  const disabledMerchants = await getDisabledMerchantKeys(pool, userId);
   const tasksCreated = [];
 
   for (const tx of newTransactionData) {
@@ -326,25 +327,33 @@ async function detectAndCreateBillTasks(userId, newTransactionData) {
 
     const cutoff = new Date();
     cutoff.setDate(cutoff.getDate() - 35);
-    const existing = await prisma.task.findFirst({
-      where: { user_id: userId, source: 'auto_bill', bill_merchant_key: merchantKey, is_completed: false, created_at: { gte: cutoff } },
-    });
-    if (existing) continue;
+    const { rows: existing } = await pool.query(
+      `SELECT id FROM tasks WHERE user_id = $1 AND source = 'auto_bill' AND bill_merchant_key = $2
+       AND is_completed = false AND created_at >= $3 LIMIT 1`,
+      [userId, merchantKey, cutoff]
+    );
+    if (existing.length) continue;
 
     const txDate = tx.transaction_date ? new Date(tx.transaction_date) : new Date();
     const dueDate = new Date(txDate);
     dueDate.setDate(dueDate.getDate() + 3);
 
-    await prisma.task.create({
-      data: {
-        user_id: userId, title: `Pay ${displayName}`,
-        description: `Auto-detected from bank sync. ${getBillTypeLabel(billInfo.type)} payment.`,
-        priority: 'high', due_date: dueDate, source: 'auto_bill',
-        bill_merchant_key: merchantKey, bill_type: billInfo.type,
-      },
-    });
+    await pool.query(
+      `INSERT INTO tasks (user_id, title, description, priority, due_date, source, bill_merchant_key, bill_type)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+      [
+        userId,
+        `Pay ${displayName}`,
+        `Auto-detected from bank sync. ${getBillTypeLabel(billInfo.type)} payment.`,
+        'high',
+        dueDate,
+        'auto_bill',
+        merchantKey,
+        billInfo.type,
+      ]
+    );
     tasksCreated.push({ merchantKey, displayName, type: billInfo.type });
-    await trackBillMerchant(userId, merchantKey, displayName, billInfo.type);
+    await trackBillMerchant(pool, userId, merchantKey, displayName, billInfo.type);
   }
 
   if (tasksCreated.length > 0) {
@@ -353,7 +362,7 @@ async function detectAndCreateBillTasks(userId, newTransactionData) {
 }
 
 // ── Express Router ────────────────────────────────────────────────────────────
-module.exports = function() {
+module.exports = function(pool) {
   const router = express.Router();
 
   // GET /api/plaid/diagnostic — test Plaid API keys directly, no auth required
@@ -394,8 +403,6 @@ module.exports = function() {
       const errorMsg  = plaidErr?.error_message || plaidErr?.display_message || err.message;
       const errorType = plaidErr?.error_type || 'api_error';
       console.error('[Plaid] Diagnostic failed: code=' + errorCode + ' type=' + errorType + ' msg=' + errorMsg);
-      // WHY hint: INVALID_API_KEYS with correct lengths usually means the secret
-      // value is wrong, or sandbox keys are being used against production (or vice versa)
       const hint = errorCode === 'INVALID_API_KEYS'
         ? `Credentials rejected by Plaid (env=${plaidEnv}). Verify: (1) the secret matches what's in Plaid Dashboard > Keys for the "${plaidEnv}" environment, (2) the secret wasn't truncated during copy-paste, (3) you're not mixing sandbox and production keys.`
         : null;
@@ -411,18 +418,23 @@ module.exports = function() {
   router.use(requireAuth);
 
   // GET /api/plaid/balances — returns live balances for all connected Plaid items
-  // Used by money.html Account Summary card to show actual account balances.
   router.get('/balances', async (req, res) => {
     try {
       const userId = req.user.id;
       const plaid = getPlaidClient();
       if (!plaid) return res.status(503).json({ success: false, message: 'Bank sync not configured' });
 
-      const items = await prisma.plaid_item.findMany({
-        where: { user_id: userId },
-        orderBy: { created_at: 'desc' },
-        include: { plaid_accounts: { select: { account_id: true, name: true, type: true, subtype: true, mask: true } } },
-      });
+      const { rows: items } = await pool.query(
+        `SELECT pi.*, json_agg(json_build_object(
+           'account_id', pa.account_id, 'name', pa.name, 'type', pa.type, 'subtype', pa.subtype, 'mask', pa.mask
+         )) FILTER (WHERE pa.id IS NOT NULL) AS plaid_accounts
+         FROM plaid_items pi
+         LEFT JOIN plaid_accounts pa ON pa.plaid_item_id = pi.id
+         WHERE pi.user_id = $1
+         GROUP BY pi.id
+         ORDER BY pi.created_at DESC`,
+        [userId]
+      );
 
       const resultItems = [];
       for (const item of items) {
@@ -446,7 +458,6 @@ module.exports = function() {
           }));
           resultItems.push({ item_id: item.id, institution: item.institution_name, accounts });
         } catch (e) {
-          // Per-item failure shouldn't block the whole response
           console.warn('[Plaid] Balance fetch failed for item', item.id, ':', e.message);
         }
       }
@@ -463,16 +474,27 @@ module.exports = function() {
       const userId = req.user.id;
       const isConfigured = !!(process.env.PLAID_CLIENT_ID && process.env.PLAID_SECRET);
       const plaidEnv = process.env.PLAID_ENV || 'sandbox';
-      // WHY prisma not prisma.pool: PrismaClient has no .pool prop; checkProStatus's
-      // queryRaw() detects Prisma via .$queryRawUnsafe and handles it directly.
-      const isPro = await checkProStatus(prisma, userId);
-      const items = await prisma.plaid_item.findMany({
-        where: { user_id: userId },
-        include: { plaid_accounts: { select: { id: true, name: true, type: true, subtype: true, mask: true } } },
-        orderBy: { created_at: 'desc' },
+      const isPro = await checkProStatus(pool, userId);
+      const { rows: items } = await pool.query(
+        `SELECT pi.*, json_agg(json_build_object(
+           'id', pa.id, 'name', pa.name, 'type', pa.type, 'subtype', pa.subtype, 'mask', pa.mask
+         )) FILTER (WHERE pa.id IS NOT NULL) AS plaid_accounts
+         FROM plaid_items pi
+         LEFT JOIN plaid_accounts pa ON pa.plaid_item_id = pi.id
+         WHERE pi.user_id = $1
+         GROUP BY pi.id
+         ORDER BY pi.created_at DESC`,
+        [userId]
+      );
+      const { rows: pendingRows } = await pool.query(
+        'SELECT COUNT(*)::int AS c FROM plaid_transactions WHERE user_id = $1 AND is_confirmed = false AND is_pending = false',
+        [userId]
+      );
+      res.json({
+        success: true, is_configured: isConfigured, plaid_env: plaidEnv, is_pro: isPro,
+        items: items.map(i => ({ ...i, plaid_accounts: i.plaid_accounts || [] })),
+        pending_review_count: pendingRows[0].c,
       });
-      const pendingCount = await prisma.plaid_transaction.count({ where: { user_id: userId, is_confirmed: false, is_pending: false } });
-      res.json({ success: true, is_configured: isConfigured, plaid_env: plaidEnv, is_pro: isPro, items, pending_review_count: pendingCount });
     } catch (err) {
       console.error('[Plaid] Error getting status:', err);
       res.status(500).json({ success: false, message: 'Failed to get Plaid status' });
@@ -482,7 +504,7 @@ module.exports = function() {
   router.post('/create-link-token', async (req, res) => {
     try {
       const userId = req.user.id;
-      const isPro = await checkProStatus(prisma, userId).catch(() => false);
+      const isPro = await checkProStatus(pool, userId).catch(() => false);
       if (!isPro) return res.status(403).json({ success: false, message: 'Bank sync is an Autopilot feature.' });
       const plaid = getPlaidClient();
       if (!plaid) {
@@ -516,18 +538,18 @@ module.exports = function() {
       const userId = req.user.id;
       const { public_token, institution_name, institution_id } = req.body;
       if (!public_token) return res.status(400).json({ success: false, message: 'public_token required' });
-      const isPro = await checkProStatus(prisma, userId).catch(() => false);
+      const isPro = await checkProStatus(pool, userId).catch(() => false);
       if (!isPro) return res.status(403).json({ success: false, message: 'Bank sync is an Autopilot feature.' });
       const plaid = getPlaidClient();
       if (!plaid) return res.status(503).json({ success: false, message: 'Bank sync is being set up.' });
       const exchangeResponse = await plaid.itemPublicTokenExchange({ public_token });
       const { access_token, item_id } = exchangeResponse.data;
-      const plaidItem = await upsertPlaidItem(userId, encryptPlaidToken(access_token), item_id, institution_name || 'Unknown Bank', institution_id || null);
+      const plaidItem = await upsertPlaidItem(pool, userId, encryptPlaidToken(access_token), item_id, institution_name || 'Unknown Bank', institution_id || null);
       const accountsResponse = await plaid.accountsGet({ access_token });
       for (const acc of accountsResponse.data.accounts) {
-        await upsertPlaidAccount(plaidItem.id, userId, acc.account_id, acc.name, acc.official_name || null, acc.type, acc.subtype || null, acc.mask || null);
+        await upsertPlaidAccount(pool, plaidItem.id, userId, acc.account_id, acc.name, acc.official_name || null, acc.type, acc.subtype || null, acc.mask || null);
       }
-      syncTransactions(plaidItem).catch(e => console.error('[Plaid] Initial sync error:', e.message));
+      syncTransactions(pool, plaidItem).catch(e => console.error('[Plaid] Initial sync error:', e.message));
       res.json({ success: true, message: 'Connected. Bringing in your transactions.', item_id: plaidItem.id, institution_name: plaidItem.institution_name });
     } catch (err) {
       console.error('[Plaid] Error exchanging token:', err.response?.data || err.message);
@@ -539,10 +561,13 @@ module.exports = function() {
     try {
       const userId = req.user.id;
       const { item_id } = req.body;
-      const where = item_id ? { id: parseInt(item_id), user_id: userId } : { user_id: userId };
-      const items = await prisma.plaid_item.findMany({ where });
+      const where = item_id
+        ? 'WHERE id = $1 AND user_id = $2'
+        : 'WHERE user_id = $1';
+      const vals = item_id ? [parseInt(item_id), userId] : [userId];
+      const { rows: items } = await pool.query(`SELECT * FROM plaid_items ${where}`, vals);
       let totalAdded = 0;
-      for (const item of items) { totalAdded += await syncTransactions(item); }
+      for (const item of items) { totalAdded += await syncTransactions(pool, item); }
       res.json({ success: true, transactions_added: totalAdded, message: `${totalAdded} new transactions ready to review` });
     } catch (err) {
       console.error('[Plaid] Error syncing:', err.response?.data || err.message);
@@ -553,11 +578,17 @@ module.exports = function() {
   router.get('/transactions/pending', async (req, res) => {
     try {
       const userId = req.user.id;
-      const txs = await prisma.plaid_transaction.findMany({
-        where: { user_id: userId, is_confirmed: false, is_pending: false },
-        orderBy: [{ transaction_date: 'desc' }, { created_at: 'desc' }], take: 50,
-        include: { categories: { select: { name: true, color: true, icon: true } }, plaid_account: { select: { name: true, mask: true } } },
-      });
+      const { rows: txs } = await pool.query(
+        `SELECT pt.*, c.name as category_name, c.color as category_color, c.icon as category_icon,
+                pa.name as account_name, pa.mask
+         FROM plaid_transactions pt
+         LEFT JOIN categories c ON pt.category_id = c.id
+         LEFT JOIN plaid_accounts pa ON pt.plaid_account_id = pa.id
+         WHERE pt.user_id = $1 AND pt.is_confirmed = false AND pt.is_pending = false
+         ORDER BY pt.transaction_date DESC, pt.created_at DESC
+         LIMIT 50`,
+        [userId]
+      );
       res.json({ success: true, transactions: txs });
     } catch (err) { console.error('[Plaid] Error fetching pending:', err); res.status(500).json({ success: false, message: 'Failed to fetch pending transactions' }); }
   });
@@ -566,35 +597,68 @@ module.exports = function() {
     try {
       const userId = req.user.id; const { id } = req.params; const { category_name } = req.body;
       if (!category_name) return res.status(400).json({ success: false, message: 'category_name required' });
-      const cat = await prisma.categories.findFirst({ where: { name: { equals: category_name, mode: 'insensitive' } } });
-      if (!cat) return res.status(404).json({ success: false, message: 'Category not found' });
-      const count = await prisma.plaid_transaction.count({ where: { id: parseInt(id), user_id: userId } });
-      if (count === 0) return res.status(404).json({ success: false, message: 'Transaction not found' });
-      await prisma.plaid_transaction.update({ where: { id: parseInt(id) }, data: { category_id: cat.id, updated_at: new Date() } });
-      res.json({ success: true, category_id: cat.id });
+      const { rows: catRows } = await pool.query(
+        'SELECT id FROM categories WHERE LOWER(name) = LOWER($1) LIMIT 1',
+        [category_name]
+      );
+      if (!catRows.length) return res.status(404).json({ success: false, message: 'Category not found' });
+      const { rows: txRows } = await pool.query(
+        'SELECT id FROM plaid_transactions WHERE id = $1 AND user_id = $2',
+        [parseInt(id), userId]
+      );
+      if (!txRows.length) return res.status(404).json({ success: false, message: 'Transaction not found' });
+      await pool.query(
+        'UPDATE plaid_transactions SET category_id = $1, updated_at = NOW() WHERE id = $2',
+        [catRows[0].id, parseInt(id)]
+      );
+      res.json({ success: true, category_id: catRows[0].id });
     } catch (err) { console.error('[Plaid] Error updating category:', err); res.status(500).json({ success: false, message: 'Category did not save. Worth retrying.' }); }
   });
 
   router.post('/transactions/:id/confirm', async (req, res) => {
     try {
       const userId = req.user.id; const { id } = req.params;
-      const tx = await prisma.plaid_transaction.findFirst({ where: { id: parseInt(id), user_id: userId, is_confirmed: false } });
-      if (!tx) return res.status(404).json({ success: false, message: 'Transaction not found' });
-      const expense = await prisma.expense.create({
-        data: { user_id: userId, amount: parseFloat(tx.amount), description: tx.description || tx.merchant_name || 'Unknown', category_id: tx.category_id, expense_date: tx.transaction_date ? new Date(tx.transaction_date + 'T00:00:00Z') : new Date(), source: 'plaid', plaid_transaction_id: tx.transaction_id },
-      });
-      await prisma.plaid_transaction.update({ where: { id: parseInt(id) }, data: { is_confirmed: true, expense_id: expense.id, updated_at: new Date() } });
-      res.json({ success: true, expense_id: expense.id });
+      const { rows: txRows } = await pool.query(
+        'SELECT * FROM plaid_transactions WHERE id = $1 AND user_id = $2 AND is_confirmed = false',
+        [parseInt(id), userId]
+      );
+      if (!txRows.length) return res.status(404).json({ success: false, message: 'Transaction not found' });
+      const tx = txRows[0];
+      const expDate = tx.transaction_date ? String(tx.transaction_date).slice(0, 10) : new Date().toISOString().split('T')[0];
+
+      const cols = ['user_id', 'amount', 'description', 'expense_date', 'source'];
+      const vals = [userId, parseFloat(tx.amount), tx.description || tx.merchant_name || 'Unknown', expDate, 'plaid'];
+      let idx = vals.length;
+      if (tx.category_id != null) { cols.push('category_id'); vals.push(tx.category_id); idx++; }
+      if (tx.transaction_id) { cols.push('plaid_transaction_id'); vals.push(tx.transaction_id); idx++; }
+
+      const ph = vals.map((_, i) => `$${i + 1}`).join(', ');
+      const { rows: expRows } = await pool.query(
+        `INSERT INTO expenses (${cols.join(', ')}) VALUES (${ph}) RETURNING *`,
+        vals
+      );
+      await pool.query(
+        'UPDATE plaid_transactions SET is_confirmed = true, expense_id = $1, updated_at = NOW() WHERE id = $2',
+        [expRows[0].id, parseInt(id)]
+      );
+      res.json({ success: true, expense_id: expRows[0].id });
     } catch (err) { console.error('[Plaid] Error confirming:', err); res.status(500).json({ success: false, message: 'Could not confirm that one. Try again?' }); }
   });
 
   router.post('/task-suggestions/:taskId/accept', async (req, res) => {
     try {
       const userId = req.user.id; const { taskId } = req.params; const { transaction_id, amount, merchant, date } = req.body;
-      const task = await prisma.task.findFirst({ where: { id: parseInt(taskId), user_id: userId, is_completed: false } });
-      if (!task) return res.status(404).json({ success: false, message: 'Task not found or already completed' });
+      const { rows: taskRows } = await pool.query(
+        'SELECT id, title FROM tasks WHERE id = $1 AND user_id = $2 AND is_completed = false',
+        [parseInt(taskId), userId]
+      );
+      if (!taskRows.length) return res.status(404).json({ success: false, message: 'Task not found or already completed' });
+      const task = taskRows[0];
       const note = `Auto-completed — $${parseFloat(amount || 0).toFixed(2)} from ${merchant || 'bank'} on ${date || 'unknown date'}`;
-      await prisma.task.update({ where: { id: parseInt(taskId) }, data: { is_completed: true, completed_at: new Date(), updated_at: new Date(), auto_complete_note: note, auto_complete_transaction_id: transaction_id || null } });
+      await pool.query(
+        'UPDATE tasks SET is_completed = true, completed_at = NOW(), updated_at = NOW(), auto_complete_note = $1, auto_complete_transaction_id = $2 WHERE id = $3',
+        [note, transaction_id || null, parseInt(taskId)]
+      );
       res.json({ success: true, task: { id: task.id, title: task.title, auto_complete_note: note } });
     } catch (err) { console.error('[Plaid] Error accepting task suggestion:', err); res.status(500).json({ success: false, message: 'Failed to complete task' }); }
   });
@@ -602,14 +666,36 @@ module.exports = function() {
   router.post('/transactions/confirm-all', async (req, res) => {
     try {
       const userId = req.user.id;
-      const pending = await prisma.plaid_transaction.findMany({ where: { user_id: userId, is_confirmed: false, is_pending: false }, select: { id: true } });
+      const { rows: pending } = await pool.query(
+        'SELECT id FROM plaid_transactions WHERE user_id = $1 AND is_confirmed = false AND is_pending = false',
+        [userId]
+      );
       let confirmed = 0;
       for (const row of pending) {
         try {
-          const tx = await prisma.plaid_transaction.findFirst({ where: { id: row.id, is_confirmed: false } });
-          if (!tx) continue;
-          const expense = await prisma.expense.create({ data: { user_id: userId, amount: parseFloat(tx.amount), description: tx.description || tx.merchant_name || 'Unknown', category_id: tx.category_id, expense_date: tx.transaction_date ? new Date(tx.transaction_date + 'T00:00:00Z') : new Date(), source: 'plaid', plaid_transaction_id: tx.transaction_id } });
-          await prisma.plaid_transaction.update({ where: { id: row.id }, data: { is_confirmed: true, expense_id: expense.id, updated_at: new Date() } });
+          const { rows: txRows } = await pool.query(
+            'SELECT * FROM plaid_transactions WHERE id = $1 AND is_confirmed = false',
+            [row.id]
+          );
+          if (!txRows.length) continue;
+          const tx = txRows[0];
+          const expDate = tx.transaction_date ? String(tx.transaction_date).slice(0, 10) : new Date().toISOString().split('T')[0];
+
+          const cols = ['user_id', 'amount', 'description', 'expense_date', 'source'];
+          const vals = [userId, parseFloat(tx.amount), tx.description || tx.merchant_name || 'Unknown', expDate, 'plaid'];
+          let idx = vals.length;
+          if (tx.category_id != null) { cols.push('category_id'); vals.push(tx.category_id); idx++; }
+          if (tx.transaction_id) { cols.push('plaid_transaction_id'); vals.push(tx.transaction_id); idx++; }
+
+          const ph = vals.map((_, i) => `$${i + 1}`).join(', ');
+          const { rows: expRows } = await pool.query(
+            `INSERT INTO expenses (${cols.join(', ')}) VALUES (${ph}) RETURNING *`,
+            vals
+          );
+          await pool.query(
+            'UPDATE plaid_transactions SET is_confirmed = true, expense_id = $1, updated_at = NOW() WHERE id = $2',
+            [expRows[0].id, row.id]
+          );
           confirmed++;
         } catch (e) { console.error('[Plaid] Error confirming tx:', row.id, e.message); }
       }
@@ -620,9 +706,15 @@ module.exports = function() {
   router.post('/transactions/:id/dismiss', async (req, res) => {
     try {
       const userId = req.user.id; const { id } = req.params;
-      const count = await prisma.plaid_transaction.count({ where: { id: parseInt(id), user_id: userId } });
-      if (count === 0) return res.status(404).json({ success: false, message: 'Transaction not found' });
-      await prisma.plaid_transaction.update({ where: { id: parseInt(id) }, data: { is_confirmed: true, updated_at: new Date() } });
+      const { rows } = await pool.query(
+        'SELECT id FROM plaid_transactions WHERE id = $1 AND user_id = $2',
+        [parseInt(id), userId]
+      );
+      if (!rows.length) return res.status(404).json({ success: false, message: 'Transaction not found' });
+      await pool.query(
+        'UPDATE plaid_transactions SET is_confirmed = true, updated_at = NOW() WHERE id = $1',
+        [parseInt(id)]
+      );
       res.json({ success: true });
     } catch (err) { console.error('[Plaid] Error dismissing:', err); res.status(500).json({ success: false, message: 'Failed to dismiss transaction' }); }
   });
@@ -630,24 +722,30 @@ module.exports = function() {
   router.get('/bills', async (req, res) => {
     try {
       const userId = req.user.id;
-      const result = await prisma.$queryRaw`
-        SELECT bp.merchant_key, bp.merchant_display_name, bp.bill_type, bp.is_disabled,
-               COUNT(t.id) FILTER (WHERE t.is_completed = false)::int AS active_tasks,
-               MAX(t.created_at) AS last_task_created_at
-        FROM bill_preferences bp
-        LEFT JOIN tasks t ON t.bill_merchant_key = bp.merchant_key AND t.user_id = bp.user_id
-        WHERE bp.user_id = ${userId}
-        GROUP BY bp.merchant_key, bp.merchant_display_name, bp.bill_type, bp.is_disabled
-        ORDER BY bp.merchant_display_name
-      `;
-      res.json({ success: true, bills: result });
+      const { rows } = await pool.query(
+        `SELECT bp.merchant_key, bp.merchant_display_name, bp.bill_type, bp.is_disabled,
+                COUNT(t.id) FILTER (WHERE t.is_completed = false)::int AS active_tasks,
+                MAX(t.created_at) AS last_task_created_at
+         FROM bill_preferences bp
+         LEFT JOIN tasks t ON t.bill_merchant_key = bp.merchant_key AND t.user_id = bp.user_id
+         WHERE bp.user_id = $1
+         GROUP BY bp.merchant_key, bp.merchant_display_name, bp.bill_type, bp.is_disabled
+         ORDER BY bp.merchant_display_name`,
+        [userId]
+      );
+      res.json({ success: true, bills: rows });
     } catch (err) { console.error('[BillTasks] Error fetching bills:', err); res.status(500).json({ success: false, message: 'Failed to fetch bill preferences' }); }
   });
 
   router.post('/bills/:key/disable', async (req, res) => {
     try {
       const userId = req.user.id; const { key } = req.params;
-      await prisma.bill_preferences.upsert({ where: { user_id_merchant_key: { user_id: userId, merchant_key: key } }, create: { user_id: userId, merchant_key: key, is_disabled: true }, update: { is_disabled: true, updated_at: new Date() } });
+      await pool.query(
+        `INSERT INTO bill_preferences (user_id, merchant_key, is_disabled)
+         VALUES ($1, $2, true)
+         ON CONFLICT (user_id, merchant_key) DO UPDATE SET is_disabled = true, updated_at = NOW()`,
+        [userId, key]
+      );
       res.json({ success: true, message: 'Auto-tasks disabled for this bill' });
     } catch (err) { console.error('[BillTasks] Error disabling bill:', err); res.status(500).json({ success: false, message: 'Could not update that bill. Try again?' }); }
   });
@@ -655,7 +753,12 @@ module.exports = function() {
   router.post('/bills/:key/enable', async (req, res) => {
     try {
       const userId = req.user.id; const { key } = req.params;
-      await prisma.bill_preferences.upsert({ where: { user_id_merchant_key: { user_id: userId, merchant_key: key } }, create: { user_id: userId, merchant_key: key, is_disabled: false }, update: { is_disabled: false, updated_at: new Date() } });
+      await pool.query(
+        `INSERT INTO bill_preferences (user_id, merchant_key, is_disabled)
+         VALUES ($1, $2, false)
+         ON CONFLICT (user_id, merchant_key) DO UPDATE SET is_disabled = false, updated_at = NOW()`,
+        [userId, key]
+      );
       res.json({ success: true, message: 'Auto-tasks re-enabled for this bill' });
     } catch (err) { console.error('[BillTasks] Error enabling bill:', err); res.status(500).json({ success: false, message: 'Could not update that bill. Try again?' }); }
   });
@@ -663,11 +766,15 @@ module.exports = function() {
   router.delete('/items/:id', async (req, res) => {
     try {
       const userId = req.user.id; const { id } = req.params;
-      const item = await prisma.plaid_item.findFirst({ where: { id: parseInt(id), user_id: userId } });
-      if (!item) return res.status(404).json({ success: false, message: 'Item not found' });
+      const { rows } = await pool.query(
+        'SELECT * FROM plaid_items WHERE id = $1 AND user_id = $2',
+        [parseInt(id), userId]
+      );
+      if (!rows.length) return res.status(404).json({ success: false, message: 'Item not found' });
+      const item = rows[0];
       const plaid = getPlaidClient();
       if (plaid) { try { await plaid.itemRemove({ access_token: decryptPlaidToken(item.access_token) }); } catch (e) { console.warn('[Plaid] Could not remove item from Plaid:', e.message); } }
-      await deletePlaidItem(parseInt(id), userId);
+      await deletePlaidItem(pool, parseInt(id), userId);
       res.json({ success: true, message: 'Account disconnected.' });
     } catch (err) { console.error('[Plaid] Error removing item:', err); res.status(500).json({ success: false, message: 'Could not disconnect. Try again?' }); }
   });

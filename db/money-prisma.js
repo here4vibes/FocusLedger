@@ -1,7 +1,7 @@
-// db/money-prisma.js — Prisma-backed query functions for money/expense/transaction data.
+// db/money-prisma.js — pg.Pool-backed query functions for money/expense/transaction data.
 // Owns: expense CRUD, plaid transaction queries, spending aggregates, category mapping.
 // Does NOT own: auth middleware, plaid token encryption (see routes/plaid.js).
-const { prisma } = require('../lib/prisma');
+// All functions accept pool as first argument.
 
 // ── Category helpers ──────────────────────────────────────────────────────────
 
@@ -20,12 +20,17 @@ const SLUG_TO_NAME = {
 };
 
 // Resolve a FocusLedger slug to a categories.id, falling back to 'Other'
-async function resolveCategoryId(slug) {
+async function resolveCategoryId(pool, slug) {
   const targetName = SLUG_TO_NAME[slug] || 'Other';
-  const cat = await prisma.categories.findFirst({ where: { name: { equals: targetName, mode: 'insensitive' } } });
-  if (cat) return cat.id;
-  const fallback = await prisma.categories.findFirst({ where: { name: { equals: 'Other', mode: 'insensitive' } } });
-  return fallback?.id || null;
+  const { rows } = await pool.query(
+    'SELECT id FROM categories WHERE LOWER(name) = LOWER($1) LIMIT 1',
+    [targetName]
+  );
+  if (rows.length) return rows[0].id;
+  const { rows: fallback } = await pool.query(
+    "SELECT id FROM categories WHERE LOWER(name) = 'other' LIMIT 1"
+  );
+  return fallback[0]?.id || null;
 }
 
 // Map Plaid category string → FocusLedger slug
@@ -54,75 +59,109 @@ function plaidCategoryToSlug(plaidCategory) {
 // ── Expense CRUD ─────────────────────────────────────────────────────────────
 
 // Create a manual expense entry
-async function createExpense({ userId, amount, categorySlug, isImpulse, note, expenseDate, localDate }) {
-  const categoryId = await resolveCategoryId(categorySlug || 'other');
+async function createExpense(pool, { userId, amount, categorySlug, isImpulse, note, expenseDate, localDate }) {
+  const categoryId = await resolveCategoryId(pool, categorySlug || 'other');
   const descVal = note || SLUG_TO_NAME[categorySlug] || 'Manual expense';
   const effectiveDate = expenseDate || localDate || new Date().toISOString().split('T')[0];
-  return prisma.expense.create({
-    data: {
-      user_id: userId,
-      amount,
-      category_id: categoryId,
-      is_impulse: isImpulse ?? null,
-      description: descVal,
-      expense_date: new Date(effectiveDate + 'T00:00:00Z'),
-      source: 'manual',
-    },
-  });
+
+  const cols = ['user_id', 'amount', 'description', 'expense_date', 'source'];
+  const vals = [userId, amount, descVal, effectiveDate, 'manual'];
+  let idx = vals.length;
+
+  if (categoryId != null) { cols.push('category_id'); vals.push(categoryId); idx++; }
+  if (isImpulse !== undefined && isImpulse !== null) { cols.push('is_impulse'); vals.push(isImpulse); idx++; }
+
+  const ph = vals.map((_, i) => `$${i + 1}`).join(', ');
+  const { rows } = await pool.query(
+    `INSERT INTO expenses (${cols.join(', ')}) VALUES (${ph}) RETURNING *`,
+    vals
+  );
+  return rows[0];
 }
 
 // Fetch expenses for a user within a date range
-async function getExpenses(userId, period, localDate) {
+async function getExpenses(pool, userId, period, localDate) {
   const { weekStart, weekEnd } = getWeekBounds(localDate);
-  let dateFilter;
+  let dateWhere = '';
+  const vals = [userId];
+  let idx = 2;
+
   if (period === 'month') {
-    dateFilter = { expense_date: { gte: new Date(weekStart + 'T00:00:00Z').toISOString().slice(0, 7) + '-01' } };
+    const monthStart = (localDate || new Date().toISOString().split('T')[0]).slice(0, 7) + '-01';
+    dateWhere = ` AND e.expense_date >= $${idx++}`;
+    vals.push(monthStart);
   } else if (period !== 'all') {
-    dateFilter = { expense_date: { gte: weekStart, lte: weekEnd } };
+    dateWhere = ` AND e.expense_date >= $${idx++} AND e.expense_date <= $${idx++}`;
+    vals.push(weekStart, weekEnd);
   }
 
-  const where = { user_id: userId, ...dateFilter };
-  const expenses = await prisma.expense.findMany({
-    where,
-    orderBy: [{ expense_date: 'desc' }, { created_at: 'desc' }],
-    include: { categories: { select: { name: true, icon: true, color: true } } },
-  });
-  return expenses;
+  const sql = `
+    SELECT e.*, c.name as category_name, c.icon as category_icon, c.color as category_color
+    FROM expenses e
+    LEFT JOIN categories c ON e.category_id = c.id
+    WHERE e.user_id = $1${dateWhere}
+    ORDER BY e.expense_date DESC, e.created_at DESC
+  `;
+  const { rows } = await pool.query(sql, vals);
+  return rows;
 }
 
 // Fetch un-triaged Plaid expenses from last 7 days (amount desc, limit 10)
-async function getUntriagedExpenses(userId, localDate) {
+async function getUntriagedExpenses(pool, userId, localDate) {
   const refDate = localDate || new Date().toISOString().split('T')[0];
   const cutoff = new Date(refDate + 'T00:00:00Z');
   cutoff.setDate(cutoff.getDate() - 7);
-  return prisma.expense.findMany({
-    where: {
-      user_id: userId,
-      source: 'plaid',
-      is_impulse: null,
-      expense_date: { gte: cutoff },
-    },
-    orderBy: { amount: 'desc' },
-    take: 10,
-    include: { categories: { select: { name: true, icon: true } } },
-  });
+  const cutoffStr = cutoff.toISOString().split('T')[0];
+
+  const sql = `
+    SELECT e.*, c.name as category_name, c.icon as category_icon
+    FROM expenses e
+    LEFT JOIN categories c ON e.category_id = c.id
+    WHERE e.user_id = $1 AND e.source = 'plaid' AND e.is_impulse IS NULL AND e.expense_date >= $2
+    ORDER BY e.amount DESC
+    LIMIT 10
+  `;
+  const { rows } = await pool.query(sql, [userId, cutoffStr]);
+  return rows;
 }
 
 // Triage an expense (set is_impulse + optional category)
-async function triageExpense(expenseId, userId, isImpulse, categorySlug) {
-  const data = { is_impulse: isImpulse };
+async function triageExpense(pool, expenseId, userId, isImpulse, categorySlug) {
+  let categoryId = null;
   if (categorySlug) {
-    data.category_id = await resolveCategoryId(categorySlug);
+    categoryId = await resolveCategoryId(pool, categorySlug);
   }
-  return prisma.expense.update({
-    where: { id: expenseId, user_id: userId },
-    data,
-    include: { categories: { select: { name: true, icon: true, color: true } } },
-  });
+
+  const setCols = ['is_impulse = $1', 'updated_at = NOW()'];
+  const vals = [isImpulse];
+  let idx = 2;
+
+  if (categoryId != null) {
+    setCols.push(`category_id = $${idx++}`);
+    vals.push(categoryId);
+  }
+
+  vals.push(expenseId, userId);
+  const sql = `
+    UPDATE expenses SET ${setCols.join(', ')}
+    WHERE id = $${idx++} AND user_id = $${idx++}
+    RETURNING *
+  `;
+  const { rows } = await pool.query(sql, vals);
+  if (!rows.length) return null;
+
+  // Fetch with category info
+  const { rows: enriched } = await pool.query(
+    `SELECT e.*, c.name as category_name, c.icon as category_icon, c.color as category_color
+     FROM expenses e LEFT JOIN categories c ON e.category_id = c.id
+     WHERE e.id = $1`,
+    [rows[0].id]
+  );
+  return enriched[0] || rows[0];
 }
 
 // Aggregate spending: total, by category, impulse breakdown
-async function getSpendingSummary(userId, period, localDate) {
+async function getSpendingSummary(pool, userId, period, localDate) {
   const { weekStart, weekEnd } = getWeekBounds(localDate);
   let startDate, endDate;
   if (period === 'month') {
@@ -134,46 +173,43 @@ async function getSpendingSummary(userId, period, localDate) {
     endDate = weekEnd;
   }
 
-  const start = new Date(startDate + 'T00:00:00Z');
-  const end = new Date(endDate + 'T23:59:59Z');
-
-  const [totalRow, byCategory, impulseRow] = await Promise.all([
-    prisma.expense.aggregate({ where: { user_id: userId, expense_date: { gte: start, lte: end } }, _sum: { amount: true } }),
-    prisma.expense.groupBy({
-      by: ['category_id'],
-      where: { user_id: userId, expense_date: { gte: start, lte: end }, category_id: { not: null } },
-      _sum: { amount: true },
-      _count: true,
-      orderBy: { _sum: { amount: 'desc' } },
-    }),
-    prisma.expense.findMany({
-      where: { user_id: userId, expense_date: { gte: start, lte: end } },
-      select: { amount: true, is_impulse: true, source: true },
-    }),
+  const [totRow, catRows, impulseRows] = await Promise.all([
+    pool.query(
+      `SELECT COALESCE(SUM(amount), 0) AS total FROM expenses
+       WHERE user_id = $1 AND expense_date >= $2 AND expense_date <= $3`,
+      [userId, startDate, endDate]
+    ),
+    pool.query(
+      `SELECT e.category_id, c.name AS category_name, c.icon AS category_icon,
+              COALESCE(SUM(e.amount), 0) AS total, COUNT(e.id)::int AS count
+       FROM expenses e LEFT JOIN categories c ON e.category_id = c.id
+       WHERE e.user_id = $1 AND e.expense_date >= $2 AND e.expense_date <= $3
+         AND e.category_id IS NOT NULL
+       GROUP BY e.category_id, c.name, c.icon
+       ORDER BY total DESC`,
+      [userId, startDate, endDate]
+    ),
+    pool.query(
+      `SELECT amount, is_impulse, source FROM expenses
+       WHERE user_id = $1 AND expense_date >= $2 AND expense_date <= $3`,
+      [userId, startDate, endDate]
+    ),
   ]);
 
-  const total = parseFloat(totalRow._sum.amount || 0);
-  const imp = impulseRow;
-
+  const total = parseFloat(totRow.rows[0].total || 0);
   let impulse_total = 0, planned_total = 0, untriaged_total = 0;
   let impulse_count = 0, untriaged_count = 0;
-  for (const e of imp) {
+  for (const e of impulseRows.rows) {
     if (e.is_impulse === true) { impulse_total += parseFloat(e.amount); impulse_count++; }
     else if (e.is_impulse === false) { planned_total += parseFloat(e.amount); }
     else if (e.source === 'plaid') { untriaged_total += parseFloat(e.amount); untriaged_count++; }
   }
 
-  // Resolve category names
-  const catIds = byCategory.map(b => b.category_id).filter(Boolean);
-  const cats = catIds.length ? await prisma.categories.findMany({ where: { id: { in: catIds } } }) : [];
-  const catById = {};
-  for (const c of cats) catById[c.id] = c;
-
-  const byCategoryNamed = byCategory.map(b => ({
-    category_name: catById[b.category_id]?.name || 'Other',
-    category_icon: catById[b.category_id]?.icon || '📦',
-    total: parseFloat(b._sum.amount || 0),
-    count: b._count,
+  const byCategoryNamed = catRows.rows.map(b => ({
+    category_name: b.category_name || 'Other',
+    category_icon: b.category_icon || '📦',
+    total: parseFloat(b.total || 0),
+    count: b.count,
   }));
 
   return {
@@ -192,18 +228,16 @@ async function getSpendingSummary(userId, period, localDate) {
 }
 
 // Today's spend stats
-async function getTodaySpend(userId, localDate) {
+async function getTodaySpend(pool, userId, localDate) {
   const today = localDate || new Date().toISOString().split('T')[0];
-  const start = new Date(today + 'T00:00:00Z');
-  const end = new Date(today + 'T23:59:59Z');
-
-  const expenses = await prisma.expense.findMany({
-    where: { user_id: userId, expense_date: { gte: start, lte: end } },
-    select: { amount: true, is_impulse: true, source: true },
-  });
+  const { rows } = await pool.query(
+    `SELECT amount, is_impulse, source FROM expenses
+     WHERE user_id = $1 AND expense_date = $2`,
+    [userId, today]
+  );
 
   let total = 0, impulse = 0, planned = 0, untriaged = 0;
-  for (const e of expenses) {
+  for (const e of rows) {
     const amt = parseFloat(e.amount);
     total += amt;
     if (e.is_impulse === true) impulse += amt;
@@ -217,255 +251,295 @@ async function getTodaySpend(userId, localDate) {
 // ── Plaid transaction helpers ──────────────────────────────────────────────────
 
 // Count unconfirmed transactions for a user
-async function countPendingReview(userId) {
-  return prisma.plaid_transaction.count({
-    where: { user_id: userId, is_confirmed: false, is_pending: false },
-  });
+async function countPendingReview(pool, userId) {
+  const { rows } = await pool.query(
+    'SELECT COUNT(*)::int AS c FROM plaid_transactions WHERE user_id = $1 AND is_confirmed = false AND is_pending = false',
+    [userId]
+  );
+  return rows[0].c;
 }
 
 // Fetch unconfirmed Plaid transactions for review (with category + account info)
-async function getPendingTransactions(userId) {
-  return prisma.plaid_transaction.findMany({
-    where: { user_id: userId, is_confirmed: false, is_pending: false },
-    orderBy: [{ transaction_date: 'desc' }, { created_at: 'desc' }],
-    take: 50,
-    include: {
-      categories: { select: { name: true, icon: true, color: true } },
-      plaid_account: { select: { name: true, mask: true } },
-    },
-  });
+async function getPendingTransactions(pool, userId) {
+  const sql = `
+    SELECT pt.*, c.name as category_name, c.icon as category_icon, c.color as category_color,
+           pa.name as account_name, pa.mask
+    FROM plaid_transactions pt
+    LEFT JOIN categories c ON pt.category_id = c.id
+    LEFT JOIN plaid_accounts pa ON pt.plaid_account_id = pa.id
+    WHERE pt.user_id = $1 AND pt.is_confirmed = false AND pt.is_pending = false
+    ORDER BY pt.transaction_date DESC, pt.created_at DESC
+    LIMIT 50
+  `;
+  const { rows } = await pool.query(sql, [userId]);
+  return rows;
 }
 
 // Confirm a Plaid transaction → create expense
-async function confirmTransaction(plaidTxId, userId) {
-  const tx = await prisma.plaid_transaction.findFirst({
-    where: { id: plaidTxId, user_id: userId, is_confirmed: false },
-    include: { categories: { select: { name: true } } },
-  });
-  if (!tx) return null;
+async function confirmTransaction(pool, plaidTxId, userId) {
+  const { rows: txRows } = await pool.query(
+    'SELECT * FROM plaid_transactions WHERE id = $1 AND user_id = $2 AND is_confirmed = false',
+    [plaidTxId, userId]
+  );
+  if (!txRows.length) return null;
+  const tx = txRows[0];
 
-  const expense = await prisma.expense.create({
-    data: {
-      user_id: userId,
-      amount: parseFloat(tx.amount),
-      description: tx.description || tx.merchant_name || 'Unknown',
-      category_id: tx.category_id,
-      expense_date: tx.transaction_date ? new Date(tx.transaction_date + 'T00:00:00Z') : new Date(),
-      source: 'plaid',
-      plaid_transaction_id: tx.transaction_id,
-    },
-  });
+  const expDate = tx.transaction_date
+    ? String(tx.transaction_date).slice(0, 10)
+    : new Date().toISOString().split('T')[0];
 
-  await prisma.plaid_transaction.update({
-    where: { id: plaidTxId },
-    data: { is_confirmed: true, expense_id: expense.id, updated_at: new Date() },
-  });
+  const cols = ['user_id', 'amount', 'description', 'expense_date', 'source'];
+  const vals = [userId, parseFloat(tx.amount), tx.description || tx.merchant_name || 'Unknown', expDate, 'plaid'];
+  let idx = vals.length;
+
+  if (tx.category_id != null) { cols.push('category_id'); vals.push(tx.category_id); idx++; }
+  if (tx.transaction_id) { cols.push('plaid_transaction_id'); vals.push(tx.transaction_id); idx++; }
+
+  const ph = vals.map((_, i) => `$${i + 1}`).join(', ');
+  const { rows: expRows } = await pool.query(
+    `INSERT INTO expenses (${cols.join(', ')}) VALUES (${ph}) RETURNING *`,
+    vals
+  );
+  const expense = expRows[0];
+
+  await pool.query(
+    'UPDATE plaid_transactions SET is_confirmed = true, expense_id = $1, updated_at = NOW() WHERE id = $2',
+    [expense.id, plaidTxId]
+  );
 
   return { expenseId: expense.id, tx };
 }
 
 // Dismiss a transaction (mark confirmed without creating expense)
-async function dismissTransaction(plaidTxId, userId) {
-  const count = await prisma.plaid_transaction.count({ where: { id: plaidTxId, user_id: userId } });
-  if (count === 0) return false;
-  await prisma.plaid_transaction.update({
-    where: { id: plaidTxId },
-    data: { is_confirmed: true, updated_at: new Date() },
-  });
+async function dismissTransaction(pool, plaidTxId, userId) {
+  const { rows } = await pool.query(
+    'SELECT id FROM plaid_transactions WHERE id = $1 AND user_id = $2',
+    [plaidTxId, userId]
+  );
+  if (!rows.length) return false;
+  await pool.query(
+    'UPDATE plaid_transactions SET is_confirmed = true, updated_at = NOW() WHERE id = $1',
+    [plaidTxId]
+  );
   return true;
 }
 
 // Update category on unconfirmed transaction
-async function recategorizeTransaction(plaidTxId, userId, categorySlug) {
-  const categoryId = await resolveCategoryId(categorySlug);
-  const count = await prisma.plaid_transaction.count({ where: { id: plaidTxId, user_id: userId } });
-  if (count === 0) return false;
-  await prisma.plaid_transaction.update({
-    where: { id: plaidTxId },
-    data: { category_id: categoryId, updated_at: new Date() },
-  });
+async function recategorizeTransaction(pool, plaidTxId, userId, categorySlug) {
+  const categoryId = await resolveCategoryId(pool, categorySlug);
+  const { rows } = await pool.query(
+    'SELECT id FROM plaid_transactions WHERE id = $1 AND user_id = $2',
+    [plaidTxId, userId]
+  );
+  if (!rows.length) return false;
+  await pool.query(
+    'UPDATE plaid_transactions SET category_id = $1, updated_at = NOW() WHERE id = $2',
+    [categoryId, plaidTxId]
+  );
   return true;
 }
 
 // Get Plaid items with accounts for a user (for Account Summary card)
-async function getPlaidItemsWithAccounts(userId) {
-  const items = await prisma.plaid_item.findMany({
-    where: { user_id: userId },
-    include: {
-      plaid_accounts: {
-        select: { id: true, name: true, type: true, subtype: true, mask: true },
-      },
-    },
-    orderBy: { created_at: 'desc' },
-  });
-  return items;
+async function getPlaidItemsWithAccounts(pool, userId) {
+  const { rows: items } = await pool.query(
+    `SELECT pi.*, json_agg(
+       json_build_object('id', pa.id, 'name', pa.name, 'type', pa.type, 'subtype', pa.subtype, 'mask', pa.mask)
+     ) FILTER (WHERE pa.id IS NOT NULL) AS plaid_accounts
+     FROM plaid_items pi
+     LEFT JOIN plaid_accounts pa ON pa.plaid_item_id = pi.id
+     WHERE pi.user_id = $1
+     GROUP BY pi.id
+     ORDER BY pi.created_at DESC`,
+    [userId]
+  );
+  return items.map(item => ({
+    ...item,
+    plaid_accounts: item.plaid_accounts || [],
+  }));
 }
 
 // Upsert a plaid_item (called after token exchange)
-async function upsertPlaidItem(userId, encryptedAccessToken, itemId, institutionName, institutionId) {
-  return prisma.plaid_item.create({
-    data: {
-      user_id: userId,
-      access_token: encryptedAccessToken,
-      item_id: itemId,
-      institution_name: institutionName || 'Unknown Bank',
-      institution_id: institutionId || null,
-    },
-  });
+async function upsertPlaidItem(pool, userId, encryptedAccessToken, itemId, institutionName, institutionId) {
+  const { rows } = await pool.query(
+    `INSERT INTO plaid_items (user_id, access_token, item_id, institution_name, institution_id)
+     VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+    [userId, encryptedAccessToken, itemId, institutionName || 'Unknown Bank', institutionId || null]
+  );
+  return rows[0];
 }
 
 // Delete a plaid_item (disconnect)
-async function deletePlaidItem(itemId, userId) {
-  await prisma.plaid_item.deleteMany({ where: { id: itemId, user_id: userId } });
+async function deletePlaidItem(pool, itemId, userId) {
+  await pool.query(
+    'DELETE FROM plaid_items WHERE id = $1 AND user_id = $2',
+    [itemId, userId]
+  );
 }
 
 // Update item cursor after sync
-async function updateItemCursor(itemId, cursor) {
-  await prisma.plaid_item.update({ where: { id: itemId }, data: { cursor, last_synced_at: new Date() } });
+async function updateItemCursor(pool, itemId, cursor) {
+  await pool.query(
+    'UPDATE plaid_items SET cursor = $1, last_synced_at = NOW() WHERE id = $2',
+    [cursor, itemId]
+  );
 }
 
 // Upsert a Plaid account
-async function upsertPlaidAccount(plaidItemId, userId, accountId, name, officialName, type, subtype, mask) {
-  return prisma.plaid_account.upsert({
-    where: { account_id: accountId },
-    create: { plaid_item_id: plaidItemId, user_id: userId, account_id: accountId, name, official_name: officialName, type, subtype, mask },
-    update: { name, mask },
-  });
+async function upsertPlaidAccount(pool, plaidItemId, userId, accountId, name, officialName, type, subtype, mask) {
+  const { rows } = await pool.query(
+    `INSERT INTO plaid_accounts (plaid_item_id, user_id, account_id, name, official_name, type, subtype, mask)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+     ON CONFLICT (account_id) DO UPDATE SET name = EXCLUDED.name, mask = EXCLUDED.mask
+     RETURNING *`,
+    [plaidItemId, userId, accountId, name, officialName || null, type, subtype || null, mask || null]
+  );
+  return rows[0];
 }
 
 // Get account_id → db id map for a plaid_item
-async function getAccountMap(plaidItemId) {
-  const accounts = await prisma.plaid_account.findMany({ where: { plaid_item_id: plaidItemId }, select: { id: true, account_id: true } });
+async function getAccountMap(pool, plaidItemId) {
+  const { rows } = await pool.query(
+    'SELECT id, account_id FROM plaid_accounts WHERE plaid_item_id = $1',
+    [plaidItemId]
+  );
   const map = {};
-  for (const a of accounts) map[a.account_id] = a.id;
+  for (const a of rows) map[a.account_id] = a.id;
   return map;
 }
 
 // Get all categories as { name → row } map
-async function getCategoriesMap() {
-  const cats = await prisma.categories.findMany({ select: { id: true, name: true } });
+async function getCategoriesMap(pool) {
+  const { rows } = await pool.query('SELECT id, name FROM categories');
   const map = {};
-  for (const c of cats) map[c.name.toLowerCase()] = c;
+  for (const c of rows) map[c.name.toLowerCase()] = c;
   return map;
 }
 
 // Insert a Plaid transaction (dedup by transaction_id)
-async function insertPlaidTransaction(params) {
+async function insertPlaidTransaction(pool, params) {
   const { plaidAccountId, userId, transactionId, amount, description, merchantName, categoryId, plaidCategory, transactionDate, isPending } = params;
-  return prisma.plaid_transaction.create({
-    data: {
-      plaid_account_id: plaidAccountId,
-      user_id: userId,
-      transaction_id: transactionId,
-      amount: parseFloat(amount),
-      description,
-      merchant_name: merchantName || null,
-      category_id: categoryId,
-      plaid_category: plaidCategory,
-      transaction_date: transactionDate ? new Date(transactionDate + 'T00:00:00Z') : null,
-      is_pending: isPending || false,
-    },
-  }).catch(() => null); // silently ignore duplicates
+  try {
+    const txDate = transactionDate ? String(transactionDate).slice(0, 10) : null;
+    const { rows } = await pool.query(
+      `INSERT INTO plaid_transactions
+         (plaid_account_id, user_id, transaction_id, amount, description, merchant_name, category_id, plaid_category, transaction_date, is_pending)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+       ON CONFLICT (transaction_id) DO NOTHING
+       RETURNING *`,
+      [plaidAccountId, userId, transactionId, parseFloat(amount), description, merchantName || null,
+       categoryId || null, plaidCategory || null, txDate, isPending || false]
+    );
+    return rows[0] || null;
+  } catch {
+    return null; // silently ignore duplicates or schema mismatches
+  }
 }
 
 // Get unconfirmed Plaid transactions for a user (for sync)
-async function getUnconfirmedPlaidTransactions(userId) {
-  return prisma.plaid_transaction.findMany({
-    where: { user_id: userId, is_confirmed: false, is_pending: false },
-    select: { id: true, transaction_id: true, transaction_date: true },
-  });
+async function getUnconfirmedPlaidTransactions(pool, userId) {
+  const { rows } = await pool.query(
+    'SELECT id, transaction_id, transaction_date FROM plaid_transactions WHERE user_id = $1 AND is_confirmed = false AND is_pending = false',
+    [userId]
+  );
+  return rows;
 }
 
 // Bulk update plaid_transactions (mark confirmed or update category)
-async function markTransactionsConfirmed(plaidTxIds, expenseIds) {
-  // Each index corresponds; batch update
+async function markTransactionsConfirmed(pool, plaidTxIds, expenseIds) {
   for (let i = 0; i < plaidTxIds.length; i++) {
-    await prisma.plaid_transaction.update({
-      where: { id: plaidTxIds[i] },
-      data: { is_confirmed: true, expense_id: expenseIds[i], updated_at: new Date() },
-    });
+    await pool.query(
+      'UPDATE plaid_transactions SET is_confirmed = true, expense_id = $1, updated_at = NOW() WHERE id = $2',
+      [expenseIds[i], plaidTxIds[i]]
+    );
   }
 }
 
 // Bill preferences
-async function getBillPreferences(userId) {
-  return prisma.bill_preferences.findMany({
-    where: { user_id: userId },
-    orderBy: { merchant_display_name: 'asc' },
-  });
+async function getBillPreferences(pool, userId) {
+  const { rows } = await pool.query(
+    'SELECT * FROM bill_preferences WHERE user_id = $1 ORDER BY merchant_display_name ASC',
+    [userId]
+  );
+  return rows;
 }
 
-async function upsertBillPreference(userId, merchantKey, isDisabled, merchantDisplayName, billType) {
-  return prisma.bill_preferences.upsert({
-    where: { user_id_merchant_key: { user_id: userId, merchant_key: merchantKey } },
-    create: { user_id: userId, merchant_key: merchantKey, is_disabled: isDisabled, merchant_display_name: merchantDisplayName, bill_type: billType },
-    update: { is_disabled: isDisabled, updated_at: new Date() },
-  });
+async function upsertBillPreference(pool, userId, merchantKey, isDisabled, merchantDisplayName, billType) {
+  const { rows } = await pool.query(
+    `INSERT INTO bill_preferences (user_id, merchant_key, is_disabled, merchant_display_name, bill_type)
+     VALUES ($1, $2, $3, $4, $5)
+     ON CONFLICT (user_id, merchant_key) DO UPDATE SET is_disabled = EXCLUDED.is_disabled, updated_at = NOW()
+     RETURNING *`,
+    [userId, merchantKey, isDisabled, merchantDisplayName || null, billType || null]
+  );
+  return rows[0];
 }
 
-async function trackBillMerchant(userId, merchantKey, merchantDisplayName, billType) {
-  return prisma.bill_preferences.upsert({
-    where: { user_id_merchant_key: { user_id: userId, merchant_key: merchantKey } },
-    create: { user_id: userId, merchant_key: merchantKey, merchant_display_name: merchantDisplayName, bill_type: billType },
-    update: { merchant_display_name: merchantDisplayName, bill_type: billType, updated_at: new Date() },
-  });
+async function trackBillMerchant(pool, userId, merchantKey, merchantDisplayName, billType) {
+  const { rows } = await pool.query(
+    `INSERT INTO bill_preferences (user_id, merchant_key, merchant_display_name, bill_type)
+     VALUES ($1, $2, $3, $4)
+     ON CONFLICT (user_id, merchant_key) DO UPDATE SET merchant_display_name = EXCLUDED.merchant_display_name, bill_type = EXCLUDED.bill_type, updated_at = NOW()
+     RETURNING *`,
+    [userId, merchantKey, merchantDisplayName, billType]
+  );
+  return rows[0];
 }
 
-async function getDisabledMerchantKeys(userId) {
-  const prefs = await prisma.bill_preferences.findMany({
-    where: { user_id: userId, is_disabled: true },
-    select: { merchant_key: true },
-  });
-  return new Set(prefs.map(p => p.merchant_key));
+async function getDisabledMerchantKeys(pool, userId) {
+  const { rows } = await pool.query(
+    'SELECT merchant_key FROM bill_preferences WHERE user_id = $1 AND is_disabled = true',
+    [userId]
+  );
+  return new Set(rows.map(p => p.merchant_key));
 }
 
 // ── Spending aggregates ───────────────────────────────────────────────────────
 
-async function getAggregateData(userId, from, to) {
-  const start = from ? new Date(from + 'T00:00:00Z') : new Date(getWeekBounds().weekStart + 'T00:00:00Z');
-  const end = to ? new Date(to + 'T23:59:59Z') : new Date();
+async function getAggregateData(pool, userId, from, to) {
+  const { weekStart } = getWeekBounds();
+  const startStr = from || weekStart;
+  const endStr   = to   || new Date().toISOString().split('T')[0];
 
-  const [totalRow, byCategory] = await Promise.all([
-    prisma.expense.aggregate({
-      where: { user_id: userId, expense_date: { gte: start, lte: end } },
-      _sum: { amount: true },
-    }),
-    prisma.expense.groupBy({
-      by: ['category_id'],
-      where: { user_id: userId, expense_date: { gte: start, lte: end }, category_id: { not: null } },
-      _sum: { amount: true },
-      _count: true,
-      orderBy: { _sum: { amount: 'desc' } },
-    }),
+  const [totRow, catRows] = await Promise.all([
+    pool.query(
+      `SELECT COALESCE(SUM(amount), 0) AS total FROM expenses
+       WHERE user_id = $1 AND expense_date >= $2 AND expense_date <= $3`,
+      [userId, startStr, endStr]
+    ),
+    pool.query(
+      `SELECT e.category_id, c.name AS category_name, c.icon AS category_icon,
+              COALESCE(SUM(e.amount), 0) AS total, COUNT(e.id)::int AS count
+       FROM expenses e LEFT JOIN categories c ON e.category_id = c.id
+       WHERE e.user_id = $1 AND e.expense_date >= $2 AND e.expense_date <= $3
+         AND e.category_id IS NOT NULL
+       GROUP BY e.category_id, c.name, c.icon
+       ORDER BY total DESC`,
+      [userId, startStr, endStr]
+    ),
   ]);
 
-  const catIds = byCategory.map(b => b.category_id).filter(Boolean);
-  const cats = catIds.length ? await prisma.categories.findMany({ where: { id: { in: catIds } } }) : [];
-  const catById = {};
-  for (const c of cats) catById[c.id] = c;
-
-  const by_category = byCategory.map(b => ({
-    category: catById[b.category_id]?.name || 'Other',
-    category_icon: catById[b.category_id]?.icon || '📦',
-    total: (parseFloat(b._sum.amount || 0) * 100).toFixed(0), // return as cents for compat
-    count: b._count,
+  const by_category = catRows.rows.map(b => ({
+    category: b.category_name || 'Other',
+    category_icon: b.category_icon || '📦',
+    total: (parseFloat(b.total || 0) * 100).toFixed(0), // return as cents for compat
+    count: b.count,
   }));
 
   return {
-    total_spend: parseFloat(totalRow._sum.amount || 0) * 100, // cents
+    total_spend: parseFloat(totRow.rows[0].total || 0) * 100, // cents
     by_category,
   };
 }
 
-async function getSpendingStatsData(userId) {
-  const all = await prisma.expense.findMany({
-    where: { user_id: userId, is_impulse: { not: null } },
-    select: { is_impulse: true },
-  });
+async function getSpendingStatsData(pool, userId) {
+  const { rows } = await pool.query(
+    'SELECT is_impulse FROM expenses WHERE user_id = $1 AND is_impulse IS NOT NULL',
+    [userId]
+  );
 
-  const total_classified = all.length;
-  const impulse_count = all.filter(e => e.is_impulse === true).length;
-  const planned_count = all.filter(e => e.is_impulse === false).length;
+  const total_classified = rows.length;
+  const impulse_count = rows.filter(e => e.is_impulse === true).length;
+  const planned_count = rows.filter(e => e.is_impulse === false).length;
 
   return { total_classified, impulse_count, planned_count };
 }
