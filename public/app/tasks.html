@@ -655,13 +655,19 @@
 
     // ── Load tasks ─────────────────────────────────────────────────────────────
     async function fetchTasks() {
-        const params = new URLSearchParams();
-        if (state.filter !== 'all') params.set('filter', state.filter);
-        if (state.sort === 'due_date') params.set('sort', 'due_date');
-        const data = await api('GET', '/api/tasks?' + params.toString());
-        if (data.success) {
-            state.tasks = data.tasks;
-            renderTasks();
+        try {
+            const params = new URLSearchParams();
+            if (state.filter !== 'all') params.set('filter', state.filter);
+            if (state.sort === 'due_date') params.set('sort', 'due_date');
+            const data = await api('GET', '/api/tasks?' + params.toString());
+            if (data.success) {
+                state.tasks = data.tasks;
+                renderTasks();
+            } else {
+                showToast('[GET /api/tasks] ' + (data.message || 'unknown error'));
+            }
+        } catch(e) {
+            showToast('[fetch tasks] ' + e.message);
         }
     }
 
@@ -815,10 +821,10 @@
                 setTimeout(() => fetchTasks(), 400);
                 fetchSummary();
             } else {
-                showToast(data.message || 'Could not complete task');
+                showToast('[toggle #' + taskId + '] ' + (data.message || 'no error detail'));
             }
-        } catch {
-            showToast('Network error — try again');
+        } catch(e) {
+            showToast('[toggle #' + taskId + '] network: ' + e.message);
         }
     }
 
@@ -919,7 +925,10 @@
     // ── Edit modal ──────────────────────────────────────────────────────────────
     function openEditModal(taskId) {
         const task = state.tasks.find(t => t.id == taskId);
-        if (!task) return;
+        if (!task) {
+            showToast('[modal #' + taskId + '] not in state (' + state.tasks.length + ' loaded)');
+            return;
+        }
         state.editingId = taskId;
         document.getElementById('editTitle').value = task.title || '';
         document.getElementById('editDueDate').value = task.due_date ? String(task.due_date).split('T')[0] : '';
@@ -1143,6 +1152,12 @@
             if (typeof window.openBuddyPanel === 'function') {
                 e.preventDefault();
                 window.openBuddyPanel();
+            } else {
+                e.preventDefault();
+                var status = window.__buddyReady === false
+                    ? '[buddy] skip: ' + (window.__buddySkip || window.__buddyError || 'unknown')
+                    : '[buddy] openBuddyPanel not set yet';
+                showToast(status);
             }
         });
 

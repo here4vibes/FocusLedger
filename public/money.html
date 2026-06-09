@@ -1129,6 +1129,8 @@ function selectCat(slug) {
   document.querySelectorAll('.cat-pill').forEach(b => {
     b.classList.toggle('selected', b.dataset.slug === slug);
   });
+  var t = document.getElementById('submitToast');
+  if (t) { t.textContent = '✓ ' + slug + ' selected'; t.style.color = '#5BA4A4'; t.classList.add('visible'); setTimeout(function(){ t.classList.remove('visible'); t.textContent = '✓ Logged!'; t.style.color = ''; }, 1200); }
 }
 
 function setImpulse(isImpulse) {
@@ -1301,6 +1303,8 @@ async function submitExpense() {
 
   const reflCard = document.getElementById('reflectionCard');
   if (reflCard && reflCard.classList.contains('visible')) {
+    var t = document.getElementById('submitToast');
+    if (t) { t.textContent = 'Dismiss the reflection prompt first ↑'; t.style.color = '#E07A5F'; t.classList.add('visible'); setTimeout(function(){ t.classList.remove('visible'); t.textContent = '✓ Logged!'; t.style.color = ''; }, 3000); }
     return;
   }
 
@@ -1332,26 +1336,26 @@ async function doSubmitExpense() {
       await Promise.all([initDashboard(), loadExpenses(currentPeriod)]);
     } else {
       const toast = document.getElementById('submitToast');
-      toast.textContent = res.message || 'Failed to log expense. Try again.';
+      toast.textContent = '[POST /api/money/expenses] ' + (res.message || 'no error detail');
       toast.style.color = '#E05252';
       toast.classList.add('visible');
       setTimeout(() => {
         toast.classList.remove('visible');
         toast.textContent = '✓ Logged!';
         toast.style.color = '';
-      }, 3000);
+      }, 4000);
     }
   } catch (e) {
     console.error('Submit expense error:', e);
     const toast = document.getElementById('submitToast');
-    toast.textContent = 'Something went wrong. Try again.';
+    toast.textContent = '[expense catch] ' + e.message;
     toast.style.color = '#E05252';
     toast.classList.add('visible');
     setTimeout(() => {
       toast.classList.remove('visible');
       toast.textContent = '✓ Logged!';
       toast.style.color = '';
-    }, 3000);
+    }, 4000);
   }
 }
 
