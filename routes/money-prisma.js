@@ -1,8 +1,6 @@
-// Phase 3B: Money tab CRUD backed by Prisma.
+// Phase 3B: Money tab CRUD backed by pg.Pool (Prisma removed).
 // Owns: expense CRUD, Plaid transaction review, Account Summary, spending aggregates.
 // Does NOT own: Plaid Link setup (routes/plaid.js), auth middleware beyond session/JWT support.
-const { prisma } = require('../lib/prisma');
-const _proUtils = require('../middleware/proUtils');
 const { fetchUserTimezone, getUserLocalDate } = require('../lib/timezone');
 const {
   createExpense,
@@ -62,13 +60,14 @@ async function getCategories(req, res) {
 async function getSummary(req, res) {
   try {
     const userId = req.user.id;
+    const pool = res.locals._pool;
     const period = req.query.period || 'week';
-    const tz = await fetchUserTimezone(prisma, userId);
+    const tz = await fetchUserTimezone(pool, userId);
     const localDate = getUserLocalDate(tz);
-    const summary = await getSpendingSummary(userId, period, localDate);
+    const summary = await getSpendingSummary(pool, userId, period, localDate);
     res.json({ success: true, summary });
   } catch (err) {
-    console.error('[money-prisma] summary error:', err);
+    console.error('[money] summary error:', err);
     res.status(500).json({ success: false, message: 'Failed to fetch summary' });
   }
 }
@@ -77,12 +76,13 @@ async function getSummary(req, res) {
 async function getToday(req, res) {
   try {
     const userId = req.user.id;
-    const tz = await fetchUserTimezone(prisma, userId);
+    const pool = res.locals._pool;
+    const tz = await fetchUserTimezone(pool, userId);
     const localDate = getUserLocalDate(tz);
-    const spend = await getTodaySpend(userId, localDate);
+    const spend = await getTodaySpend(pool, userId, localDate);
     res.json({ success: true, ...spend });
   } catch (err) {
-    console.error('[money-prisma] today error:', err);
+    console.error('[money] today error:', err);
     res.status(500).json({ success: false, message: 'Failed to fetch today spend' });
   }
 }
@@ -91,12 +91,13 @@ async function getToday(req, res) {
 async function getUntriaged(req, res) {
   try {
     const userId = req.user.id;
-    const tz = await fetchUserTimezone(prisma, userId);
+    const pool = res.locals._pool;
+    const tz = await fetchUserTimezone(pool, userId);
     const localDate = getUserLocalDate(tz);
-    const expenses = await getUntriagedExpenses(userId, localDate);
+    const expenses = await getUntriagedExpenses(pool, userId, localDate);
     res.json({ success: true, expenses, count: expenses.length });
   } catch (err) {
-    console.error('[money-prisma] untriaged error:', err);
+    console.error('[money] untriaged error:', err);
     res.status(500).json({ success: false, message: 'Failed to fetch untriaged' });
   }
 }
@@ -105,13 +106,14 @@ async function getUntriaged(req, res) {
 async function listExpenses(req, res) {
   try {
     const userId = req.user.id;
+    const pool = res.locals._pool;
     const period = req.query.period || 'week';
-    const tz = await fetchUserTimezone(prisma, userId);
+    const tz = await fetchUserTimezone(pool, userId);
     const localDate = getUserLocalDate(tz);
-    const expenses = await getExpenses(userId, period, localDate);
+    const expenses = await getExpenses(pool, userId, period, localDate);
     res.json({ success: true, expenses });
   } catch (err) {
-    console.error('[money-prisma] list error:', err);
+    console.error('[money] list error:', err);
     res.status(500).json({ success: false, message: 'Failed to fetch expenses' });
   }
 }
@@ -120,6 +122,7 @@ async function listExpenses(req, res) {
 async function addExpense(req, res) {
   try {
     const userId = req.user.id;
+    const pool = res.locals._pool;
     const { amount, category, is_impulse, note, expense_date } = req.body;
 
     if (!amount || parseFloat(amount) <= 0) {
@@ -131,9 +134,9 @@ async function addExpense(req, res) {
                        : is_impulse === false || is_impulse === 'false' ? false
                        : null;
 
-    const tz = await fetchUserTimezone(prisma, userId);
+    const tz = await fetchUserTimezone(pool, userId);
     const localDate = getUserLocalDate(tz);
-    const expense = await createExpense({
+    const expense = await createExpense(pool, {
       userId,
       amount: parseFloat(amount),
       categorySlug,
@@ -145,7 +148,7 @@ async function addExpense(req, res) {
 
     res.status(201).json({ success: true, expense });
   } catch (err) {
-    console.error('[money-prisma] create error:', err);
+    console.error('[money] create error:', err);
     res.status(500).json({ success: false, message: 'Failed to create expense' });
   }
 }
@@ -155,6 +158,7 @@ async function patchTriage(req, res) {
   try {
     const { id } = req.params;
     const userId = req.user.id;
+    const pool = res.locals._pool;
     const { is_impulse, category } = req.body;
 
     if (is_impulse === undefined || is_impulse === null) {
@@ -164,16 +168,12 @@ async function patchTriage(req, res) {
     const impulseValue = is_impulse === true || is_impulse === 'true';
     const categorySlug = (category && VALID_CATEGORIES[category]) ? category : null;
 
-    const expense = await triageExpense(parseInt(id), userId, impulseValue, categorySlug);
+    const expense = await triageExpense(pool, parseInt(id), userId, impulseValue, categorySlug);
     if (!expense) return res.status(404).json({ success: false, message: 'Expense not found' });
 
     res.json({ success: true, expense });
   } catch (err) {
-    // PrismaClientKnownRequestError code P2025 = Record not found
-    if (err?.code === 'P2025') {
-      return res.status(404).json({ success: false, message: 'Expense not found' });
-    }
-    console.error('[money-prisma] triage error:', err);
+    console.error('[money] triage error:', err);
     res.status(500).json({ success: false, message: 'Failed to triage expense' });
   }
 }
@@ -184,21 +184,19 @@ async function updateExpense(req, res) {
     const { id } = req.params;
     const { is_impulse, category } = req.body;
     const userId = req.user.id;
+    const pool = res.locals._pool;
 
     if (is_impulse !== undefined) {
       const impulseValue = is_impulse === true || is_impulse === 'true';
       const categorySlug = (category && VALID_CATEGORIES[category]) ? category : null;
-      const expense = await triageExpense(parseInt(id), userId, impulseValue, categorySlug);
+      const expense = await triageExpense(pool, parseInt(id), userId, impulseValue, categorySlug);
       if (!expense) return res.status(404).json({ success: false, message: 'Expense not found' });
       return res.json({ success: true, expense });
     }
 
     res.status(400).json({ success: false, message: 'No fields to update' });
   } catch (err) {
-    if (err?.code === 'P2025') {
-      return res.status(404).json({ success: false, message: 'Expense not found' });
-    }
-    console.error('[money-prisma] update error:', err);
+    console.error('[money] update error:', err);
     res.status(500).json({ success: false, message: 'Failed to update expense' });
   }
 }
@@ -208,10 +206,11 @@ async function deleteExpense(req, res) {
   try {
     const { id } = req.params;
     const userId = req.user.id;
-    await prisma.expense.deleteMany({ where: { id: parseInt(id), user_id: userId } });
+    const pool = res.locals._pool;
+    await pool.query('DELETE FROM expenses WHERE id = $1 AND user_id = $2', [parseInt(id), userId]);
     res.json({ success: true });
   } catch (err) {
-    console.error('[money-prisma] delete error:', err);
+    console.error('[money] delete error:', err);
     res.status(500).json({ success: false, message: 'Failed to delete expense' });
   }
 }
@@ -228,10 +227,11 @@ async function getAggregate(req, res) {
   try {
     const { from, to } = req.query;
     const userId = req.user.id;
-    const aggregate = await getAggregateData(userId, from, to);
+    const pool = res.locals._pool;
+    const aggregate = await getAggregateData(pool, userId, from, to);
     res.json({ ...aggregate });
   } catch (err) {
-    console.error('[money-prisma] aggregate error:', err);
+    console.error('[money] aggregate error:', err);
     res.status(500).json({ success: false, message: 'Failed to fetch aggregate' });
   }
 }
@@ -242,18 +242,16 @@ async function getAggregate(req, res) {
 async function getTodaySession(req, res) {
   try {
     const userId = req.user.id;
-    const tz = await fetchUserTimezone(prisma, userId);
+    const pool = res.locals._pool;
+    const tz = await fetchUserTimezone(pool, userId);
     const today = getUserLocalDate(tz);
-    const todayStart = new Date(today + 'T00:00:00Z');
-    const todayEnd = new Date(today + 'T23:59:59Z');
 
-    const sessions = await prisma.spending_session.findMany({
-      where: { user_id: userId, started_at: { gte: todayStart, lte: todayEnd } },
-      orderBy: { started_at: 'desc' },
-      take: 1,
-    });
+    const { rows } = await pool.query(
+      `SELECT * FROM spending_sessions WHERE user_id = $1 AND started_at::date = $2::date ORDER BY started_at DESC LIMIT 1`,
+      [userId, today]
+    );
 
-    const session = sessions[0] || null;
+    const session = rows[0] || null;
     res.json({
       success: true,
       session: session ? {
@@ -266,7 +264,7 @@ async function getTodaySession(req, res) {
       } : null,
     });
   } catch (err) {
-    console.error('[money-prisma] today session error:', err);
+    console.error('[money] today session error:', err);
     res.status(500).json({ success: false, message: 'Failed to fetch today session' });
   }
 }
@@ -277,10 +275,11 @@ async function getTodaySession(req, res) {
 async function getSpendingStats(req, res) {
   try {
     const userId = req.user.id;
-    const stats = await getSpendingStatsData(userId);
+    const pool = res.locals._pool;
+    const stats = await getSpendingStatsData(pool, userId);
     res.json({ ...stats });
   } catch (err) {
-    console.error('[money-prisma] spending-stats error:', err);
+    console.error('[money] spending-stats error:', err);
     res.status(500).json({ success: false, message: 'Failed to fetch spending stats' });
   }
 }
@@ -290,7 +289,7 @@ async function getAlerts(req, res) {
   try {
     res.json({ success: true, alerts: [], pendingAlert: null, stats: { total_spent: 0, impulse_count: 0 } });
   } catch (err) {
-    console.error('[money-prisma] alerts error:', err);
+    console.error('[money] alerts error:', err);
     res.status(500).json({ success: false, message: 'Failed to fetch alerts' });
   }
 }
@@ -299,10 +298,11 @@ async function getAlerts(req, res) {
 async function getPending(req, res) {
   try {
     const userId = req.user.id;
-    const txs = await getPendingTransactions(userId);
+    const pool = res.locals._pool;
+    const txs = await getPendingTransactions(pool, userId);
     res.json({ success: true, transactions: txs });
   } catch (err) {
-    console.error('[money-prisma] pending error:', err);
+    console.error('[money] pending error:', err);
     res.status(500).json({ success: false, message: 'Failed to fetch pending' });
   }
 }
@@ -313,18 +313,19 @@ async function recategorize(req, res) {
     const { id } = req.params;
     const { category_name } = req.body;
     const userId = req.user.id;
+    const pool = res.locals._pool;
 
     if (!category_name) return res.status(400).json({ success: false, message: 'category_name required' });
 
     // Map category name to slug
     const slug = category_name.toLowerCase().replace(/[&]/g, '').replace(/ /g, '_').replace(/_+/g, '_');
     const validSlug = VALID_CATEGORIES[slug] ? slug : 'other';
-    const updated = await recategorizeTransaction(parseInt(id), userId, validSlug);
+    const updated = await recategorizeTransaction(pool, parseInt(id), userId, validSlug);
     if (!updated) return res.status(404).json({ success: false, message: 'Transaction not found' });
 
     res.json({ success: true });
   } catch (err) {
-    console.error('[money-prisma] recategorize error:', err);
+    console.error('[money] recategorize error:', err);
     res.status(500).json({ success: false, message: 'Failed to update category' });
   }
 }
@@ -334,11 +335,12 @@ async function confirmTx(req, res) {
   try {
     const { id } = req.params;
     const userId = req.user.id;
-    const result = await confirmTransaction(parseInt(id), userId);
+    const pool = res.locals._pool;
+    const result = await confirmTransaction(pool, parseInt(id), userId);
     if (!result) return res.status(404).json({ success: false, message: 'Transaction not found' });
     res.json({ success: true, expense_id: result.expenseId });
   } catch (err) {
-    console.error('[money-prisma] confirm error:', err);
+    console.error('[money] confirm error:', err);
     res.status(500).json({ success: false, message: 'Failed to confirm transaction' });
   }
 }
@@ -348,11 +350,12 @@ async function dismissTx(req, res) {
   try {
     const { id } = req.params;
     const userId = req.user.id;
-    const dismissed = await dismissTransaction(parseInt(id), userId);
+    const pool = res.locals._pool;
+    const dismissed = await dismissTransaction(pool, parseInt(id), userId);
     if (!dismissed) return res.status(404).json({ success: false, message: 'Transaction not found' });
     res.json({ success: true });
   } catch (err) {
-    console.error('[money-prisma] dismiss error:', err);
+    console.error('[money] dismiss error:', err);
     res.status(500).json({ success: false, message: 'Failed to dismiss transaction' });
   }
 }
@@ -362,28 +365,25 @@ async function dismissTx(req, res) {
 async function getAccounts(req, res) {
   try {
     const userId = req.user.id;
-    const items = await getPlaidItemsWithAccounts(userId);
-    const pendingCount = await countPendingReview(userId);
+    const pool = res.locals._pool;
+    const items = await getPlaidItemsWithAccounts(pool, userId);
+    const pendingCount = await countPendingReview(pool, userId);
 
     if (items.length === 0) {
       return res.json({ connected: false });
     }
 
-    // For each item, attempt to fetch balances from Plaid
-    // (stored encrypted tokens — no balance in DB directly)
-    // Return account list + last synced time
     const resultItems = items.map(item => ({
       id: item.id,
       institution: item.institution_name,
       institution_id: item.institution_id,
       lastSynced: item.last_synced_at,
-      accounts: item.plaid_accounts.map(a => ({
+      accounts: (item.plaid_accounts || []).map(a => ({
         id: a.id,
         name: a.name,
         type: a.type,
         subtype: a.subtype,
         mask: a.mask,
-        // Balance is fetched live from Plaid — stored accounts have no balance column
       })),
     }));
 
@@ -393,7 +393,7 @@ async function getAccounts(req, res) {
       pending_review_count: pendingCount,
     });
   } catch (err) {
-    console.error('[money-prisma] accounts error:', err);
+    console.error('[money] accounts error:', err);
     res.status(500).json({ success: false, message: 'Failed to fetch accounts' });
   }
 }
@@ -404,10 +404,11 @@ async function disconnectItem(req, res) {
   try {
     const { id } = req.params;
     const userId = req.user.id;
-    await deletePlaidItem(parseInt(id), userId);
+    const pool = res.locals._pool;
+    await deletePlaidItem(pool, parseInt(id), userId);
     res.json({ success: true, message: 'Account disconnected.' });
   } catch (err) {
-    console.error('[money-prisma] disconnect error:', err);
+    console.error('[money] disconnect error:', err);
     res.status(500).json({ success: false, message: 'Failed to disconnect' });
   }
 }
@@ -416,10 +417,11 @@ async function disconnectItem(req, res) {
 async function getBills(req, res) {
   try {
     const userId = req.user.id;
-    const bills = await getBillPreferences(userId);
+    const pool = res.locals._pool;
+    const bills = await getBillPreferences(pool, userId);
     res.json({ success: true, bills });
   } catch (err) {
-    console.error('[money-prisma] bills error:', err);
+    console.error('[money] bills error:', err);
     res.status(500).json({ success: false, message: 'Failed to fetch bills' });
   }
 }
@@ -429,10 +431,11 @@ async function disableBill(req, res) {
   try {
     const { key } = req.params;
     const userId = req.user.id;
-    await upsertBillPreference(userId, key, true, null, null);
+    const pool = res.locals._pool;
+    await upsertBillPreference(pool, userId, key, true, null, null);
     res.json({ success: true, message: 'Auto-tasks disabled' });
   } catch (err) {
-    console.error('[money-prisma] disable bill error:', err);
+    console.error('[money] disable bill error:', err);
     res.status(500).json({ success: false, message: 'Failed to disable bill' });
   }
 }
@@ -442,29 +445,33 @@ async function enableBill(req, res) {
   try {
     const { key } = req.params;
     const userId = req.user.id;
-    await upsertBillPreference(userId, key, false, null, null);
+    const pool = res.locals._pool;
+    await upsertBillPreference(pool, userId, key, false, null, null);
     res.json({ success: true, message: 'Auto-tasks re-enabled' });
   } catch (err) {
-    console.error('[money-prisma] enable bill error:', err);
+    console.error('[money] enable bill error:', err);
     res.status(500).json({ success: false, message: 'Failed to enable bill' });
   }
 }
 
 // ── Mount on Express Router ───────────────────────────────────────────────
-module.exports = function() {
+module.exports = function(pool) {
   const router = require('express').Router();
+
+  // Attach pool to res.locals so all handlers can access it without closure
+  router.use((req, res, next) => { res.locals._pool = pool; next(); });
   router.use(authMW);
 
   // Expense CRUD
-  router.get('/expenses/categories',  getCategories);
-  router.get('/expenses/summary',     getSummary);
+  router.get('/expenses/categories',   getCategories);
+  router.get('/expenses/summary',      getSummary);
   router.get('/expenses/today',        getToday);
-  router.get('/expenses/untriaged',   getUntriaged);
-  router.get('/expenses',             listExpenses);
-  router.post('/expenses',            addExpense);
+  router.get('/expenses/untriaged',    getUntriaged);
+  router.get('/expenses',              listExpenses);
+  router.post('/expenses',             addExpense);
   router.patch('/expenses/:id/triage', patchTriage);
-  router.patch('/expenses/:id',       updateExpense);
-  router.delete('/expenses/:id',      deleteExpense);
+  router.patch('/expenses/:id',        updateExpense);
+  router.delete('/expenses/:id',       deleteExpense);
 
   // Spending aggregates (used by dashboard cards)
   router.get('/transactions/aggregate', getAggregate);
@@ -476,21 +483,21 @@ module.exports = function() {
   router.get('/spending-sessions/today', getTodaySession);
 
   // Nudge config + alerts
-  router.get('/nudge-config',  getNudgeConfig);
-  router.get('/alerts',         getAlerts);
+  router.get('/nudge-config', getNudgeConfig);
+  router.get('/alerts',       getAlerts);
 
   // Plaid transaction review
-  router.get('/transactions/pending',  getPending);
+  router.get('/transactions/pending',         getPending);
   router.patch('/transactions/:id/category', recategorize);
-  router.post('/transactions/:id/confirm',  confirmTx);
+  router.post('/transactions/:id/confirm',   confirmTx);
   router.post('/transactions/:id/dismiss',   dismissTx);
 
   // Accounts + bills
-  router.get('/accounts',     getAccounts);
-  router.delete('/items/:id', disconnectItem);
-  router.get('/bills',         getBills);
+  router.get('/accounts',            getAccounts);
+  router.delete('/items/:id',        disconnectItem);
+  router.get('/bills',               getBills);
   router.post('/bills/:key/disable', disableBill);
-  router.post('/bills/:key/enable',   enableBill);
+  router.post('/bills/:key/enable',  enableBill);
 
   return router;
 };

@@ -167,14 +167,11 @@ const newsRouteFactory = require('./routes/news');
 app.use('/api/auth',            require('./routes/auth')(pool, loginLimiter, signupLimiter));
 app.use('/api/contact',         require('./routes/contact')(pool));
 app.use('/api/comeback',        require('./routes/comeback')(pool));
-// Prisma-backed task routes (Phase 3A) — replaces pool-based routes.
-// Pool routes kept at /api/tasks-pool for backward compat during migration.
-// When all clients migrate to Prisma, remove the pool route.
-app.use('/api/tasks',           require('./routes/tasks-prisma')());
+app.use('/api/tasks',           require('./routes/tasks-prisma')(pool));
 app.use('/api/expenses',        require('./routes/expenses')(pool));
 app.use('/api/subscription',    require('./routes/subscription')(pool));
-app.use('/api/plaid',           require('./routes/plaid')());
-app.use('/api/money',           require('./routes/money-prisma')());
+app.use('/api/plaid',           require('./routes/plaid')(pool));
+app.use('/api/money',           require('./routes/money-prisma')(pool));
 app.use('/api/ideas',           require('./routes/ideas')(pool));
 app.use('/api/recurring',       require('./routes/recurring')(pool));
 app.use('/api/values',          require('./routes/values')(pool));

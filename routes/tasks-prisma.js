@@ -1,41 +1,20 @@
-// Phase 3A: Tasks CRUD backed by Prisma.
+// Phase 3A: Tasks CRUD backed by pg.Pool (Prisma removed).
 // Owns: task CRUD, steps CRUD, summary, nudges, suggest-steps, suggest-duration.
 // Does NOT own: auth middleware, pro status check, recurring task spawning.
-const { prisma } = require('../lib/prisma');
 const { checkProStatus } = require('../middleware/proUtils');
 const { fetchUserTimezone, getUserLocalDate } = require('../lib/timezone');
 const { complete } = require('../lib/claude-client');
 
-// ── Helpers: time string ↔ Date conversion (Prisma @db.Time returns Date) ───
-// DB stores time as 'time without time zone'; Prisma maps it to DateTime @db.Time.
-// Frontend sends/expects "HH:MM" strings — these helpers bridge the gap.
-function timeStrToDate(str) {
-  if (!str) return null;
-  if (str instanceof Date) return str;
-  const [h, m] = String(str).split(':').map(Number);
-  if (isNaN(h)) return null;
-  return new Date(Date.UTC(1970, 0, 1, h, m || 0, 0));
-}
-
-function dateToTimeStr(d) {
-  if (!d) return null;
-  if (typeof d === 'string') return d; // already a string
-  if (d instanceof Date) {
-    const h = String(d.getUTCHours()).padStart(2, '0');
-    const m = String(d.getUTCMinutes()).padStart(2, '0');
-    return `${h}:${m}`;
-  }
-  return null;
-}
-
-// Normalize task object: convert due_time Date back to "HH:MM" string for API consumers
-// Also ensure recurrence_type is present (defaults to "none" for existing rows)
+// ── Helpers: time string normalization ───────────────────────────────────────
+// DB stores time as 'time without time zone'; pg returns it as a string "HH:MM:SS".
+// Frontend sends/expects "HH:MM" strings — slice to normalize.
 function normTask(t) {
   if (!t) return t;
   return {
     ...t,
-    due_time: dateToTimeStr(t.due_time),
+    due_time: t.due_time ? String(t.due_time).slice(0, 5) : null,
     recurrence_type: t.recurrence_type || 'none',
+    steps: t.steps || [],
   };
 }
 
@@ -51,7 +30,6 @@ function spawnNextOccurrence(task, userId) {
   if (freq === 'daily') {
     nextDate = new Date(base.getTime() + 86400000);
   } else if (freq === 'weekdays') {
-    // Mon-Fri: find next weekday
     do { base.setDate(base.getDate() + 1); } while (base.getDay() === 0 || base.getDay() === 6);
     nextDate = base;
   } else if (freq === 'weekly') {
@@ -72,9 +50,8 @@ function spawnNextOccurrence(task, userId) {
     description: task.description || null,
     priority: task.priority || 'medium',
     due_date: nextDate,
-    due_time: task.due_time,
+    due_time: task.due_time || null,
     source: 'recurring',
-    recurring_task_id: null,
     value_id: task.value_id || null,
     notes: task.notes || null,
     recurrence_type: task.recurrence_type,
@@ -102,30 +79,35 @@ async function listTasks(req, res) {
     const { filter = 'all', sort = 'default' } = req.query;
     const userId = req.user.id;
 
-    const where = { user_id: userId };
-    if (filter === 'active') where.is_completed = false;
-    else if (filter === 'completed') where.is_completed = true;
+    let whereClause = 'WHERE t.user_id = $1';
+    if (filter === 'active') whereClause += ' AND t.is_completed = false';
+    else if (filter === 'completed') whereClause += ' AND t.is_completed = true';
 
-    const orderBy = sort === 'due_date'
-      ? [{ is_completed: 'asc' }, { due_date: 'asc' }, { due_time: 'asc' }, { created_at: 'desc' }]
-      : [{ is_completed: 'asc' }, { created_at: 'desc' }];
+    const orderClause = sort === 'due_date'
+      ? 'ORDER BY t.is_completed ASC, t.due_date ASC NULLS LAST, t.due_time ASC NULLS LAST, t.created_at DESC'
+      : 'ORDER BY t.is_completed ASC, t.created_at DESC';
 
-    const tasks = await prisma.task.findMany({
-      where,
-      orderBy,
-      include: { steps: { orderBy: { sort_order: 'asc' } } },
-    });
+    const sql = `
+      SELECT t.*,
+        COALESCE(json_agg(json_build_object(
+          'id', s.id, 'task_id', s.task_id, 'title', s.title,
+          'is_completed', s.is_completed, 'sort_order', s.sort_order,
+          'completed_at', s.completed_at, 'created_at', s.created_at
+        ) ORDER BY s.sort_order) FILTER (WHERE s.id IS NOT NULL), '[]') AS steps,
+        COUNT(s.id) FILTER (WHERE s.id IS NOT NULL)::int AS total_steps,
+        COUNT(s.id) FILTER (WHERE s.is_completed)::int AS completed_steps
+      FROM tasks t
+      LEFT JOIN task_steps s ON s.task_id = t.id
+      ${whereClause}
+      GROUP BY t.id
+      ${orderClause}
+    `;
 
-    // Count steps in JS; normalize due_time to "HH:MM" string
-    const enriched = tasks.map(t => ({
-      ...normTask(t),
-      total_steps: t.steps.length,
-      completed_steps: t.steps.filter(s => s.is_completed).length,
-    }));
-
+    const { rows } = await res.locals._pool.query(sql, [userId]);
+    const enriched = rows.map(normTask);
     res.json({ success: true, tasks: enriched });
   } catch (err) {
-    console.error('[tasks-prisma] list error:', err);
+    console.error('[tasks] list error:', err);
     res.status(500).json({ success: false, message: 'Failed to fetch tasks' });
   }
 }
@@ -134,30 +116,32 @@ async function listTasks(req, res) {
 async function getSummary(req, res) {
   try {
     const userId = req.user.id;
-    const tz = await fetchUserTimezone(prisma, userId);
+    const pool = res.locals._pool;
+    const tz = await fetchUserTimezone(pool, userId);
     const localToday = getUserLocalDate(tz);
 
-    const [all] = await prisma.$queryRaw`
+    const sql = `
       SELECT
         COUNT(*)::int                                  AS total,
         COUNT(*) FILTER (WHERE NOT is_completed)::int  AS active_tasks,
         COUNT(*) FILTER (WHERE is_completed)::int      AS completed_tasks,
-        COUNT(*) FILTER (WHERE is_completed AND (completed_at AT TIME ZONE ${tz})::date = ${localToday}::date)::int AS completed_today,
+        COUNT(*) FILTER (WHERE is_completed AND (completed_at AT TIME ZONE $2)::date = $3::date)::int AS completed_today,
         COUNT(*) FILTER (WHERE is_completed AND completed_at >= NOW() - INTERVAL '7 days')::int AS completed_this_week,
-        COUNT(*) FILTER (WHERE due_date = ${localToday}::date AND NOT is_completed)::int AS due_today,
-        COUNT(*) FILTER (WHERE due_date < ${localToday}::date AND NOT is_completed)::int AS overdue,
+        COUNT(*) FILTER (WHERE due_date = $3::date AND NOT is_completed)::int AS due_today,
+        COUNT(*) FILTER (WHERE due_date < $3::date AND NOT is_completed)::int AS overdue,
         COUNT(*) FILTER (WHERE
-          due_date::date = ${localToday}::date
-          OR (due_date::date < ${localToday}::date AND NOT is_completed)
-          OR (due_date IS NULL AND (created_at AT TIME ZONE ${tz})::date = ${localToday}::date AND NOT is_completed)
-          OR (is_completed AND (completed_at AT TIME ZONE ${tz})::date = ${localToday}::date)
+          due_date::date = $3::date
+          OR (due_date::date < $3::date AND NOT is_completed)
+          OR (due_date IS NULL AND (created_at AT TIME ZONE $2)::date = $3::date AND NOT is_completed)
+          OR (is_completed AND (completed_at AT TIME ZONE $2)::date = $3::date)
         )::int AS today_total
-      FROM tasks WHERE user_id = ${userId}
+      FROM tasks WHERE user_id = $1
     `;
 
-    res.json({ success: true, summary: all });
+    const { rows } = await pool.query(sql, [userId, tz, localToday]);
+    res.json({ success: true, summary: rows[0] });
   } catch (err) {
-    console.error('[tasks-prisma] summary error:', err);
+    console.error('[tasks] summary error:', err);
     res.status(500).json({ success: false, message: 'Failed to fetch summary' });
   }
 }
@@ -166,16 +150,18 @@ async function getSummary(req, res) {
 async function getNudges(req, res) {
   try {
     const userId = req.user.id;
+    const pool = res.locals._pool;
     const now = new Date();
 
-    const tasks = await prisma.task.findMany({
-      where: { user_id: userId, is_completed: false, due_date: { not: null } },
-      orderBy: [{ due_date: 'asc' }, { due_time: 'asc' }],
-      select: { id: true, title: true, due_date: true, due_time: true },
-    });
+    const { rows } = await pool.query(
+      `SELECT id, title, due_date, due_time FROM tasks
+       WHERE user_id = $1 AND is_completed = false AND due_date IS NOT NULL
+       ORDER BY due_date ASC, due_time ASC NULLS LAST`,
+      [userId]
+    );
 
-    const nudges = tasks.map(task => {
-      const timeStr = dateToTimeStr(task.due_time);
+    const nudges = rows.map(task => {
+      const timeStr = task.due_time ? String(task.due_time).slice(0, 5) : null;
       let dueAtUTC;
       if (timeStr) {
         const [th, tm] = timeStr.split(':').map(Number);
@@ -199,7 +185,7 @@ async function getNudges(req, res) {
 
     res.json({ success: true, nudges });
   } catch (err) {
-    console.error('[tasks-prisma] nudges error:', err);
+    console.error('[tasks] nudges error:', err);
     res.status(500).json({ success: false, message: 'Failed to fetch nudges' });
   }
 }
@@ -209,6 +195,7 @@ async function suggestSteps(req, res) {
   try {
     const { title } = req.body;
     const userId = req.user.id;
+    const pool = res.locals._pool;
 
     if (!title?.trim()) return res.json({ success: true, suggestions: [], skip: true });
 
@@ -219,8 +206,7 @@ async function suggestSteps(req, res) {
       return res.json({ success: true, suggestions: [], skip: true, reason: 'simple_task' });
     }
 
-    let isPro = false;
-    try { isPro = await checkProStatus(prisma, userId); } catch (_e) { isPro = false; }
+    const isPro = await checkProStatus(pool, userId).catch(() => false);
     if (!isPro) return res.json({ success: true, suggestions: [], skip: false, is_pro: false });
 
     let content;
@@ -250,7 +236,7 @@ async function suggestSteps(req, res) {
     if (!suggestions.length) return res.json({ success: true, suggestions: [], skip: true, reason: 'no_steps' });
     res.json({ success: true, suggestions, is_pro: true });
   } catch (err) {
-    console.error('[tasks-prisma] suggest-steps error:', err.message);
+    console.error('[tasks] suggest-steps error:', err.message);
     res.json({ success: true, suggestions: [], skip: true, reason: 'error' });
   }
 }
@@ -280,7 +266,7 @@ async function suggestDuration(req, res) {
         minutes = Math.min(Math.round(parsed.minutes), 480);
       }
     } catch {
-      const match = content.match(/\n\//);
+      const match = content.match(/\d+/);
       if (match) minutes = Math.min(parseInt(match[0]), 480);
     }
 
@@ -295,16 +281,26 @@ async function getTask(req, res) {
   try {
     const { id } = req.params;
     const userId = req.user.id;
+    const pool = res.locals._pool;
 
-    const task = await prisma.task.findFirst({
-      where: { id: parseInt(id), user_id: userId },
-      include: { steps: { orderBy: { sort_order: 'asc' } } },
-    });
+    const sql = `
+      SELECT t.*,
+        COALESCE(json_agg(json_build_object(
+          'id', s.id, 'task_id', s.task_id, 'title', s.title,
+          'is_completed', s.is_completed, 'sort_order', s.sort_order,
+          'completed_at', s.completed_at, 'created_at', s.created_at
+        ) ORDER BY s.sort_order) FILTER (WHERE s.id IS NOT NULL), '[]') AS steps
+      FROM tasks t
+      LEFT JOIN task_steps s ON s.task_id = t.id
+      WHERE t.id = $1 AND t.user_id = $2
+      GROUP BY t.id
+    `;
 
-    if (!task) return res.status(404).json({ success: false, message: 'Task not found' });
-    res.json({ success: true, task: normTask(task) });
+    const { rows } = await pool.query(sql, [parseInt(id), userId]);
+    if (!rows.length) return res.status(404).json({ success: false, message: 'Task not found' });
+    res.json({ success: true, task: normTask(rows[0]) });
   } catch (err) {
-    console.error('[tasks-prisma] get error:', err);
+    console.error('[tasks] get error:', err);
     res.status(500).json({ success: false, message: 'Failed to fetch task' });
   }
 }
@@ -316,81 +312,120 @@ async function createTask(req, res) {
             expected_amount, duration_minutes, is_household, is_shared_with_partner,
             recurrence_type, recurrence_day } = req.body;
     const userId = req.user.id;
+    const pool = res.locals._pool;
 
     if (!title?.trim()) return res.status(400).json({ success: false, message: 'What should this task be called?' });
     if (title.trim().length > 150) return res.status(400).json({ success: false, message: 'Task title must be 150 characters or fewer.' });
 
     // Free user task limit check
     try {
-      const isPro = await checkProStatus(prisma, userId);
+      const isPro = await checkProStatus(pool, userId);
       if (!isPro) {
-        const activeCount = await prisma.task.count({ where: { user_id: userId, is_completed: false } });
-        if (activeCount >= 10) {
+        const { rows: countRows } = await pool.query(
+          'SELECT COUNT(*)::int AS c FROM tasks WHERE user_id = $1 AND is_completed = false',
+          [userId]
+        );
+        if (countRows[0].c >= 10) {
           return res.status(402).json({ success: false, message: 'You have 10 active tasks — the free plan cap. Finish a few, or open it up with Autopilot.', code: 'TASK_LIMIT_REACHED', upgrade_required: true });
         }
       }
     } catch (subErr) {
-      // WHY fall-through: subscription DB errors must not block task creation.
-      // Treat as free-tier so the 10-task cap still applies (safe default).
-      console.error('[tasks-prisma] subscription check failed, treating as free:', subErr.message);
+      console.error('[tasks] subscription check failed, treating as free:', subErr.message);
       try {
-        const activeCount = await prisma.task.count({ where: { user_id: userId, is_completed: false } });
-        if (activeCount >= 10) {
+        const { rows: countRows } = await pool.query(
+          'SELECT COUNT(*)::int AS c FROM tasks WHERE user_id = $1 AND is_completed = false',
+          [userId]
+        );
+        if (countRows[0].c >= 10) {
           return res.status(402).json({ success: false, message: 'You have 10 active tasks — the free plan cap. Finish a few, or open it up with Autopilot.', code: 'TASK_LIMIT_REACHED', upgrade_required: true });
         }
-      } catch {
-        // If even the count fails (full DB outage), let creation proceed and let Prisma surface the real error below
-      }
+      } catch { /* full DB outage — let creation attempt proceed */ }
     }
 
     // Auto-tag to value
     let autoValueId = null;
     try {
       const { matchTaskToValue } = require('../lib/auto-tagger');
-      autoValueId = await matchTaskToValue(prisma, userId, title.trim());
+      autoValueId = await matchTaskToValue(pool, userId, title.trim());
     } catch (e) {
-      console.warn('[tasks-prisma] auto-tag failed:', e.message);
+      console.warn('[tasks] auto-tag failed:', e.message);
     }
 
     const durationMins = duration_minutes ? parseInt(duration_minutes) : null;
+    const recType = recurrence_type || 'none';
+    const recDay = (recType && recType !== 'none' && recType !== 'daily' && recType !== 'weekdays' && recurrence_day != null)
+      ? parseInt(recurrence_day)
+      : null;
 
-    const task = await prisma.task.create({
-      data: {
-        user_id: userId,
-        title: title.trim(),
-        description: description || null,
-        priority: priority || 'medium',
-        due_date: due_date ? new Date(due_date) : null,
-        due_time: timeStrToDate(due_time),
-        source: source || 'manual',
-        merchant_hint: merchant_hint || null,
-        expected_amount: expected_amount ? parseFloat(expected_amount) : null,
-        value_id: autoValueId,
-        duration_minutes: durationMins,
-        duration_source: durationMins ? 'manual' : null,
-        is_household: Boolean(is_household),
-        is_shared_with_partner: Boolean(is_shared_with_partner),
-        recurrence_type: recurrence_type || 'none',
-        recurrence_day: recurrence_type && recurrence_type !== 'none' && recurrence_type !== 'daily' && recurrence_type !== 'weekdays'
-          ? (recurrence_day != null ? parseInt(recurrence_day) : null)
-          : null,
-      },
-      include: { steps: { orderBy: { sort_order: 'asc' } } },
-    });
+    // Build INSERT dynamically to skip columns that may not exist in older DB schemas
+    const cols = ['user_id', 'title', 'priority', 'source'];
+    const vals = [userId, title.trim(), priority || 'medium', source || 'manual'];
+    let idx = vals.length;
+
+    function addCol(col, val) {
+      cols.push(col);
+      vals.push(val);
+      idx++;
+    }
+
+    if (description)           addCol('description', description);
+    if (due_date)              addCol('due_date', due_date);
+    if (due_time)              addCol('due_time', due_time);
+    if (merchant_hint)         addCol('merchant_hint', merchant_hint);
+    if (expected_amount != null) addCol('expected_amount', parseFloat(expected_amount));
+    if (autoValueId != null)   addCol('value_id', autoValueId);
+    if (durationMins != null)  addCol('duration_minutes', durationMins);
+    if (durationMins != null)  addCol('duration_source', 'manual');
+    if (is_household != null)  addCol('is_household', Boolean(is_household));
+    if (is_shared_with_partner != null) addCol('is_shared_with_partner', Boolean(is_shared_with_partner));
+    addCol('recurrence_type', recType);
+    if (recDay != null)        addCol('recurrence_day', recDay);
+
+    const placeholders = vals.map((_, i) => `$${i + 1}`).join(', ');
+    const insertSql = `INSERT INTO tasks (${cols.join(', ')}) VALUES (${placeholders}) RETURNING *`;
+
+    let taskRow;
+    try {
+      const { rows } = await pool.query(insertSql, vals);
+      taskRow = rows[0];
+    } catch (insertErr) {
+      if (insertErr.code === '42703') {
+        // Retry with minimal columns if an optional column doesn't exist
+        const minSql = `INSERT INTO tasks (user_id, title, priority, source) VALUES ($1, $2, $3, $4) RETURNING *`;
+        const { rows } = await pool.query(minSql, [userId, title.trim(), priority || 'medium', source || 'manual']);
+        taskRow = rows[0];
+      } else {
+        throw insertErr;
+      }
+    }
 
     // Insert steps if provided
     if (steps?.length > 0) {
-      const stepData = steps.map((s, i) => ({ task_id: task.id, title: s.trim(), sort_order: i }));
-      await prisma.task_step.createMany({ data: stepData });
+      for (let i = 0; i < steps.length; i++) {
+        await pool.query(
+          'INSERT INTO task_steps (task_id, title, sort_order) VALUES ($1, $2, $3)',
+          [taskRow.id, steps[i].trim(), i]
+        );
+      }
     }
 
     // Re-fetch with steps
-    const fullTask = await prisma.task.findUnique({
-      where: { id: task.id },
-      include: { steps: { orderBy: { sort_order: 'asc' } } },
-    });
+    const fetchSql = `
+      SELECT t.*,
+        COALESCE(json_agg(json_build_object(
+          'id', s.id, 'task_id', s.task_id, 'title', s.title,
+          'is_completed', s.is_completed, 'sort_order', s.sort_order,
+          'completed_at', s.completed_at, 'created_at', s.created_at
+        ) ORDER BY s.sort_order) FILTER (WHERE s.id IS NOT NULL), '[]') AS steps
+      FROM tasks t
+      LEFT JOIN task_steps s ON s.task_id = t.id
+      WHERE t.id = $1
+      GROUP BY t.id
+    `;
+    const { rows: fullRows } = await pool.query(fetchSql, [taskRow.id]);
+    const fullTask = fullRows[0] || taskRow;
 
-    res.status(201).json({ success: true, task: normTask(fullTask || task) });
+    res.status(201).json({ success: true, task: normTask(fullTask) });
 
     // Fire-and-forget: AI duration suggestion
     if (!durationMins) {
@@ -406,13 +441,16 @@ async function createTask(req, res) {
           ]);
           const parsed = JSON.parse(raw);
           if (parsed && typeof parsed.minutes === 'number' && parsed.minutes > 0) {
-            await prisma.task.update({ where: { id: task.id }, data: { duration_minutes: Math.min(Math.round(parsed.minutes), 480), duration_source: 'ai' } });
+            await pool.query(
+              'UPDATE tasks SET duration_minutes = $1, duration_source = $2 WHERE id = $3',
+              [Math.min(Math.round(parsed.minutes), 480), 'ai', taskRow.id]
+            );
           }
         } catch { /* silent */ }
       });
     }
   } catch (err) {
-    console.error('[tasks-prisma] create error:', err);
+    console.error('[tasks] create error:', err);
     res.status(500).json({ success: false, message: 'Failed to create task' });
   }
 }
@@ -424,46 +462,57 @@ async function updateTask(req, res) {
     const { due_date, due_time, title, value_id, notes, is_household, is_shared_with_partner, is_completed,
             recurrence_type, recurrence_day } = req.body;
     const userId = req.user.id;
+    const pool = res.locals._pool;
 
     if (title !== undefined && title.trim().length > 150) {
       return res.status(400).json({ success: false, message: 'Task title must be 150 characters or fewer.' });
     }
 
-    const data = {};
-    if (due_date !== undefined)         data.due_date = due_date ? new Date(due_date) : null;
-    if (due_time !== undefined)         data.due_time = timeStrToDate(due_time);
-    if (title !== undefined && title.trim()) data.title = title.trim();
-    if (value_id !== undefined)         data.value_id = (!value_id || value_id === 0) ? null : parseInt(value_id);
-    if (notes !== undefined)            data.notes = notes === '' ? null : notes;
-    if (is_household !== undefined)     data.is_household = Boolean(is_household);
-    if (is_shared_with_partner !== undefined) data.is_shared_with_partner = Boolean(is_shared_with_partner);
+    const setCols = [];
+    const vals = [];
+    let idx = 1;
+
+    function addSet(col, val) {
+      setCols.push(`${col} = $${idx++}`);
+      vals.push(val);
+    }
+
+    if (due_date !== undefined)  addSet('due_date', due_date || null);
+    if (due_time !== undefined)  addSet('due_time', due_time || null);
+    if (title !== undefined && title.trim()) addSet('title', title.trim());
+    if (value_id !== undefined)  addSet('value_id', (!value_id || value_id === 0) ? null : parseInt(value_id));
+    if (notes !== undefined)     addSet('notes', notes === '' ? null : notes);
+    if (is_household !== undefined) addSet('is_household', Boolean(is_household));
+    if (is_shared_with_partner !== undefined) addSet('is_shared_with_partner', Boolean(is_shared_with_partner));
     if (is_completed !== undefined) {
-      data.is_completed = Boolean(is_completed);
-      data.completed_at = is_completed ? new Date() : null;
+      addSet('is_completed', Boolean(is_completed));
+      addSet('completed_at', is_completed ? new Date() : null);
     }
     if (recurrence_type !== undefined) {
-      data.recurrence_type = recurrence_type;
+      addSet('recurrence_type', recurrence_type);
     }
-    if (recurrence_type && recurrence_type !== 'none' && recurrence_type !== 'daily' && recurrence_type !== 'weekdays') {
-      if (recurrence_day !== undefined) data.recurrence_day = recurrence_day != null ? parseInt(recurrence_day) : null;
-    } else if (recurrence_type === 'none' || recurrence_type === 'daily' || recurrence_type === 'weekdays') {
-      data.recurrence_day = null;
+    if (recurrence_type !== undefined) {
+      if (recurrence_type && recurrence_type !== 'none' && recurrence_type !== 'daily' && recurrence_type !== 'weekdays') {
+        if (recurrence_day !== undefined) addSet('recurrence_day', recurrence_day != null ? parseInt(recurrence_day) : null);
+      } else {
+        addSet('recurrence_day', null);
+      }
     }
-    data.updated_at = new Date();
+    addSet('updated_at', new Date());
 
-    if (Object.keys(data).length <= 1 && !data.updated_at) {
+    if (setCols.length <= 1) {
       return res.status(400).json({ success: false, message: 'No fields to update' });
     }
 
-    const task = await prisma.task.update({
-      where: { id: parseInt(id), user_id: userId },
-      data,
-    });
+    vals.push(parseInt(id), userId);
+    const sql = `UPDATE tasks SET ${setCols.join(', ')} WHERE id = $${idx++} AND user_id = $${idx++} RETURNING *`;
 
-    res.json({ success: true, task: normTask(task) });
+    const { rows } = await pool.query(sql, vals);
+    if (!rows.length) return res.status(404).json({ success: false, message: 'Task not found' });
+    res.json({ success: true, task: normTask(rows[0]) });
   } catch (err) {
-    if (err.code === 'P2025') return res.status(404).json({ success: false, message: 'Task not found' });
-    console.error('[tasks-prisma] update error:', err);
+    if (err.code === '42703') return res.status(500).json({ success: false, message: 'Column does not exist: ' + err.message });
+    console.error('[tasks] update error:', err);
     res.status(500).json({ success: false, message: 'Failed to update task' });
   }
 }
@@ -473,36 +522,62 @@ async function toggleTask(req, res) {
   try {
     const { id } = req.params;
     const userId = req.user.id;
+    const pool = res.locals._pool;
 
-    const existing = await prisma.task.findFirst({ where: { id: parseInt(id), user_id: userId } });
-    if (!existing) return res.status(404).json({ success: false, message: 'Task not found' });
+    const { rows: existing } = await pool.query(
+      'SELECT * FROM tasks WHERE id = $1 AND user_id = $2',
+      [parseInt(id), userId]
+    );
+    if (!existing.length) return res.status(404).json({ success: false, message: 'Task not found' });
+    const task_before = existing[0];
+    const newCompleted = !task_before.is_completed;
 
-    const task = await prisma.task.update({
-      where: { id: parseInt(id), user_id: userId },
-      data: { is_completed: !existing.is_completed, completed_at: !existing.is_completed ? new Date() : null, updated_at: new Date() },
-    });
+    const { rows: updated } = await pool.query(
+      'UPDATE tasks SET is_completed = $1, completed_at = $2, updated_at = NOW() WHERE id = $3 AND user_id = $4 RETURNING *',
+      [newCompleted, newCompleted ? new Date() : null, parseInt(id), userId]
+    );
+    const task = updated[0];
 
-    if (task.is_completed) {
-      await prisma.task_step.updateMany({ where: { task_id: parseInt(id) }, data: { is_completed: true, completed_at: new Date() } });
+    if (newCompleted) {
+      await pool.query(
+        'UPDATE task_steps SET is_completed = true, completed_at = NOW() WHERE task_id = $1',
+        [parseInt(id)]
+      );
     }
 
     // Spawn next occurrence if completing a recurring task
     let nextRecurring = null;
-    if (task.is_completed && existing.recurrence_type && existing.recurrence_type !== 'none') {
+    if (newCompleted && task_before.recurrence_type && task_before.recurrence_type !== 'none') {
       try {
-        const nextData = spawnNextOccurrence(existing, userId);
+        const nextData = spawnNextOccurrence(task_before, userId);
         if (nextData) {
-          const nextTask = await prisma.task.create({ data: nextData });
-          nextRecurring = normTask(nextTask);
+          const cols = ['user_id', 'title', 'priority', 'source', 'recurrence_type'];
+          const vals = [nextData.user_id, nextData.title, nextData.priority, nextData.source, nextData.recurrence_type];
+          let idx = vals.length;
+
+          function addC(col, val) { cols.push(col); vals.push(val); idx++; }
+          if (nextData.description)    addC('description', nextData.description);
+          if (nextData.due_date)       addC('due_date', nextData.due_date);
+          if (nextData.due_time)       addC('due_time', nextData.due_time);
+          if (nextData.value_id)       addC('value_id', nextData.value_id);
+          if (nextData.notes)          addC('notes', nextData.notes);
+          if (nextData.recurrence_day != null) addC('recurrence_day', nextData.recurrence_day);
+
+          const ph = vals.map((_, i) => `$${i + 1}`).join(', ');
+          const { rows: nextRows } = await pool.query(
+            `INSERT INTO tasks (${cols.join(', ')}) VALUES (${ph}) RETURNING *`,
+            vals
+          );
+          nextRecurring = normTask(nextRows[0]);
         }
       } catch (spawnErr) {
-        console.error('[tasks-prisma] failed to spawn next occurrence:', spawnErr.message);
+        console.error('[tasks] failed to spawn next occurrence:', spawnErr.message);
       }
     }
 
     res.json({ success: true, task: normTask(task), next_recurring_task: nextRecurring });
   } catch (err) {
-    console.error('[tasks-prisma] toggle error:', err);
+    console.error('[tasks] toggle error:', err);
     res.status(500).json({ success: false, message: 'Failed to toggle task' });
   }
 }
@@ -513,20 +588,20 @@ async function updateDuration(req, res) {
     const { id } = req.params;
     const { duration_minutes } = req.body;
     const userId = req.user.id;
+    const pool = res.locals._pool;
 
     const mins = duration_minutes === null || duration_minutes === undefined ? null : parseInt(duration_minutes);
     if (mins !== null && (isNaN(mins) || mins < 1 || mins > 1440)) {
       return res.status(400).json({ success: false, message: 'Duration must be between 1 and 1440 minutes.' });
     }
 
-    const task = await prisma.task.update({
-      where: { id: parseInt(id), user_id: userId },
-      data: { duration_minutes: mins, duration_source: mins === null ? null : 'manual', updated_at: new Date() },
-    });
-
-    res.json({ success: true, task: normTask(task) });
+    const { rows } = await pool.query(
+      'UPDATE tasks SET duration_minutes = $1, duration_source = $2, updated_at = NOW() WHERE id = $3 AND user_id = $4 RETURNING *',
+      [mins, mins === null ? null : 'manual', parseInt(id), userId]
+    );
+    if (!rows.length) return res.status(404).json({ success: false, message: 'Task not found' });
+    res.json({ success: true, task: normTask(rows[0]) });
   } catch (err) {
-    if (err.code === 'P2025') return res.status(404).json({ success: false, message: 'Task not found' });
     res.status(500).json({ success: false, message: 'Failed to update duration' });
   }
 }
@@ -536,12 +611,16 @@ async function deleteTask(req, res) {
   try {
     const { id } = req.params;
     const userId = req.user.id;
+    const pool = res.locals._pool;
 
-    await prisma.task.delete({ where: { id: parseInt(id), user_id: userId } });
+    const { rowCount } = await pool.query(
+      'DELETE FROM tasks WHERE id = $1 AND user_id = $2',
+      [parseInt(id), userId]
+    );
+    if (rowCount === 0) return res.status(404).json({ success: false, message: 'Task not found' });
     res.json({ success: true });
   } catch (err) {
-    if (err.code === 'P2025') return res.status(404).json({ success: false, message: 'Task not found' });
-    console.error('[tasks-prisma] delete error:', err);
+    console.error('[tasks] delete error:', err);
     res.status(500).json({ success: false, message: 'Failed to delete task' });
   }
 }
@@ -550,7 +629,20 @@ async function deleteTask(req, res) {
 async function getStreak(req, res) {
   try {
     const userId = req.user.id;
-    const streak = await prisma.morning_streaks.findUnique({ where: { user_id: userId } });
+    const pool = res.locals._pool;
+
+    let streak = null;
+    try {
+      const { rows } = await pool.query(
+        'SELECT * FROM morning_streaks WHERE user_id = $1 LIMIT 1',
+        [userId]
+      );
+      streak = rows[0] || null;
+    } catch (tableErr) {
+      // Table may not exist in all DB versions
+      if (tableErr.code !== '42P01') throw tableErr;
+    }
+
     res.json({
       success: true,
       current_streak: streak?.current_streak ?? 0,
@@ -558,7 +650,7 @@ async function getStreak(req, res) {
       last_completed_date: streak?.last_completed_date ?? null,
     });
   } catch (err) {
-    console.error('[tasks-prisma] streak error:', err);
+    console.error('[tasks] streak error:', err);
     res.status(500).json({ success: false, message: 'Failed to fetch streak' });
   }
 }
@@ -569,21 +661,30 @@ async function addStep(req, res) {
     const { taskId } = req.params;
     const { title } = req.body;
     const userId = req.user.id;
+    const pool = res.locals._pool;
 
     if (!title?.trim()) return res.status(400).json({ success: false, message: 'Title is required' });
 
-    const task = await prisma.task.findFirst({ where: { id: parseInt(taskId), user_id: userId } });
-    if (!task) return res.status(404).json({ success: false, message: 'Task not found' });
+    const { rows: taskRows } = await pool.query(
+      'SELECT id FROM tasks WHERE id = $1 AND user_id = $2',
+      [parseInt(taskId), userId]
+    );
+    if (!taskRows.length) return res.status(404).json({ success: false, message: 'Task not found' });
 
-    const maxOrder = await prisma.task_step.aggregate({ where: { task_id: parseInt(taskId) }, _max: { sort_order: true } });
+    const { rows: maxRows } = await pool.query(
+      'SELECT COALESCE(MAX(sort_order), -1) AS max_order FROM task_steps WHERE task_id = $1',
+      [parseInt(taskId)]
+    );
+    const nextOrder = (maxRows[0].max_order ?? -1) + 1;
 
-    const step = await prisma.task_step.create({
-      data: { task_id: parseInt(taskId), title: title.trim(), sort_order: (maxOrder._max.sort_order ?? -1) + 1 },
-    });
+    const { rows } = await pool.query(
+      'INSERT INTO task_steps (task_id, title, sort_order) VALUES ($1, $2, $3) RETURNING *',
+      [parseInt(taskId), title.trim(), nextOrder]
+    );
 
-    res.status(201).json({ success: true, step });
+    res.status(201).json({ success: true, step: rows[0] });
   } catch (err) {
-    console.error('[tasks-prisma] addStep error:', err);
+    console.error('[tasks] addStep error:', err);
     res.status(500).json({ success: false, message: 'Failed to add step' });
   }
 }
@@ -594,28 +695,34 @@ async function updateStep(req, res) {
     const { taskId, stepId } = req.params;
     const { title, sort_order } = req.body;
     const userId = req.user.id;
+    const pool = res.locals._pool;
 
-    const task = await prisma.task.findFirst({ where: { id: parseInt(taskId), user_id: userId } });
-    if (!task) return res.status(404).json({ success: false, message: 'Task not found' });
+    const { rows: taskRows } = await pool.query(
+      'SELECT id FROM tasks WHERE id = $1 AND user_id = $2',
+      [parseInt(taskId), userId]
+    );
+    if (!taskRows.length) return res.status(404).json({ success: false, message: 'Task not found' });
 
-    const data = {};
+    const setCols = [];
+    const vals = [];
+    let idx = 1;
+
     if (title !== undefined) {
       if (!title.trim()) return res.status(400).json({ success: false, message: 'Title cannot be empty' });
-      data.title = title.trim();
+      setCols.push(`title = $${idx++}`); vals.push(title.trim());
     }
-    if (sort_order !== undefined) data.sort_order = sort_order;
+    if (sort_order !== undefined) { setCols.push(`sort_order = $${idx++}`); vals.push(sort_order); }
 
-    if (!Object.keys(data).length) return res.status(400).json({ success: false, message: 'Nothing to update' });
+    if (!setCols.length) return res.status(400).json({ success: false, message: 'Nothing to update' });
 
-    const step = await prisma.task_step.update({
-      where: { id: parseInt(stepId), task_id: parseInt(taskId) },
-      data,
-    });
+    vals.push(parseInt(stepId), parseInt(taskId));
+    const sql = `UPDATE task_steps SET ${setCols.join(', ')} WHERE id = $${idx++} AND task_id = $${idx++} RETURNING *`;
 
-    res.json({ success: true, step });
+    const { rows } = await pool.query(sql, vals);
+    if (!rows.length) return res.status(404).json({ success: false, message: 'Step not found' });
+    res.json({ success: true, step: rows[0] });
   } catch (err) {
-    if (err.code === 'P2025') return res.status(404).json({ success: false, message: 'Step not found' });
-    console.error('[tasks-prisma] updateStep error:', err);
+    console.error('[tasks] updateStep error:', err);
     res.status(500).json({ success: false, message: 'Failed to update step' });
   }
 }
@@ -625,32 +732,52 @@ async function toggleStep(req, res) {
   try {
     const { taskId, stepId } = req.params;
     const userId = req.user.id;
+    const pool = res.locals._pool;
 
-    const task = await prisma.task.findFirst({ where: { id: parseInt(taskId), user_id: userId } });
-    if (!task) return res.status(404).json({ success: false, message: 'Task not found' });
+    const { rows: taskRows } = await pool.query(
+      'SELECT * FROM tasks WHERE id = $1 AND user_id = $2',
+      [parseInt(taskId), userId]
+    );
+    if (!taskRows.length) return res.status(404).json({ success: false, message: 'Task not found' });
+    const task = taskRows[0];
 
-    const existing = await prisma.task_step.findFirst({ where: { id: parseInt(stepId), task_id: parseInt(taskId) } });
-    if (!existing) return res.status(404).json({ success: false, message: 'Step not found' });
+    const { rows: existingRows } = await pool.query(
+      'SELECT * FROM task_steps WHERE id = $1 AND task_id = $2',
+      [parseInt(stepId), parseInt(taskId)]
+    );
+    if (!existingRows.length) return res.status(404).json({ success: false, message: 'Step not found' });
+    const existing = existingRows[0];
+    const newCompleted = !existing.is_completed;
 
-    const step = await prisma.task_step.update({
-      where: { id: parseInt(stepId), task_id: parseInt(taskId) },
-      data: { is_completed: !existing.is_completed, completed_at: !existing.is_completed ? new Date() : null },
-    });
+    const { rows: stepRows } = await pool.query(
+      'UPDATE task_steps SET is_completed = $1, completed_at = $2 WHERE id = $3 AND task_id = $4 RETURNING *',
+      [newCompleted, newCompleted ? new Date() : null, parseInt(stepId), parseInt(taskId)]
+    );
+    const step = stepRows[0];
 
-    // Auto-complete parent task if all steps done; uncomplete if step unchecked
-    const allSteps = await prisma.task_step.findMany({ where: { task_id: parseInt(taskId) } });
+    // Auto-complete/uncomplete parent task based on steps state
+    const { rows: allSteps } = await pool.query(
+      'SELECT is_completed FROM task_steps WHERE task_id = $1',
+      [parseInt(taskId)]
+    );
     const allDone = allSteps.length > 0 && allSteps.every(s => s.is_completed);
     const noneDone = allSteps.every(s => !s.is_completed);
 
     if (allDone) {
-      await prisma.task.update({ where: { id: parseInt(taskId) }, data: { is_completed: true, completed_at: new Date() } });
+      await pool.query(
+        'UPDATE tasks SET is_completed = true, completed_at = NOW() WHERE id = $1',
+        [parseInt(taskId)]
+      );
     } else if (noneDone && task.is_completed) {
-      await prisma.task.update({ where: { id: parseInt(taskId) }, data: { is_completed: false, completed_at: null } });
+      await pool.query(
+        'UPDATE tasks SET is_completed = false, completed_at = NULL WHERE id = $1',
+        [parseInt(taskId)]
+      );
     }
 
     res.json({ success: true, step, next_recurring_task: null });
   } catch (err) {
-    console.error('[tasks-prisma] toggleStep error:', err);
+    console.error('[tasks] toggleStep error:', err);
     res.status(500).json({ success: false, message: 'Failed to toggle step' });
   }
 }
@@ -660,15 +787,22 @@ async function deleteStep(req, res) {
   try {
     const { taskId, stepId } = req.params;
     const userId = req.user.id;
+    const pool = res.locals._pool;
 
-    const task = await prisma.task.findFirst({ where: { id: parseInt(taskId), user_id: userId } });
-    if (!task) return res.status(404).json({ success: false, message: 'Task not found' });
+    const { rows: taskRows } = await pool.query(
+      'SELECT id FROM tasks WHERE id = $1 AND user_id = $2',
+      [parseInt(taskId), userId]
+    );
+    if (!taskRows.length) return res.status(404).json({ success: false, message: 'Task not found' });
 
-    await prisma.task_step.delete({ where: { id: parseInt(stepId), task_id: parseInt(taskId) } });
+    const { rowCount } = await pool.query(
+      'DELETE FROM task_steps WHERE id = $1 AND task_id = $2',
+      [parseInt(stepId), parseInt(taskId)]
+    );
+    if (rowCount === 0) return res.status(404).json({ success: false, message: 'Step not found' });
     res.json({ success: true });
   } catch (err) {
-    if (err.code === 'P2025') return res.status(404).json({ success: false, message: 'Step not found' });
-    console.error('[tasks-prisma] deleteStep error:', err);
+    console.error('[tasks] deleteStep error:', err);
     res.status(500).json({ success: false, message: 'Failed to delete step' });
   }
 }
@@ -680,26 +814,29 @@ async function getReentryBrief(req, res) {
   try {
     const taskId = parseInt(req.params.id);
     const userId = req.user.id;
+    const pool = res.locals._pool;
     if (isNaN(taskId)) return res.status(400).json({ success: false, message: 'Invalid task id' });
 
-    const task = await prisma.task.findFirst({
-      where: { id: taskId, user_id: userId },
-      select: { id: true, title: true, notes: true, created_at: true, is_completed: true },
-    });
-    if (!task) return res.status(404).json({ success: false, message: 'Task not found' });
+    const { rows: taskRows } = await pool.query(
+      'SELECT id, title, notes, created_at, is_completed FROM tasks WHERE id = $1 AND user_id = $2',
+      [taskId, userId]
+    );
+    if (!taskRows.length) return res.status(404).json({ success: false, message: 'Task not found' });
+    const task = taskRows[0];
 
-    const [lastSession, nextSubstep] = await Promise.all([
-      prisma.focus_session.findFirst({
-        where: { task_id: taskId },
-        orderBy: { started_at: 'desc' },
-        select: { started_at: true, actual_duration_seconds: true },
-      }),
-      prisma.task_substep.findFirst({
-        where: { task_id: taskId, is_completed: false },
-        orderBy: { sort_order: 'asc' },
-        select: { title: true },
-      }),
+    const [sessionResult, substepResult] = await Promise.all([
+      pool.query(
+        'SELECT started_at, actual_duration_seconds FROM focus_sessions WHERE task_id = $1 ORDER BY started_at DESC LIMIT 1',
+        [taskId]
+      ).catch(() => ({ rows: [] })),
+      pool.query(
+        'SELECT title FROM task_substeps WHERE task_id = $1 AND is_completed = false ORDER BY sort_order ASC LIMIT 1',
+        [taskId]
+      ).catch(() => ({ rows: [] })),
     ]);
+
+    const lastSession = sessionResult.rows[0] || null;
+    const nextSubstep = substepResult.rows[0] || null;
 
     const now = new Date();
     const referenceDate = lastSession ? new Date(lastSession.started_at) : new Date(task.created_at);
@@ -719,14 +856,17 @@ async function getReentryBrief(req, res) {
       },
     });
   } catch (err) {
-    console.error('[tasks-prisma] getReentryBrief error:', err);
+    console.error('[tasks] getReentryBrief error:', err);
     res.status(500).json({ success: false, message: 'Failed to load brief' });
   }
 }
 
 // ── Mount on Express Router ───────────────────────────────────────────────────
-module.exports = function() {
+module.exports = function(pool) {
   const router = require('express').Router();
+
+  // Attach pool to res.locals so all handlers can access it without closure
+  router.use((req, res, next) => { res.locals._pool = pool; next(); });
   router.use(authMW);
 
   router.get('/', listTasks);
