@@ -394,7 +394,7 @@ module.exports = function(pool) {
         client_name: 'FocusLedger Diagnostic',
         products: ['transactions'],
         country_codes: ['US'],
-        options: { language: 'en' },
+        language: 'en',
       });
       res.json({ success: true, configured: true, ...diagInfo, message: 'Plaid API keys are working. Environment: ' + plaidEnv });
     } catch (err) {
@@ -516,7 +516,7 @@ module.exports = function(pool) {
         client_name: 'FocusLedger',
         products: ['transactions'],
         country_codes: ['US'],
-        options: { language: 'en' },
+        language: 'en',
       };
       if (process.env.PLAID_WEBHOOK_URL) {
         linkTokenParams.webhook = process.env.PLAID_WEBHOOK_URL;
