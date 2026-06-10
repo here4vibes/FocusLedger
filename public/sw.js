@@ -13,7 +13,7 @@
  * when offline. The ~50ms latency cost is invisible on modern connections.
  */
 
-const CACHE_VERSION = 'fl-v37';
+const CACHE_VERSION = 'fl-v38';
 const OFFLINE_URL = '/offline.html';
 
 // Assets to precache on install (app shell)
@@ -125,7 +125,7 @@ self.addEventListener('fetch', event => {
 // on every online load is worth the negligible latency cost.
 async function networkFirstAsset(request) {
   try {
-    const response = await fetch(request);
+    const response = await fetch(request, { cache: 'no-store' });
     if (response.ok) {
       const cache = await caches.open(CACHE_VERSION);
       cache.put(request, response.clone());
