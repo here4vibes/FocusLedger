@@ -659,25 +659,24 @@ function staggerRevealCards() {
 
 // ─── Seed unlock state from DB (avoids localStorage race condition) ──────────
 async function seedUnlockState() {
+  function applyLocalStorageFallback() {
+    const stored = localStorage.getItem('fl_first_transaction_date');
+    if (stored) daysSinceFirstTx = Math.floor((new Date() - new Date(stored + 'T12:00:00')) / 86400000);
+  }
   try {
     const r = await api('/api/money/user-stats');
     if (r.success) {
       if (r.first_expense_date) {
         const firstDate = new Date(r.first_expense_date + 'T12:00:00');
-        const now = new Date();
-        daysSinceFirstTx = Math.floor((now - firstDate) / (1000 * 60 * 60 * 24));
+        daysSinceFirstTx = Math.floor((new Date() - firstDate) / (1000 * 60 * 60 * 24));
         localStorage.setItem('fl_first_transaction_date', r.first_expense_date);
       }
-      if (r.evening_swipe_done) {
-        localStorage.setItem('fl_evening_swipe_done', 'true');
-      }
+      if (r.evening_swipe_done) localStorage.setItem('fl_evening_swipe_done', 'true');
+    } else {
+      applyLocalStorageFallback();
     }
   } catch (e) {
-    // Fall back to cached localStorage values
-    const stored = localStorage.getItem('fl_first_transaction_date');
-    if (stored) {
-      daysSinceFirstTx = Math.floor((new Date() - new Date(stored + 'T12:00:00')) / 86400000);
-    }
+    applyLocalStorageFallback();
   }
 }
 
