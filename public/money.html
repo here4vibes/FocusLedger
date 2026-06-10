@@ -440,8 +440,8 @@
       <span class="alert-emoji">💭</span>
       <div class="alert-body">
         <div class="alert-text" id="alertText"></div>
-        <button class="btn-check-in" onclick="onCheckIn()">Check in now</button>
-        <button class="btn-dismiss-alert" onclick="dismissAlert()">Dismiss</button>
+        <button class="btn-check-in" id="btnCheckIn">Check in now</button>
+        <button class="btn-dismiss-alert" id="btnDismissAlert">Dismiss</button>
       </div>
     </div>
   </div>
@@ -453,12 +453,12 @@
       <span class="triage-count-badge" id="triageBadge">0</span>
     </div>
     <p class="triage-desc" id="triageDesc">Some bank transactions need a quick "impulse or planned?" check.</p>
-    <button class="btn-triage-open" onclick="openTriageModal()">Review now</button>
+    <button class="btn-triage-open" id="btnTriageOpen">Review now</button>
   </div>
 
   <!-- QUICK ADD CARD -->
   <!-- Camera capture button -->
-  <button id="scanReceiptBtn" onclick="openCapture('receipt')" style="width:100%;display:flex;align-items:center;justify-content:center;gap:0.5rem;background:var(--surface);border:1.5px solid var(--border);border-radius:14px;padding:0.75rem 1rem;font-family:'DM Sans',sans-serif;font-size:0.9rem;font-weight:600;color:var(--navy);cursor:pointer;margin-bottom:0.75rem;min-height:48px;transition:background 0.15s;">
+  <button id="scanReceiptBtn" style="width:100%;display:flex;align-items:center;justify-content:center;gap:0.5rem;background:var(--surface);border:1.5px solid var(--border);border-radius:14px;padding:0.75rem 1rem;font-family:'DM Sans',sans-serif;font-size:0.9rem;font-weight:600;color:var(--navy);cursor:pointer;margin-bottom:0.75rem;min-height:48px;transition:background 0.15s;">
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
     Scan a receipt
   </button>
@@ -467,7 +467,7 @@
   <div class="quick-add-card">
     <div class="amount-row">
       <span class="currency-sign">$</span>
-      <input class="amount-input" type="number" id="amountInput" inputmode="decimal" placeholder="0.00" min="0.01" step="0.01" autofocus>
+      <input class="amount-input" type="number" id="amountInput" inputmode="decimal" placeholder="0.00" min="0.01" step="0.01">
     </div>
 
     <!-- Category pills -->
@@ -481,8 +481,8 @@
       <div class="reflection-title" id="reflectionTitle">Just a moment…</div>
       <div class="reflection-sub" id="reflectionSub">"Will this still matter to you tomorrow?"</div>
       <div class="reflection-btns">
-        <button class="btn-reflection-add" id="btnReflectionAdd" onclick="proceedWithReflection(true)">Add to plan</button>
-        <button class="btn-reflection-skip" onclick="proceedWithReflection(false)">Log anyway</button>
+        <button class="btn-reflection-add" id="btnReflectionAdd">Add to plan</button>
+        <button class="btn-reflection-skip" id="btnReflectionSkip">Log anyway</button>
       </div>
     </div>
 
@@ -493,8 +493,8 @@
         <small>Impulse data = patterns, not guilt</small>
       </div>
       <div class="toggle-wrap">
-        <button class="toggle-btn" id="btnYes" onclick="setImpulse(false)">Yes</button>
-        <button class="toggle-btn" id="btnNo" onclick="setImpulse(true)">Nope</button>
+        <button class="toggle-btn" id="btnYes">Yes</button>
+        <button class="toggle-btn" id="btnNo">Nope</button>
       </div>
     </div>
 
@@ -504,7 +504,7 @@
       <input class="date-input" type="date" id="dateInput">
     </div>
 
-    <button class="btn-submit" onclick="submitExpense()">+ Log Spend</button>
+    <button class="btn-submit" id="btnSubmit">+ Log Spend</button>
     <div class="submit-toast" id="submitToast">✓ Logged!</div>
   </div>
 
@@ -512,8 +512,8 @@
   <div class="expenses-section">
     <div class="section-label">Spending overview</div>
     <div class="period-tabs">
-      <button class="period-tab active" onclick="setPeriod('week', this)">This week</button>
-      <button class="period-tab" onclick="setPeriod('month', this)">This month</button>
+      <button class="period-tab active" id="tabWeek">This week</button>
+      <button class="period-tab" id="tabMonth">This month</button>
     </div>
 
     <!-- Impulse fact -->
@@ -548,9 +548,9 @@
 </div><!-- /page-wrap -->
 
 <!-- TRIAGE MODAL -->
-<div class="modal-overlay" id="triageModal" onclick="closeTriageOnOverlay(event)">
+<div class="modal-overlay" id="triageModal">
   <div class="modal-sheet">
-    <div class="modal-handle" onclick="closeTriageModal()"></div>
+    <div class="modal-handle" id="modalHandle"></div>
     <div class="modal-title">Spending check-in</div>
     <div class="modal-subtitle" id="triageModalSubtitle">Let's tag a few transactions. Takes 30 seconds.</div>
 
@@ -563,7 +563,7 @@
       <!-- filled by JS -->
     </div>
 
-    <button class="btn-skip-all" onclick="skipAllTriage()">Skip remaining</button>
+    <button class="btn-skip-all" id="btnSkipAll">Skip remaining</button>
   </div>
 </div>
 
@@ -577,8 +577,8 @@
     <div class="delay-countdown-label">minutes remaining</div>
     <div class="delay-progress-bar"><div class="delay-progress-fill" id="delayProgressFill" style="width:0%"></div></div>
     <div class="delay-subtext">This pause helps you show up how you want to.</div>
-    <button class="btn-proceed-soon" id="btnProceed" onclick="proceedAfterDelay()" disabled>Wait… (10:00)</button>
-    <button class="btn-cancel-delay" onclick="cancelDelay()">Cancel</button>
+    <button class="btn-proceed-soon" id="btnProceed" disabled>Wait… (10:00)</button>
+    <button class="btn-cancel-delay" id="btnCancelDelay">Cancel</button>
   </div>
 </div>
 
@@ -652,6 +652,38 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Watch amount input for reflection card trigger
   document.getElementById('amountInput').addEventListener('input', onAmountChange);
+
+  // ── Button bindings (no inline onclick) ─────────────────────────────────
+  document.getElementById('btnCheckIn').addEventListener('click', onCheckIn);
+  document.getElementById('btnDismissAlert').addEventListener('click', dismissAlert);
+  document.getElementById('btnTriageOpen').addEventListener('click', openTriageModal);
+  document.getElementById('scanReceiptBtn').addEventListener('click', function() { openCapture('receipt'); });
+  document.getElementById('btnReflectionAdd').addEventListener('click', function() { proceedWithReflection(true); });
+  document.getElementById('btnReflectionSkip').addEventListener('click', function() { proceedWithReflection(false); });
+  document.getElementById('btnYes').addEventListener('click', function() { setImpulse(false); });
+  document.getElementById('btnNo').addEventListener('click', function() { setImpulse(true); });
+  document.getElementById('btnSubmit').addEventListener('click', submitExpense);
+  document.getElementById('tabWeek').addEventListener('click', function() { setPeriod('week', this); });
+  document.getElementById('tabMonth').addEventListener('click', function() { setPeriod('month', this); });
+  document.getElementById('triageModal').addEventListener('click', closeTriageOnOverlay);
+  document.getElementById('modalHandle').addEventListener('click', closeTriageModal);
+  document.getElementById('btnSkipAll').addEventListener('click', skipAllTriage);
+  document.getElementById('btnProceed').addEventListener('click', proceedAfterDelay);
+  document.getElementById('btnCancelDelay').addEventListener('click', cancelDelay);
+
+  // Category pills — delegation on the grid container
+  document.getElementById('catGrid').addEventListener('click', function(e) {
+    var pill = e.target.closest('.cat-pill');
+    if (pill) selectCat(pill.dataset.slug);
+  });
+
+  // Triage card — delegation on container (content replaced on each card)
+  document.getElementById('triageCardContainer').addEventListener('click', function(e) {
+    var chip = e.target.closest('.triage-cat');
+    if (chip) { selectTriageCat(chip.dataset.slug); return; }
+    var btn = e.target.closest('[data-expense-id]');
+    if (btn) triageExpense(parseInt(btn.dataset.expenseId, 10), btn.dataset.impulse === 'true');
+  });
 
   // Load dashboard data
   window.onBankSyncStatusChanged = loadAccountCard;
@@ -887,7 +919,7 @@ async function loadTodaySpendingCard() {
     const txCount = (spend.total > 0 ? 1 : 0); // spend.today doesn't count txs, just total
 
     container.innerHTML = `
-      <div class="dash-card" onclick="go('/app/money')" style="cursor:pointer">
+      <a href="/app/money" class="dash-card" style="cursor:pointer;display:block;text-decoration:none;color:inherit">
         <div class="card-row">
           <div class="card-left">
             <div class="card-label">Today's spend</div>
@@ -898,7 +930,7 @@ async function loadTodaySpendingCard() {
             <div class="card-icon-badge">📅</div>
           </div>
         </div>
-      </div>`;
+      </a>`;
 
     // fl_first_transaction_date is now seeded from DB via seedUnlockState()
   } catch (e) {
@@ -1163,8 +1195,7 @@ function buildCatGrid() {
   const grid = document.getElementById('catGrid');
   grid.innerHTML = CATS.map(c => `
     <button class="cat-pill${c.slug === selectedCat ? ' selected' : ''}"
-            data-slug="${c.slug}"
-            onclick="selectCat('${c.slug}')">
+            data-slug="${c.slug}">
       ${c.label}
     </button>
   `).join('');
@@ -1584,8 +1615,7 @@ function renderTriageCard() {
 
   const catChips = CATS.map(c => `
     <span class="triage-cat${c.slug === triageCatSelected ? ' selected' : ''}"
-          data-slug="${c.slug}"
-          onclick="selectTriageCat('${c.slug}')">
+          data-slug="${c.slug}">
       ${c.label}
     </span>`).join('');
 
@@ -1607,8 +1637,8 @@ function renderTriageCard() {
         </div>
         <div class="triage-cats" id="triageCats">${catChips}</div>
         <div class="triage-btns">
-          <button class="btn-planned" onclick="triageExpense(${exp.id}, false)">✓ Planned</button>
-          <button class="btn-impulse" onclick="triageExpense(${exp.id}, true)">⚡ Impulse</button>
+          <button class="btn-planned" data-expense-id="${exp.id}" data-impulse="false">✓ Planned</button>
+          <button class="btn-impulse" data-expense-id="${exp.id}" data-impulse="true">⚡ Impulse</button>
         </div>
       </div>
     </div>`;
@@ -1776,7 +1806,7 @@ function attachSwipeToCard(card, expenseId, amount) {
     <div id="captureConfirm" style="display:none;">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;">
         <h3 style="font-family:'Space Grotesk',sans-serif;font-size:1rem;font-weight:700;color:#011e5c;">Confirm expense</h3>
-        <button onclick="closeCapture()" style="background:none;border:none;font-size:1.2rem;color:#6b6b6b;cursor:pointer;padding:0.25rem;">✕</button>
+        <button id="btnCaptureClose" style="background:none;border:none;font-size:1.2rem;color:#6b6b6b;cursor:pointer;padding:0.25rem;">✕</button>
       </div>
       <div style="display:flex;flex-direction:column;gap:0.75rem;margin-bottom:1.25rem;">
         <div style="display:flex;gap:0.75rem;align-items:center;">
@@ -1807,7 +1837,7 @@ function attachSwipeToCard(card, expenseId, amount) {
           </select>
         </div>
       </div>
-      <button onclick="saveReceipt()" style="width:100%;background:#F26B3A;color:#fff;border:none;border-radius:14px;padding:0.9rem;font-family:'Space Grotesk',sans-serif;font-size:1rem;font-weight:700;cursor:pointer;min-height:48px;">Save expense</button>
+      <button id="btnSaveReceipt" style="width:100%;background:#F26B3A;color:#fff;border:none;border-radius:14px;padding:0.9rem;font-family:'Space Grotesk',sans-serif;font-size:1rem;font-weight:700;cursor:pointer;min-height:48px;">Save expense</button>
     </div>
 
     <!-- Step 3: error state -->
@@ -1815,8 +1845,8 @@ function attachSwipeToCard(card, expenseId, amount) {
       <div style="font-size:2rem;margin-bottom:0.75rem;">📷</div>
       <div id="captureErrorMsg" style="font-family:'Space Grotesk',sans-serif;font-weight:600;color:#011e5c;margin-bottom:0.5rem;">Couldn't read the image</div>
       <div style="font-size:0.85rem;color:#6b6b6b;margin-bottom:1.25rem;">Try better lighting or move closer to the receipt.</div>
-      <button onclick="retryCapture()" style="background:#011e5c;color:#fff;border:none;border-radius:12px;padding:0.75rem 1.5rem;font-size:0.9rem;font-weight:600;cursor:pointer;">Try again</button>
-      <button onclick="closeCapture()" style="background:none;border:none;color:#6b6b6b;font-size:0.88rem;cursor:pointer;margin-left:1rem;">Cancel</button>
+      <button id="btnRetryCapture" style="background:#011e5c;color:#fff;border:none;border-radius:12px;padding:0.75rem 1.5rem;font-size:0.9rem;font-weight:600;cursor:pointer;">Try again</button>
+      <button id="btnCancelCapture" style="background:none;border:none;color:#6b6b6b;font-size:0.88rem;cursor:pointer;margin-left:1rem;">Cancel</button>
     </div>
 
   </div>
@@ -1959,6 +1989,12 @@ function attachSwipeToCard(card, expenseId, amount) {
   document.getElementById('captureOverlay').addEventListener('click', function(e) {
     if (e.target === document.getElementById('captureOverlay')) closeCapture();
   });
+
+  // Capture modal button bindings
+  document.getElementById('btnCaptureClose').addEventListener('click', closeCapture);
+  document.getElementById('btnSaveReceipt').addEventListener('click', window.saveReceipt);
+  document.getElementById('btnRetryCapture').addEventListener('click', retryCapture);
+  document.getElementById('btnCancelCapture').addEventListener('click', closeCapture);
 })();
 </script>
 </body>
