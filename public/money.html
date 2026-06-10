@@ -2,30 +2,6 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <script>
-  // Error diagnostic: captures uncaught JS errors and shows them as a visible banner
-  (function() {
-    function showErrBanner(msg, src, line, col) {
-      var b = document.getElementById('fl-err-banner');
-      if (!b) {
-        b = document.createElement('div');
-        b.id = 'fl-err-banner';
-        b.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#c0392b;color:white;font-size:13px;font-family:monospace;padding:8px 12px;white-space:pre-wrap;word-break:break-all;box-shadow:0 2px 8px rgba(0,0,0,0.4)';
-        document.body ? document.body.prepend(b) : document.addEventListener('DOMContentLoaded', function() { document.body.prepend(b); });
-      }
-      b.style.display = 'block';
-      var entry = '[JS ERROR] ' + msg + (src ? ' @ ' + src.split('/').pop() + ':' + line + ':' + col : '') + '\n';
-      b.textContent = (b.textContent || '') + entry;
-    }
-    window.onerror = function(msg, src, line, col, err) {
-      showErrBanner(msg, src, line, col);
-      return false;
-    };
-    window.addEventListener('unhandledrejection', function(e) {
-      showErrBanner('Unhandled Promise: ' + (e.reason && e.reason.message ? e.reason.message : String(e.reason)), '', '', '');
-    });
-  })();
-  </script>
   <link rel="manifest" href="/manifest.json">
   <meta name="theme-color" content="#011e5c">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -467,7 +443,7 @@
   <div class="quick-add-card">
     <div class="amount-row">
       <span class="currency-sign">$</span>
-      <input class="amount-input" type="number" id="amountInput" inputmode="decimal" placeholder="0.00" min="0.01" step="0.01" autofocus>
+      <input class="amount-input" type="number" id="amountInput" inputmode="decimal" placeholder="0.00" min="0.01" step="0.01">
     </div>
 
     <!-- Category pills -->
