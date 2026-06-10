@@ -800,13 +800,23 @@ async function loadAccountCard() {
     html += '</div>';
     html += '<div class="card-right"><div class="card-icon-badge">💳</div></div>';
     html += '</div>';
-    // Disconnect option
+    // Disconnect / Reconnect options
     html += '<div style="margin-top:0.5rem;padding-top:0.5rem;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">';
     html += '<span style="font-size:0.72rem;color:var(--text-muted);">Bank via Plaid · AES-256 encrypted</span>';
+    html += '<div style="display:flex;gap:0.75rem;">';
+    html += '<button id="money-reconnect-btn" style="font-size:0.72rem;color:var(--orange,#F26B3A);background:none;border:none;cursor:pointer;text-decoration:underline;text-underline-offset:2px;">Reconnect</button>';
     html += '<button id="money-disconnect-btn" style="font-size:0.72rem;color:var(--text-muted);background:none;border:none;cursor:pointer;text-decoration:underline;text-underline-offset:2px;">Disconnect</button>';
     html += '</div>';
     html += '</div>';
+    html += '</div>';
     container.innerHTML = html;
+
+    var reconnBtn = document.getElementById('money-reconnect-btn');
+    if (reconnBtn && itemId) {
+      reconnBtn.addEventListener('click', function() {
+        PlaidService.reconnectBankAccount(itemId, reconnBtn);
+      });
+    }
 
     var discBtn = document.getElementById('money-disconnect-btn');
     if (discBtn) {
