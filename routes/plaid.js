@@ -511,13 +511,17 @@ module.exports = function(pool) {
         console.error('[Plaid] create-link-token: Plaid client not initialized — PLAID_CLIENT_ID or PLAID_SECRET missing');
         return res.status(503).json({ success: false, message: 'Bank sync is being set up.' });
       }
-      const response = await plaid.linkTokenCreate({
+      const linkTokenParams = {
         user: { client_user_id: String(userId) },
         client_name: 'FocusLedger',
         products: ['transactions'],
         country_codes: ['US'],
         options: { language: 'en' },
-      });
+      };
+      if (process.env.PLAID_WEBHOOK_URL) {
+        linkTokenParams.webhook = process.env.PLAID_WEBHOOK_URL;
+      }
+      const response = await plaid.linkTokenCreate(linkTokenParams);
       res.json({ success: true, link_token: response.data.link_token });
     } catch (err) {
       const plaidErr = err.response?.data || err.message;
@@ -530,6 +534,31 @@ module.exports = function(pool) {
                  : errorCode === 'PRODUCT_NOT_READY'    ? 'Bank sync is still initializing. Try again in a moment.'
                  :                                       'Connection did not start. Give it another try?';
       res.status(500).json({ success: false, message: userMsg, error_code: errorCode });
+    }
+  });
+
+  router.post('/create-update-token', async (req, res) => {
+    try {
+      const userId = req.user.id;
+      const { item_id } = req.body;
+      if (!item_id) return res.status(400).json({ success: false, message: 'item_id required' });
+      const plaid = getPlaidClient();
+      if (!plaid) return res.status(503).json({ success: false, message: 'Bank sync is being set up.' });
+      const { rows } = await pool.query('SELECT * FROM plaid_items WHERE id = $1 AND user_id = $2', [parseInt(item_id), userId]);
+      if (!rows.length) return res.status(404).json({ success: false, message: 'Item not found' });
+      const accessToken = decryptPlaidToken(rows[0].access_token);
+      const linkTokenParams = {
+        user: { client_user_id: String(userId) },
+        client_name: 'FocusLedger',
+        country_codes: ['US'],
+        access_token: accessToken,
+      };
+      if (process.env.PLAID_WEBHOOK_URL) linkTokenParams.webhook = process.env.PLAID_WEBHOOK_URL;
+      const response = await plaid.linkTokenCreate(linkTokenParams);
+      res.json({ success: true, link_token: response.data.link_token });
+    } catch (err) {
+      console.error('[Plaid] Error creating update token:', err.response?.data || err.message);
+      res.status(500).json({ success: false, message: 'Could not start reconnect. Try again?' });
     }
   });
 

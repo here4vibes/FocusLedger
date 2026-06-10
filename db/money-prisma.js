@@ -542,6 +542,14 @@ async function getSpendingStatsData(pool, userId) {
   return { total_classified, impulse_count, planned_count };
 }
 
+async function getFirstExpenseDate(pool, userId) {
+  const { rows } = await pool.query(
+    'SELECT MIN(expense_date) AS first_date FROM expenses WHERE user_id = $1',
+    [userId]
+  );
+  return rows[0]?.first_date || null;
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function getWeekBounds(localDate) {
@@ -587,4 +595,5 @@ module.exports = {
   getWeekBounds,
   getAggregateData,
   getSpendingStatsData,
+  getFirstExpenseDate,
 };

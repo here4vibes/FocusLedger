@@ -636,12 +636,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // ─── Dashboard init ──────────────────────────────────────────────────────────
 async function initDashboard() {
-  await Promise.all([
-    loadAccountCard(),
-    loadTodaySpendingCard(),
-    checkUnlockConditions(),
-  ]);
-  // Stagger-fade card reveals
+  // loadTodaySpendingCard must finish before checkUnlockConditions reads daysSinceFirstTx
+  await Promise.all([loadAccountCard(), seedUnlockState()]);
+  await Promise.all([loadTodaySpendingCard(), checkUnlockConditions()]);
   staggerRevealCards();
 }
 
@@ -660,17 +657,32 @@ function staggerRevealCards() {
   });
 }
 
+// ─── Seed unlock state from DB (avoids localStorage race condition) ──────────
+async function seedUnlockState() {
+  try {
+    const r = await api('/api/money/user-stats');
+    if (r.success) {
+      if (r.first_expense_date) {
+        const firstDate = new Date(r.first_expense_date + 'T12:00:00');
+        const now = new Date();
+        daysSinceFirstTx = Math.floor((now - firstDate) / (1000 * 60 * 60 * 24));
+        localStorage.setItem('fl_first_transaction_date', r.first_expense_date);
+      }
+      if (r.evening_swipe_done) {
+        localStorage.setItem('fl_evening_swipe_done', 'true');
+      }
+    }
+  } catch (e) {
+    // Fall back to cached localStorage values
+    const stored = localStorage.getItem('fl_first_transaction_date');
+    if (stored) {
+      daysSinceFirstTx = Math.floor((new Date() - new Date(stored + 'T12:00:00')) / 86400000);
+    }
+  }
+}
+
 // ─── Unlock conditions ───────────────────────────────────────────────────────
 async function checkUnlockConditions() {
-  // Check first transaction date from localStorage (seeded on first transaction load)
-  const storedFirstTx = localStorage.getItem('fl_first_transaction_date');
-  if (storedFirstTx) {
-    const firstDate = new Date(storedFirstTx);
-    const today = new Date();
-    daysSinceFirstTx = Math.floor((today - firstDate) / (1000 * 60 * 60 * 24));
-  }
-
-  // Check first Evening Swipe completion from localStorage
   const swipeDone = localStorage.getItem('fl_evening_swipe_done') === 'true';
 
   unlockState = {
@@ -788,13 +800,23 @@ async function loadAccountCard() {
     html += '</div>';
     html += '<div class="card-right"><div class="card-icon-badge">💳</div></div>';
     html += '</div>';
-    // Disconnect option
+    // Disconnect / Reconnect options
     html += '<div style="margin-top:0.5rem;padding-top:0.5rem;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">';
     html += '<span style="font-size:0.72rem;color:var(--text-muted);">Bank via Plaid · AES-256 encrypted</span>';
+    html += '<div style="display:flex;gap:0.75rem;">';
+    html += '<button id="money-reconnect-btn" style="font-size:0.72rem;color:var(--orange,#F26B3A);background:none;border:none;cursor:pointer;text-decoration:underline;text-underline-offset:2px;">Reconnect</button>';
     html += '<button id="money-disconnect-btn" style="font-size:0.72rem;color:var(--text-muted);background:none;border:none;cursor:pointer;text-decoration:underline;text-underline-offset:2px;">Disconnect</button>';
     html += '</div>';
     html += '</div>';
+    html += '</div>';
     container.innerHTML = html;
+
+    var reconnBtn = document.getElementById('money-reconnect-btn');
+    if (reconnBtn && itemId) {
+      reconnBtn.addEventListener('click', function() {
+        PlaidService.reconnectBankAccount(itemId, reconnBtn);
+      });
+    }
 
     var discBtn = document.getElementById('money-disconnect-btn');
     if (discBtn) {
@@ -855,11 +877,7 @@ async function loadTodaySpendingCard() {
         </div>
       </div>`;
 
-    // Seed first transaction date if we have spend
-    if (spend.total > 0 && !localStorage.getItem('fl_first_transaction_date')) {
-      const today = new Date().toISOString().split('T')[0];
-      localStorage.setItem('fl_first_transaction_date', today);
-    }
+    // fl_first_transaction_date is now seeded from DB via seedUnlockState()
   } catch (e) {
     container.innerHTML = `
       <div class="dash-card">
@@ -1895,6 +1913,7 @@ function attachSwipeToCard(card, expenseId, amount) {
         category: category,
         note: merchant || null,
         expense_date: date,
+        is_impulse: false,
       })
     })
     .then(function(r) { return r.json(); })

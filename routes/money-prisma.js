@@ -20,6 +20,7 @@ const {
   upsertBillPreference,
   getAggregateData,
   getSpendingStatsData,
+  getFirstExpenseDate,
 } = require('../db/money-prisma');
 
 // ── Auth middleware (use both session + JWT) ──────────────────────────────────
@@ -284,6 +285,31 @@ async function getSpendingStats(req, res) {
   }
 }
 
+// ── GET /api/money/user-stats ─────────────────────────────────────────────
+// Returns first_expense_date (ISO string or null) + has_triaged_ever boolean.
+// Used by frontend to seed dashboard unlock conditions from the DB (not localStorage).
+async function getUserStats(req, res) {
+  try {
+    const userId = req.user.id;
+    const pool = res.locals._pool;
+    const [firstDate, triagedRows] = await Promise.all([
+      getFirstExpenseDate(pool, userId),
+      pool.query(
+        `SELECT 1 FROM expenses WHERE user_id = $1 AND is_impulse IS NOT NULL LIMIT 1`,
+        [userId]
+      ),
+    ]);
+    res.json({
+      success: true,
+      first_expense_date: firstDate ? firstDate.toISOString().split('T')[0] : null,
+      evening_swipe_done: triagedRows.rows.length > 0,
+    });
+  } catch (err) {
+    console.error('[money] user-stats error:', err);
+    res.status(500).json({ success: false, message: 'Failed to fetch user stats' });
+  }
+}
+
 // ── GET /api/money/alerts ─────────────────────────────────────────────────
 async function getAlerts(req, res) {
   try {
@@ -481,6 +507,9 @@ module.exports = function(pool) {
 
   // Get today's spending session (used by dashboard unlock conditions)
   router.get('/spending-sessions/today', getTodaySession);
+
+  // User tracking stats (first expense date for dashboard unlock)
+  router.get('/user-stats', getUserStats);
 
   // Nudge config + alerts
   router.get('/nudge-config', getNudgeConfig);

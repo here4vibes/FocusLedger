@@ -129,7 +129,7 @@
   // ── Disconnect ──────────────────────────────────────────────────────────────
 
   function disconnectBankAccount(itemId) {
-    fetch('/api/money/items/' + itemId, { method: 'DELETE', headers: authHeaders() })
+    fetch('/api/plaid/items/' + itemId, { method: 'DELETE', headers: authHeaders() })
     .then(function (r) { return r.json(); })
     .then(function (data) {
       if (data.success) {
@@ -138,6 +138,61 @@
       }
     })
     .catch(function () { showBankSyncToast('', 'Failed to disconnect. Try again.'); });
+  }
+
+  // ── Reconnect (Plaid update mode) ───────────────────────────────────────────
+
+  function reconnectBankAccount(itemId, btn) {
+    if (btn) { btn.disabled = true; btn.textContent = 'Reconnecting…'; }
+    var errEl = btn ? btn.closest('.dash-card')?.querySelector('.bank-reconnect-err') : null;
+
+    fetch('/api/plaid/create-update-token', {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({ item_id: itemId }),
+    })
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+      if (!data.success || !data.link_token) {
+        if (btn) { btn.disabled = false; btn.textContent = 'Reconnect'; }
+        showBankSyncToast('error', data.message || 'Could not start reconnect. Try again?');
+        return;
+      }
+      if (window.Plaid) {
+        openReconnectLink(data.link_token, btn);
+      } else {
+        var script = document.createElement('script');
+        script.src = 'https://cdn.plaid.com/link/v2/stable/link-initialize.js';
+        script.onload = function () { openReconnectLink(data.link_token, btn); };
+        script.onerror = function () {
+          if (btn) { btn.disabled = false; btn.textContent = 'Reconnect'; }
+          showBankSyncToast('error', 'Couldn’t load the connection tool. Check your internet.');
+        };
+        document.head.appendChild(script);
+      }
+    })
+    .catch(function () {
+      if (btn) { btn.disabled = false; btn.textContent = 'Reconnect'; }
+      showBankSyncToast('error', 'Reconnect didn’t start. Try again.');
+    });
+  }
+
+  function openReconnectLink(linkToken, btn) {
+    var handler = window.Plaid.create({
+      token: linkToken,
+      onSuccess: function () {
+        if (btn) { btn.disabled = false; btn.textContent = 'Reconnect'; }
+        showBankSyncToast('', '✓ Connection refreshed.');
+        if (typeof onBankSyncStatusChanged === 'function') onBankSyncStatusChanged();
+      },
+      onExit: function (err) {
+        if (btn) { btn.disabled = false; btn.textContent = 'Reconnect'; }
+        if (err && err.error_code !== 'USER_CANCELLED') {
+          showBankSyncToast('error', err.error_message || 'Reconnect interrupted. Try again.');
+        }
+      },
+    });
+    handler.open();
   }
 
   // ── Load + Render Status ────────────────────────────────────────────────────
@@ -268,6 +323,7 @@
     initPlaidLink: initPlaidLink,
     openPlaidLink: function (linkToken) { openPlaidLink(linkToken, null, null, null); },
     disconnectBankAccount: disconnectBankAccount,
+    reconnectBankAccount: reconnectBankAccount,
     loadBankSyncStatus: loadBankSyncStatus,
     showBankSyncToast: showBankSyncToast,
     relativeTime: relativeTime,
