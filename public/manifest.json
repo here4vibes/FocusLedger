@@ -2,7 +2,7 @@
   "name": "FocusLedger",
   "short_name": "FocusLedger",
   "description": "One app for your tasks and your money — ADHD-friendly focus tracker with bank sync.",
-  "start_url": "/app",
+  "start_url": "/app/tasks",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
@@ -57,15 +57,16 @@
       "name": "Add Task",
       "short_name": "Task",
       "description": "Jump straight to adding a new task",
-      "url": "/app#add-task",
+      "url": "/app/tasks",
       "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
     },
     {
-      "name": "Log Expense",
-      "short_name": "Expense",
-      "description": "Quickly log a new expense",
-      "url": "/app#add-expense",
+      "name": "Money",
+      "short_name": "Money",
+      "description": "Check your spending",
+      "url": "/app/money",
       "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
     }
   ]
 }
+
