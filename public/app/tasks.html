@@ -1302,6 +1302,8 @@
         document.getElementById('qaOverlay').classList.add('open');
         setTimeout(() => document.getElementById('qaInput').focus(), 50);
     }
+    // Shared-nav pill FAB wires to this
+    window.flQuickAdd = openQuickAdd;
 
     function closeQuickAdd() {
         const overlay = document.getElementById('qaOverlay');
