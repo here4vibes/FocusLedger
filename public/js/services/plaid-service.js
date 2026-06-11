@@ -166,14 +166,14 @@
         script.onload = function () { openReconnectLink(data.link_token, btn); };
         script.onerror = function () {
           if (btn) { btn.disabled = false; btn.textContent = 'Reconnect'; }
-          showBankSyncToast('error', 'Couldn’t load the connection tool. Check your internet.');
+          showBankSyncToast('error', "Couldn't load the connection tool. Check your internet.");
         };
         document.head.appendChild(script);
       }
     })
     .catch(function () {
       if (btn) { btn.disabled = false; btn.textContent = 'Reconnect'; }
-      showBankSyncToast('error', 'Reconnect didn’t start. Try again.');
+      showBankSyncToast('error', "Reconnect didn't start. Try again.");
     });
   }
 

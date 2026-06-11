@@ -301,7 +301,7 @@ async function getUserStats(req, res) {
     ]);
     res.json({
       success: true,
-      first_expense_date: firstDate ? firstDate.toISOString().split('T')[0] : null,
+      first_expense_date: firstDate ? String(firstDate).split('T')[0] : null,
       evening_swipe_done: triagedRows.rows.length > 0,
     });
   } catch (err) {

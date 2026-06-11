@@ -377,8 +377,8 @@ async function createTask(req, res) {
 
     let taskRow;
     {
-      let insertCols = [...allCols];
-      let insertVals = [...allVals];
+      const insertCols = [...allCols];
+      const insertVals = [...allVals];
       // The core columns (user_id + title) must always stay; everything else is strippable.
       while (true) {
         const ph = insertVals.map((_, i) => `$${i + 1}`).join(', ');
@@ -553,9 +553,7 @@ async function toggleTask(req, res) {
         if (nextData) {
           const cols = ['user_id', 'title', 'priority', 'source', 'recurrence_type'];
           const vals = [nextData.user_id, nextData.title, nextData.priority, nextData.source, nextData.recurrence_type];
-          let idx = vals.length;
-
-          function addC(col, val) { cols.push(col); vals.push(val); idx++; }
+          function addC(col, val) { cols.push(col); vals.push(val); }
           if (nextData.description)    addC('description', nextData.description);
           if (nextData.due_date)       addC('due_date', nextData.due_date);
           if (nextData.due_time)       addC('due_time', nextData.due_time);
@@ -601,7 +599,7 @@ async function updateDuration(req, res) {
     );
     if (!rows.length) return res.status(404).json({ success: false, message: 'Task not found' });
     res.json({ success: true, task: normTask(rows[0]) });
-  } catch (err) {
+  } catch {
     res.status(500).json({ success: false, message: 'Failed to update duration' });
   }
 }

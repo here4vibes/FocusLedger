@@ -454,6 +454,24 @@
         }
         .recur-day-row select:focus { border-color: var(--orange); }
 
+        /* Value select in edit modal */
+        .modal-field select {
+            width: 100%; padding: 0.65rem 0.85rem; border: 1.5px solid var(--border);
+            border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 0.9rem;
+            background: white; color: var(--text-dark); outline: none; cursor: pointer;
+            appearance: auto;
+        }
+        .modal-field select:focus { border-color: var(--orange); }
+
+        /* Parse chips below task input */
+        .task-parse-chips { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-top: 0.45rem; min-height: 0; }
+        .task-parse-chip {
+            display: inline-flex; align-items: center; gap: 0.25rem;
+            padding: 0.22rem 0.6rem; background: rgba(91,164,164,0.1);
+            border: 1px solid rgba(91,164,164,0.3); border-radius: 20px;
+            font-size: 0.74rem; font-weight: 500; color: var(--green);
+        }
+
         /* ── Toast ──────────────────────────────────────────────────────── */
         .toast {
             position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%) translateY(20px);
@@ -605,6 +623,7 @@
                 <input type="text" id="taskInput" class="add-task-input" placeholder="What do you need to do?" maxlength="150" autocomplete="off">
                 <button class="btn-add" id="addBtn">Add</button>
             </div>
+            <div class="task-parse-chips" id="taskParseChips"></div>
             <div class="breakdown-toggle" id="breakdownToggle">
                 <div class="toggle-track" id="breakdownTrack"><div class="toggle-knob"></div></div>
                 <span>Break it into steps</span>
@@ -662,6 +681,12 @@
             <div class="modal-field">
                 <label>Notes</label>
                 <textarea id="editNotes" placeholder="Any extra details?"></textarea>
+            </div>
+            <div class="modal-field" id="editValueField">
+                <label>Value tag</label>
+                <select id="editValue">
+                    <option value="">— No value —</option>
+                </select>
             </div>
             <div class="modal-field">
                 <label>Repeat</label>
@@ -962,21 +987,60 @@
         fetchSummary();
     }
 
+    // ── Parse chips (live feedback while typing) ────────────────────────────────
+    function updateTaskParseChips(rawText) {
+        const chips = document.getElementById('taskParseChips');
+        if (!chips) return;
+        if (!rawText.trim() || !window.parseNaturalLanguage) { chips.innerHTML = ''; return; }
+        const { parsed } = window.parseNaturalLanguage(rawText);
+        const parts = [];
+        if (parsed.date) {
+            const d = new Date(parsed.date + 'T12:00:00');
+            const today = new Date(); today.setHours(0,0,0,0);
+            const tmrw = new Date(today); tmrw.setDate(tmrw.getDate() + 1);
+            const dStr = d.setHours(0,0,0,0) === today.setHours(0,0,0,0) ? 'Today'
+                       : d.setHours(0,0,0,0) === tmrw.setHours(0,0,0,0) ? 'Tomorrow'
+                       : d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+            parts.push('📅 ' + dStr);
+        }
+        if (parsed.time) {
+            const [h, m] = parsed.time.split(':').map(Number);
+            const ampm = h >= 12 ? 'pm' : 'am';
+            parts.push('⏰ ' + (h % 12 || 12) + ':' + String(m).padStart(2, '0') + ampm);
+        }
+        if (parsed.recurrence) parts.push(parsed.recurrence.label);
+        chips.innerHTML = parts.map(p => `<span class="task-parse-chip">${escHtml(p)}</span>`).join('');
+    }
+
     // ── Add task ────────────────────────────────────────────────────────────────
     async function addTask() {
         const input = document.getElementById('taskInput');
-        const title = input.value.trim();
-        if (!title) return;
+        const raw = input.value.trim();
+        if (!raw) return;
+
+        // Parse NLP from the raw input
+        let title = raw;
+        const body = {};
+        if (window.parseNaturalLanguage) {
+            const { parsed, remaining } = window.parseNaturalLanguage(raw);
+            title = remaining.trim() || raw;
+            if (parsed.date) body.due_date = parsed.date;
+            if (parsed.time) body.due_time = parsed.time;
+            if (parsed.recurrence) {
+                body.recurrence_type = parsed.recurrence.type;
+                if (parsed.recurrence.day != null) body.recurrence_day = parsed.recurrence.day;
+            }
+        }
+        body.title = title;
 
         const steps = Array.from(document.querySelectorAll('#stepInputs input'))
             .map(i => i.value.trim()).filter(s => s);
-
-        const body = { title };
         if (steps.length > 0) body.steps = steps;
 
         const data = await api('POST', '/api/tasks', body);
         if (data.success) {
             input.value = '';
+            document.getElementById('taskParseChips').innerHTML = '';
             document.getElementById('stepsArea').classList.remove('visible');
             document.getElementById('stepInputs').innerHTML = '';
             state.breakdownOn = false;
@@ -1107,6 +1171,20 @@
         document.getElementById('editDueDate').value = task.due_date ? String(task.due_date).split('T')[0] : '';
         document.getElementById('editDueTime').value = task.due_time || '';
         document.getElementById('editNotes').value = task.notes || '';
+
+        // Populate value select from state.valuesMap
+        const valueSelect = document.getElementById('editValue');
+        valueSelect.innerHTML = '<option value="">— No value —</option>';
+        if (state.valuesMap) {
+            Object.values(state.valuesMap).forEach(v => {
+                const opt = document.createElement('option');
+                opt.value = v.id;
+                opt.textContent = v.value_name;
+                if (task.value_id && String(task.value_id) === String(v.id)) opt.selected = true;
+                valueSelect.appendChild(opt);
+            });
+        }
+
         const rtype = task.recurrence_type || 'none';
         setActivePill(rtype);
         updateRecurDayRow(rtype, task.recurrence_day ?? null);
@@ -1128,6 +1206,7 @@
         const rtype = document.querySelector('#recurPills .recur-pill.active')?.dataset.val || 'none';
         const needsDay = rtype === 'weekly' || rtype === 'monthly';
         const rday = needsDay ? parseInt(document.getElementById('recurDay').value) : null;
+        const rawValueId = document.getElementById('editValue').value;
         const data = {
             title: document.getElementById('editTitle').value.trim(),
             due_date: document.getElementById('editDueDate').value || null,
@@ -1135,6 +1214,7 @@
             notes: document.getElementById('editNotes').value || null,
             recurrence_type: rtype,
             recurrence_day: rday,
+            value_id: rawValueId ? parseInt(rawValueId) : null,
         };
         if (!data.title) { showToast('Title is required'); return; }
         const result = await api('PATCH', '/api/tasks/' + state.editingId, data);
@@ -1205,6 +1285,7 @@
 
     // ── Add task button ────────────────────────────────────────────────────────
     document.getElementById('addBtn').addEventListener('click', addTask);
+    document.getElementById('taskInput').addEventListener('input', (e) => updateTaskParseChips(e.target.value));
     document.getElementById('taskInput').addEventListener('keydown', (e) => {
         if (e.key === 'Enter') addTask();
         // Trigger AI breakdown when toggle is on and title looks complete
@@ -1342,9 +1423,10 @@
             }
         });
 
-        // Wire date parser to FAB system
+        // Wire date parser to FAB system and task input
         window._qaParse = parseNaturalLanguage;
         window._qaChipLabel = chipLabel;
+        window.parseNaturalLanguage = parseNaturalLanguage;
 
         // Pro badge
         document.getElementById('proBadge').classList.add('visible');

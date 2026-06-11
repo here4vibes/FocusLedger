@@ -2,6 +2,30 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <script>
+  // Error diagnostic: captures uncaught JS errors and shows them as a visible banner
+  (function() {
+    function showErrBanner(msg, src, line, col) {
+      var b = document.getElementById('fl-err-banner');
+      if (!b) {
+        b = document.createElement('div');
+        b.id = 'fl-err-banner';
+        b.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#c0392b;color:white;font-size:13px;font-family:monospace;padding:8px 12px;white-space:pre-wrap;word-break:break-all;box-shadow:0 2px 8px rgba(0,0,0,0.4)';
+        document.body ? document.body.prepend(b) : document.addEventListener('DOMContentLoaded', function() { document.body.prepend(b); });
+      }
+      b.style.display = 'block';
+      var entry = '[JS ERROR] ' + msg + (src ? ' @ ' + src.split('/').pop() + ':' + line + ':' + col : '') + '\n';
+      b.textContent = (b.textContent || '') + entry;
+    }
+    window.onerror = function(msg, src, line, col, err) {
+      showErrBanner(msg, src, line, col);
+      return false;
+    };
+    window.addEventListener('unhandledrejection', function(e) {
+      showErrBanner('Unhandled Promise: ' + (e.reason && e.reason.message ? e.reason.message : String(e.reason)), '', '', '');
+    });
+  })();
+  </script>
   <link rel="manifest" href="/manifest.json">
   <meta name="theme-color" content="#011e5c">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -691,25 +715,24 @@ function staggerRevealCards() {
 
 // ─── Seed unlock state from DB (avoids localStorage race condition) ──────────
 async function seedUnlockState() {
+  function applyLocalStorageFallback() {
+    const stored = localStorage.getItem('fl_first_transaction_date');
+    if (stored) daysSinceFirstTx = Math.floor((new Date() - new Date(stored + 'T12:00:00')) / 86400000);
+  }
   try {
     const r = await api('/api/money/user-stats');
     if (r.success) {
       if (r.first_expense_date) {
         const firstDate = new Date(r.first_expense_date + 'T12:00:00');
-        const now = new Date();
-        daysSinceFirstTx = Math.floor((now - firstDate) / (1000 * 60 * 60 * 24));
+        daysSinceFirstTx = Math.floor((new Date() - firstDate) / (1000 * 60 * 60 * 24));
         localStorage.setItem('fl_first_transaction_date', r.first_expense_date);
       }
-      if (r.evening_swipe_done) {
-        localStorage.setItem('fl_evening_swipe_done', 'true');
-      }
+      if (r.evening_swipe_done) localStorage.setItem('fl_evening_swipe_done', 'true');
+    } else {
+      applyLocalStorageFallback();
     }
   } catch (e) {
-    // Fall back to cached localStorage values
-    const stored = localStorage.getItem('fl_first_transaction_date');
-    if (stored) {
-      daysSinceFirstTx = Math.floor((new Date() - new Date(stored + 'T12:00:00')) / 86400000);
-    }
+    applyLocalStorageFallback();
   }
 }
 
@@ -1724,7 +1747,7 @@ function attachSwipeToCard(card, expenseId, amount) {
 }
 
 </script>
-<script src="/js/services/plaid-service.js"></script>
+<script src="/js/services/plaid-service.js?v=3"></script>
 <script src="/shared-nav.js"></script>
     <script src="/buddy-widget.js"></script>
 <script src="/js/date-parser.js"></script>

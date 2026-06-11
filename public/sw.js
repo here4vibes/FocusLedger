@@ -125,7 +125,7 @@ self.addEventListener('fetch', event => {
 // on every online load is worth the negligible latency cost.
 async function networkFirstAsset(request) {
   try {
-    const response = await fetch(request);
+    const response = await fetch(request, { cache: 'no-store' });
     if (response.ok) {
       const cache = await caches.open(CACHE_VERSION);
       cache.put(request, response.clone());

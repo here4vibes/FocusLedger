@@ -159,6 +159,28 @@ app.get('/health', async (req, res) => {
   }
 });
 
+// Temporary diagnostic — shows tasks.id column state and migration history
+app.get('/api/debug/tasks-schema', async (req, res) => {
+  try {
+    const [colRes, trigRes, migRes, nullRes, seqRes] = await Promise.all([
+      pool.query(`SELECT column_default, is_nullable, identity_generation FROM information_schema.columns WHERE table_schema='public' AND table_name='tasks' AND column_name='id'`),
+      pool.query(`SELECT trigger_name FROM information_schema.triggers WHERE event_object_table='tasks' AND trigger_name='tasks_auto_id'`),
+      pool.query(`SELECT name, applied_at FROM _migrations ORDER BY applied_at DESC LIMIT 10`),
+      pool.query(`SELECT COUNT(*)::int AS cnt FROM tasks WHERE id IS NULL`),
+      pool.query(`SELECT sequencename, last_value FROM pg_sequences WHERE sequencename='tasks_id_seq'`),
+    ]);
+    res.json({
+      id_column: colRes.rows[0],
+      trigger_installed: trigRes.rows.length > 0,
+      null_id_tasks: nullRes.rows[0].cnt,
+      sequence: seqRes.rows[0] || null,
+      recent_migrations: migRes.rows,
+    });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // =============================================================================
 // 5. API ROUTES
 // =============================================================================
@@ -272,6 +294,77 @@ app.use((err, req, res, next) => {
 });
 
 const { purgeExpiredStash } = require('./db/email-to-tasks');
+
+// Inline tasks.id schema repair — runs on every start until schema is correct.
+// Bypasses migrate.js entirely; uses the live pool that we know is working.
+// Non-blocking: server starts regardless of whether repair succeeds.
+(async () => {
+  let client;
+  try {
+    client = await pool.connect();
+    await client.query('SET statement_timeout = 0'); // DDL may wait for locks
+    await client.query('BEGIN');
+
+    // 1. Ensure sequence exists and is synced
+    await client.query(`
+      DO $$ BEGIN
+        IF NOT EXISTS (SELECT 1 FROM pg_sequences WHERE sequencename = 'tasks_id_seq') THEN
+          CREATE SEQUENCE tasks_id_seq;
+        END IF;
+      END $$
+    `);
+    await client.query(`
+      SELECT setval('tasks_id_seq',
+        COALESCE((SELECT MAX(id) FROM tasks WHERE id IS NOT NULL), 0) + 1, false)
+    `);
+
+    // 2. Wire DEFAULT on id if not already set
+    const { rows: [col] } = await client.query(
+      `SELECT column_default FROM information_schema.columns
+       WHERE table_schema='public' AND table_name='tasks' AND column_name='id'`
+    );
+    if (!col?.column_default?.startsWith('nextval')) {
+      await client.query(
+        `ALTER TABLE tasks ALTER COLUMN id SET DEFAULT nextval('tasks_id_seq')`
+      );
+      console.log('[startup] tasks.id DEFAULT set');
+    }
+
+    // 3. Install BEFORE INSERT trigger (belt-and-suspenders)
+    await client.query(`
+      CREATE OR REPLACE FUNCTION tasks_assign_id()
+      RETURNS TRIGGER LANGUAGE plpgsql AS $$
+      BEGIN
+        IF NEW.id IS NULL THEN NEW.id := nextval('tasks_id_seq'); END IF;
+        RETURN NEW;
+      END; $$
+    `);
+    await client.query(`DROP TRIGGER IF EXISTS tasks_auto_id ON tasks`);
+    await client.query(`
+      CREATE TRIGGER tasks_auto_id
+        BEFORE INSERT ON tasks
+        FOR EACH ROW EXECUTE FUNCTION tasks_assign_id()
+    `);
+
+    // 4. Delete null-ID tasks
+    const { rows: [{ cnt }] } = await client.query(
+      `SELECT COUNT(*)::int AS cnt FROM tasks WHERE id IS NULL`
+    );
+    if (cnt > 0) {
+      await client.query(`DELETE FROM task_steps WHERE task_id IS NULL`);
+      await client.query(`DELETE FROM tasks WHERE id IS NULL`);
+      console.log(`[startup] purged ${cnt} null-ID tasks`);
+    }
+
+    await client.query('COMMIT');
+    console.log('[startup] tasks.id repair done');
+  } catch (e) {
+    if (client) await client.query('ROLLBACK').catch(() => {});
+    console.error('[startup] tasks.id repair failed:', e.message);
+  } finally {
+    if (client) client.release();
+  }
+})();
 
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);

@@ -3,9 +3,9 @@
   "version": "1.0.0",
   "main": "server.js",
   "scripts": {
-    "start": "npm run db:generate && node server.js",
-    "dev": "npm run db:generate && node server.js",
-    "build": "npm run lint && npm test && npm run db:generate && npm run migrate",
+    "start": "node migrate.js && node server.js",
+    "dev": "node server.js",
+    "build": "npm run lint && npm test && npm run migrate",
     "migrate": "node migrate.js",
     "db:push": "prisma db push --skip-generate",
     "db:generate": "prisma generate",
