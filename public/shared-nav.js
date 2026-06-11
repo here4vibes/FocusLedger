@@ -191,8 +191,40 @@
     return nav;
   }
 
+  // ── Build top bar (mobile) ────────────────────────────────
+  // Fixed top bar with brain logo on left, hamburger button on right.
+  // Hidden on desktop via CSS — sidebar already has the logo.
+
+  function buildTopBar(hamburgerBtn) {
+    var bar = document.createElement('header');
+    bar.id = 'shared-top-bar';
+    bar.setAttribute('role', 'banner');
+
+    var logoLink = document.createElement('a');
+    logoLink.href = '/app/tasks';
+    logoLink.className = 'shared-top-logo';
+    logoLink.setAttribute('aria-label', 'FocusLedger home');
+
+    var logoImg = document.createElement('img');
+    logoImg.src = '/icons/fl-icon.svg';
+    logoImg.alt = '';
+    logoImg.setAttribute('aria-hidden', 'true');
+
+    var logoText = document.createElement('span');
+    logoText.className = 'shared-top-logo-text';
+    logoText.innerHTML = '<span class="fl-focus">Focus</span><span class="fl-ledger">Ledger</span>';
+
+    logoLink.appendChild(logoImg);
+    logoLink.appendChild(logoText);
+
+    bar.appendChild(logoLink);
+    bar.appendChild(hamburgerBtn);
+
+    return bar;
+  }
+
   // ── Build hamburger button ────────────────────────────────
-  // Hidden on desktop via CSS; mobile only.
+  // Placed inside #shared-top-bar on mobile; hidden on desktop via CSS.
 
   function buildHamburgerBtn() {
     var btn = document.createElement('button');
@@ -449,16 +481,16 @@
     document.body.setAttribute('data-nav-shell', mobileView ? 'mobile' : 'desktop');
     document.body.classList.add('shared-nav-active');
 
-    // Shared elements: hamburger button + slide-out menu (shown on mobile,
-    // hidden on desktop via CSS — not critical if both are present since they're
-    // styled out on desktop anyway).
+    // Build hamburger + top bar (hamburger lives inside top bar on mobile;
+    // CSS hides the whole bar on desktop where the sidebar has the logo).
     var hamburgerBtn = buildHamburgerBtn();
     var parts         = buildSlideMenu();
     var overlay        = parts.overlay;
     var menu           = parts.menu;
     var closeBtn       = parts.closeBtn;
 
-    document.body.appendChild(hamburgerBtn);
+    var topBar = buildTopBar(hamburgerBtn);
+    document.body.appendChild(topBar);
     document.body.appendChild(overlay);
     document.body.appendChild(menu);
 

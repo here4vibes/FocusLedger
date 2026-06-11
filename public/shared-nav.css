@@ -99,8 +99,7 @@ body.transitioning-in {
 #shared-hamburger-btn {
   transition: background var(--transition-speed) ease,
               transform 0.15s ease;
-  /* Relative positioning needed for the active-page dot */
-  position: fixed;
+  position: relative; /* inside #shared-top-bar, not fixed */
 }
 #shared-hamburger-btn:hover {
   transform: scale(1.05);
@@ -139,17 +138,18 @@ body[data-nav-shell="desktop"] #shared-bottom-nav {
 
 #shared-bottom-nav {
   position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: var(--nav-height);
-  background: var(--nav-bg);
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(340px, calc(100% - 32px));
+  height: 58px;
+  background: #0c1b40;
+  border-radius: 30px;
   z-index: var(--nav-z);
   display: flex;
-  align-items: stretch;
-  box-shadow: 0 -4px 20px rgba(0,0,0,0.3);
-  /* safe area inset for iOS home indicator */
-  padding-bottom: env(safe-area-inset-bottom, 0);
+  align-items: center;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.38), 0 2px 8px rgba(0,0,0,0.18);
+  padding: 0 6px;
 }
 
 .shared-nav-item {
@@ -215,19 +215,73 @@ body[data-nav-shell="desktop"] #shared-bottom-nav {
   font-weight: 500;
 }
 
+/* ── Top Bar (mobile) — brain logo left + hamburger right ── */
+
+#shared-top-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  min-height: 52px;
+  padding-top: env(safe-area-inset-top, 0);
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.07);
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.06);
+  z-index: var(--nav-z);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-left: 16px;
+  padding-right: 12px;
+}
+
+/* Hidden on desktop — sidebar already has the logo */
+@media (min-width: 900px) {
+  #shared-top-bar { display: none !important; }
+}
+
+.shared-top-logo {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.shared-top-logo img {
+  height: 26px;
+  width: auto;
+  display: block;
+  flex-shrink: 0;
+}
+
+.shared-top-logo-text {
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.shared-top-logo-text .fl-focus {
+  color: #011e5c;
+}
+
+.shared-top-logo-text .fl-ledger {
+  color: #f0b429;
+}
+
 /* ── Hamburger Button ─────────────────────────────────────── */
 
 #shared-hamburger-btn {
-  position: fixed;
-  top: 12px;
-  right: 16px;
+  position: relative;
   z-index: var(--menu-z);
   width: 40px;
   height: 40px;
   border-radius: 10px;
   border: none;
   background: var(--nav-bg);
-  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.22);
   cursor: pointer;
   display: flex;
   flex-direction: column;
@@ -465,7 +519,9 @@ body[data-nav-shell="desktop"] #shared-bottom-nav {
 /* ── Body padding so content isn't hidden behind fixed nav ── */
 
 body.shared-nav-active {
-  padding-bottom: calc(var(--nav-height) + env(safe-area-inset-bottom, 0px));
+  /* Top bar: 52px + notch; floating pill: 58px + 16px gap + safe area */
+  padding-top: calc(52px + env(safe-area-inset-top, 0px));
+  padding-bottom: calc(90px + env(safe-area-inset-bottom, 0px));
 }
 
 /* ── Reduced motion ────────────────────────────────────────── */
@@ -498,6 +554,38 @@ body.shared-nav-active {
   .shared-nav-icon svg {
     width: 18px;
     height: 18px;
+  }
+}
+
+/* ── Mobile floating pill — icon-only inactive, icon+label active ─ */
+@media (max-width: 899px) {
+  #shared-bottom-nav .shared-nav-label {
+    display: none;
+  }
+  #shared-bottom-nav .shared-nav-item.active .shared-nav-label {
+    display: block;
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--nav-brand-active);
+    white-space: nowrap;
+  }
+  #shared-bottom-nav .shared-nav-item {
+    padding: 6px 4px;
+    border-radius: 22px;
+    transition: background 0.15s ease, color var(--transition-speed) ease;
+  }
+  #shared-bottom-nav .shared-nav-item.active {
+    background: rgba(201,168,76,0.16);
+    color: var(--nav-brand-active);
+  }
+  #shared-bottom-nav .shared-nav-icon {
+    width: 26px;
+    height: 26px;
+    background: none !important;
+  }
+  #shared-bottom-nav .shared-nav-icon svg {
+    width: 20px;
+    height: 20px;
   }
 }
 
@@ -656,6 +744,7 @@ body.shared-nav-active {
 
   /* ── Body padding for sidebar ─────────────────────────── */
   body.shared-nav-active {
+    padding-top: 0;
     padding-bottom: 0;
     padding-left: var(--nav-sidebar-width);
   }
