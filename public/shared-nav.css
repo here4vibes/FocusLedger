@@ -516,6 +516,20 @@ body[data-nav-shell="desktop"] #shared-bottom-nav {
   outline: none;
 }
 
+/* ── Hide page-specific top navs on mobile — shared top bar replaces them ─── */
+/* Each app page has its own legacy top nav (.top-nav, .portal-nav, etc.).
+   On mobile, the shared top bar (brain logo + hamburger) covers this role.
+   These navs are still visible on desktop where there's no shared top bar. */
+@media (max-width: 899px) {
+  body.shared-nav-active .top-nav,
+  body.shared-nav-active .portal-nav,
+  body.shared-nav-active .app-nav,
+  body.shared-nav-active .settings-nav,
+  body.shared-nav-active .hdr-nav {
+    display: none !important;
+  }
+}
+
 /* ── Body padding so content isn't hidden behind fixed nav ── */
 
 body.shared-nav-active {
