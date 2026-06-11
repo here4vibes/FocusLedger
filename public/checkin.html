@@ -1135,7 +1135,13 @@
             body: JSON.stringify({ mood: mood, intention: null })
         }).catch(function() {});
 
-        var planPromise = apiFetch('/api/buddy/daily-plan?mood=' + encodeURIComponent(mood) + '&date=' + TODAY)
+        var planController = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+        var planSignal = planController ? planController.signal : undefined;
+
+        var planPromise = apiFetch(
+            '/api/buddy/daily-plan?mood=' + encodeURIComponent(mood) + '&date=' + TODAY,
+            planSignal ? { signal: planSignal } : {}
+        )
             .then(function(r) { return r.json(); })
             .catch(function() { return null; });
 
@@ -1150,7 +1156,19 @@
             .catch(function() { return null; });
         }
 
+        // 15-second safety valve — button always becomes tappable even if API hangs
+        var completionTimer = setTimeout(function() {
+            if (planController) { try { planController.abort(); } catch (e) {} }
+            var btn = el('completionBtn');
+            if (btn && btn.disabled) {
+                btn.textContent = 'Continue →';
+                btn.disabled = false;
+                btn.addEventListener('click', function() { window.location.href = '/app/buddy'; });
+            }
+        }, 15000);
+
         Promise.all([planPromise, insightPromise]).then(function(results) {
+            clearTimeout(completionTimer);
             var insightData = results[1];
 
             if (insightData && insightData.insight) {
@@ -1171,6 +1189,7 @@
                 window.location.href = '/app/buddy';
             });
         }).catch(function() {
+            clearTimeout(completionTimer);
             var btn = el('completionBtn');
             btn.textContent = 'Continue →';
             btn.disabled = false;

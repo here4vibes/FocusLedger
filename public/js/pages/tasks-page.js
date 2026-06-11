@@ -3,7 +3,7 @@
  * Owns: task list state, rendering, form submission, inline editing, step management.
  * Does NOT own: shared nav, auth token storage, subscription UI.
  *
- * Replaces inline JS in app.html. Uses Prisma-backed /api/tasks routes.
+ * Replaces inline JS in app.html. Uses /api/tasks routes.
  */
 
 (function() {

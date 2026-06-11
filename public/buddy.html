@@ -1123,6 +1123,7 @@
         var allTasks = [];       // all incomplete tasks (for swap picker)
         var swappingSlot = null; // which slot is being swapped (1/2/3)
         var planAccepted = false;
+        var _planController = null; // AbortController for in-flight plan fetch
 
 
         // ── Main load ─────────────────────────────────────────────────────────
@@ -1759,44 +1760,74 @@
         }
 
         // ── Load / generate plan ──────────────────────────────────────────────
+        function renderPlanError(withMood) {
+            return '<div class="plan-intro" style="text-align:center;padding:1.5rem 0;">' +
+                '<div style="font-size:1.4rem;margin-bottom:0.4rem;">⚠️</div>' +
+                '<div style="color:var(--text-muted);font-size:0.9rem;margin-bottom:0.75rem;">Couldn\'t build your plan.</div>' +
+                '<button id="retryPlanBtn" style="background:var(--orange);color:#fff;border:none;padding:0.55rem 1.2rem;border-radius:20px;font-size:0.88rem;font-weight:600;cursor:pointer;font-family:inherit;">Try again</button>' +
+            '</div>';
+        }
+
         function loadPlan(withMood) {
             var planArea = el('planArea');
             if (!planArea) return;
+
+            // Cancel any in-flight plan fetch to prevent a stale loadPlan(false)
+            // from overwriting the result of a mood-triggered loadPlan(true).
+            if (_planController) { try { _planController.abort(); } catch (e) {} }
+            _planController = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+            var signal = _planController ? _planController.signal : undefined;
+
             planArea.innerHTML = renderPlanLoading();
 
-            var url = '/api/buddy/daily-plan?date=' + TODAY;
+            // 20-second timeout guard — Render cold starts can be slow but not this slow.
+            var timeoutId = setTimeout(function() {
+                if (_planController) { try { _planController.abort(); } catch (e) {} }
+            }, 20000);
+
+            function onSuccess(result) {
+                clearTimeout(timeoutId);
+                var area = el('planArea');
+                if (!area) return;
+                if (result && result.success) {
+                    currentSlots = result.slots || [null, null, null];
+                    area.innerHTML = renderPlanSlots(result.plan, currentSlots);
+                    wireAcceptBtn();
+                    wireRegenBtn();
+                    wireSwapBtns();
+                } else {
+                    area.innerHTML = renderPlanError(withMood);
+                    var rb = document.getElementById('retryPlanBtn');
+                    if (rb) rb.addEventListener('click', function() { loadPlan(withMood); });
+                }
+            }
+
+            function onError(err) {
+                clearTimeout(timeoutId);
+                if (err && err.name === 'AbortError') return; // intentional cancel
+                var area = el('planArea');
+                if (!area) return;
+                area.innerHTML = renderPlanError(withMood);
+                var rb = document.getElementById('retryPlanBtn');
+                if (rb) rb.addEventListener('click', function() { loadPlan(withMood); });
+            }
+
             if (withMood && selectedMood) {
-                // Regenerate with new mood
                 apiFetch('/api/buddy/daily-plan/regenerate', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ mood: selectedMood, date: TODAY })
+                    body: JSON.stringify({ mood: selectedMood, date: TODAY }),
+                    signal: signal
                 })
                 .then(function(r) { return r.json(); })
-                .then(function(result) {
-                    if (result.success) {
-                        currentSlots = result.slots || [null, null, null];
-                        planArea.innerHTML = renderPlanSlots(result.plan, currentSlots);
-                        wireAcceptBtn();
-                        wireRegenBtn();
-                        wireSwapBtns();
-                    }
-                })
-                .catch(function() { showToast('Couldn\'t build your plan. Try again?'); });
+                .then(onSuccess)
+                .catch(onError);
             } else {
-                // First load — get or generate
-                apiFetch(url + (selectedMood ? '&mood=' + selectedMood : ''))
+                var url = '/api/buddy/daily-plan?date=' + TODAY + (selectedMood ? '&mood=' + selectedMood : '');
+                apiFetch(url, signal ? { signal: signal } : {})
                 .then(function(r) { return r.json(); })
-                .then(function(result) {
-                    if (result.success) {
-                        currentSlots = result.slots || [null, null, null];
-                        planArea.innerHTML = renderPlanSlots(result.plan, currentSlots);
-                        wireAcceptBtn();
-                        wireRegenBtn();
-                        wireSwapBtns();
-                    }
-                })
-                .catch(function() { showToast('Couldn\'t build your plan. Try again?'); });
+                .then(onSuccess)
+                .catch(onError);
             }
         }
 

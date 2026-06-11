@@ -7,9 +7,6 @@
     "dev": "node server.js",
     "build": "npm run lint && npm test && npm run migrate",
     "migrate": "node migrate.js",
-    "db:push": "prisma db push --skip-generate",
-    "db:generate": "prisma generate",
-    "db:studio": "prisma studio",
     "test": "jest --forceExit --testTimeout=10000",
     "test:watch": "jest --watch",
     "test:e2e": "playwright test",
@@ -33,7 +30,6 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.101.0",
-    "@prisma/client": "^5.22.0",
     "@sentry/node": "^8.0.0",
     "apn": "^2.2.0",
     "connect-pg-simple": "^9.0.1",
@@ -49,7 +45,6 @@
     "openai": "^4.77.0",
     "pg": "^8.11.3",
     "plaid": "latest",
-    "prisma": "^5.22.0",
     "resend": "^6.12.2",
     "stripe": "^22.2.0",
     "web-push": "^3.6.7"
