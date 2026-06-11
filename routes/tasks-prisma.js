@@ -629,45 +629,36 @@ async function getStreak(req, res) {
     const userId = req.user.id;
     const pool = res.locals._pool;
 
-    // Distinct calendar dates where at least one task was completed, most recent first
-    const { rows } = await pool.query(
-      `SELECT DISTINCT DATE(completed_at) AS d
-       FROM tasks
-       WHERE user_id = $1 AND completed = true AND completed_at IS NOT NULL
-       ORDER BY d DESC
-       LIMIT 365`,
-      [userId]
-    );
+    let streak = null;
+    try {
+      const { rows } = await pool.query(
+        'SELECT * FROM morning_streaks WHERE user_id = $1 LIMIT 1',
+        [userId]
+      );
+      streak = rows[0] || null;
+    } catch (tableErr) {
+      // Table may not exist in all DB versions
+      if (tableErr.code !== '42P01') throw tableErr;
+    }
 
+    // Streak is only active if last check-in was today or yesterday —
+    // the DB row is never auto-reset, so we must check recency here.
     let currentStreak = 0;
-    if (rows.length > 0) {
+    if (streak?.current_streak && streak.last_completed_date) {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       const yesterday = new Date(today);
       yesterday.setDate(today.getDate() - 1);
-
-      const lastDate = new Date(rows[0].d);
+      const lastDate = new Date(streak.last_completed_date);
       lastDate.setHours(0, 0, 0, 0);
-
-      // Only count streak if last completion was today or yesterday
-      if (lastDate >= yesterday) {
-        currentStreak = 1;
-        for (let i = 1; i < rows.length; i++) {
-          const curr = new Date(rows[i].d);
-          curr.setHours(0, 0, 0, 0);
-          const prev = new Date(rows[i - 1].d);
-          prev.setHours(0, 0, 0, 0);
-          const diffDays = Math.round((prev - curr) / (1000 * 60 * 60 * 24));
-          if (diffDays === 1) currentStreak++;
-          else break;
-        }
-      }
+      if (lastDate >= yesterday) currentStreak = streak.current_streak;
     }
 
     res.json({
       success: true,
       current_streak: currentStreak,
-      last_completed_date: rows[0]?.d ?? null,
+      longest_streak: streak?.longest_streak ?? 0,
+      last_completed_date: streak?.last_completed_date ?? null,
     });
   } catch (err) {
     console.error('[tasks] streak error:', err);
