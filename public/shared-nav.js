@@ -115,7 +115,26 @@
     nav.id = 'shared-bottom-nav';
     nav.setAttribute('aria-label', 'Main navigation');
 
-    NAV_ITEMS.forEach(function (item) {
+    // First 2 items: Tasks, Money
+    NAV_ITEMS.slice(0, 2).forEach(function (item) {
+      nav.appendChild(buildNavAnchor(item, 'shared-nav-item'));
+    });
+
+    // Center FAB — calls window.flQuickAdd() if the page has wired it up
+    var fab = document.createElement('button');
+    fab.type = 'button';
+    fab.className = 'shared-nav-fab';
+    fab.setAttribute('aria-label', 'Quick add');
+    fab.textContent = '+';
+    fab.addEventListener('click', function () {
+      if (typeof window.flQuickAdd === 'function') {
+        window.flQuickAdd();
+      }
+    });
+    nav.appendChild(fab);
+
+    // Last 2 items: Vault, Buddy
+    NAV_ITEMS.slice(2).forEach(function (item) {
       nav.appendChild(buildNavAnchor(item, 'shared-nav-item'));
     });
 

@@ -9,6 +9,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/css/design-system.css">
     <link rel="stylesheet" href="/css/app-layout.css">
+    <link rel="stylesheet" href="/shared-nav.css">
     <style>
         /* ── Design tokens (mirrors app.html) ───────────────────────────── */
         :root {
@@ -498,13 +499,8 @@
             font-size: 0.8rem; font-weight: 600; cursor: pointer; white-space: nowrap;
         }
 
-        /* ── Mobile bottom bar ─────────────────────────────────────────── */
-        .mobile-bottom-bar {
-            display: flex; position: fixed; bottom: 0; left: 0; right: 0;
-            background: var(--navy); border-top: none; z-index: 200;
-            justify-content: space-around; padding: 0.5rem 0;
-        }
-        @media (min-width: 900px) { .mobile-bottom-bar { display: none; } }
+        /* ── Mobile bottom bar — hidden: shared-nav.js injects floating pill ── */
+        .mobile-bottom-bar { display: none !important; }
         .bottom-tab {
             display: flex; flex-direction: column; align-items: center; gap: 0.2rem;
             color: rgba(255,255,255,0.55); text-decoration: none;
@@ -516,7 +512,7 @@
 
         /* ── FAB ───────────────────────────────────────────────────────────── */
         .fab {
-            position: fixed; bottom: 78px; right: 20px;
+            position: fixed; bottom: calc(90px + env(safe-area-inset-bottom, 0px)); right: 20px;
             width: 58px; height: 58px; border-radius: 16px;
             background: var(--orange); border: none; cursor: pointer;
             display: flex; align-items: center; justify-content: center;
@@ -589,7 +585,7 @@
 </head>
 <body>
     <!-- Header -->
-    <header class="page-header">
+    <header class="page-header app-nav">
         <div class="page-header-left">
             <a href="/app/tasks" class="logo">
                 <img src="/icons/fl-icon.svg" class="logo-img" alt="">
@@ -731,8 +727,8 @@
         </div>
     </div>
 
-    <!-- Mobile bottom nav -->
-    <nav class="mobile-bottom-bar" id="mobileNav"></nav>
+    <!-- Mobile bottom nav — replaced by shared-nav.js floating pill -->
+    <nav class="mobile-bottom-bar" id="mobileNav" aria-hidden="true"></nav>
 
     <script src="/js/services/values-service.js"></script>
     <script src="/js/date-parser.js"></script>
@@ -1306,6 +1302,8 @@
         document.getElementById('qaOverlay').classList.add('open');
         setTimeout(() => document.getElementById('qaInput').focus(), 50);
     }
+    // Shared-nav pill FAB wires to this
+    window.flQuickAdd = openQuickAdd;
 
     function closeQuickAdd() {
         const overlay = document.getElementById('qaOverlay');
@@ -1441,5 +1439,6 @@
     init();
     </script>
     <script src="/buddy-widget.js"></script>
+    <script src="/shared-nav.js"></script>
 </body>
 </html>

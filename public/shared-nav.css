@@ -571,6 +571,46 @@ body.shared-nav-active {
   }
 }
 
+/* ── Center FAB inside the pill ─────────────────────────────────── */
+/* Gold "+" button between Money and Vault. flex:0 0 auto so it doesn't
+   stretch. Sits inside the 58px pill with a raised circle. */
+.shared-nav-fab {
+  flex: 0 0 auto;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #c9a84c;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  font-weight: 300;
+  line-height: 1;
+  color: #011e5c;
+  box-shadow: 0 3px 12px rgba(201,168,76,0.45), 0 1px 4px rgba(0,0,0,0.18);
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  margin: 0 2px;
+}
+
+.shared-nav-fab:hover {
+  transform: scale(1.10);
+  box-shadow: 0 5px 18px rgba(201,168,76,0.55), 0 2px 6px rgba(0,0,0,0.2);
+}
+
+.shared-nav-fab:active {
+  transform: scale(0.93);
+}
+
+/* Hide page-level floating FABs on mobile — pill FAB replaces them */
+@media (max-width: 899px) {
+  body.shared-nav-active .fab {
+    display: none !important;
+  }
+}
+
 /* ── Mobile floating pill — icon-only inactive, icon+label active ─ */
 @media (max-width: 899px) {
   #shared-bottom-nav .shared-nav-label {
