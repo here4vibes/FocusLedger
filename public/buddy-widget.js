@@ -158,6 +158,7 @@
         unclassifiedCount: res.unclassifiedCount || 0,
         isEveningTime: res.isEveningTime || false,
         eveningCheckinDone: res.eveningCheckinDone || false,
+        morningCheckinDone: res.morningCheckinDone || false,
         routineMissed: res.routineMissed || false,
         hasNewBuddyMessage: res.hasNewBuddyMessage || false,
         firstMoneyVisit: isFirstMoneyVisit(),
@@ -703,9 +704,22 @@
     }
 
     switch (action) {
-      case 'checkin':
-        window.location.href = '/app/checkin';
+      case 'checkin': {
+        const _hour = new Date().getHours();
+        const _eveningDone = contextData?.eveningCheckinDone || false;
+        const _morningDone = contextData?.morningCheckinDone || false;
+        if (_hour >= 19 && !_eveningDone) {
+          // After 7 PM with spending triage pending → evening review
+          window.location.href = '/checkin';
+        } else if (!_morningDone) {
+          // Morning check-in not done yet → morning check-in page
+          window.location.href = '/app/checkin';
+        } else {
+          // Morning done, daytime → open conversational buddy panel
+          openPanel();
+        }
         break;
+      }
       case 'plan':
         sendMessage("Can you give me my today's focus plan?");
         break;
