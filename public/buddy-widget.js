@@ -704,7 +704,7 @@
 
     switch (action) {
       case 'checkin':
-        window.location.href = '/checkin';
+        window.location.href = '/app/checkin';
         break;
       case 'plan':
         sendMessage("Can you give me my today's focus plan?");
