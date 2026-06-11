@@ -474,6 +474,61 @@
         .complete-btn:disabled { opacity: 0.5; cursor: not-allowed; }
     </style>
     <link rel="stylesheet" href="/shared-nav.css">
+    <style>
+      /* Collapse shared nav pill to a small circle on this focused-flow page.
+         Inline so it overrides regardless of which SW-cached shared-nav.js is running. */
+      #shared-bottom-nav {
+        width: 48px !important;
+        height: 48px !important;
+        border-radius: 50% !important;
+        padding: 0 !important;
+        overflow: hidden !important;
+        justify-content: center !important;
+        cursor: pointer !important;
+      }
+      #shared-bottom-nav .shared-nav-item,
+      #shared-bottom-nav .shared-nav-fab {
+        opacity: 0 !important;
+        pointer-events: none !important;
+        flex: 0 0 0 !important;
+        min-width: 0 !important;
+        overflow: hidden !important;
+      }
+      #shared-bottom-nav::before {
+        display: block !important;
+        content: '' !important;
+        position: absolute !important;
+        width: 18px !important;
+        height: 18px !important;
+        background-image: radial-gradient(circle, rgba(255,255,255,0.7) 2.5px, transparent 2.5px) !important;
+        background-size: 9px 9px !important;
+        background-repeat: repeat !important;
+      }
+      /* Expanded state (class toggled by tap) */
+      #shared-bottom-nav.nav-expanded {
+        width: min(340px, calc(100% - 32px)) !important;
+        height: 58px !important;
+        border-radius: 30px !important;
+        padding: 0 6px !important;
+        overflow: visible !important;
+        cursor: default !important;
+      }
+      #shared-bottom-nav.nav-expanded .shared-nav-item,
+      #shared-bottom-nav.nav-expanded .shared-nav-fab {
+        opacity: 1 !important;
+        pointer-events: auto !important;
+        flex: 1 !important;
+        min-width: unset !important;
+        overflow: visible !important;
+      }
+      #shared-bottom-nav.nav-expanded::before {
+        display: none !important;
+      }
+      /* Keep body padding at a modest value — collapsed circle is smaller */
+      body.shared-nav-active {
+        padding-bottom: calc(68px + env(safe-area-inset-bottom, 0px)) !important;
+      }
+    </style>
 </head>
 <body>
 <div class="app-shell">
@@ -1160,5 +1215,29 @@
 <!-- Haptics: no-op in browser, native feedback in iOS Capacitor shell -->
 <script src="/js/haptics.js"></script>
 <script src="/shared-nav.js"></script>
+<script>
+  // Tap collapsed circle → expand pill for 4s then collapse back
+  (function () {
+    var _collapseTimer = null;
+    function setupCollapsedNav() {
+      var nav = document.getElementById('shared-bottom-nav');
+      if (!nav) return;
+      nav.addEventListener('click', function (e) {
+        if (nav.classList.contains('nav-expanded')) return;
+        e.stopPropagation();
+        nav.classList.add('nav-expanded');
+        clearTimeout(_collapseTimer);
+        _collapseTimer = setTimeout(function () {
+          nav.classList.remove('nav-expanded');
+        }, 4000);
+      });
+    }
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', setupCollapsedNav);
+    } else {
+      setupCollapsedNav();
+    }
+  })();
+</script>
 </body>
 </html>
