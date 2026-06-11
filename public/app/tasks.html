@@ -1440,5 +1440,13 @@
     </script>
     <script src="/buddy-widget.js"></script>
     <script src="/shared-nav.js"></script>
+    <script>
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' });
+        navigator.serviceWorker.addEventListener('message', function(e) {
+          if (e.data && e.data.type === 'SW_UPDATED') window.location.reload();
+        });
+      }
+    </script>
 </body>
 </html>
