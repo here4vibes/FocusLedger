@@ -197,7 +197,7 @@ module.exports = function (pool) {
     const isEveningTime = localHour >= 17 && localHour <= 22;
 
     try {
-      const [taskResult, untriagedResult, checkinsResult, routineResult, buddyResult] =
+      const [taskResult, untriagedResult, checkinsResult, morningResult, routineResult, buddyResult] =
         await Promise.all([
           // Incomplete task count (not done, not archived)
           pool.query(
@@ -217,6 +217,13 @@ module.exports = function (pool) {
           pool.query(
             `SELECT 1 FROM buddy_checkins
              WHERE user_id = $1 AND checkin_type = 'evening'
+               AND checkin_date = CURRENT_DATE LIMIT 1`,
+            [userId]
+          ),
+          // Morning check-in done today?
+          pool.query(
+            `SELECT 1 FROM buddy_checkins
+             WHERE user_id = $1 AND checkin_type = 'morning'
                AND checkin_date = CURRENT_DATE LIMIT 1`,
             [userId]
           ),
@@ -241,6 +248,7 @@ module.exports = function (pool) {
         ]);
 
       const eveningDone = checkinsResult.rows.length > 0;
+      const morningDone = morningResult.rows.length > 0;
       const routineMissed = routineResult.rows.length > 0;
       const hasNewBuddyMessage = parseInt(buddyResult.rows[0].cnt) > 0;
 
@@ -250,6 +258,7 @@ module.exports = function (pool) {
         unclassifiedCount: parseInt(untriagedResult.rows[0].cnt),
         isEveningTime,
         eveningCheckinDone: eveningDone,
+        morningCheckinDone: morningDone,
         routineMissed,
         hasNewBuddyMessage,
         firstMoneyVisit: false, // determined client-side via localStorage

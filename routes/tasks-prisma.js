@@ -641,9 +641,22 @@ async function getStreak(req, res) {
       if (tableErr.code !== '42P01') throw tableErr;
     }
 
+    // Streak is only active if last check-in was today or yesterday —
+    // the DB row is never auto-reset, so we must check recency here.
+    let currentStreak = 0;
+    if (streak?.current_streak && streak.last_completed_date) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const yesterday = new Date(today);
+      yesterday.setDate(today.getDate() - 1);
+      const lastDate = new Date(streak.last_completed_date);
+      lastDate.setHours(0, 0, 0, 0);
+      if (lastDate >= yesterday) currentStreak = streak.current_streak;
+    }
+
     res.json({
       success: true,
-      current_streak: streak?.current_streak ?? 0,
+      current_streak: currentStreak,
       longest_streak: streak?.longest_streak ?? 0,
       last_completed_date: streak?.last_completed_date ?? null,
     });
