@@ -17,27 +17,9 @@
  * - Task count limit (10 for free, unlimited for Pro)
  */
 
-/**
- * Execute raw SQL against either a pg.Pool or a PrismaClient.
- * pg.Pool:  pool.query(text, [params]) → { rows: [...] }
- * Prisma:   prisma.$queryRawUnsafe(text, [...params]) → [{ ... }]
- *
- * @param {pg.Pool | import('@prisma/client').PrismaClient} db
- * @param {string} text
- * @param {any[]} params
- * @returns {Promise<{rows: any[]}>}
- */
 async function queryRaw(db, text, params) {
-  let rows;
-  if (db && typeof db.$queryRawUnsafe === 'function') {
-    // Prisma client — $queryRawUnsafe takes spread params and returns a plain array
-    rows = await db.$queryRawUnsafe(text, ...params);
-  } else {
-    // pg.Pool — returns { rows: [...] }
-    const result = await db.query(text, params);
-    rows = result.rows;
-  }
-  return rows;
+  const result = await db.query(text, params);
+  return result.rows;
 }
 
 /**
