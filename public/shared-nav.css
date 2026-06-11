@@ -571,6 +571,65 @@ body.shared-nav-active {
   }
 }
 
+/* ── Collapsed pill — small circle on focused-flow pages ─────────
+   Shown on check-in / focus-mode pages so the pill doesn't block the
+   page's own input area. Tap to expand back to full pill for 4s. */
+#shared-bottom-nav.nav-collapsed {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  padding: 0;
+  overflow: hidden;
+  justify-content: center;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.35), 0 2px 6px rgba(0,0,0,0.2);
+  transition: width 0.32s cubic-bezier(0.34, 1.56, 0.64, 1),
+              height 0.32s cubic-bezier(0.34, 1.56, 0.64, 1),
+              border-radius 0.28s ease,
+              padding 0.28s ease;
+  cursor: pointer;
+}
+
+/* Expanded state also animates smoothly back to pill */
+#shared-bottom-nav:not(.nav-collapsed) {
+  transition: width 0.32s cubic-bezier(0.34, 1.56, 0.64, 1),
+              height 0.32s cubic-bezier(0.34, 1.56, 0.64, 1),
+              border-radius 0.28s ease,
+              padding 0.28s ease;
+}
+
+/* Hide nav items + FAB when collapsed; show the 4-dot indicator */
+#shared-bottom-nav.nav-collapsed .shared-nav-item,
+#shared-bottom-nav.nav-collapsed .shared-nav-fab {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+}
+
+#shared-bottom-nav:not(.nav-collapsed) .shared-nav-item,
+#shared-bottom-nav:not(.nav-collapsed) .shared-nav-fab {
+  opacity: 1;
+  pointer-events: auto;
+  transition: opacity 0.2s ease 0.1s;
+}
+
+/* 4-dot grid shown only when collapsed */
+#shared-bottom-nav::before {
+  content: '';
+  display: none;
+  width: 18px;
+  height: 18px;
+  background-image: radial-gradient(circle, rgba(255,255,255,0.75) 2.5px, transparent 2.5px);
+  background-size: 9px 9px;
+  background-repeat: repeat;
+  pointer-events: none;
+  flex-shrink: 0;
+}
+
+#shared-bottom-nav.nav-collapsed::before {
+  display: block;
+  position: absolute;
+}
+
 /* ── Center FAB inside the pill ─────────────────────────────────── */
 /* Gold "+" button between Money and Vault. flex:0 0 auto so it doesn't
    stretch. Sits inside the 58px pill with a raised circle. */

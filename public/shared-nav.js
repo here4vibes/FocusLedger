@@ -529,14 +529,27 @@
     document.body.appendChild(menu);
 
     // Only inject the shell that matches the current viewport.
-    // Focused flow pages (check-in, focus mode) suppress the bottom pill so it
-    // doesn't overlap the page's own input area — top bar + hamburger still render.
-    if (mobileView && !isBottomNavExcluded()) {
+    // On focused flow pages (check-in, focus mode) the pill collapses to a small
+    // circle so it doesn't cover the page's input — tap to temporarily expand.
+    if (mobileView) {
       var mobileNav = buildMobileBottomNav();
+      if (isBottomNavExcluded()) {
+        mobileNav.classList.add('nav-collapsed');
+        // Remove bottom padding — collapsed circle doesn't need the full 90px clearance
+        document.body.style.paddingBottom = 'calc(72px + env(safe-area-inset-bottom, 0px))';
+        // Tap collapsed circle → expand for 4s then re-collapse
+        var collapseTimer = null;
+        mobileNav.addEventListener('click', function (e) {
+          if (!mobileNav.classList.contains('nav-collapsed')) return;
+          e.stopPropagation();
+          mobileNav.classList.remove('nav-collapsed');
+          clearTimeout(collapseTimer);
+          collapseTimer = setTimeout(function () {
+            mobileNav.classList.add('nav-collapsed');
+          }, 4000);
+        });
+      }
       document.body.appendChild(mobileNav);
-    } else if (mobileView) {
-      // Excluded page: remove bottom padding that was added for the pill
-      document.body.style.paddingBottom = '';
     } else {
       var desktopNav = buildDesktopSidebar();
       document.body.appendChild(desktopNav);
