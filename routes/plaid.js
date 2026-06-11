@@ -280,12 +280,38 @@ async function syncTransactions(pool, item) {
         ? `${tx.personal_finance_category.primary}/${tx.personal_finance_category.detailed}`
         : (tx.category ? tx.category.join(' > ') : null);
 
-      await insertPlaidTransaction(pool, {
+      const plaidTx = await insertPlaidTransaction(pool, {
         plaidAccountId, userId: item.user_id, transactionId: tx.transaction_id,
         amount: tx.amount, description: tx.merchant_name || tx.name || 'Unknown',
         merchantName: tx.merchant_name || null, categoryId: category?.id || null,
         plaidCategory: plaidCategoryStr, transactionDate: tx.date, isPending: tx.pending || false,
       });
+
+      // Auto-confirm non-pending transactions directly into expenses.
+      // is_impulse stays NULL so the Buddy check-in flow asks impulse vs planned later.
+      // Pending transactions (pre-auth holds) are staged only — confirmed when they clear.
+      if (plaidTx && !tx.pending) {
+        try {
+          const expDate = String(tx.date).slice(0, 10);
+          const cols = ['user_id', 'amount', 'description', 'expense_date', 'source', 'plaid_transaction_id'];
+          const vals = [item.user_id, parseFloat(tx.amount), tx.merchant_name || tx.name || 'Unknown', expDate, 'plaid', tx.transaction_id];
+          if (plaidTx.category_id) { cols.push('category_id'); vals.push(plaidTx.category_id); }
+          const ph = vals.map((_, i) => `$${i + 1}`).join(', ');
+          const { rows: expRows } = await pool.query(
+            `INSERT INTO expenses (${cols.join(', ')}) VALUES (${ph}) ON CONFLICT (plaid_transaction_id) DO NOTHING RETURNING *`,
+            vals
+          );
+          if (expRows.length) {
+            await pool.query(
+              'UPDATE plaid_transactions SET is_confirmed = true, expense_id = $1, updated_at = NOW() WHERE id = $2',
+              [expRows[0].id, plaidTx.id]
+            );
+          }
+        } catch (e) {
+          console.error('[Plaid] Auto-confirm error for tx', plaidTx?.id, e.message);
+        }
+      }
+
       added++;
       billCandidates.push({ ...tx, transaction_date: tx.date });
     }
