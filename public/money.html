@@ -192,6 +192,17 @@
     .btn-triage-open{background:var(--orange);color:white;border:none;padding:0.5rem 1.1rem;border-radius:8px;font-size:0.85rem;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;min-height:40px;transition:background 0.15s}
     .btn-triage-open:hover{background:var(--orange-light)}
 
+    /* PLAID PENDING BANNER */
+    .plaid-pending-banner{background:#edf7f7;border:1.5px solid #4A9292;border-radius:14px;padding:0.9rem 1.1rem;margin-bottom:1rem;display:flex;align-items:center;gap:0.9rem}
+    .ppb-icon{font-size:1.4rem;flex-shrink:0}
+    .ppb-content{flex:1;min-width:0}
+    .ppb-title{font-family:'Space Grotesk',sans-serif;font-size:0.88rem;font-weight:600;color:var(--navy)}
+    .ppb-sub{font-size:0.78rem;color:var(--text-muted);margin-top:2px}
+    .ppb-actions{display:flex;gap:0.5rem;align-items:center;flex-shrink:0}
+    .ppb-btn-import{background:#4A9292;color:white;border:none;border-radius:8px;padding:0.45rem 0.9rem;font-family:'DM Sans',sans-serif;font-size:0.82rem;font-weight:600;cursor:pointer;min-height:36px;transition:background 0.15s;-webkit-tap-highlight-color:transparent}
+    .ppb-btn-import:active{transform:scale(0.97)}
+    .ppb-btn-import:disabled{opacity:0.55;cursor:not-allowed}
+
     /* QUICK ADD */
     .section-label{font-size:0.7rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);font-weight:600;margin-bottom:0.6rem}
     .quick-add-card{background:var(--surface);border-radius:16px;padding:1.25rem;box-shadow:0 1px 3px rgba(0,0,0,0.06);margin-bottom:1rem}
@@ -446,6 +457,18 @@
     </div>
   </div>
 
+  <!-- PLAID PENDING REVIEW BANNER — shown when bank transactions need importing -->
+  <div class="plaid-pending-banner" id="plaidPendingBanner" style="display:none">
+    <div class="ppb-icon">🏦</div>
+    <div class="ppb-content">
+      <div class="ppb-title" id="ppbTitle">Bank transactions ready to import</div>
+      <div class="ppb-sub" id="ppbSub">Tap to add them to your spending tracker.</div>
+    </div>
+    <div class="ppb-actions">
+      <button class="ppb-btn-import" id="ppbImportBtn">Import all</button>
+    </div>
+  </div>
+
   <!-- TRIAGE BANNER -->
   <div class="triage-banner" id="triageBanner">
     <div class="triage-banner-header">
@@ -648,6 +671,7 @@ document.addEventListener('DOMContentLoaded', () => {
   loadNudgeConfig();
   loadSpendingAlerts();
   checkUntriaged();
+  checkPendingPlaid();
   loadExpenses(currentPeriod);
 
   // Watch amount input for reflection card trigger
@@ -670,6 +694,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('btnSkipAll').addEventListener('click', skipAllTriage);
   document.getElementById('btnProceed').addEventListener('click', proceedAfterDelay);
   document.getElementById('btnCancelDelay').addEventListener('click', cancelDelay);
+  document.getElementById('ppbImportBtn').addEventListener('click', importAllPlaidTransactions);
 
   // Category pills — delegation on the grid container
   document.getElementById('catGrid').addEventListener('click', function(e) {
@@ -1455,6 +1480,37 @@ async function checkUntriaged() {
         : `${count} transactions need a quick "impulse or planned?" check.`;
     banner.classList.add('visible');
   } catch (e) { /* silent */ }
+}
+
+// ─── Plaid pending transaction review ────────────────────────────────────────
+async function checkPendingPlaid() {
+  try {
+    const r = await api('/api/plaid/transactions/pending');
+    if (!r.success || !r.transactions || r.transactions.length === 0) return;
+    const count = r.transactions.length;
+    document.getElementById('ppbTitle').textContent =
+      count === 1 ? '1 bank transaction ready to import' : `${count} bank transactions ready to import`;
+    document.getElementById('plaidPendingBanner').style.display = 'flex';
+  } catch (e) { /* silent */ }
+}
+
+async function importAllPlaidTransactions() {
+  const btn = document.getElementById('ppbImportBtn');
+  btn.textContent = 'Importing…';
+  btn.disabled = true;
+  try {
+    const r = await api('/api/plaid/transactions/confirm-all', { method: 'POST' });
+    if (r.success) {
+      document.getElementById('plaidPendingBanner').style.display = 'none';
+      await Promise.all([loadExpenses(currentPeriod), loadTodaySpendingCard(), checkUntriaged()]);
+    } else {
+      btn.textContent = 'Import all';
+      btn.disabled = false;
+    }
+  } catch (e) {
+    btn.textContent = 'Import all';
+    btn.disabled = false;
+  }
 }
 
 // ─── Expenses list ────────────────────────────────────────────────────────────
