@@ -301,10 +301,18 @@ async function syncTransactions(pool, item) {
             `INSERT INTO expenses (${cols.join(', ')}) VALUES (${ph}) ON CONFLICT (plaid_transaction_id) DO NOTHING RETURNING *`,
             vals
           );
-          if (expRows.length) {
+          let syncExpenseId = expRows[0]?.id;
+          if (!syncExpenseId && tx.transaction_id) {
+            const { rows: existingExp } = await pool.query(
+              'SELECT id FROM expenses WHERE plaid_transaction_id = $1',
+              [tx.transaction_id]
+            );
+            syncExpenseId = existingExp[0]?.id;
+          }
+          if (syncExpenseId) {
             await pool.query(
               'UPDATE plaid_transactions SET is_confirmed = true, expense_id = $1, updated_at = NOW() WHERE id = $2',
-              [expRows[0].id, plaidTx.id]
+              [syncExpenseId, plaidTx.id]
             );
           }
         } catch (e) {
@@ -742,14 +750,27 @@ module.exports = function(pool) {
 
           const ph = vals.map((_, i) => `$${i + 1}`).join(', ');
           const { rows: expRows } = await pool.query(
-            `INSERT INTO expenses (${cols.join(', ')}) VALUES (${ph}) RETURNING *`,
+            `INSERT INTO expenses (${cols.join(', ')}) VALUES (${ph}) ON CONFLICT (plaid_transaction_id) DO NOTHING RETURNING id`,
             vals
           );
-          await pool.query(
-            'UPDATE plaid_transactions SET is_confirmed = true, expense_id = $1, updated_at = NOW() WHERE id = $2',
-            [expRows[0].id, row.id]
-          );
-          confirmed++;
+
+          // If conflict (expense already exists), find its id by plaid_transaction_id
+          let expenseId = expRows[0]?.id;
+          if (!expenseId && tx.transaction_id) {
+            const { rows: existing } = await pool.query(
+              'SELECT id FROM expenses WHERE plaid_transaction_id = $1',
+              [tx.transaction_id]
+            );
+            expenseId = existing[0]?.id;
+          }
+
+          if (expenseId) {
+            await pool.query(
+              'UPDATE plaid_transactions SET is_confirmed = true, expense_id = $1, updated_at = NOW() WHERE id = $2',
+              [expenseId, row.id]
+            );
+            confirmed++;
+          }
         } catch (e) { console.error('[Plaid] Error confirming tx:', row.id, e.message); }
       }
       res.json({ success: true, confirmed_count: confirmed });
