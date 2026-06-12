@@ -510,6 +510,133 @@
   }
 }
 
+/* ── Brain Dump + Energy Menu tool views ──────────────────────────────── */
+.bw-tool-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.bw-back-btn {
+  font-size: 0.78rem;
+  color: var(--bw-muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  font-family: 'DM Sans', sans-serif;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.bw-tool-title {
+  font-size: 0.9rem;
+  font-weight: 700;
+  font-family: 'Space Grotesk', sans-serif;
+  color: var(--bw-navy);
+}
+.bw-tool-sub {
+  font-size: 0.82rem;
+  color: var(--bw-muted);
+  margin-bottom: 10px;
+  line-height: 1.45;
+}
+.bw-tool-textarea {
+  width: 100%;
+  min-height: 110px;
+  resize: vertical;
+  border: 1.5px solid var(--bw-border);
+  border-radius: 12px;
+  padding: 10px 14px;
+  font-size: 0.88rem;
+  font-family: 'DM Sans', sans-serif;
+  background: var(--bw-cream);
+  color: var(--bw-text);
+  outline: none;
+  transition: border-color 0.15s;
+  line-height: 1.4;
+}
+.bw-tool-textarea:focus { border-color: var(--bw-navy); background: white; }
+.bw-tool-submit {
+  margin-top: 8px;
+  width: 100%;
+  padding: 0.7rem;
+  background: var(--bw-navy);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: 'DM Sans', sans-serif;
+  transition: opacity 0.15s;
+}
+.bw-tool-submit:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* Triage / menu result rows */
+.bw-triage-section { margin-top: 12px; }
+.bw-triage-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 6px;
+  color: var(--bw-navy);
+}
+.bw-label-now   { color: #4a7c59; }
+.bw-label-later { color: #8c6d2c; }
+.bw-label-trash { color: var(--bw-muted); }
+
+.bw-triage-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.bw-triage-text { flex: 1; font-size: 0.85rem; line-height: 1.4; }
+.bw-triage-step { font-size: 0.76rem; color: var(--bw-muted); }
+.bw-triage-muted { font-size: 0.85rem; color: var(--bw-muted); padding: 2px 0; }
+.bw-triage-add {
+  flex-shrink: 0;
+  font-size: 0.72rem;
+  padding: 3px 10px;
+  border: 1.5px solid var(--bw-navy);
+  background: none;
+  border-radius: 100px;
+  cursor: pointer;
+  color: var(--bw-navy);
+  font-weight: 600;
+  white-space: nowrap;
+  font-family: 'DM Sans', sans-serif;
+  transition: background 0.12s, color 0.12s;
+}
+.bw-triage-add:hover { background: var(--bw-navy); color: white; }
+
+/* Energy level selector */
+#bw-dm-energy-row {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+.bw-energy-btn {
+  flex: 1;
+  padding: 8px 6px;
+  border: 1.5px solid var(--bw-border);
+  border-radius: 10px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  background: white;
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 500;
+  color: var(--bw-navy);
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+}
+.bw-energy-btn.active {
+  background: var(--bw-navy);
+  border-color: var(--bw-navy);
+  color: white;
+  font-weight: 600;
+}
+
 /* ── Entrance animation ───────────────────────────────────────────────── */
 @keyframes bw-slide-in {
   from { opacity: 0; transform: scale(0.5) translateY(20px); }

@@ -408,6 +408,8 @@
       '<div id="bw-quick-actions">',
         '<button class="bw-quick-btn" data-action="checkin">📋 Check-in</button>',
         '<button class="bw-quick-btn" data-action="plan">🎯 Today plan</button>',
+        '<button class="bw-quick-btn" data-action="brain-dump">🧠 Brain dump</button>',
+        '<button class="bw-quick-btn" data-action="energy">⚡ Energy menu</button>',
         '<button class="bw-quick-btn" data-action="focus">🎯 Focus mode</button>',
         '<button class="bw-quick-btn" data-action="stuck">🔧 I am stuck</button>',
       '</div>',
@@ -723,12 +725,188 @@
       case 'plan':
         sendMessage("Can you give me my today's focus plan?");
         break;
+      case 'brain-dump':
+        showBrainDump();
+        break;
+      case 'energy':
+        showEnergyMenu();
+        break;
       case 'focus':
         window.location.href = '/app/focus/next';
         break;
       case 'stuck':
         sendMessage("I'm stuck on a task. Can you help me break it down?");
         break;
+    }
+  }
+
+  // ── HTML helpers ─────────────────────────────────────────────────────
+
+  function escHtml(str) {
+    return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+  function escAttr(str) {
+    return String(str || '').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  }
+
+  function enterToolMode() {
+    panelEl.querySelector('#bw-panel-input-area').style.display = 'none';
+  }
+  function exitToolMode() {
+    panelEl.querySelector('#bw-panel-input-area').style.display = '';
+    if (loadSession()) { renderSessionMessages(); } else { renderEmpty(); }
+  }
+
+  // ── Brain Dump ────────────────────────────────────────────────────────
+
+  function showBrainDump() {
+    enterToolMode();
+    var content = panelEl.querySelector('#bw-panel-content');
+    content.innerHTML = [
+      '<div class="bw-tool-header">',
+        '<button class="bw-back-btn" id="bw-bd-back">← Chat</button>',
+        '<span class="bw-tool-title">🧠 Brain Dump</span>',
+      '</div>',
+      '<p class="bw-tool-sub">Dump everything swirling in your head. Buddy sorts it into Now / Later / Trash.</p>',
+      '<textarea id="bw-bd-input" class="bw-tool-textarea" placeholder="One thing per line…" spellcheck="true" autocorrect="on" autocapitalize="sentences"></textarea>',
+      '<button id="bw-bd-submit" class="bw-tool-submit">Sort it out</button>',
+      '<div id="bw-bd-results"></div>',
+    ].join('');
+
+    content.querySelector('#bw-bd-back').addEventListener('click', exitToolMode);
+    content.querySelector('#bw-bd-submit').addEventListener('click', function () {
+      var text = content.querySelector('#bw-bd-input').value.trim();
+      if (text) submitBrainDumpWidget(text);
+    });
+    setTimeout(function () { var ta = content.querySelector('#bw-bd-input'); if (ta) ta.focus(); }, 200);
+  }
+
+  async function submitBrainDumpWidget(text) {
+    var content = panelEl.querySelector('#bw-panel-content');
+    var btn = content.querySelector('#bw-bd-submit');
+    var results = content.querySelector('#bw-bd-results');
+    btn.textContent = 'Sorting…'; btn.disabled = true;
+    results.innerHTML = '<div class="bw-message buddy" style="align-self:flex-start"><div class="bw-loading-dots"><span></span><span></span><span></span></div></div>';
+
+    try {
+      var res = await api('/api/buddy/brain-dump-triage', { method: 'POST', body: JSON.stringify({ text }) });
+      if (!res.success) throw new Error('failed');
+
+      var html = '';
+      if (res.now && res.now.length) {
+        html += '<div class="bw-triage-section"><div class="bw-triage-label bw-label-now">✅ Do now</div>';
+        res.now.forEach(function (item) {
+          html += '<div class="bw-triage-row">';
+          html += '<div class="bw-triage-text"><strong>' + escHtml(item.item) + '</strong>';
+          if (item.nextStep) html += '<br><span class="bw-triage-step">' + escHtml(item.nextStep) + '</span>';
+          html += '</div>';
+          html += '<button class="bw-triage-add" data-title="' + escAttr(item.item) + '">+ Task</button>';
+          html += '</div>';
+        });
+        html += '</div>';
+      }
+      if (res.later && res.later.length) {
+        html += '<div class="bw-triage-section"><div class="bw-triage-label bw-label-later">🕒 Later</div>';
+        res.later.forEach(function (item) {
+          html += '<div class="bw-triage-row bw-triage-muted">' + escHtml(item.item) + '</div>';
+        });
+        html += '</div>';
+      }
+      if (res.trash && res.trash.length) {
+        html += '<div class="bw-triage-section"><div class="bw-triage-label bw-label-trash">🗑 Let go</div>';
+        res.trash.forEach(function (item) {
+          html += '<div class="bw-triage-row bw-triage-muted">' + escHtml(item.item) + '</div>';
+        });
+        html += '</div>';
+      }
+      results.innerHTML = html || '<div class="bw-tool-sub">Nothing to sort.</div>';
+
+      results.querySelectorAll('.bw-triage-add').forEach(function (b) {
+        b.addEventListener('click', function () { addTriageTaskWidget(b.dataset.title, b); });
+      });
+    } catch {
+      results.innerHTML = '<div class="bw-tool-sub">Something went wrong. Try again?</div>';
+    }
+    btn.textContent = 'Sort it out'; btn.disabled = false;
+  }
+
+  async function addTriageTaskWidget(title, btn) {
+    btn.textContent = '…'; btn.disabled = true;
+    try {
+      var res = await api('/api/tasks', { method: 'POST', body: JSON.stringify({ title }) });
+      btn.textContent = res.success ? '✓' : '✗';
+    } catch { btn.textContent = '✗'; }
+  }
+
+  // ── Energy Menu (Dopamine Menu) ───────────────────────────────────────
+
+  function showEnergyMenu() {
+    enterToolMode();
+    var content = panelEl.querySelector('#bw-panel-content');
+    content.innerHTML = [
+      '<div class="bw-tool-header">',
+        '<button class="bw-back-btn" id="bw-dm-back">← Chat</button>',
+        '<span class="bw-tool-title">⚡ Energy Menu</span>',
+      '</div>',
+      '<p class="bw-tool-sub">How\'s your energy right now?</p>',
+      '<div id="bw-dm-energy-row">',
+        '<button class="bw-energy-btn" data-energy="high">⚡ High</button>',
+        '<button class="bw-energy-btn" data-energy="medium">😐 Medium</button>',
+        '<button class="bw-energy-btn" data-energy="low">🌫️ Low</button>',
+      '</div>',
+      '<div id="bw-dm-results"></div>',
+    ].join('');
+
+    content.querySelector('#bw-dm-back').addEventListener('click', exitToolMode);
+    content.querySelectorAll('.bw-energy-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        content.querySelectorAll('.bw-energy-btn').forEach(function (b) { b.classList.remove('active'); });
+        btn.classList.add('active');
+        loadEnergyMenuTasks(btn.dataset.energy);
+      });
+    });
+  }
+
+  async function loadEnergyMenuTasks(energy) {
+    var content = panelEl.querySelector('#bw-panel-content');
+    var results = content.querySelector('#bw-dm-results');
+    results.innerHTML = '<div class="bw-message buddy" style="align-self:flex-start"><div class="bw-loading-dots"><span></span><span></span><span></span></div></div>';
+
+    try {
+      var res = await api('/api/buddy/dopamine-menu', { method: 'POST', body: JSON.stringify({ energy }) });
+      if (!res.success) throw new Error('failed');
+
+      var sections = [
+        { key: 'appetizers', label: '🍿 Quick Wins (1-5 min)' },
+        { key: 'entrees',    label: '🍽 Deep Work (15-30 min)' },
+        { key: 'sides',      label: '🎲 Creative / Anytime' },
+      ];
+      var html = '';
+      sections.forEach(function (sec) {
+        var items = res[sec.key] || [];
+        if (!items.length) return;
+        html += '<div class="bw-triage-section"><div class="bw-triage-label">' + escHtml(sec.label) + '</div>';
+        items.forEach(function (item) {
+          html += '<div class="bw-triage-row">';
+          html += '<div class="bw-triage-text"><strong>' + escHtml(item.title) + '</strong>';
+          if (item.why) html += '<br><span class="bw-triage-step">' + escHtml(item.why) + '</span>';
+          html += '</div>';
+          if (item.task_id) {
+            html += '<button class="bw-triage-add bw-start-btn" data-id="' + escAttr(String(item.task_id)) + '">Start</button>';
+          }
+          html += '</div>';
+        });
+        html += '</div>';
+      });
+      results.innerHTML = html || '<div class="bw-tool-sub">No tasks found.</div>';
+
+      results.querySelectorAll('.bw-start-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          window.location.href = '/app/tasks?focus=' + encodeURIComponent(btn.dataset.id);
+        });
+      });
+    } catch {
+      results.innerHTML = '<div class="bw-tool-sub">Couldn\'t load tasks. Try again?</div>';
     }
   }
 
