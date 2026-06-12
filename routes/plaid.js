@@ -265,9 +265,11 @@ async function syncTransactions(pool, item) {
   const accountMap = await getAccountMap(pool, item.id);
   const categoriesByName = await getCategoriesMap(pool);
 
+  let lastSyncAccounts = [];
   while (hasMore) {
     const response = await plaid.transactionsSync({ access_token: accessToken, cursor: cursor || undefined, count: 100 });
-    const { added: newTransactions, removed, next_cursor, has_more } = response.data;
+    const { added: newTransactions, removed, next_cursor, has_more, accounts: syncAccounts } = response.data;
+    if (syncAccounts && syncAccounts.length) lastSyncAccounts = syncAccounts;
 
     for (const tx of newTransactions) {
       if (tx.amount <= 0) continue;
@@ -337,6 +339,19 @@ async function syncTransactions(pool, item) {
   }
 
   await updateItemCursor(pool, item.id, cursor);
+
+  // Store account balances from last sync page so card can show them without a live Plaid call
+  for (const acc of lastSyncAccounts) {
+    if (acc.balances?.current != null || acc.balances?.available != null) {
+      await pool.query(
+        `UPDATE plaid_accounts
+         SET current_balance = $1, available_balance = $2, balance_updated_at = NOW()
+         WHERE account_id = $3 AND user_id = $4`,
+        [acc.balances.current ?? null, acc.balances.available ?? null, acc.account_id, item.user_id]
+      );
+    }
+  }
+
   console.log(`[Plaid] Synced item ${item.id} for user ${item.user_id}: ${added} new transactions`);
 
   if (billCandidates.length > 0) {
@@ -451,52 +466,75 @@ module.exports = function(pool) {
 
   router.use(requireAuth);
 
-  // GET /api/plaid/balances — returns live balances for all connected Plaid items
+  // GET /api/plaid/balances — live balances; falls back to DB cache if Plaid call fails
   router.get('/balances', async (req, res) => {
     try {
       const userId = req.user.id;
       const plaid = getPlaidClient();
-      if (!plaid) return res.status(503).json({ success: false, message: 'Bank sync not configured' });
 
-      const { rows: items } = await pool.query(
-        `SELECT pi.*, json_agg(json_build_object(
-           'account_id', pa.account_id, 'name', pa.name, 'type', pa.type, 'subtype', pa.subtype, 'mask', pa.mask
-         )) FILTER (WHERE pa.id IS NOT NULL) AS plaid_accounts
-         FROM plaid_items pi
-         LEFT JOIN plaid_accounts pa ON pa.plaid_item_id = pi.id
-         WHERE pi.user_id = $1
-         GROUP BY pi.id
+      // Always load DB accounts (needed for fallback and account_id → name mapping)
+      const { rows: dbAccounts } = await pool.query(
+        `SELECT pa.account_id, pa.name, pa.official_name, pa.type, pa.subtype, pa.mask,
+                pa.current_balance, pa.available_balance, pa.balance_updated_at,
+                pi.id AS item_id, pi.institution_name
+         FROM plaid_accounts pa
+         JOIN plaid_items pi ON pa.plaid_item_id = pi.id
+         WHERE pa.user_id = $1
          ORDER BY pi.created_at DESC`,
         [userId]
       );
 
-      const resultItems = [];
-      for (const item of items) {
-        const accessToken = decryptPlaidToken(item.access_token);
-        if (!accessToken) continue;
+      if (!dbAccounts.length) return res.json({ success: true, items: [] });
 
-        try {
-          const resp = await plaid.accountsBalanceGet({ access_token: accessToken });
-          const accounts = resp.data.accounts.map(a => ({
-            account_id: a.account_id,
-            name: a.name,
-            official_name: a.official_name,
-            type: a.type,
-            subtype: a.subtype,
-            mask: a.mask,
-            balances: {
-              available: a.balances.available,
-              current: a.balances.current,
-              iso_currency_code: a.balances.iso_currency_code,
-            },
-          }));
-          resultItems.push({ item_id: item.id, institution: item.institution_name, accounts });
-        } catch (e) {
-          console.warn('[Plaid] Balance fetch failed for item', item.id, ':', e.message);
+      // Group by item for the response shape the frontend expects
+      const byItem = {};
+      for (const a of dbAccounts) {
+        if (!byItem[a.item_id]) byItem[a.item_id] = { item_id: a.item_id, institution: a.institution_name, accounts: [] };
+        byItem[a.item_id].accounts.push({
+          account_id: a.account_id, name: a.name, official_name: a.official_name,
+          type: a.type, subtype: a.subtype, mask: a.mask,
+          balances: {
+            current: a.current_balance != null ? parseFloat(a.current_balance) : null,
+            available: a.available_balance != null ? parseFloat(a.available_balance) : null,
+          },
+          _from_cache: true,
+        });
+      }
+
+      // Try live Plaid call and overwrite cache entries that succeed
+      if (plaid) {
+        const { rows: items } = await pool.query(
+          'SELECT * FROM plaid_items WHERE user_id = $1 ORDER BY created_at DESC', [userId]
+        );
+        for (const item of items) {
+          const accessToken = decryptPlaidToken(item.access_token);
+          if (!accessToken) continue;
+          try {
+            const resp = await plaid.accountsBalanceGet({ access_token: accessToken });
+            const liveAccounts = resp.data.accounts.map(a => ({
+              account_id: a.account_id, name: a.name, official_name: a.official_name,
+              type: a.type, subtype: a.subtype, mask: a.mask,
+              balances: { available: a.balances.available, current: a.balances.current,
+                          iso_currency_code: a.balances.iso_currency_code },
+            }));
+            byItem[item.id] = { item_id: item.id, institution: item.institution_name, accounts: liveAccounts };
+            // Persist fresh balances to DB
+            for (const a of resp.data.accounts) {
+              if (a.balances.current != null || a.balances.available != null) {
+                pool.query(
+                  `UPDATE plaid_accounts SET current_balance=$1, available_balance=$2, balance_updated_at=NOW()
+                   WHERE account_id=$3 AND user_id=$4`,
+                  [a.balances.current ?? null, a.balances.available ?? null, a.account_id, userId]
+                ).catch(() => {});
+              }
+            }
+          } catch (e) {
+            console.warn('[Plaid] Live balance fetch failed for item', item.id, '(using cached):', e.message);
+          }
         }
       }
 
-      res.json({ success: true, items: resultItems });
+      res.json({ success: true, items: Object.values(byItem) });
     } catch (err) {
       console.error('[Plaid] Balances error:', err);
       res.status(500).json({ success: false, message: 'Failed to fetch balances' });
@@ -610,7 +648,8 @@ module.exports = function(pool) {
       const plaidItem = await upsertPlaidItem(pool, userId, encryptPlaidToken(access_token), item_id, institution_name || 'Unknown Bank', institution_id || null);
       const accountsResponse = await plaid.accountsGet({ access_token });
       for (const acc of accountsResponse.data.accounts) {
-        await upsertPlaidAccount(pool, plaidItem.id, userId, acc.account_id, acc.name, acc.official_name || null, acc.type, acc.subtype || null, acc.mask || null);
+        await upsertPlaidAccount(pool, plaidItem.id, userId, acc.account_id, acc.name, acc.official_name || null, acc.type, acc.subtype || null, acc.mask || null,
+          acc.balances?.current ?? null, acc.balances?.available ?? null);
       }
       syncTransactions(pool, plaidItem).catch(e => console.error('[Plaid] Initial sync error:', e.message));
       res.json({ success: true, message: 'Connected. Bringing in your transactions.', item_id: plaidItem.id, institution_name: plaidItem.institution_name });
