@@ -1447,6 +1447,11 @@
                 parts.push(renderMorningCheckin(data));
             }
 
+            // ── DEFERRED ITEMS (resurfaced from prior brain dumps) ────────────
+            if (data.deferredItems && data.deferredItems.length) {
+                parts.push(renderDeferredItems(data.deferredItems));
+            }
+
             // ── QUICK TOOLS (Brain Dump + Dopamine Menu) ──────────────────────
             parts.push(renderQuickTools());
 
@@ -1680,6 +1685,23 @@
             '</div>';
         }
 
+        // ── Deferred items resurfaced from prior brain dumps ─────────────────
+        function renderDeferredItems(items) {
+            if (!items || !items.length) return '';
+            var html = '<div class="card" id="deferredCard" style="border-color:#f6e05e;border-width:2px;">';
+            html += '<div class="card-label" style="color:#b7791f;">💭 From your brain dump</div>';
+            html += '<div class="card-sub" style="margin-bottom:0.75rem;">These were parked as "later." Still relevant?</div>';
+            items.forEach(function(item, i) {
+                html += '<div class="deferred-item" id="deferredItem' + i + '" style="display:flex;align-items:center;gap:0.65rem;padding:0.55rem 0;border-bottom:1px solid var(--border);">';
+                html += '<div style="flex:1;font-size:0.9rem;color:var(--navy);line-height:1.35;">' + escHtml(item.text) + '</div>';
+                html += '<button class="triage-action-btn btn-add-task" data-defer-text="' + escHtml(item.text) + '" data-defer-idx="' + i + '" style="margin-left:auto;">+ Task</button>';
+                html += '<button class="deferred-dismiss-btn" data-defer-idx="' + i + '" style="padding:0.35rem 0.55rem;background:none;border:1px solid var(--border);border-radius:8px;font-size:0.78rem;color:var(--text-muted);cursor:pointer;white-space:nowrap;">✕</button>';
+                html += '</div>';
+            });
+            html += '</div>';
+            return html;
+        }
+
         // ── Quick Tools: Brain Dump + Dopamine Menu ───────────────────────────
         function renderQuickTools() {
             return '<div class="card" id="quickToolsCard">' +
@@ -1843,7 +1865,31 @@
                 });
             }
 
+            wireDeferredCard();
             wireQuickTools();
+        }
+
+        function wireDeferredCard() {
+            // "→ Task" buttons on deferred items
+            document.querySelectorAll('.btn-add-task[data-defer-text]').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    addTriageTask(btn.dataset.deferText, btn);
+                });
+            });
+            // Dismiss buttons — hide the row client-side (expires from DB after 3 days naturally)
+            document.querySelectorAll('.deferred-dismiss-btn').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    var row = el('deferredItem' + btn.dataset.deferIdx);
+                    if (row) row.style.display = 'none';
+                    // If all rows hidden, hide the whole card
+                    var card = el('deferredCard');
+                    if (card) {
+                        var anyVisible = Array.from(card.querySelectorAll('[id^="deferredItem"]'))
+                            .some(function(r) { return r.style.display !== 'none'; });
+                        if (!anyVisible) card.style.display = 'none';
+                    }
+                });
+            });
         }
 
         // ── Quick Tools: Brain Dump + Dopamine Menu ───────────────────────────
@@ -2020,7 +2066,7 @@
                 later.forEach(function(item, i) {
                     html += '<div class="triage-item" data-triage-later="' + i + '">';
                     html += '<div class="triage-item-body"><div class="triage-item-title">' + escHtml(item.item) + '</div></div>';
-                    html += '<button class="triage-action-btn btn-add-idea" data-later-idx="' + i + '">→ Ideas</button>';
+                    html += '<button class="triage-action-btn btn-add-idea" data-later-idx="' + i + '">→ Journal</button>';
                     html += '</div>';
                 });
                 html += '</div>';
@@ -2108,21 +2154,21 @@
 
         function addTriageIdea(title, btn) {
             btn.disabled = true; btn.textContent = '...';
-            apiFetch('/api/ideas', {
+            apiFetch('/api/buddy/defer-items', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ content: title })
+                body: JSON.stringify({ items: [title] })
             })
             .then(function(r) { return r.json(); })
             .then(function(result) {
-                if (result.success || result.id || result.idea) {
-                    btn.textContent = '✓'; showToast('Saved to Ideas!');
+                if (result.success) {
+                    btn.textContent = '✓'; showToast('Saved — Buddy will resurface this. 💭');
                 } else {
-                    btn.disabled = false; btn.textContent = '→ Ideas';
+                    btn.disabled = false; btn.textContent = '→ Journal';
                     showToast('Couldn\'t save. Try again?');
                 }
             })
-            .catch(function() { btn.disabled = false; btn.textContent = '→ Ideas'; });
+            .catch(function() { btn.disabled = false; btn.textContent = '→ Journal'; });
         }
 
         function loadDopamineMenu() {

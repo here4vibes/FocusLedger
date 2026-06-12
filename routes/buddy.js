@@ -746,6 +746,17 @@ module.exports = function(pool) {
         WHERE user_id = $1 AND checkin_date = $2
       `, [userId, today]);
 
+      // Resurface deferred brain-dump items saved in the last 3 days
+      const deferredResult = await pool.query(`
+        SELECT id, content, created_at
+        FROM journal_entries
+        WHERE user_id = $1
+          AND entry_type = 'deferred'
+          AND created_at >= NOW() - INTERVAL '3 days'
+        ORDER BY created_at DESC
+        LIMIT 10
+      `, [userId]);
+
       const morning = checkinsResult.rows.find(r => r.checkin_type === 'morning') || null;
       const evening = checkinsResult.rows.find(r => r.checkin_type === 'evening') || null;
 
@@ -764,6 +775,16 @@ module.exports = function(pool) {
         dailyPlanSlots = enriched.slots;
       }
 
+      // Parse deferred items: each row is one brain dump session stored as a
+      // bullet list. Flatten into individual strings for the frontend.
+      const deferredItems = deferredResult.rows.flatMap(row => {
+        return row.content
+          .split('\n')
+          .map(line => line.replace(/^[•\-]\s*/, '').trim())
+          .filter(Boolean)
+          .map(text => ({ id: row.id, text }));
+      });
+
       res.json({
         success: true,
         date: today,
@@ -772,7 +793,8 @@ module.exports = function(pool) {
         morning,
         evening,
         dailyPlan,
-        dailyPlanSlots
+        dailyPlanSlots,
+        deferredItems
       });
     } catch (err) {
       console.error('[buddy] GET /status error:', err.message);
@@ -1619,6 +1641,36 @@ Example output: ["Walk to the kitchen","Pick up one item from the counter","Put 
     } catch (err) {
       console.error('[buddy] POST /confirm-tasks error:', err.message);
       res.status(500).json({ success: false, message: 'Failed to save tasks' });
+    }
+  });
+
+  // ─── POST /api/buddy/defer-items ─────────────────────────────────────────
+  // Save "Later" items from a brain dump triage to journal_entries so Buddy
+  // can resurface them on the next morning check-in.
+  // body: { items: string[] }
+  router.post('/defer-items', async (req, res) => {
+    try {
+      const userId = req.user.id;
+      const { items } = req.body;
+      if (!Array.isArray(items) || !items.length) {
+        return res.status(400).json({ success: false, message: 'items array required' });
+      }
+      const content = items
+        .map(i => (typeof i === 'string' ? i : i.item || '').trim())
+        .filter(Boolean)
+        .map(i => `• ${i}`)
+        .join('\n');
+      if (!content) {
+        return res.status(400).json({ success: false, message: 'No valid items' });
+      }
+      await pool.query(
+        `INSERT INTO journal_entries (user_id, content, entry_type) VALUES ($1, $2, 'deferred')`,
+        [userId, content]
+      );
+      res.json({ success: true });
+    } catch (err) {
+      console.error('[buddy] POST /defer-items error:', err.message);
+      res.status(500).json({ success: false, message: 'Failed to save deferred items' });
     }
   });
 
