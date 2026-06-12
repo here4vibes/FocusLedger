@@ -78,10 +78,6 @@ Node.js + Express · PostgreSQL (Neon) · Render deployment · Vanilla HTML/CSS/
 - `insight_unlocks` — tracks which Progressive Insights tiers each user has unlocked; unlocked_at, viewed, interacted flags; UNIQUE(user_id, insight_key)
 - `task_time_estimations` — Time-Blindness P1: user time estimates vs actuals per task; calibration_score (actual/estimated ratio); UNIQUE(task_id)
 
-## Database
-- `users` — accounts, subscription, Google OAuth, is_qa_user, Pro/Tandem grants, UTM, timezone
-- `tasks` — todo items: due dates, steps, recurring, notes, duration_minutes; `is_household`/`is_shared_with_partner` for Tandem sharing
-
 ## External integrations
 - **Resend + OpenAI/Polsia AI** — email delivery (Resend, hello@focusledger.net) + AI task breakdown/tagging/coaching/personalized insights
 - **Plaid** — bank account sync for spending + bill detection
@@ -92,6 +88,9 @@ Node.js + Express · PostgreSQL (Neon) · Render deployment · Vanilla HTML/CSS/
 - **APNs** — iOS push via `apn` npm package; env vars: APNS_KEY_ID, APNS_TEAM_ID, APNS_KEY_P8, APNS_BUNDLE_ID
 
 ## Recent changes
+- **2026-06-12** — Brain Dump Triage + Dopamine Menu (PR #56): Brain Dump quick-tool in Buddy panel with Web Speech API voice input (continuous mode, auto-restart on Chrome 60s timeout), native browser autocorrect, and AI triage into Now/Later/Trash categories. Later items park in `journal_entries` (`entry_type='deferred'`) and Buddy resurfaces them next morning via `GET /api/buddy/status`. Dopamine Menu generates 3-tier energy-matched task list from real pending tasks. Routes: `POST /api/buddy/brain-dump-triage`, `POST /api/buddy/defer-items`, `POST /api/buddy/dopamine-menu`.
+- **2026-06-12** — Schema repairs (PR #56): 4 idempotent migrations fix Prisma-vs-production-SQL column mismatches for `buddy_checkins` (`date`→`checkin_date`, `type`→`checkin_type`), `buddy_midday_checkins`, `task_substeps` (add `step_text`, `step_order`, `completed`, `user_id`, `completed_at`), and `buddy_daily_plans` (`date`→`plan_date`, `mood` type, `plan_json`→individual columns). Fixed `routes/daily-brief.js`, `routes/insights.js`, `routes/momentum-score.js` to use new column names.
+- **2026-06-12** — CI reliability (PR #57): Removed dead `npx prisma generate` step (schema.prisma deleted); added `defaultBrowserType: 'chromium'` to `playwright.smoke.config.js` mobile projects (CI only installs Chromium; `devices['iPhone 13']` was defaulting to WebKit).
 - **2026-05-27** — Energy/Movement Micro-Break Prompts: after 90 min of focus (configurable 45/60/90/120 min), Buddy sends a movement nudge "Stand up, stretch for 2 minutes — I'll wait." New `movement_break` nudge type; cron job `movementBreakCheck.js` checks active sessions against `break_interval_minutes` in `user_focus_prefs`; manual "I need a break" button on Focus Mode page; front-end interval selector (45m/60m/90m/2h).
 - **2026-05-27** — Compact task cards with value tag badges: redesigned `.task-card` from blocky to thin single-line layout (~52px min-height); title truncates with ellipsis; colored value-name pill badge from `user_values` table renders on each card; steps hidden in compact view (shown in edit modal); `values-service.js` loaded in tasks.html; `state.valuesMap` caches values for O(1) badge lookup; recurrence icon + steps count badge inline.
 - **2026-05-27** — Task card tap-to-expand + recurring settings: slide-down CSS animation (max-height transition, ~280ms); detail view with inline title edit, due date picker, value tag pills, recurring toggle (Off/Daily/Weekdays/Weekly/Monthly) with day selector, notes, steps, delete; tap-outside dismiss; recurring icon (🔄) on collapsed cards; `recurrence_type` + `recurrence_day` fields added to task model; completing a recurring task auto-spawns the next occurrence.
@@ -139,7 +138,7 @@ git add -p                               # review hunks before staging
 git commit -m "type(scope): description"
 
 # Push and open PR — never merge your own PRs to main without review
-git push origin HEAD
+git push -u origin HEAD
 
 # To check what's changed vs main
 git diff main...HEAD --stat
@@ -148,6 +147,17 @@ git diff main...HEAD --stat
 **Branch naming:** `fix/`, `feat/`, `chore/`, `migration/` prefixes. Always branch from `main`.
 
 **Never force-push to main.** Never commit `.env`, secrets, or `node_modules`.
+
+### Branching in cloud sessions (code.claude.com)
+
+Every cloud session is assigned a dedicated branch via the system prompt — e.g. `claude/task-slug-wXxXx`. That branch is already wired to CI (`branches: [main, "claude/**"]` in `.github/workflows/ci.yml`).
+
+**Rules for cloud sessions:**
+1. **Use the assigned branch.** The system prompt always specifies the branch. Develop on that branch — do NOT create a different one.
+2. **Do NOT create additional branches** during a session unless the user explicitly asks.
+3. **Push to the assigned branch.** Always `git push -u origin <assigned-branch>`.
+4. **After merge:** once the session's PR is squash-merged to main, that `claude/<slug>` branch is stale. The next session starts fresh on a new branch — do not re-use old session branches.
+5. **Local dev:** use standard prefixes (`fix/`, `feat/`, `chore/`, `migration/`) when working outside a cloud session.
 
 ### Neon (PostgreSQL)
 Connection is via `DATABASE_URL` env var (already set in Render + local `.env`).
