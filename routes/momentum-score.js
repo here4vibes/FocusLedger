@@ -63,7 +63,7 @@ module.exports = function (pool) {
 
         // Connection: Buddy check-ins today
         pool.query(
-          `SELECT type FROM buddy_checkins
+          `SELECT checkin_type FROM buddy_checkins
            WHERE user_id = $1
              AND (created_at AT TIME ZONE $2)::date = $3::date`,
           [userId, tz, today]
@@ -86,7 +86,7 @@ module.exports = function (pool) {
       const routinesCompletedToday = parseInt(rhythmRes.rows[0]?.n || 0, 10);
       const rhythmScore = routinesCompletedToday > 0 ? 100 : 0;
 
-      const checkinTypes = new Set(connectionRes.rows.map(r => r.type));
+      const checkinTypes = new Set(connectionRes.rows.map(r => r.checkin_type));
       const connectionScore = (checkinTypes.has('morning') ? 50 : 0) +
                               (checkinTypes.has('evening') ? 50 : 0);
 

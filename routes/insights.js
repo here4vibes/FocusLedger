@@ -54,7 +54,7 @@ module.exports = function InsightsRouter(pool) {
         pool.query('SELECT COUNT(*) as cnt FROM transactions WHERE user_id = $1', [userId]),
         pool.query('SELECT COUNT(DISTINCT date) as days FROM transactions WHERE user_id = $1', [userId]),
         pool.query('SELECT COUNT(DISTINCT completed_at::date) as days FROM tasks WHERE user_id = $1 AND completed_at IS NOT NULL', [userId]),
-        pool.query('SELECT COUNT(*) as cnt FROM buddy_checkins WHERE user_id = $1 AND type = $2 AND completed = true', [userId, 'evening']),
+        pool.query('SELECT COUNT(*) as cnt FROM buddy_checkins WHERE user_id = $1 AND checkin_type = $2', [userId, 'evening']),
       ]);
 
       const txnCount      = parseInt(txnResult.rows[0]?.cnt   || 0, 10);
