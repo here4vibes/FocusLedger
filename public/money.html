@@ -823,43 +823,10 @@ async function loadAccountCard() {
     var lastSynced = firstItem && firstItem.lastSynced ? PlaidService.relativeTime(firstItem.lastSynced) : null;
     var accounts = firstItem ? (firstItem.accounts || []) : [];
     var primary = accounts.find(function(a) { return a.type === 'depository'; }) || accounts[0];
-    // Merge in live balance from /api/plaid/balances
-    if (primary) {
-      var dbAccountId = primary.id; // this is the DB row id, not Plaid account_id
-      // Find the account in balances by matching account name + type
-      var liveBalances = null;
-      for (var ai = 0; ai < accounts.length; ai++) {
-        var acc = accounts[ai];
-        // Try to match by name
-        for (var bi2 = 0; bi2 < (balances && balances.items ? balances.items.length : 0); bi2++) {
-          var bItem2 = balances.items[bi2];
-          for (var ba2 = 0; ba2 < (bItem2.accounts || []).length; ba2++) {
-            var bAcc2 = bItem2.accounts[ba2];
-            if (bAcc2.name === acc.name && bAcc2.type === acc.type) {
-              liveBalances = bAcc2.balances;
-              break;
-            }
-          }
-          if (liveBalances) break;
-        }
-        if (liveBalances) break;
-      }
-      if (primary._balances) {
-        // Already merged
-      }
-    }
     var balance = null;
-    if (primary && balances && balances.items) {
-      // Try to match primary account by name
-      outer: for (var i = 0; i < balances.items.length; i++) {
-        for (var j = 0; j < (balances.items[i].accounts || []).length; j++) {
-          var accBal = balances.items[i].accounts[j];
-          if (accBal.name === primary.name || accBal.name === (primary.official_name || primary.name)) {
-            balance = accBal.balances && accBal.balances.current != null ? fmt(accBal.balances.current) : null;
-            break outer;
-          }
-        }
-      }
+    if (primary && primary.account_id && balanceMap[primary.account_id]) {
+      var lb = balanceMap[primary.account_id];
+      balance = lb.current != null ? fmt(lb.current) : (lb.available != null ? fmt(lb.available) : null);
     }
     if (balance === null && primary && primary._balances) {
       balance = primary._balances.current != null ? fmt(primary._balances.current) : null;
