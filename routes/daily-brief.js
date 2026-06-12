@@ -32,7 +32,7 @@ module.exports = function (pool) {
 
       const [gateRow, userRow] = await Promise.all([
         pool.query(
-          `SELECT 1 FROM buddy_checkins WHERE user_id = $1 AND type = 'evening'
+          `SELECT 1 FROM buddy_checkins WHERE user_id = $1 AND checkin_type = 'evening'
            AND (created_at AT TIME ZONE $2)::date = $3::date LIMIT 1`,
           [userId, tz, yesterdayStr]
         ).catch(() => ({ rows: [] })),

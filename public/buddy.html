@@ -965,6 +965,56 @@
     .qa-chip{display:inline-flex;align-items:center;gap:0.3rem;padding:0.3rem 0.75rem;background:var(--cream);border:1.5px solid var(--border);border-radius:20px;font-size:0.78rem;font-weight:500;color:var(--navy);cursor:pointer;transition:border-color .15s,background .15s;user-select:none}
     .qa-chip:hover{border-color:var(--orange);background:rgba(201,168,76,0.08)}
     .qa-chip .chip-dot{width:7px;height:7px;border-radius:50%;background:#5BA4A4}
+
+    /* ── Quick Tools card ── */
+    .quick-tools-grid{display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:0.25rem}
+    .qt-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0.25rem;padding:1rem 0.5rem;background:var(--cream-dark);border:1.5px solid var(--border);border-radius:14px;cursor:pointer;font-size:0.88rem;font-weight:600;color:var(--navy);line-height:1.3;text-align:center;transition:background .15s,transform .1s;-webkit-tap-highlight-color:transparent}
+    .qt-btn:active{transform:scale(0.96)}
+    .qt-btn.active{background:var(--navy);color:white;border-color:var(--navy)}
+    .qt-btn.active .qt-sub{color:rgba(255,255,255,0.65)}
+    .qt-icon{font-size:1.5rem;line-height:1}
+    .qt-sub{font-size:0.71rem;font-weight:400;color:var(--text-muted);margin-top:0.1rem}
+    .qt-panel{margin-top:1rem;border-top:1px solid var(--border);padding-top:1rem}
+
+    /* ── Brain Dump ── */
+    .bd-input-wrap{position:relative}
+    .bd-textarea{width:100%;min-height:110px;border:1.5px solid var(--border);border-radius:12px;padding:0.8rem 3.2rem 0.8rem 0.8rem;font-size:1rem;font-family:'DM Sans',sans-serif;color:var(--navy);background:var(--surface);resize:vertical;box-sizing:border-box;line-height:1.5}
+    .bd-textarea:focus{outline:none;border-color:var(--orange)}
+    .bd-mic-btn{position:absolute;right:0.55rem;bottom:0.55rem;width:40px;height:40px;border-radius:50%;border:none;background:var(--navy);color:white;font-size:1.1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .2s;flex-shrink:0}
+    .bd-mic-btn.recording{background:#e53e3e;animation:bdPulse 1.2s infinite}
+    @keyframes bdPulse{0%,100%{box-shadow:0 0 0 0 rgba(229,62,62,0.35)}60%{box-shadow:0 0 0 8px rgba(229,62,62,0)}}
+    .bd-submit-btn{width:100%;margin-top:0.65rem;padding:0.85rem;background:var(--orange);color:white;border:none;border-radius:12px;font-size:0.95rem;font-weight:700;cursor:pointer;transition:opacity .15s}
+    .bd-submit-btn:disabled{opacity:0.5;cursor:not-allowed}
+    .bd-triage{margin-top:1rem}
+    .triage-section{margin-bottom:1rem}
+    .triage-label{font-size:0.71rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:0.45rem;padding:0.2rem 0}
+    .triage-now>.triage-label{color:#276749}
+    .triage-later>.triage-label{color:#b7791f}
+    .triage-trash>.triage-label{color:var(--text-muted)}
+    .triage-item{display:flex;align-items:flex-start;justify-content:space-between;gap:0.65rem;padding:0.65rem 0.75rem;border-radius:10px;margin-bottom:0.4rem}
+    .triage-now .triage-item{background:#f0faf4;border:1px solid #9ae6b4}
+    .triage-later .triage-item{background:#fffbf0;border:1px solid #f6e05e}
+    .triage-trash .triage-item{background:var(--cream-dark);border:1px solid var(--border);opacity:0.75}
+    .triage-item-body{flex:1;min-width:0}
+    .triage-item-title{font-size:0.9rem;font-weight:600;color:var(--navy);line-height:1.35}
+    .triage-item-step{font-size:0.8rem;color:#276749;margin-top:0.2rem;line-height:1.4}
+    .triage-action-btn{flex-shrink:0;padding:0.35rem 0.65rem;border:none;border-radius:8px;font-size:0.78rem;font-weight:600;cursor:pointer;white-space:nowrap;line-height:1}
+    .btn-add-task{background:#276749;color:white}
+    .btn-add-idea{background:#f6ad55;color:#7c3c00}
+    .bd-bulk-btn{width:100%;padding:0.75rem;background:var(--navy);color:white;border:none;border-radius:12px;font-size:0.88rem;font-weight:600;cursor:pointer;margin-top:0.5rem}
+    .bd-bulk-btn:disabled{opacity:0.5;cursor:not-allowed}
+
+    /* ── Dopamine Menu ── */
+    .dm-tier{margin-bottom:1.1rem}
+    .dm-tier-label{font-size:0.71rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:0.45rem}
+    .dm-appetizer .dm-tier-label{color:#c05621}
+    .dm-entree .dm-tier-label{color:var(--navy)}
+    .dm-side .dm-tier-label{color:#553c9a}
+    .dm-item{display:flex;align-items:center;gap:0.75rem;padding:0.65rem 0.75rem;border-radius:10px;margin-bottom:0.4rem;border:1px solid var(--border);background:var(--surface)}
+    .dm-item-body{flex:1;min-width:0}
+    .dm-item-title{font-size:0.9rem;font-weight:600;color:var(--navy);line-height:1.3}
+    .dm-item-meta{font-size:0.79rem;color:var(--text-muted);margin-top:0.15rem}
+    .dm-start-btn{flex-shrink:0;padding:0.38rem 0.7rem;background:var(--orange);color:white;border:none;border-radius:8px;font-size:0.8rem;font-weight:600;cursor:pointer;white-space:nowrap}
     </style>
     <link rel="stylesheet" href="/shared-nav.css">
 </head>
@@ -1397,6 +1447,14 @@
                 parts.push(renderMorningCheckin(data));
             }
 
+            // ── DEFERRED ITEMS (resurfaced from prior brain dumps) ────────────
+            if (data.deferredItems && data.deferredItems.length) {
+                parts.push(renderDeferredItems(data.deferredItems));
+            }
+
+            // ── QUICK TOOLS (Brain Dump + Dopamine Menu) ──────────────────────
+            parts.push(renderQuickTools());
+
             // ── EVENING SECTION ───────────────────────────────────────────────
             if (isEvening) {
                 parts.push(renderEveningRecap(data));
@@ -1627,6 +1685,56 @@
             '</div>';
         }
 
+        // ── Deferred items resurfaced from prior brain dumps ─────────────────
+        function renderDeferredItems(items) {
+            if (!items || !items.length) return '';
+            var html = '<div class="card" id="deferredCard" style="border-color:#f6e05e;border-width:2px;">';
+            html += '<div class="card-label" style="color:#b7791f;">💭 From your brain dump</div>';
+            html += '<div class="card-sub" style="margin-bottom:0.75rem;">These were parked as "later." Still relevant?</div>';
+            items.forEach(function(item, i) {
+                html += '<div class="deferred-item" id="deferredItem' + i + '" style="display:flex;align-items:center;gap:0.65rem;padding:0.55rem 0;border-bottom:1px solid var(--border);">';
+                html += '<div style="flex:1;font-size:0.9rem;color:var(--navy);line-height:1.35;">' + escHtml(item.text) + '</div>';
+                html += '<button class="triage-action-btn btn-add-task" data-defer-text="' + escHtml(item.text) + '" data-defer-idx="' + i + '" style="margin-left:auto;">+ Task</button>';
+                html += '<button class="deferred-dismiss-btn" data-defer-idx="' + i + '" style="padding:0.35rem 0.55rem;background:none;border:1px solid var(--border);border-radius:8px;font-size:0.78rem;color:var(--text-muted);cursor:pointer;white-space:nowrap;">✕</button>';
+                html += '</div>';
+            });
+            html += '</div>';
+            return html;
+        }
+
+        // ── Quick Tools: Brain Dump + Dopamine Menu ───────────────────────────
+        function renderQuickTools() {
+            return '<div class="card" id="quickToolsCard">' +
+                '<div class="card-label">Quick tools</div>' +
+                '<div class="quick-tools-grid">' +
+                    '<button class="qt-btn" id="brainDumpBtn">' +
+                        '<span class="qt-icon">🧠</span>' +
+                        'Brain Dump' +
+                        '<span class="qt-sub">Clear the noise</span>' +
+                    '</button>' +
+                    '<button class="qt-btn" id="dopamineMenuBtn">' +
+                        '<span class="qt-icon">⚡</span>' +
+                        'Dopamine Menu' +
+                        '<span class="qt-sub">Find your spark</span>' +
+                    '</button>' +
+                '</div>' +
+                '<div id="brainDumpPanel" style="display:none;" class="qt-panel">' +
+                    '<div class="bd-input-wrap">' +
+                        '<textarea id="brainDumpText" class="bd-textarea"' +
+                            ' placeholder="Just talk or type — everything swirling in your head. No formatting needed."' +
+                            ' spellcheck="true" autocorrect="on" autocapitalize="sentences" autocomplete="off">' +
+                        '</textarea>' +
+                        '<button id="bdMicBtn" class="bd-mic-btn" title="Tap to speak">🎤</button>' +
+                    '</div>' +
+                    '<button id="bdSubmitBtn" class="bd-submit-btn">Sort it out →</button>' +
+                    '<div id="bdResults" style="display:none;" class="bd-triage"></div>' +
+                '</div>' +
+                '<div id="dopamineMenuPanel" style="display:none;" class="qt-panel">' +
+                    '<div id="dmResults"></div>' +
+                '</div>' +
+            '</div>';
+        }
+
         // ── Auto-routines suggestion card ─────────────────────────────────────
         function renderSuggestionCard(suggestion) {
             if (!suggestion || !suggestion.message) return '';
@@ -1753,10 +1861,376 @@
             if (editBtn) {
                 editBtn.addEventListener('click', function() {
                     var suggestionId = editBtn.dataset.suggestionId;
-                    // For now, redirect to routines page — future: open edit modal
                     window.location.href = '/app/routines?new=true&suggestionId=' + suggestionId;
                 });
             }
+
+            wireDeferredCard();
+            wireQuickTools();
+        }
+
+        function wireDeferredCard() {
+            // "→ Task" buttons on deferred items
+            document.querySelectorAll('.btn-add-task[data-defer-text]').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    addTriageTask(btn.dataset.deferText, btn);
+                });
+            });
+            // Dismiss buttons — hide the row client-side (expires from DB after 3 days naturally)
+            document.querySelectorAll('.deferred-dismiss-btn').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    var row = el('deferredItem' + btn.dataset.deferIdx);
+                    if (row) row.style.display = 'none';
+                    // If all rows hidden, hide the whole card
+                    var card = el('deferredCard');
+                    if (card) {
+                        var anyVisible = Array.from(card.querySelectorAll('[id^="deferredItem"]'))
+                            .some(function(r) { return r.style.display !== 'none'; });
+                        if (!anyVisible) card.style.display = 'none';
+                    }
+                });
+            });
+        }
+
+        // ── Quick Tools: Brain Dump + Dopamine Menu ───────────────────────────
+        var _recognition = null;
+        var _micActive = false;
+        var _bdFinalTranscript = '';
+
+        function wireQuickTools() {
+            var bdBtn  = el('brainDumpBtn');
+            var dmBtn  = el('dopamineMenuBtn');
+            var bdPanel = el('brainDumpPanel');
+            var dmPanel = el('dopamineMenuPanel');
+            if (!bdBtn || !dmBtn) return;
+
+            // Toggle Brain Dump panel
+            bdBtn.addEventListener('click', function() {
+                var open = bdPanel.style.display !== 'none';
+                bdPanel.style.display = open ? 'none' : '';
+                dmPanel.style.display = 'none';
+                bdBtn.classList.toggle('active', !open);
+                dmBtn.classList.remove('active');
+                if (!open) el('brainDumpText').focus();
+            });
+
+            // Toggle Dopamine Menu panel (auto-loads on first open)
+            var dmLoaded = false;
+            dmBtn.addEventListener('click', function() {
+                var open = dmPanel.style.display !== 'none';
+                dmPanel.style.display = open ? 'none' : '';
+                bdPanel.style.display = 'none';
+                dmBtn.classList.toggle('active', !open);
+                bdBtn.classList.remove('active');
+                if (!open && !dmLoaded) {
+                    dmLoaded = true;
+                    loadDopamineMenu();
+                }
+            });
+
+            // ── Mic button (Web Speech API) ──────────────────────────────────
+            var micBtn = el('bdMicBtn');
+            if (micBtn) {
+                micBtn.addEventListener('click', function() {
+                    if (_micActive) {
+                        stopListening();
+                    } else {
+                        startListening();
+                    }
+                });
+            }
+
+            // ── Brain Dump submit ────────────────────────────────────────────
+            var submitBtn = el('bdSubmitBtn');
+            if (submitBtn) {
+                submitBtn.addEventListener('click', function() {
+                    var text = (el('brainDumpText').value || '').trim();
+                    if (!text) { showToast('Type or say something first.'); return; }
+                    submitBrainDump(text);
+                });
+            }
+        }
+
+        function startListening() {
+            var SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechRec) {
+                showToast('Speech input not supported in this browser. Type instead!');
+                return;
+            }
+            if (_recognition) { try { _recognition.stop(); } catch(e) {} }
+
+            _recognition = new SpeechRec();
+            _recognition.continuous = true;
+            _recognition.interimResults = true;
+            _recognition.lang = 'en-US';
+            _bdFinalTranscript = (el('brainDumpText').value || '').trim();
+            if (_bdFinalTranscript) _bdFinalTranscript += ' ';
+
+            _recognition.onresult = function(event) {
+                var interim = '';
+                for (var i = event.resultIndex; i < event.results.length; i++) {
+                    var t = event.results[i][0].transcript;
+                    if (event.results[i].isFinal) {
+                        _bdFinalTranscript += t + ' ';
+                    } else {
+                        interim += t;
+                    }
+                }
+                var textarea = el('brainDumpText');
+                if (textarea) textarea.value = _bdFinalTranscript + interim;
+            };
+
+            _recognition.onerror = function(e) {
+                if (e.error !== 'aborted') showToast('Mic error: ' + e.error);
+                stopListening();
+            };
+
+            _recognition.onend = function() {
+                // Auto-restart if user didn't manually stop (handles 60s Chrome timeout)
+                if (_micActive) {
+                    try { _recognition.start(); } catch(e) { stopListening(); }
+                }
+            };
+
+            try {
+                _recognition.start();
+                _micActive = true;
+                var micBtn = el('bdMicBtn');
+                if (micBtn) { micBtn.classList.add('recording'); micBtn.textContent = '⏹'; }
+            } catch(e) {
+                showToast('Could not start mic. Check browser permissions.');
+            }
+        }
+
+        function stopListening() {
+            _micActive = false;
+            if (_recognition) { try { _recognition.stop(); } catch(e) {} _recognition = null; }
+            var micBtn = el('bdMicBtn');
+            if (micBtn) { micBtn.classList.remove('recording'); micBtn.textContent = '🎤'; }
+            // Trim trailing space left by continuous transcript
+            var ta = el('brainDumpText');
+            if (ta) ta.value = (ta.value || '').trimEnd();
+        }
+
+        function submitBrainDump(text) {
+            stopListening();
+            var submitBtn = el('bdSubmitBtn');
+            var results   = el('bdResults');
+            if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Sorting...'; }
+            results.style.display = 'none';
+
+            apiFetch('/api/buddy/brain-dump-triage', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text: text })
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Sort it out →'; }
+                if (!data.success) { showToast('Couldn\'t sort — try again?'); return; }
+                renderTriageResults(data);
+            })
+            .catch(function() {
+                if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Sort it out →'; }
+                showToast('Connection error. Try again?');
+            });
+        }
+
+        function renderTriageResults(data) {
+            var now   = data.now   || [];
+            var later = data.later || [];
+            var trash = data.trash || [];
+            var html  = '';
+
+            if (now.length) {
+                html += '<div class="triage-section triage-now">';
+                html += '<div class="triage-label">✅ Do Now (' + now.length + ')</div>';
+                now.forEach(function(item, i) {
+                    html += '<div class="triage-item" data-triage-now="' + i + '">';
+                    html += '<div class="triage-item-body">';
+                    html += '<div class="triage-item-title">' + escHtml(item.item) + '</div>';
+                    if (item.nextStep) html += '<div class="triage-item-step">→ ' + escHtml(item.nextStep) + '</div>';
+                    html += '</div>';
+                    html += '<button class="triage-action-btn btn-add-task" data-now-idx="' + i + '">+ Task</button>';
+                    html += '</div>';
+                });
+                if (now.length > 1) {
+                    html += '<button class="bd-bulk-btn" id="bdBulkBtn">Add all ' + now.length + ' as tasks</button>';
+                }
+                html += '</div>';
+            }
+
+            if (later.length) {
+                html += '<div class="triage-section triage-later">';
+                html += '<div class="triage-label">📅 Later (' + later.length + ')</div>';
+                later.forEach(function(item, i) {
+                    html += '<div class="triage-item" data-triage-later="' + i + '">';
+                    html += '<div class="triage-item-body"><div class="triage-item-title">' + escHtml(item.item) + '</div></div>';
+                    html += '<button class="triage-action-btn btn-add-idea" data-later-idx="' + i + '">→ Journal</button>';
+                    html += '</div>';
+                });
+                html += '</div>';
+            }
+
+            if (trash.length) {
+                html += '<div class="triage-section triage-trash">';
+                html += '<div class="triage-label">🗑 Let go (' + trash.length + ')</div>';
+                trash.forEach(function(item) {
+                    html += '<div class="triage-item">';
+                    html += '<div class="triage-item-body"><div class="triage-item-title">' + escHtml(item.item) + '</div></div>';
+                    html += '</div>';
+                });
+                html += '</div>';
+            }
+
+            var resultsEl = el('bdResults');
+            resultsEl.innerHTML = html;
+            resultsEl.style.display = '';
+
+            // Wire individual "add task" buttons
+            resultsEl.querySelectorAll('.btn-add-task[data-now-idx]').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    var idx = parseInt(btn.dataset.nowIdx, 10);
+                    var item = (data.now || [])[idx];
+                    if (!item) return;
+                    addTriageTask(item.item, btn);
+                });
+            });
+
+            // Wire "add idea" buttons
+            resultsEl.querySelectorAll('.btn-add-idea[data-later-idx]').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    var idx = parseInt(btn.dataset.laterIdx, 10);
+                    var item = (data.later || [])[idx];
+                    if (!item) return;
+                    addTriageIdea(item.item, btn);
+                });
+            });
+
+            // Wire bulk "add all" button
+            var bulkBtn = el('bdBulkBtn');
+            if (bulkBtn) {
+                bulkBtn.addEventListener('click', function() {
+                    bulkBtn.disabled = true;
+                    bulkBtn.textContent = 'Adding...';
+                    var nowItems = data.now || [];
+                    apiFetch('/api/buddy/confirm-tasks', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ tasks: nowItems.map(function(n) { return { title: n.item }; }) })
+                    })
+                    .then(function(r) { return r.json(); })
+                    .then(function(result) {
+                        bulkBtn.textContent = '✓ ' + (result.count || nowItems.length) + ' tasks added';
+                        showToast('Added ' + (result.count || nowItems.length) + ' tasks! 🎯');
+                        // Disable individual add buttons too
+                        resultsEl.querySelectorAll('.btn-add-task').forEach(function(b) {
+                            b.disabled = true; b.textContent = '✓';
+                        });
+                    })
+                    .catch(function() { bulkBtn.disabled = false; bulkBtn.textContent = 'Add all as tasks'; });
+                });
+            }
+        }
+
+        function addTriageTask(title, btn) {
+            btn.disabled = true; btn.textContent = '...';
+            apiFetch('/api/tasks', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ title: title, priority: 'medium' })
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(result) {
+                if (result.success || result.id || result.task) {
+                    btn.textContent = '✓'; showToast('Task added!');
+                } else {
+                    btn.disabled = false; btn.textContent = '+ Task';
+                    showToast('Couldn\'t add task. Try again?');
+                }
+            })
+            .catch(function() { btn.disabled = false; btn.textContent = '+ Task'; });
+        }
+
+        function addTriageIdea(title, btn) {
+            btn.disabled = true; btn.textContent = '...';
+            apiFetch('/api/buddy/defer-items', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ items: [title] })
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(result) {
+                if (result.success) {
+                    btn.textContent = '✓'; showToast('Saved — Buddy will resurface this. 💭');
+                } else {
+                    btn.disabled = false; btn.textContent = '→ Journal';
+                    showToast('Couldn\'t save. Try again?');
+                }
+            })
+            .catch(function() { btn.disabled = false; btn.textContent = '→ Journal'; });
+        }
+
+        function loadDopamineMenu() {
+            var dmResults = el('dmResults');
+            if (!dmResults) return;
+            dmResults.innerHTML = '<div style="text-align:center;padding:1.5rem 0;"><div class="spinner"></div><div style="margin-top:0.5rem;font-size:0.88rem;color:var(--text-muted);">Building your menu...</div></div>';
+
+            apiFetch('/api/buddy/dopamine-menu', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ energy: selectedMood || null, availableMinutes: null })
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (!data.success) { dmResults.innerHTML = '<div style="color:var(--text-muted);font-size:0.9rem;">Couldn\'t load menu. Try again?</div>'; return; }
+                renderDopamineMenu(data);
+            })
+            .catch(function() {
+                dmResults.innerHTML = '<div style="color:var(--text-muted);font-size:0.9rem;">Connection error.</div>';
+            });
+        }
+
+        function renderDopamineMenu(data) {
+            var tiers = [
+                { key: 'appetizers', cls: 'dm-appetizer', label: '🍿 Appetizers · 1–5 min', items: data.appetizers || [] },
+                { key: 'entrees',    cls: 'dm-entree',    label: '🍽 Entrées · 15–30 min',  items: data.entrees    || [] },
+                { key: 'sides',      cls: 'dm-side',      label: '🎨 Sides · anytime',       items: data.sides      || [] }
+            ];
+            var html = '';
+            tiers.forEach(function(tier) {
+                if (!tier.items.length) return;
+                html += '<div class="dm-tier ' + tier.cls + '">';
+                html += '<div class="dm-tier-label">' + tier.label + '</div>';
+                tier.items.forEach(function(item) {
+                    html += '<div class="dm-item">';
+                    html += '<div class="dm-item-body">';
+                    html += '<div class="dm-item-title">' + escHtml(item.title) + '</div>';
+                    if (item.why) html += '<div class="dm-item-meta">' + escHtml(item.why) + '</div>';
+                    html += '</div>';
+                    var taskId = item.task_id;
+                    html += '<button class="dm-start-btn"' + (taskId ? ' data-task-id="' + taskId + '"' : '') + '>Start</button>';
+                    html += '</div>';
+                });
+                html += '</div>';
+            });
+
+            var dmResults = el('dmResults');
+            dmResults.innerHTML = html;
+
+            // Wire Start buttons — navigate to tasks or just show toast
+            dmResults.querySelectorAll('.dm-start-btn').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    var taskId = btn.dataset.taskId;
+                    if (taskId) {
+                        window.location.href = '/app?focus=' + taskId;
+                    } else {
+                        btn.textContent = '✓';
+                        btn.style.background = 'var(--green)';
+                        showToast('Go for it! 🚀');
+                    }
+                });
+            });
         }
 
         // ── Load / generate plan ──────────────────────────────────────────────
