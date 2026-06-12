@@ -884,12 +884,28 @@ async function loadAccountCard() {
     html += '<div style="margin-top:0.5rem;padding-top:0.5rem;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">';
     html += '<span style="font-size:0.72rem;color:var(--text-muted);">Bank via Plaid · AES-256 encrypted</span>';
     html += '<div style="display:flex;gap:0.75rem;">';
+    html += '<button id="money-sync-btn" style="font-size:0.72rem;color:var(--navy,#011e5c);background:none;border:none;cursor:pointer;text-decoration:underline;text-underline-offset:2px;">Refresh</button>';
     html += '<button id="money-reconnect-btn" style="font-size:0.72rem;color:var(--orange,#F26B3A);background:none;border:none;cursor:pointer;text-decoration:underline;text-underline-offset:2px;">Reconnect</button>';
     html += '<button id="money-disconnect-btn" style="font-size:0.72rem;color:var(--text-muted);background:none;border:none;cursor:pointer;text-decoration:underline;text-underline-offset:2px;">Disconnect</button>';
     html += '</div>';
     html += '</div>';
     html += '</div>';
     container.innerHTML = html;
+
+    var syncBtn = document.getElementById('money-sync-btn');
+    if (syncBtn && itemId) {
+      syncBtn.addEventListener('click', async function() {
+        syncBtn.textContent = 'Syncing…';
+        syncBtn.disabled = true;
+        try {
+          await api('/api/plaid/sync', { method: 'POST', body: JSON.stringify({ item_id: itemId }) });
+          await Promise.all([loadAccountCard(), checkPendingPlaid()]);
+        } catch (e) {
+          syncBtn.textContent = 'Refresh';
+          syncBtn.disabled = false;
+        }
+      });
+    }
 
     var reconnBtn = document.getElementById('money-reconnect-btn');
     if (reconnBtn && itemId) {
@@ -1502,7 +1518,7 @@ async function importAllPlaidTransactions() {
     const r = await api('/api/plaid/transactions/confirm-all', { method: 'POST' });
     if (r.success) {
       document.getElementById('plaidPendingBanner').style.display = 'none';
-      await Promise.all([loadExpenses(currentPeriod), loadTodaySpendingCard(), checkUntriaged()]);
+      await Promise.all([loadExpenses(currentPeriod), loadTodaySpendingCard(), checkUntriaged(), checkPendingPlaid()]);
     } else {
       btn.textContent = 'Import all';
       btn.disabled = false;
