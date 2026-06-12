@@ -39,7 +39,9 @@ module.exports = defineConfig({
     // ── focusledger.net ───────────────────────────────────────────────────────
     {
       name: 'primary-mobile',
-      use: { ...devices['iPhone 13'], baseURL: PRIMARY_URL },
+      // iPhone 13 viewport/UA/touch but Chromium engine — CI only installs Chromium.
+      // Layout smoke tests don't need WebKit rendering fidelity.
+      use: { ...devices['iPhone 13'], defaultBrowserType: 'chromium', baseURL: PRIMARY_URL },
     },
     {
       name: 'primary-desktop',
@@ -49,7 +51,7 @@ module.exports = defineConfig({
     // ── focusledger-mwn3.onrender.com ─────────────────────────────────────────
     {
       name: 'render-mobile',
-      use: { ...devices['iPhone 13'], baseURL: RENDER_URL },
+      use: { ...devices['iPhone 13'], defaultBrowserType: 'chromium', baseURL: RENDER_URL },
     },
     {
       name: 'render-desktop',
