@@ -1622,6 +1622,141 @@ Example output: ["Walk to the kitchen","Pick up one item from the counter","Put 
     }
   });
 
+  // ─── POST /api/buddy/brain-dump-triage ───────────────────────────────────
+  // Executive Function Externalizer: raw brain dump → Now / Later / Trash.
+  // AI fixes speech-to-text artifacts, parses discrete items, categorizes each,
+  // and writes a 1-sentence first physical action for every "Now" item.
+  // body: { text: string }
+  router.post('/brain-dump-triage', async (req, res) => {
+    try {
+      const userId = req.user.id; // eslint-disable-line no-unused-vars
+      const { text } = req.body;
+      if (!text || !text.trim()) {
+        return res.status(400).json({ success: false, message: 'text required' });
+      }
+
+      const systemPrompt = `You are an ADHD executive function assistant. The user just did a brain dump — everything swirling in their head, possibly transcribed from speech so it may be messy.
+
+Steps:
+1. Fix obvious speech-to-text errors and run-on sentences.
+2. Parse the corrected text into discrete items (one concern/task/thought per item).
+3. Categorize each item:
+   - "now": urgent + actionable TODAY — write a 1-sentence first PHYSICAL action (open, call, write, click, walk to...)
+   - "later": real but not today — no action needed yet
+   - "trash": worry, anxiety, or noise with no actionable path — let it go
+
+Return ONLY valid JSON (no markdown, no explanation):
+{"now":[{"item":"...","nextStep":"Open the..."}],"later":[{"item":"..."}],"trash":[{"item":"..."}]}
+
+Rules:
+- Keep each item under 10 words
+- nextStep must be completable in under 2 minutes
+- Be decisive — not everything is "now"
+- "trash" is for things like "what if I fail" or "I need to exercise more someday"
+- If the dump is very short or unclear, do your best with what's there`;
+
+      const raw = await chatMessages(
+        [{ role: 'user', content: text.trim() }],
+        { system: systemPrompt, maxTokens: 900 }
+      );
+
+      let triage;
+      try {
+        const cleaned = raw.trim().replace(/^```json\s*/,'').replace(/^```\s*/,'').replace(/\s*```$/,'');
+        triage = JSON.parse(cleaned);
+      } catch {
+        return res.status(500).json({ success: false, message: 'AI returned unexpected format' });
+      }
+
+      res.json({
+        success: true,
+        now:   Array.isArray(triage.now)   ? triage.now   : [],
+        later: Array.isArray(triage.later) ? triage.later : [],
+        trash: Array.isArray(triage.trash) ? triage.trash : []
+      });
+    } catch (err) {
+      console.error('[buddy] POST /brain-dump-triage error:', err.message);
+      res.status(500).json({ success: false, message: 'Failed to triage brain dump' });
+    }
+  });
+
+  // ─── POST /api/buddy/dopamine-menu ───────────────────────────────────────
+  // Dopamine Menu Architect: generates a tiered activity menu anchored in
+  // the user's actual pending tasks, matched to their current energy.
+  // body: { energy?: string, availableMinutes?: number }
+  router.post('/dopamine-menu', async (req, res) => {
+    try {
+      const userId = req.user.id;
+      const { energy, availableMinutes } = req.body;
+      const tz    = await fetchUserTimezone(pool, userId);
+      const today = getUserLocalDate(tz);
+
+      const tasksResult = await pool.query(`
+        SELECT id, title, duration_minutes, priority
+        FROM tasks
+        WHERE user_id = $1
+          AND is_completed = false
+          AND ${actionableDateFilter(2)}
+        ORDER BY
+          CASE priority WHEN 'high' THEN 0 WHEN 'medium' THEN 1 ELSE 2 END,
+          created_at ASC
+        LIMIT 20
+      `, [userId, today]);
+
+      const taskList = tasksResult.rows.length > 0
+        ? tasksResult.rows.map((t, i) =>
+            `${i + 1}. [id:${t.id}] ${t.title}${t.duration_minutes ? ` (~${t.duration_minutes}min)` : ''}`
+          ).join('\n')
+        : '(no pending tasks)';
+
+      const systemPrompt = `You are an ADHD dopamine coach. Generate a "Dopamine Menu" to help the user find their starting energy.
+
+User's current energy: ${energy || 'unknown'}
+Available time: ${availableMinutes ? availableMinutes + ' minutes' : 'flexible'}
+
+User's pending tasks (use real task IDs where possible):
+${taskList}
+
+Create a 3-tier menu. Each tier has 2-3 items:
+- "appetizers": 1-5 min. Quick wins, movement, or the simplest task from their list.
+- "entrees": 15-30 min. Deep work or highest-priority tasks from their list.
+- "sides": anytime. Creative, playful, or values-aligned — from their list or general suggestions.
+
+Return ONLY valid JSON (no markdown):
+{"appetizers":[{"title":"...","duration":"3 min","task_id":null,"why":"One sentence on why this sparks energy"}],"entrees":[...],"sides":[...]}
+
+Rules:
+- "why" must be under 10 words and connect to dopamine/momentum
+- For items from the task list, set task_id to the numeric id shown above
+- For non-task suggestions, set task_id to null
+- Match energy level: low energy = gentler appetizers; high energy = bolder entrees
+- Never invent task IDs — only use ones from the list`;
+
+      const raw = await chatMessages(
+        [{ role: 'user', content: 'Generate my dopamine menu.' }],
+        { system: systemPrompt, maxTokens: 700 }
+      );
+
+      let menu;
+      try {
+        const cleaned = raw.trim().replace(/^```json\s*/,'').replace(/^```\s*/,'').replace(/\s*```$/,'');
+        menu = JSON.parse(cleaned);
+      } catch {
+        return res.status(500).json({ success: false, message: 'AI returned unexpected format' });
+      }
+
+      res.json({
+        success:    true,
+        appetizers: Array.isArray(menu.appetizers) ? menu.appetizers : [],
+        entrees:    Array.isArray(menu.entrees)    ? menu.entrees    : [],
+        sides:      Array.isArray(menu.sides)      ? menu.sides      : []
+      });
+    } catch (err) {
+      console.error('[buddy] POST /dopamine-menu error:', err.message);
+      res.status(500).json({ success: false, message: 'Failed to generate dopamine menu' });
+    }
+  });
+
   return router;
 };
 
