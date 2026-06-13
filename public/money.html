@@ -610,6 +610,9 @@
 const token = localStorage.getItem('fl_token');
 if (!token) { window.location.href = '/login'; }
 
+// PlaidService calls this after reconnect/disconnect success
+window.onBankSyncStatusChanged = function() { if (typeof loadAccountCard === 'function') loadAccountCard(); };
+
 function api(path, opts = {}) {
   return fetch(path, {
     ...opts,
@@ -865,11 +868,17 @@ async function loadAccountCard() {
         syncBtn.textContent = 'Syncing…';
         syncBtn.disabled = true;
         try {
-          await api('/api/plaid/sync', { method: 'POST', body: JSON.stringify({ item_id: itemId }) });
+          const sr = await api('/api/plaid/sync', { method: 'POST', body: JSON.stringify({ item_id: itemId }) });
           await Promise.all([loadAccountCard(), checkPendingPlaid()]);
+          if (!sr.success) {
+            var t = document.getElementById('submitToast');
+            if (t) { t.textContent = sr.message || 'Sync failed — try reconnecting your bank'; t.style.color = '#E07A5F'; t.classList.add('visible'); setTimeout(() => { t.classList.remove('visible'); t.textContent = '✓ Logged!'; t.style.color = ''; }, 4000); }
+          }
         } catch (e) {
           syncBtn.textContent = 'Refresh';
           syncBtn.disabled = false;
+          var t = document.getElementById('submitToast');
+          if (t) { t.textContent = 'Sync failed — try reconnecting your bank'; t.style.color = '#E07A5F'; t.classList.add('visible'); setTimeout(() => { t.classList.remove('visible'); t.textContent = '✓ Logged!'; t.style.color = ''; }, 4000); }
         }
       });
     }
@@ -883,11 +892,26 @@ async function loadAccountCard() {
 
     var discBtn = document.getElementById('money-disconnect-btn');
     if (discBtn) {
-      discBtn.addEventListener('click', function() {
+      discBtn.addEventListener('click', async function() {
         if (!itemId) return;
-        if (confirm('Disconnect this account? This will stop syncing transactions.')) {
-          PlaidService.disconnectBankAccount(itemId);
-          loadAccountCard();
+        if (!confirm('Disconnect this account? This will stop syncing transactions.')) return;
+        discBtn.textContent = 'Disconnecting…';
+        discBtn.disabled = true;
+        try {
+          const dr = await api('/api/plaid/items/' + itemId, { method: 'DELETE' });
+          if (dr.success) {
+            await loadAccountCard();
+            var t = document.getElementById('submitToast');
+            if (t) { t.textContent = '✓ Account disconnected'; t.style.color = '#5BA4A4'; t.classList.add('visible'); setTimeout(() => { t.classList.remove('visible'); t.textContent = '✓ Logged!'; t.style.color = ''; }, 3000); }
+          } else {
+            discBtn.textContent = 'Disconnect';
+            discBtn.disabled = false;
+            var t = document.getElementById('submitToast');
+            if (t) { t.textContent = dr.message || 'Disconnect failed — try again'; t.style.color = '#E05252'; t.classList.add('visible'); setTimeout(() => { t.classList.remove('visible'); t.textContent = '✓ Logged!'; t.style.color = ''; }, 4000); }
+          }
+        } catch(e) {
+          discBtn.textContent = 'Disconnect';
+          discBtn.disabled = false;
         }
       });
     }
@@ -1282,6 +1306,7 @@ function checkReflectionCard(amount) {
       subEl.textContent   = '"Will this still matter to you tomorrow?"';
     }
     card.classList.add('visible');
+    setTimeout(() => card.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 50);
   } else if (amount < nudgeConfig.reflectionMin) {
     reflectionShown = false;
     card.classList.remove('visible');
@@ -1485,10 +1510,16 @@ async function importAllPlaidTransactions() {
     const r = await api('/api/plaid/transactions/confirm-all', { method: 'POST' });
     if (r.success) {
       document.getElementById('plaidPendingBanner').style.display = 'none';
+      if (r.confirmed_count > 0) {
+        const t = document.getElementById('submitToast');
+        if (t) { t.textContent = `✓ ${r.confirmed_count} transaction${r.confirmed_count === 1 ? '' : 's'} imported`; t.style.color = '#5BA4A4'; t.classList.add('visible'); setTimeout(() => { t.classList.remove('visible'); t.textContent = '✓ Logged!'; t.style.color = ''; }, 3000); }
+      }
       await Promise.all([loadExpenses(currentPeriod), loadTodaySpendingCard(), checkUntriaged(), checkPendingPlaid()]);
     } else {
       btn.textContent = 'Import all';
       btn.disabled = false;
+      const t = document.getElementById('submitToast');
+      if (t) { t.textContent = r.message || 'Import failed — try again'; t.style.color = '#E05252'; t.classList.add('visible'); setTimeout(() => { t.classList.remove('visible'); t.textContent = '✓ Logged!'; t.style.color = ''; }, 4000); }
     }
   } catch (e) {
     btn.textContent = 'Import all';
@@ -1893,6 +1924,10 @@ function attachSwipeToCard(card, expenseId, amount) {
 
 <!-- Hidden file input — triggers camera -->
 <input type="file" id="captureFileInput" accept="image/*" capture="environment" style="display:none;">
+
+<!-- PlaidService showBankSyncToast target — must exist on every page that loads plaid-service.js -->
+<div id="toast" style="display:none;position:fixed;bottom:80px;left:50%;transform:translateX(-50%);padding:0.65rem 1.25rem;border-radius:10px;font-size:0.85rem;font-weight:600;z-index:9999;max-width:88vw;text-align:center;pointer-events:none;"></div>
+<style>#toast.error{background:#E05252;color:#fff}#toast.success,#toast.visible{background:#011e5c;color:#fff}</style>
 
 <style>
 @keyframes captureSpin { to { transform: rotate(360deg); } }
