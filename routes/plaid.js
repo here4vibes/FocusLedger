@@ -615,8 +615,18 @@ module.exports = function(pool) {
       syncTransactions(pool, plaidItem).catch(e => console.error('[Plaid] Initial sync error:', e.message));
       res.json({ success: true, message: 'Connected. Bringing in your transactions.', item_id: plaidItem.id, institution_name: plaidItem.institution_name });
     } catch (err) {
-      console.error('[Plaid] Error exchanging token:', err.response?.data || err.message);
-      res.status(500).json({ success: false, message: 'That connection did not go through. Try again?' });
+      const plaidData = err.response?.data;
+      console.error('[Plaid] Error exchanging token:', plaidData || err.message);
+      const plaidCode = plaidData?.error_code;
+      const plaidMsg = plaidData?.error_message || plaidData?.display_message;
+      const dbError = !plaidData && err.message;
+      res.status(500).json({
+        success: false,
+        message: 'That connection did not go through. Try again?',
+        plaid_error_code: plaidCode || null,
+        plaid_error_message: plaidMsg || null,
+        internal_error: dbError || null,
+      });
     }
   });
 

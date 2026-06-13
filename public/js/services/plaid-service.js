@@ -69,7 +69,10 @@
             showBankSyncToast('', '\u2713 Connected to ' + (data.institution_name || institutionName) + '.');
             if (typeof onBankSyncStatusChanged === 'function') onBankSyncStatusChanged();
           } else {
-            if (errEl) { errEl.textContent = data.message || 'That connection didn\u2019t go through. Try again?'; errEl.style.display = 'block'; }
+            var errDetail = '';
+            if (data.plaid_error_code) errDetail = ' [Plaid: ' + data.plaid_error_code + ']';
+            else if (data.internal_error) errDetail = ' [App error: ' + data.internal_error.slice(0, 80) + ']';
+            if (errEl) { errEl.textContent = (data.message || 'That connection didn\u2019t go through. Try again?') + errDetail; errEl.style.display = 'block'; }
           }
         })
         .catch(function () {
