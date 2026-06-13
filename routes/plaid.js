@@ -295,21 +295,25 @@ async function syncTransactions(pool, item) {
       if (plaidTx && !tx.pending) {
         try {
           const expDate = String(tx.date).slice(0, 10);
-          const cols = ['user_id', 'amount', 'description', 'expense_date', 'source', 'plaid_transaction_id'];
-          const vals = [item.user_id, parseFloat(tx.amount), tx.merchant_name || tx.name || 'Unknown', expDate, 'plaid', tx.transaction_id];
-          if (plaidTx.category_id) { cols.push('category_id'); vals.push(plaidTx.category_id); }
-          const ph = vals.map((_, i) => `$${i + 1}`).join(', ');
-          const { rows: expRows } = await pool.query(
-            `INSERT INTO expenses (${cols.join(', ')}) VALUES (${ph}) ON CONFLICT (plaid_transaction_id) DO NOTHING RETURNING *`,
-            vals
-          );
-          let syncExpenseId = expRows[0]?.id;
-          if (!syncExpenseId && tx.transaction_id) {
-            const { rows: existingExp } = await pool.query(
-              'SELECT id FROM expenses WHERE plaid_transaction_id = $1',
+          // Pre-check for duplicate to avoid ON CONFLICT (which requires a UNIQUE INDEX)
+          let syncExpenseId = null;
+          if (tx.transaction_id) {
+            const { rows: dup } = await pool.query(
+              'SELECT id FROM expenses WHERE plaid_transaction_id = $1 LIMIT 1',
               [tx.transaction_id]
             );
-            syncExpenseId = existingExp[0]?.id;
+            syncExpenseId = dup[0]?.id || null;
+          }
+          if (!syncExpenseId) {
+            const cols = ['user_id', 'amount', 'description', 'expense_date', 'source', 'plaid_transaction_id'];
+            const vals = [item.user_id, parseFloat(tx.amount), tx.merchant_name || tx.name || 'Unknown', expDate, 'plaid', tx.transaction_id];
+            if (plaidTx.category_id) { cols.push('category_id'); vals.push(plaidTx.category_id); }
+            const ph = vals.map((_, i) => `$${i + 1}`).join(', ');
+            const { rows: expRows } = await pool.query(
+              `INSERT INTO expenses (${cols.join(', ')}) VALUES (${ph}) RETURNING id`,
+              vals
+            );
+            syncExpenseId = expRows[0]?.id || null;
           }
           if (syncExpenseId) {
             await pool.query(
@@ -782,25 +786,27 @@ module.exports = function(pool) {
           const tx = txRows[0];
           const expDate = tx.transaction_date ? String(tx.transaction_date).slice(0, 10) : new Date().toISOString().split('T')[0];
 
-          const cols = ['user_id', 'amount', 'description', 'expense_date', 'source'];
-          const vals = [userId, parseFloat(tx.amount), tx.description || tx.merchant_name || 'Unknown', expDate, 'plaid'];
-          if (tx.category_id != null) { cols.push('category_id'); vals.push(tx.category_id); }
-          if (tx.transaction_id) { cols.push('plaid_transaction_id'); vals.push(tx.transaction_id); }
-
-          const ph = vals.map((_, i) => `$${i + 1}`).join(', ');
-          const { rows: expRows } = await pool.query(
-            `INSERT INTO expenses (${cols.join(', ')}) VALUES (${ph}) ON CONFLICT (plaid_transaction_id) DO NOTHING RETURNING id`,
-            vals
-          );
-
-          // If conflict (expense already exists), find its id by plaid_transaction_id
-          let expenseId = expRows[0]?.id;
-          if (!expenseId && tx.transaction_id) {
-            const { rows: existing } = await pool.query(
-              'SELECT id FROM expenses WHERE plaid_transaction_id = $1',
+          // Check for an existing expense first to avoid relying on ON CONFLICT
+          let expenseId = null;
+          if (tx.transaction_id) {
+            const { rows: dup } = await pool.query(
+              'SELECT id FROM expenses WHERE plaid_transaction_id = $1 LIMIT 1',
               [tx.transaction_id]
             );
-            expenseId = existing[0]?.id;
+            expenseId = dup[0]?.id || null;
+          }
+
+          if (!expenseId) {
+            const cols = ['user_id', 'amount', 'description', 'expense_date', 'source'];
+            const vals = [userId, parseFloat(tx.amount), tx.description || tx.merchant_name || 'Unknown', expDate, 'plaid'];
+            if (tx.category_id != null) { cols.push('category_id'); vals.push(tx.category_id); }
+            if (tx.transaction_id) { cols.push('plaid_transaction_id'); vals.push(tx.transaction_id); }
+            const ph = vals.map((_, i) => `$${i + 1}`).join(', ');
+            const { rows: expRows } = await pool.query(
+              `INSERT INTO expenses (${cols.join(', ')}) VALUES (${ph}) RETURNING id`,
+              vals
+            );
+            expenseId = expRows[0]?.id || null;
           }
 
           if (expenseId) {
