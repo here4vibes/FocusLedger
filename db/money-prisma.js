@@ -103,7 +103,12 @@ async function getExpenses(pool, userId, period, localDate) {
     ORDER BY e.expense_date DESC, e.created_at DESC
   `;
   const { rows } = await pool.query(sql, vals);
-  return rows;
+  return rows.map(r => ({
+    ...r,
+    expense_date: r.expense_date
+      ? String(r.expense_date).slice(0, 10)
+      : null,
+  }));
 }
 
 // Fetch un-triaged Plaid expenses from last 7 days (amount desc, limit 10)

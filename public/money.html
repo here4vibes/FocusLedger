@@ -1209,6 +1209,7 @@ function getWeekStart(date) {
 function formatDate(d) {
   if (!d) return '';
   if (typeof d === 'string') return d.slice(0, 10);
+  if (typeof d.toISOString !== 'function') return '';
   return d.toISOString().split('T')[0];
 }
 
