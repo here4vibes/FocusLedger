@@ -14,11 +14,13 @@
  *
  * Fix:
  *   1. Create the sequence (IF NOT EXISTS — idempotent).
- *   2. Backfill any NULL ids with the next sequence value.
- *   3. Set the column default to the sequence.
- *   4. Set the column NOT NULL.
- *   5. Add PRIMARY KEY constraint (IF NOT EXISTS check via pg_constraint).
- *   6. Own the sequence by the column so it drops with the table.
+ *   2. Use JS to compute next safe start value (avoids setval(seq,0) which
+ *      throws because PostgreSQL sequences have MINVALUE=1 by default).
+ *   3. Backfill any NULL ids with the next sequence value.
+ *   4. Set the column default to the sequence.
+ *   5. Set the column NOT NULL.
+ *   6. Add PRIMARY KEY constraint (IF NOT EXISTS check via pg_constraint).
+ *   7. Own the sequence by the column so it drops with the table.
  */
 module.exports = {
   name: 'fix_plaid_items_id_sequence',
@@ -27,11 +29,15 @@ module.exports = {
     // 1. Create sequence
     await client.query(`CREATE SEQUENCE IF NOT EXISTS plaid_items_id_seq`);
 
-    // 2. Advance sequence past any existing ids so backfill values don't collide
-    await client.query(`
-      SELECT setval('plaid_items_id_seq',
-        GREATEST(COALESCE((SELECT MAX(id) FROM plaid_items WHERE id IS NOT NULL), 0), 0))
-    `);
+    // 2. Compute safe start: max existing non-null id + 1, minimum 1.
+    //    Using JS avoids GREATEST(COALESCE(...,0),0) which can produce 0
+    //    and cause "value 0 is out of range for sequence" (MINVALUE=1).
+    const { rows } = await client.query(
+      `SELECT COALESCE(MAX(id), 0)::int AS max_id FROM plaid_items WHERE id IS NOT NULL`
+    );
+    const nextStart = (rows[0].max_id || 0) + 1; // always ≥ 1
+    // setval(..., val, false) means nextval() will return val (not val+1)
+    await client.query(`SELECT setval('plaid_items_id_seq', $1, false)`, [nextStart]);
 
     // 3. Backfill rows whose id is NULL
     await client.query(`
@@ -44,7 +50,7 @@ module.exports = {
         ALTER COLUMN id SET DEFAULT nextval('plaid_items_id_seq')
     `);
 
-    // 5. Add NOT NULL constraint
+    // 5. Add NOT NULL constraint (safe — we just backfilled all NULLs)
     await client.query(`
       ALTER TABLE plaid_items ALTER COLUMN id SET NOT NULL
     `);
