@@ -499,28 +499,6 @@
       <!-- populated by JS -->
     </div>
 
-    <!-- Reflection card -->
-    <div class="reflection-card" id="reflectionCard">
-      <div class="reflection-title" id="reflectionTitle">Just a moment…</div>
-      <div class="reflection-sub" id="reflectionSub">"Will this still matter to you tomorrow?"</div>
-      <div class="reflection-btns">
-        <button class="btn-reflection-add" id="btnReflectionAdd">Add to plan</button>
-        <button class="btn-reflection-skip" id="btnReflectionSkip">Log anyway</button>
-      </div>
-    </div>
-
-    <!-- Impulse toggle -->
-    <div class="impulse-row">
-      <div class="impulse-label">
-        Was this planned?
-        <small>Impulse data = patterns, not guilt</small>
-      </div>
-      <div class="toggle-wrap">
-        <button class="toggle-btn" id="btnYes">Yes</button>
-        <button class="toggle-btn" id="btnNo">Nope</button>
-      </div>
-    </div>
-
     <!-- Note + Date -->
     <div class="row-inputs">
       <input class="note-input" type="text" id="noteInput" placeholder="Note (optional)">
@@ -590,6 +568,17 @@
   </div>
 </div>
 
+<!-- REFLECTION MODAL — triggered by Log Spend when amount ≥ $25 -->
+<div class="delay-modal-overlay" id="reflectionModal">
+  <div class="delay-modal">
+    <div class="delay-emoji" id="reflectionEmoji">💭</div>
+    <div class="delay-title" id="reflectionTitle">Just a moment…</div>
+    <div class="delay-sub" id="reflectionSub">"Will this still matter to you tomorrow?"</div>
+    <button id="btnReflectionLog" style="width:100%;background:var(--navy,#011e5c);color:white;border:none;border-radius:12px;padding:0.9rem;font-family:'Space Grotesk',sans-serif;font-size:0.95rem;font-weight:700;cursor:pointer;min-height:48px;margin-bottom:0.75rem;">Log it anyway</button>
+    <button class="btn-cancel-delay" id="btnReflectionCancel">← Go back</button>
+  </div>
+</div>
+
 <!-- DELAY MODAL -->
 <div class="delay-modal-overlay" id="delayModal">
   <div class="delay-modal">
@@ -651,14 +640,12 @@ const CAT_ICON_MAP = {
 };
 
 let selectedCat = 'other';
-let selectedImpulse = null;
 let currentPeriod = 'week';
 let untriagedList = [];
 let triageIndex = 0;
 let triageCatSelected = null;
 let nudgeConfig = { delayThreshold: 75, reflectionMin: 25 };
 let swipePlanned = 0, swipeImpulse = 0, swipeImpulseAmount = 0;
-let reflectionShown = false;
 let delayCountdownInterval = null;
 let delayRemainingSeconds = 0;
 let pendingExpenseData = null;
@@ -677,18 +664,13 @@ document.addEventListener('DOMContentLoaded', () => {
   checkPendingPlaid();
   loadExpenses(currentPeriod);
 
-  // Watch amount input for reflection card trigger
-  document.getElementById('amountInput').addEventListener('input', onAmountChange);
-
   // ── Button bindings (no inline onclick) ─────────────────────────────────
   document.getElementById('btnCheckIn').addEventListener('click', onCheckIn);
   document.getElementById('btnDismissAlert').addEventListener('click', dismissAlert);
   document.getElementById('btnTriageOpen').addEventListener('click', openTriageModal);
   document.getElementById('scanReceiptBtn').addEventListener('click', function() { openCapture('receipt'); });
-  document.getElementById('btnReflectionAdd').addEventListener('click', function() { proceedWithReflection(true); });
-  document.getElementById('btnReflectionSkip').addEventListener('click', function() { proceedWithReflection(false); });
-  document.getElementById('btnYes').addEventListener('click', function() { setImpulse(false); });
-  document.getElementById('btnNo').addEventListener('click', function() { setImpulse(true); });
+  document.getElementById('btnReflectionLog').addEventListener('click', function() { closeReflectionModal(); doSubmitExpense(); });
+  document.getElementById('btnReflectionCancel').addEventListener('click', function() { closeReflectionModal(); pendingExpenseData = null; });
   document.getElementById('btnSubmit').addEventListener('click', submitExpense);
   document.getElementById('tabWeek').addEventListener('click', function() { setPeriod('week', this); });
   document.getElementById('tabMonth').addEventListener('click', function() { setPeriod('month', this); });
@@ -862,30 +844,42 @@ async function loadAccountCard() {
     html += '</div>';
     container.innerHTML = html;
 
+    // showFixedToast: uses the position:fixed #toast (always on-screen), not submitToast
+    function showFixedToast(msg, isError) {
+      var el = document.getElementById('toast');
+      if (!el) return;
+      el.textContent = msg;
+      el.className = isError ? 'error' : 'success';
+      el.style.display = 'block';
+      clearTimeout(el._ft);
+      el._ft = setTimeout(function() { el.style.display = 'none'; }, isError ? 4000 : 3000);
+    }
+
     var syncBtn = document.getElementById('money-sync-btn');
-    if (syncBtn && itemId) {
+    if (syncBtn) {
       syncBtn.addEventListener('click', async function() {
+        if (!itemId) { showFixedToast('Account not found — try refreshing the page', true); return; }
         syncBtn.textContent = 'Syncing…';
         syncBtn.disabled = true;
         try {
           const sr = await api('/api/plaid/sync', { method: 'POST', body: JSON.stringify({ item_id: itemId }) });
           await Promise.all([loadAccountCard(), checkPendingPlaid()]);
           if (!sr.success) {
-            var t = document.getElementById('submitToast');
-            if (t) { t.textContent = sr.message || 'Sync failed — try reconnecting your bank'; t.style.color = '#E07A5F'; t.classList.add('visible'); setTimeout(() => { t.classList.remove('visible'); t.textContent = '✓ Logged!'; t.style.color = ''; }, 4000); }
+            showFixedToast(sr.message || 'Sync failed — try reconnecting your bank', true);
+          } else {
+            const n = sr.transactions_added || 0;
+            showFixedToast(n > 0 ? `✓ ${n} new transaction${n === 1 ? '' : 's'} ready` : '✓ Up to date', false);
           }
         } catch (e) {
-          syncBtn.textContent = 'Refresh';
-          syncBtn.disabled = false;
-          var t = document.getElementById('submitToast');
-          if (t) { t.textContent = 'Sync failed — try reconnecting your bank'; t.style.color = '#E07A5F'; t.classList.add('visible'); setTimeout(() => { t.classList.remove('visible'); t.textContent = '✓ Logged!'; t.style.color = ''; }, 4000); }
+          showFixedToast('Sync failed — try reconnecting your bank', true);
         }
       });
     }
 
     var reconnBtn = document.getElementById('money-reconnect-btn');
-    if (reconnBtn && itemId) {
+    if (reconnBtn) {
       reconnBtn.addEventListener('click', function() {
+        if (!itemId) { showFixedToast('Account not found — try refreshing the page', true); return; }
         PlaidService.reconnectBankAccount(itemId, reconnBtn);
       });
     }
@@ -893,25 +887,24 @@ async function loadAccountCard() {
     var discBtn = document.getElementById('money-disconnect-btn');
     if (discBtn) {
       discBtn.addEventListener('click', async function() {
-        if (!itemId) return;
+        if (!itemId) { showFixedToast('Account not found — try refreshing the page', true); return; }
         if (!confirm('Disconnect this account? This will stop syncing transactions.')) return;
         discBtn.textContent = 'Disconnecting…';
         discBtn.disabled = true;
         try {
           const dr = await api('/api/plaid/items/' + itemId, { method: 'DELETE' });
           if (dr.success) {
+            showFixedToast('✓ Account disconnected', false);
             await loadAccountCard();
-            var t = document.getElementById('submitToast');
-            if (t) { t.textContent = '✓ Account disconnected'; t.style.color = '#5BA4A4'; t.classList.add('visible'); setTimeout(() => { t.classList.remove('visible'); t.textContent = '✓ Logged!'; t.style.color = ''; }, 3000); }
           } else {
             discBtn.textContent = 'Disconnect';
             discBtn.disabled = false;
-            var t = document.getElementById('submitToast');
-            if (t) { t.textContent = dr.message || 'Disconnect failed — try again'; t.style.color = '#E05252'; t.classList.add('visible'); setTimeout(() => { t.classList.remove('visible'); t.textContent = '✓ Logged!'; t.style.color = ''; }, 4000); }
+            showFixedToast(dr.message || 'Disconnect failed — try again', true);
           }
         } catch(e) {
           discBtn.textContent = 'Disconnect';
           discBtn.disabled = false;
+          showFixedToast('Disconnect failed — try again', true);
         }
       });
     }
@@ -1242,12 +1235,6 @@ function selectCat(slug) {
   if (t) { t.textContent = '✓ ' + slug + ' selected'; t.style.color = '#5BA4A4'; t.classList.add('visible'); setTimeout(function(){ t.classList.remove('visible'); t.textContent = '✓ Logged!'; t.style.color = ''; }, 3000); }
 }
 
-function setImpulse(isImpulse) {
-  selectedImpulse = isImpulse;
-  document.getElementById('btnYes').className = 'toggle-btn' + (!isImpulse ? ' active-no' : '');
-  document.getElementById('btnNo').className  = 'toggle-btn' + (isImpulse  ? ' active-yes' : '');
-}
-
 // ─── Nudge config + spending alerts ──────────────────────────────────────────
 async function loadNudgeConfig() {
   try {
@@ -1284,56 +1271,18 @@ function onCheckIn() {
   openTriageModal();
 }
 
-// ─── Reflection card ─────────────────────────────────────────────────────────
-function onAmountChange() {
-  const amount = parseFloat(document.getElementById('amountInput').value) || 0;
-  checkReflectionCard(amount);
+// ─── Reflection modal ─────────────────────────────────────────────────────────
+function showReflectionModal(amount) {
+  document.getElementById('reflectionEmoji').textContent = amount >= 200 ? '🤔' : '💭';
+  document.getElementById('reflectionTitle').textContent = amount >= 200 ? 'Big spend ahead' : 'Just a moment…';
+  document.getElementById('reflectionSub').textContent   = amount >= 200
+    ? '"Will this still matter to you in a week?"'
+    : '"Will this still matter to you tomorrow?"';
+  document.getElementById('reflectionModal').classList.add('open');
 }
 
-function checkReflectionCard(amount) {
-  const card = document.getElementById('reflectionCard');
-  if (!card) return;
-
-  if (amount >= nudgeConfig.reflectionMin && !reflectionShown) {
-    reflectionShown = true;
-    const titleEl = document.getElementById('reflectionTitle');
-    const subEl   = document.getElementById('reflectionSub');
-    if (amount >= 200) {
-      titleEl.textContent = 'Big spend ahead';
-      subEl.textContent   = '"Will this still matter to you in a week?"';
-    } else {
-      titleEl.textContent = 'Just a moment…';
-      subEl.textContent   = '"Will this still matter to you tomorrow?"';
-    }
-    card.classList.add('visible');
-    setTimeout(() => card.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 50);
-  } else if (amount < nudgeConfig.reflectionMin) {
-    reflectionShown = false;
-    card.classList.remove('visible');
-  }
-}
-
-function proceedWithReflection(addToPlan) {
-  const card = document.getElementById('reflectionCard');
-  card.classList.remove('visible');
-  if (addToPlan) {
-    selectedImpulse = false;
-    setImpulse(false);
-  }
-  // Reflection card may appear from onAmountChange before the user ever clicks
-  // "Log Spend", so pendingExpenseData might not be set yet. Populate it now.
-  if (!pendingExpenseData) {
-    const amount = parseFloat(document.getElementById('amountInput').value);
-    if (!amount || amount <= 0) return;
-    pendingExpenseData = {
-      amount,
-      category: selectedCat,
-      is_impulse: selectedImpulse,
-      note: document.getElementById('noteInput').value.trim() || null,
-      expense_date: document.getElementById('dateInput').value,
-    };
-  }
-  doSubmitExpense();
+function closeReflectionModal() {
+  document.getElementById('reflectionModal').classList.remove('open');
 }
 
 // ─── Delay modal ─────────────────────────────────────────────────────────────
@@ -1400,7 +1349,6 @@ function closeDelayModal() {
   if (delayCountdownInterval) clearInterval(delayCountdownInterval);
   delayCountdownInterval = null;
   document.getElementById('delayModal').classList.remove('open');
-  reflectionShown = false;
 }
 
 // ─── Submit expense ───────────────────────────────────────────────────────────
@@ -1416,7 +1364,7 @@ async function submitExpense() {
   pendingExpenseData = {
     amount,
     category: selectedCat,
-    is_impulse: selectedImpulse,
+    is_impulse: null,
     note: document.getElementById('noteInput').value.trim() || null,
     expense_date: document.getElementById('dateInput').value,
   };
@@ -1426,10 +1374,8 @@ async function submitExpense() {
     return;
   }
 
-  const reflCard = document.getElementById('reflectionCard');
-  if (reflCard && reflCard.classList.contains('visible')) {
-    var t = document.getElementById('submitToast');
-    if (t) { t.textContent = 'Dismiss the reflection prompt first ↑'; t.style.color = '#E07A5F'; t.classList.add('visible'); setTimeout(function(){ t.classList.remove('visible'); t.textContent = '✓ Logged!'; t.style.color = ''; }, 3000); }
+  if (amount >= nudgeConfig.reflectionMin) {
+    showReflectionModal(amount);
     return;
   }
 
@@ -1446,11 +1392,6 @@ async function doSubmitExpense() {
     if (res.success) {
       document.getElementById('amountInput').value = '';
       document.getElementById('noteInput').value = '';
-      selectedImpulse = null;
-      document.getElementById('btnYes').className = 'toggle-btn';
-      document.getElementById('btnNo').className  = 'toggle-btn';
-      reflectionShown = false;
-      document.getElementById('reflectionCard').classList.remove('visible');
 
       const toast = document.getElementById('submitToast');
       toast.classList.add('visible');
