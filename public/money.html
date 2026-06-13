@@ -804,7 +804,9 @@ async function loadAccountCard() {
     // Map from /api/money/accounts response format:
     // { connected, items: [{ id, institution, lastSynced, accounts }] }
     var items = r.items || [];
-    var firstItem = items[0];
+    // Prefer the first item that actually has accounts (duplicate items from
+    // failed connects have no accounts and would otherwise produce a blank balance)
+    var firstItem = items.find(function(i) { return (i.accounts || []).length > 0; }) || items[0];
     var lastSynced = firstItem && firstItem.lastSynced ? PlaidService.relativeTime(firstItem.lastSynced) : null;
     var accounts = firstItem ? (firstItem.accounts || []) : [];
     var primary = accounts.find(function(a) { return a.type === 'depository'; }) || accounts[0];
@@ -1480,19 +1482,21 @@ async function importAllPlaidTransactions() {
   btn.disabled = true;
   try {
     const r = await api('/api/plaid/transactions/confirm-all', { method: 'POST' });
-    if (r.success) {
+    // Always reset button first — if checkPendingPlaid re-shows the banner the
+    // button must be in a clickable state, not stuck at "Importing…"
+    btn.textContent = 'Import all';
+    btn.disabled = false;
+    if (r.success && r.confirmed_count > 0) {
       document.getElementById('plaidPendingBanner').style.display = 'none';
-      if (r.confirmed_count > 0) {
-        const t = document.getElementById('submitToast');
-        if (t) { t.textContent = `✓ ${r.confirmed_count} transaction${r.confirmed_count === 1 ? '' : 's'} imported`; t.style.color = '#5BA4A4'; t.classList.add('visible'); setTimeout(() => { t.classList.remove('visible'); t.textContent = '✓ Logged!'; t.style.color = ''; }, 3000); }
-      }
-      await Promise.all([loadExpenses(currentPeriod), loadTodaySpendingCard(), checkUntriaged(), checkPendingPlaid()]);
-    } else {
-      btn.textContent = 'Import all';
-      btn.disabled = false;
       const t = document.getElementById('submitToast');
-      if (t) { t.textContent = r.message || 'Import failed — try again'; t.style.color = '#E05252'; t.classList.add('visible'); setTimeout(() => { t.classList.remove('visible'); t.textContent = '✓ Logged!'; t.style.color = ''; }, 4000); }
+      if (t) { t.textContent = `✓ ${r.confirmed_count} transaction${r.confirmed_count === 1 ? '' : 's'} imported`; t.style.color = '#5BA4A4'; t.classList.add('visible'); setTimeout(() => { t.classList.remove('visible'); t.textContent = '✓ Logged!'; t.style.color = ''; }, 3000); }
+      await Promise.all([loadExpenses(currentPeriod), loadTodaySpendingCard(), checkUntriaged(), checkPendingPlaid()]);
+    } else if (!r.success) {
+      const t = document.getElementById('submitToast');
+      if (t) { t.textContent = r.message || 'Import failed — try Refresh first'; t.style.color = '#E05252'; t.classList.add('visible'); setTimeout(() => { t.classList.remove('visible'); t.textContent = '✓ Logged!'; t.style.color = ''; }, 4000); }
     }
+    // If success but confirmed_count === 0: button is already re-enabled above,
+    // banner stays visible so the user can retry after tapping Refresh.
   } catch (e) {
     btn.textContent = 'Import all';
     btn.disabled = false;

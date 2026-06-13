@@ -382,18 +382,35 @@ async function getPlaidItemsWithAccounts(pool, userId) {
 }
 
 // Upsert a plaid_item (called after token exchange)
+// Uses ON CONFLICT (item_id, user_id) to avoid duplicate rows when the user
+// reconnects the same bank. Falls back to INSERT-with-explicit-id if the
+// unique index doesn't exist yet (pre-migration environments).
 async function upsertPlaidItem(pool, userId, encryptedAccessToken, itemId, institutionName, institutionId) {
-  // Compute id explicitly so the row is never inserted with id = NULL even if
-  // the sequence / column-default hasn't been set up yet by the migration.
-  const { rows } = await pool.query(
-    `INSERT INTO plaid_items (id, user_id, access_token, item_id, institution_name, institution_id)
-     VALUES (
-       (SELECT COALESCE(MAX(id), 0) + 1 FROM plaid_items),
-       $1, $2, $3, $4, $5
-     ) RETURNING *`,
-    [userId, encryptedAccessToken, itemId, institutionName || 'Unknown Bank', institutionId || null]
-  );
-  return rows[0];
+  try {
+    const { rows } = await pool.query(
+      `INSERT INTO plaid_items (id, user_id, access_token, item_id, institution_name, institution_id)
+       VALUES ((SELECT COALESCE(MAX(id), 0) + 1 FROM plaid_items), $1, $2, $3, $4, $5)
+       ON CONFLICT (item_id, user_id) DO UPDATE SET
+         access_token     = EXCLUDED.access_token,
+         institution_name = EXCLUDED.institution_name,
+         institution_id   = EXCLUDED.institution_id
+       RETURNING *`,
+      [userId, encryptedAccessToken, itemId, institutionName || 'Unknown Bank', institutionId || null]
+    );
+    return rows[0];
+  } catch (e) {
+    if (e.code === '42P10' || e.message.includes('there is no unique constraint')) {
+      // Unique index not yet created — fall back to plain INSERT
+      const { rows } = await pool.query(
+        `INSERT INTO plaid_items (id, user_id, access_token, item_id, institution_name, institution_id)
+         VALUES ((SELECT COALESCE(MAX(id), 0) + 1 FROM plaid_items), $1, $2, $3, $4, $5)
+         RETURNING *`,
+        [userId, encryptedAccessToken, itemId, institutionName || 'Unknown Bank', institutionId || null]
+      );
+      return rows[0];
+    }
+    throw e;
+  }
 }
 
 // Delete a plaid_item (disconnect)
