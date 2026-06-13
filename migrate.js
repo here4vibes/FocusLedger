@@ -100,10 +100,11 @@ async function runCoreMigrations(client) {
     `ALTER TABLE plaid_accounts ADD COLUMN IF NOT EXISTS current_balance    NUMERIC(12,2)`,
     `ALTER TABLE plaid_accounts ADD COLUMN IF NOT EXISTS available_balance  NUMERIC(12,2)`,
     `ALTER TABLE plaid_accounts ADD COLUMN IF NOT EXISTS balance_updated_at TIMESTAMPTZ`,
+    `CREATE UNIQUE INDEX IF NOT EXISTS plaid_accounts_account_id_unique ON plaid_accounts (account_id)`,
   ];
   for (const sql of balanceCols) {
     try { await client.query(sql); } catch (e) {
-      console.warn('[migrate] plaid_accounts column patch skipped:', e.message);
+      console.warn('[migrate] plaid_accounts patch skipped:', e.message);
     }
   }
 }
