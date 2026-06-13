@@ -93,6 +93,24 @@ async function runCoreMigrations(client) {
   await client.query(`
     CREATE INDEX IF NOT EXISTS users_stripe_subscription_id_idx ON users (stripe_subscription_id)
   `);
+
+  // plaid_accounts balance columns — added here because the migration chain
+  // that should apply these (1780975000000) has never successfully run in
+  // production. Running unconditionally with full guards so it can never block.
+  await client.query(`
+    DO $$
+    BEGIN
+      IF EXISTS (
+        SELECT 1 FROM information_schema.tables
+        WHERE table_name = 'plaid_accounts' AND table_schema = current_schema()
+      ) THEN
+        ALTER TABLE plaid_accounts
+          ADD COLUMN IF NOT EXISTS current_balance    NUMERIC(12,2),
+          ADD COLUMN IF NOT EXISTS available_balance  NUMERIC(12,2),
+          ADD COLUMN IF NOT EXISTS balance_updated_at TIMESTAMPTZ;
+      END IF;
+    END $$
+  `);
 }
 
 /**
