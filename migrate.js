@@ -94,23 +94,18 @@ async function runCoreMigrations(client) {
     CREATE INDEX IF NOT EXISTS users_stripe_subscription_id_idx ON users (stripe_subscription_id)
   `);
 
-  // plaid_accounts balance columns — added here because the migration chain
-  // that should apply these (1780975000000) has never successfully run in
-  // production. Running unconditionally with full guards so it can never block.
-  await client.query(`
-    DO $$
-    BEGIN
-      IF EXISTS (
-        SELECT 1 FROM information_schema.tables
-        WHERE table_name = 'plaid_accounts' AND table_schema = current_schema()
-      ) THEN
-        ALTER TABLE plaid_accounts
-          ADD COLUMN IF NOT EXISTS current_balance    NUMERIC(12,2),
-          ADD COLUMN IF NOT EXISTS available_balance  NUMERIC(12,2),
-          ADD COLUMN IF NOT EXISTS balance_updated_at TIMESTAMPTZ;
-      END IF;
-    END $$
-  `);
+  // plaid_accounts balance columns — unconditional, each in its own try/catch
+  // so a missing table (fresh DB) or already-existing column never blocks startup.
+  const balanceCols = [
+    `ALTER TABLE plaid_accounts ADD COLUMN IF NOT EXISTS current_balance    NUMERIC(12,2)`,
+    `ALTER TABLE plaid_accounts ADD COLUMN IF NOT EXISTS available_balance  NUMERIC(12,2)`,
+    `ALTER TABLE plaid_accounts ADD COLUMN IF NOT EXISTS balance_updated_at TIMESTAMPTZ`,
+  ];
+  for (const sql of balanceCols) {
+    try { await client.query(sql); } catch (e) {
+      console.warn('[migrate] plaid_accounts column patch skipped:', e.message);
+    }
+  }
 }
 
 /**
@@ -157,12 +152,14 @@ async function runFolderMigrations(client) {
       console.log(`Migration complete: ${name}`);
     } catch (err) {
       await client.query('ROLLBACK');
-      throw new Error(`Migration failed (${name}): ${err.message}`);
+      // Log but don't crash — a stuck migration shouldn't prevent the server
+      // from starting with new code. The migration will be retried next deploy.
+      console.error(`[migrate] WARNING: migration "${name}" failed and was rolled back: ${err.message}`);
     }
   }
 }
 
 migrate().catch(err => {
-  console.error('Migration failed:', err.message);
+  console.error('Migration runner error:', err.message);
   process.exit(1);
 });
