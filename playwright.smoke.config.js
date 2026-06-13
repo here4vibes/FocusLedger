@@ -24,7 +24,9 @@ module.exports = defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
   workers: process.env.CI ? 4 : undefined,
-  timeout: 20000,
+  // WHY 50s: public nav is JS-injected; Render free tier cold starts take up to 30s.
+  // 10s timeout caused primary-mobile flakes when the server was cold.
+  timeout: process.env.CI ? 50000 : 20000,
 
   reporter: process.env.CI
     ? [['github'], ['html', { open: 'never', outputFolder: 'smoke-report' }]]
