@@ -1320,6 +1320,19 @@ function proceedWithReflection(addToPlan) {
     selectedImpulse = false;
     setImpulse(false);
   }
+  // Reflection card may appear from onAmountChange before the user ever clicks
+  // "Log Spend", so pendingExpenseData might not be set yet. Populate it now.
+  if (!pendingExpenseData) {
+    const amount = parseFloat(document.getElementById('amountInput').value);
+    if (!amount || amount <= 0) return;
+    pendingExpenseData = {
+      amount,
+      category: selectedCat,
+      is_impulse: selectedImpulse,
+      note: document.getElementById('noteInput').value.trim() || null,
+      expense_date: document.getElementById('dateInput').value,
+    };
+  }
   doSubmitExpense();
 }
 
