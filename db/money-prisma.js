@@ -347,6 +347,26 @@ async function getPlaidItemsWithAccounts(pool, userId) {
     [userId]
   );
   if (!items.length) return [];
+
+  // Runtime repair: if any row has id = NULL (sequence migration hasn't run yet),
+  // assign a real integer now so buttons work immediately without waiting for a deploy.
+  for (const item of items) {
+    if (item.id == null) {
+      try {
+        const { rows: fixed } = await pool.query(
+          `UPDATE plaid_items
+           SET id = (SELECT COALESCE(MAX(id), 0) + 1 FROM plaid_items WHERE id IS NOT NULL)
+           WHERE user_id = $1 AND item_id = $2 AND id IS NULL
+           RETURNING id`,
+          [userId, item.item_id]
+        );
+        if (fixed.length > 0) item.id = fixed[0].id;
+      } catch (e) {
+        console.error('[plaid] runtime id repair failed for item_id', item.item_id, e.message);
+      }
+    }
+  }
+
   const { rows: accounts } = await pool.query(
     'SELECT * FROM plaid_accounts WHERE plaid_item_id = ANY($1)',
     [items.map(i => i.id)]
