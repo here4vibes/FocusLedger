@@ -358,9 +358,14 @@ async function getPlaidItemsWithAccounts(pool, userId) {
 
 // Upsert a plaid_item (called after token exchange)
 async function upsertPlaidItem(pool, userId, encryptedAccessToken, itemId, institutionName, institutionId) {
+  // Compute id explicitly so the row is never inserted with id = NULL even if
+  // the sequence / column-default hasn't been set up yet by the migration.
   const { rows } = await pool.query(
-    `INSERT INTO plaid_items (user_id, access_token, item_id, institution_name, institution_id)
-     VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+    `INSERT INTO plaid_items (id, user_id, access_token, item_id, institution_name, institution_id)
+     VALUES (
+       (SELECT COALESCE(MAX(id), 0) + 1 FROM plaid_items),
+       $1, $2, $3, $4, $5
+     ) RETURNING *`,
     [userId, encryptedAccessToken, itemId, institutionName || 'Unknown Bank', institutionId || null]
   );
   return rows[0];
