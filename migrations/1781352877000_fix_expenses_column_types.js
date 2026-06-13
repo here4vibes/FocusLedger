@@ -13,14 +13,17 @@
  *    Decimal amounts like 25.50 are stored as 26 (rounded). Minor precision
  *    loss, but wrong type for financial data.
  *
- * Both changes use USING clauses so existing data is preserved:
- *   - integer plaid_transaction_ids (if any) become their decimal string form
- *   - integer amounts stay numerically identical but gain decimal precision
+ * Strategy: drop the unique index before altering column types so PostgreSQL
+ * does not need to rebuild it in place (avoids edge cases with typed indexes).
+ * We then deduplicate and recreate the index explicitly.
  */
 module.exports = {
   name: 'fix_expenses_column_types',
 
   up: async (client) => {
+    // Drop the unique index first so ALTER COLUMN TYPE has no index to rebuild.
+    await client.query(`DROP INDEX IF EXISTS expenses_plaid_tx_id_unique`);
+
     // 1. plaid_transaction_id: INTEGER → VARCHAR(255)
     //    Guard: only alter if the column is currently integer-typed.
     await client.query(`
@@ -57,7 +60,16 @@ module.exports = {
       END $$
     `);
 
-    // 3. Ensure the unique index on plaid_transaction_id exists (varchar now)
+    // 3. Deduplicate before recreating the unique index (keeps highest id per tx)
+    await client.query(`
+      DELETE FROM expenses a
+      USING expenses b
+      WHERE a.plaid_transaction_id IS NOT NULL
+        AND a.plaid_transaction_id = b.plaid_transaction_id
+        AND a.id < b.id
+    `);
+
+    // 4. Recreate unique index (partial — excludes NULLs for manual expenses)
     await client.query(`
       CREATE UNIQUE INDEX IF NOT EXISTS expenses_plaid_tx_id_unique
         ON expenses (plaid_transaction_id)
