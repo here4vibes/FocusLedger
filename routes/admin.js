@@ -136,15 +136,15 @@ module.exports = function(pool) {
         `)
       ]);
 
-      const totalUsers    = totalUsersResult.rows[0].count;
-      const proMonthly    = proMonthlyResult.rows[0].count;
-      const proAnnual     = proAnnualResult.rows[0].count;
+      const totalUsers    = totalUsersResult.rows[0]?.count ?? 0;
+      const proMonthly    = proMonthlyResult.rows[0]?.count ?? 0;
+      const proAnnual     = proAnnualResult.rows[0]?.count ?? 0;
       const proTotal      = proMonthly + proAnnual;
       const freeUsers     = Math.max(0, totalUsers - proTotal);
       const conversionPct = totalUsers > 0 ? ((proTotal / totalUsers) * 100).toFixed(1) : '0.0';
-      const newThisWeek   = newThisWeekResult.rows[0].count;
-      const newThisMonth  = newThisMonthResult.rows[0].count;
-      const churnCount    = churnThisMonthResult.rows[0].count;
+      const newThisWeek   = newThisWeekResult.rows[0]?.count ?? 0;
+      const newThisMonth  = newThisMonthResult.rows[0]?.count ?? 0;
+      const churnCount    = churnThisMonthResult.rows[0]?.count ?? 0;
 
       // MRR: monthly subscribers x $9.99 + annual subscribers x $8.33/mo
       const MONTHLY_PRICE = 9.99;
@@ -152,9 +152,9 @@ module.exports = function(pool) {
       const mrr = (proMonthly * MONTHLY_PRICE) + (proAnnual * ANNUAL_MONTHLY_PRICE);
 
       // Visitor stats
-      const visitorsToday   = visitorsTodayResult.rows[0].count;
-      const visitors7dTotal = visitors7dResult.rows.reduce((sum, r) => sum + r.unique_visitors, 0);
-      const visitors30d     = visitors30dResult.rows[0].count;
+      const visitorsToday   = visitorsTodayResult.rows[0]?.count ?? 0;
+      const visitors7dTotal = visitors7dResult.rows.reduce((sum, r) => sum + (r.unique_visitors || 0), 0);
+      const visitors30d     = visitors30dResult.rows[0]?.count ?? 0;
 
       // Build 7-day trend array (fill gaps with 0 for missing days)
       const trend7d = [];

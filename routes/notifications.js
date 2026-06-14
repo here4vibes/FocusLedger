@@ -70,14 +70,14 @@ function createNotificationsRouter(pool) {
            LIMIT 3
          )`,
         [userId]
-      ).catch(() => {}); // non-fatal cleanup
+      ).catch(e => console.warn('[notifications] cleanup old subs:', e.message));
 
       // Save timezone so nudges fire at local times
       if (timezone && typeof timezone === 'string' && timezone.length < 64) {
         await pool.query(
           'UPDATE users SET timezone = $1 WHERE id = $2',
           [timezone, userId]
-        ).catch(() => {}); // non-fatal
+        ).catch(e => console.warn('[notifications] timezone update:', e.message));
       }
 
       // Send a confirmation notification
@@ -336,7 +336,7 @@ async function sendNudgePushNotifications(pool, userId, nudges) {
         sentCount++;
       } catch (sendErr) {
         if (sendErr.statusCode === 410 || sendErr.statusCode === 404) {
-          await deleteSubscriptionByEndpoint(pool, row.endpoint).catch(() => {});
+          await deleteSubscriptionByEndpoint(pool, row.endpoint).catch(e => console.warn('[notifications] cleanup stale sub:', e.message));
         } else {
           console.warn('[Notifications] Push send error:', sendErr.message);
         }

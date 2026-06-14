@@ -647,6 +647,88 @@
         }
         .volume-row.dark-mode .volume-pct { color: var(--text-muted); }
 
+        /* ── Pomodoro ring ──────────────────────────────────────────────────────── */
+        .timer-ring-wrap {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 240px;
+            height: 240px;
+            margin: 0 auto 8px;
+        }
+        .timer-ring {
+            position: absolute;
+            top: 0; left: 0;
+            transform: rotate(-90deg);
+            width: 240px; height: 240px;
+        }
+        .timer-ring-bg {
+            fill: none;
+            stroke: rgba(1,30,92,0.08);
+            stroke-width: 8;
+        }
+        .timer-ring-progress {
+            fill: none;
+            stroke: var(--orange);
+            stroke-width: 8;
+            stroke-linecap: round;
+            stroke-dasharray: 659.73; /* 2π × 105 */
+            stroke-dashoffset: 0;
+            transition: stroke-dashoffset 0.9s linear, stroke 0.3s;
+        }
+        .timer-ring-progress.break-phase { stroke: var(--green); }
+        #ambient-bg.active ~ #focus-app .timer-ring-bg { stroke: rgba(255,255,255,0.12); }
+        #ambient-bg.active ~ #focus-app .timer-ring-progress { stroke: rgba(240,180,41,0.9); }
+        .timer-ring-inner {
+            position: absolute;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        /* Pomodoro toggle */
+        .pomodoro-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+        .pom-toggle {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 14px;
+            border-radius: 99px;
+            border: 1.5px solid var(--border);
+            background: transparent;
+            font-size: 0.8rem;
+            font-family: 'DM Sans', sans-serif;
+            font-weight: 600;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .pom-toggle.active {
+            border-color: var(--orange);
+            color: var(--orange);
+            background: rgba(201,168,76,0.06);
+        }
+        #ambient-bg.active ~ #focus-app .pom-toggle { color: rgba(255,255,255,0.6); border-color: rgba(255,255,255,0.2); }
+        #ambient-bg.active ~ #focus-app .pom-toggle.active { color: var(--gold); border-color: var(--gold); background: rgba(240,180,41,0.1); }
+        .pom-phase-label {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            font-weight: 700;
+            color: var(--orange);
+            display: none;
+        }
+        .pom-phase-label.break-phase { color: var(--green); }
+        .pom-phase-label.visible { display: block; }
+        #ambient-bg.active ~ #focus-app .pom-phase-label { color: var(--gold); }
+
         /* Pulse animation for Complete when timer fires */
         @keyframes pulse-glow {
             0%, 100% { box-shadow: var(--shadow-sm); }
@@ -823,9 +905,22 @@
                 <button class="duration-pill"         data-duration="90">90 min</button>
             </div>
 
+            <div class="pomodoro-row">
+                <button class="pom-toggle" id="pom-toggle">🍅 Pomodoro</button>
+                <span class="pom-phase-label" id="pom-phase-label">Work</span>
+            </div>
+
             <div class="timer-block">
-                <div class="timer-display" id="timer-display">25:00</div>
-                <div class="timer-sublabel" id="timer-sublabel">remaining</div>
+                <div class="timer-ring-wrap">
+                    <svg class="timer-ring" viewBox="0 0 240 240" aria-hidden="true">
+                        <circle class="timer-ring-bg" cx="120" cy="120" r="105"/>
+                        <circle class="timer-ring-progress" id="timer-ring-progress" cx="120" cy="120" r="105"/>
+                    </svg>
+                    <div class="timer-ring-inner">
+                        <div class="timer-display" id="timer-display">25:00</div>
+                        <div class="timer-sublabel" id="timer-sublabel">remaining</div>
+                    </div>
+                </div>
             </div>
 
             <div class="times-up-banner" id="times-up-banner">
@@ -899,6 +994,13 @@ const AUDIO_TRACKS = {
     let timerLeft       = timerSecs;
     let timerInterval   = null;
     let timesUp         = false;
+
+    // Pomodoro state
+    let pomodoroMode   = false;
+    let pomodoroPhase  = 'work'; // 'work' | 'break'
+    let pomodoroCount  = 0;      // completed work cycles
+    const POM_WORK_SECS  = 25 * 60;
+    const POM_BREAK_SECS = 5 * 60;
 
     // Body Double state
     let bdEnabled       = false;
@@ -1209,17 +1311,45 @@ const AUDIO_TRACKS = {
     document.getElementById('duration-selector').addEventListener('click', e => {
         const pill = e.target.closest('.duration-pill');
         if (!pill || timesUp) return;
+        // Disable duration pills while in Pomodoro mode
+        if (pomodoroMode) return;
         selectDuration(parseInt(pill.dataset.duration));
         restartTimer();
     });
 
+    document.getElementById('pom-toggle').addEventListener('click', () => {
+        pomodoroMode = !pomodoroMode;
+        const btn = document.getElementById('pom-toggle');
+        btn.classList.toggle('active', pomodoroMode);
+        if (pomodoroMode) {
+            pomodoroPhase = 'work';
+            pomodoroCount = 0;
+            timerSecs = POM_WORK_SECS;
+        } else {
+            timerSecs = 25 * 60; // revert to default
+        }
+        updatePomodoroUI();
+        restartTimer();
+    });
+
     // ── Timer ───────────────────────────────────────────────────────────────────
+    const RING_CIRCUMFERENCE = 2 * Math.PI * 105; // ≈ 659.73
+
+    function updateRing() {
+        const ring = document.getElementById('timer-ring-progress');
+        if (!ring) return;
+        const pct = timerSecs > 0 ? timerLeft / timerSecs : 0;
+        ring.style.strokeDashoffset = RING_CIRCUMFERENCE * (1 - pct);
+        ring.classList.toggle('break-phase', pomodoroMode && pomodoroPhase === 'break');
+    }
+
     function updateTimerDisplay() {
         const m = Math.floor(timerLeft / 60);
         const s = timerLeft % 60;
         document.getElementById('timer-display').textContent =
             String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
         document.getElementById('timer-sublabel').textContent = timesUp ? "time's up" : 'remaining';
+        updateRing();
     }
 
     function startTimer() {
@@ -1229,11 +1359,16 @@ const AUDIO_TRACKS = {
 
     function restartTimer() {
         if (timerInterval) clearInterval(timerInterval);
+        if (!pomodoroMode) {
+            pomodoroPhase = 'work';
+            pomodoroCount = 0;
+        }
         timerLeft = timerSecs;
         timesUp = false;
         document.getElementById('times-up-banner').classList.remove('visible');
         document.getElementById('btn-complete').classList.remove('pulse');
         updateTimerDisplay();
+        updatePomodoroUI();
         timerInterval = setInterval(tick, 1000);
     }
 
@@ -1242,9 +1377,39 @@ const AUDIO_TRACKS = {
         updateTimerDisplay();
         if (timerLeft <= 0) {
             clearInterval(timerInterval);
-            timesUp = true;
-            document.getElementById('times-up-banner').classList.add('visible');
-            document.getElementById('btn-complete').classList.add('pulse');
+            if (pomodoroMode) {
+                // Auto-advance to next Pomodoro phase
+                if (pomodoroPhase === 'work') {
+                    pomodoroCount++;
+                    pomodoroPhase = 'break';
+                    timerSecs = POM_BREAK_SECS;
+                } else {
+                    pomodoroPhase = 'work';
+                    timerSecs = POM_WORK_SECS;
+                }
+                timerLeft = timerSecs;
+                timesUp = false;
+                updatePomodoroUI();
+                updateTimerDisplay();
+                timerInterval = setInterval(tick, 1000);
+            } else {
+                timesUp = true;
+                document.getElementById('times-up-banner').classList.add('visible');
+                document.getElementById('btn-complete').classList.add('pulse');
+            }
+        }
+    }
+
+    function updatePomodoroUI() {
+        const phaseLabel = document.getElementById('pom-phase-label');
+        if (!phaseLabel) return;
+        if (pomodoroMode) {
+            phaseLabel.textContent = pomodoroPhase === 'work'
+                ? (pomodoroCount > 0 ? `Work #${pomodoroCount + 1}` : 'Work')
+                : `Break ${pomodoroCount > 0 ? `(${pomodoroCount}✓)` : ''}`;
+            phaseLabel.className = 'pom-phase-label visible' + (pomodoroPhase === 'break' ? ' break-phase' : '');
+        } else {
+            phaseLabel.className = 'pom-phase-label';
         }
     }
 

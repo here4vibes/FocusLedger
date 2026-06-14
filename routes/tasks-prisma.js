@@ -841,7 +841,7 @@ async function getReentryBrief(req, res) {
         [taskId]
       ).catch(() => ({ rows: [] })),
       pool.query(
-        'SELECT title FROM task_substeps WHERE task_id = $1 AND is_completed = false ORDER BY sort_order ASC LIMIT 1',
+        'SELECT step_text AS title FROM task_substeps WHERE task_id = $1 AND completed = false ORDER BY step_order ASC LIMIT 1',
         [taskId]
       ).catch(() => ({ rows: [] })),
     ]);

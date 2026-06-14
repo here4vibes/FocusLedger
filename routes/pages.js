@@ -111,8 +111,8 @@ router.get('/app/buddy',    (_, res) => res.sendFile(pub('buddy.html')));
 // Plaid Link, and every email/link that references /app/settings.
 router.get('/app/settings', (_, res) => res.sendFile(pub('settings.html')));
 
-// /app root → redirect to /app/tasks (canonical entry point)
-router.get('/app',          (_, res) => res.redirect(301, '/app/tasks'));
+// /app root → home hub page
+router.get('/app',          (_, res) => res.sendFile(pub('home.html')));
 
 // Backward-compat aliases — old top-level routes kept as 301 redirects
 // so bookmarks, emails, and push notifications don't break.

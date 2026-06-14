@@ -529,7 +529,7 @@ module.exports = function(pool) {
                   `UPDATE plaid_accounts SET current_balance=$1, available_balance=$2, balance_updated_at=NOW()
                    WHERE account_id=$3 AND user_id=$4`,
                   [a.balances.current ?? null, a.balances.available ?? null, a.account_id, userId]
-                ).catch(() => {});
+                ).catch(e => console.warn('[plaid] balance cache update failed:', e.message));
               }
             }
           } catch (e) {

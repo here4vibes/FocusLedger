@@ -63,7 +63,7 @@ async function handleWebhookAsync(pool, item_id) {
         const sub = typeof row.subscription === 'string' ? JSON.parse(row.subscription) : row.subscription;
         webpush.sendNotification(sub, payload).catch(e => {
           if (e.statusCode === 410 || e.statusCode === 404) {
-            pool.query('DELETE FROM push_subscriptions WHERE endpoint = $1', [row.endpoint]).catch(() => {});
+            pool.query('DELETE FROM push_subscriptions WHERE endpoint = $1', [row.endpoint]).catch(e => console.warn('[plaid-webhook] cleanup push_subscriptions:', e.message));
           }
         });
       }
@@ -76,7 +76,7 @@ async function handleWebhookAsync(pool, item_id) {
     const tokens = tokenRows.rows.map(r => r.token);
     if (tokens.length) {
       await sendApnsNotification(tokens, { title, body, url: '/money' }, (bad) =>
-        pool.query('DELETE FROM push_tokens WHERE token = $1', [bad]).catch(() => {})
+        pool.query('DELETE FROM push_tokens WHERE token = $1', [bad]).catch(e => console.warn('[plaid-webhook] cleanup push_tokens:', e.message))
       );
     }
   }
