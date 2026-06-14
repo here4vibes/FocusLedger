@@ -568,16 +568,7 @@
   </div>
 </div>
 
-<!-- REFLECTION MODAL — triggered by Log Spend when amount ≥ $25 -->
-<div class="delay-modal-overlay" id="reflectionModal">
-  <div class="delay-modal">
-    <div class="delay-emoji" id="reflectionEmoji">💭</div>
-    <div class="delay-title" id="reflectionTitle">Just a moment…</div>
-    <div class="delay-sub" id="reflectionSub">"Will this still matter to you tomorrow?"</div>
-    <button id="btnReflectionLog" style="width:100%;background:var(--navy,#011e5c);color:white;border:none;border-radius:12px;padding:0.9rem;font-family:'Space Grotesk',sans-serif;font-size:0.95rem;font-weight:700;cursor:pointer;min-height:48px;margin-bottom:0.75rem;">Log it anyway</button>
-    <button class="btn-cancel-delay" id="btnReflectionCancel">← Go back</button>
-  </div>
-</div>
+<!-- REFLECTION MODAL removed -->
 
 <!-- DELAY MODAL -->
 <div class="delay-modal-overlay" id="delayModal">
@@ -669,8 +660,6 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('btnDismissAlert').addEventListener('click', dismissAlert);
   document.getElementById('btnTriageOpen').addEventListener('click', openTriageModal);
   document.getElementById('scanReceiptBtn').addEventListener('click', function() { openCapture('receipt'); });
-  document.getElementById('btnReflectionLog').addEventListener('click', function() { closeReflectionModal(); doSubmitExpense(); });
-  document.getElementById('btnReflectionCancel').addEventListener('click', function() { closeReflectionModal(); pendingExpenseData = null; });
   document.getElementById('btnSubmit').addEventListener('click', submitExpense);
   document.getElementById('tabWeek').addEventListener('click', function() { setPeriod('week', this); });
   document.getElementById('tabMonth').addEventListener('click', function() { setPeriod('month', this); });
@@ -1383,11 +1372,6 @@ async function submitExpense() {
 
   if (amount >= nudgeConfig.delayThreshold) {
     showDelayModal(amount);
-    return;
-  }
-
-  if (amount >= nudgeConfig.reflectionMin) {
-    showReflectionModal(amount);
     return;
   }
 
