@@ -619,11 +619,77 @@
     });
   }
 
+  // ── FLNav public API ─────────────────────────────────────────────
+  // window.FLNav.collapse() — shrink nav to dot and move to top-bar corner.
+  // window.FLNav.restore()  — expand back to full pill at bottom.
+  // Called automatically when any *.overlay element gets/loses 'open' class.
+  // Pages can also call directly for overlays that toggle display instead.
+
+  var _overlayDepth = 0;
+
+  window.FLNav = {
+    collapse: function () {
+      _overlayDepth++;
+      var nav = document.getElementById('shared-bottom-nav');
+      if (!nav) return;
+      nav.classList.add('nav-collapsed', 'nav-overlay-mode');
+    },
+    restore: function () {
+      _overlayDepth = Math.max(0, _overlayDepth - 1);
+      if (_overlayDepth > 0) return;
+      var nav = document.getElementById('shared-bottom-nav');
+      if (!nav) return;
+      nav.classList.remove('nav-collapsed', 'nav-overlay-mode');
+    },
+    forceRestore: function () {
+      _overlayDepth = 0;
+      var nav = document.getElementById('shared-bottom-nav');
+      if (nav) nav.classList.remove('nav-collapsed', 'nav-overlay-mode');
+    }
+  };
+
+  // ── Auto-detect overlays via MutationObserver ─────────────────────
+  // Watches for any element with 'overlay' in its class or id gaining/losing
+  // the 'open' class. Zero per-page wiring needed — just use .classList.add('open').
+
+  function isOverlayEl(el) {
+    var cls = (typeof el.className === 'string' ? el.className : '') + ' ' + (el.id || '');
+    return cls.toLowerCase().includes('overlay');
+  }
+
+  var _observerReady = false;
+  function startOverlayObserver() {
+    if (_observerReady || typeof MutationObserver === 'undefined') return;
+    _observerReady = true;
+
+    var observer = new MutationObserver(function (mutations) {
+      mutations.forEach(function (m) {
+        if (m.type !== 'attributes' || m.attributeName !== 'class') return;
+        var el = m.target;
+        if (!isOverlayEl(el)) return;
+        var nowOpen  = el.classList.contains('open');
+        var wasOpen  = m.oldValue ? m.oldValue.split(' ').indexOf('open') > -1 : false;
+        if (nowOpen && !wasOpen)  window.FLNav.collapse();
+        if (!nowOpen && wasOpen)  window.FLNav.restore();
+      });
+    });
+
+    observer.observe(document.body, {
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['class'],
+      attributeOldValue: true,
+    });
+  }
+
+  // ── Init ──────────────────────────────────────────────────
+
   // Run when DOM is ready
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
+    document.addEventListener('DOMContentLoaded', function () { init(); startOverlayObserver(); });
   } else {
     init();
+    startOverlayObserver();
   }
 
 })();

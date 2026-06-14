@@ -630,6 +630,20 @@ body.shared-nav-active {
   position: absolute;
 }
 
+/* ── Overlay mode — moves collapsed circle to top-bar corner ─────
+   Applied alongside nav-collapsed when a modal/sheet/overlay opens.
+   Clears the bottom of the screen so the overlay has full space.
+   The circle appears just left of the hamburger button. */
+#shared-bottom-nav.nav-overlay-mode {
+  bottom: auto !important;
+  left: auto !important;
+  transform: none !important;
+  top: calc(10px + env(safe-area-inset-top, 0px));
+  right: 56px;
+  width: 36px !important;
+  height: 36px !important;
+}
+
 /* ── Center FAB inside the pill ─────────────────────────────────── */
 /* Gold "+" button between Money and Vault. flex:0 0 auto so it doesn't
    stretch. Sits inside the 58px pill with a raised circle. */
