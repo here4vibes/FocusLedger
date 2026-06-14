@@ -236,6 +236,7 @@ app.use('/api/auto-routines',    require('./routes/autoRoutines')(pool));
 app.use('/api/followup-emails',   require('./routes/followupEmails')(pool));
 app.use('/api/push',             require('./routes/push-tokens')(pool));
 app.use('/api/health-score',     require('./routes/health-score')(pool));
+app.use('/api/gcal',             require('./routes/google-calendar')(pool));
 // v1 API: Plaid connect/disconnect + Transaction endpoints
 app.use('/api/v1',                 require('./routes/v1')(pool));
 app.use('/api/v1/insights',       require('./routes/insights')(pool));

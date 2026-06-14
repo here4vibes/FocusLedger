@@ -458,6 +458,27 @@
       pointer-events: none;
     }
     .empty-day-icon { font-size: 2rem; margin-bottom: 0.5rem; }
+
+    /* ── Google Calendar connect bar ─────────────────────────────── */
+    .gcal-bar {
+      display: flex; align-items: center; gap: 10px;
+      padding: 6px 1rem; background: rgba(1,30,92,0.03);
+      border-bottom: 1px solid var(--border);
+      font-size: 0.78rem; color: var(--muted);
+      flex-shrink: 0;
+    }
+    .gcal-bar-icon { font-size: 1rem; flex-shrink: 0; }
+    .gcal-bar-text { flex: 1; }
+    .gcal-btn {
+      padding: 4px 12px; border-radius: 99px;
+      border: 1.5px solid var(--border);
+      background: white; font-size: 0.75rem; font-weight: 600;
+      color: var(--navy); cursor: pointer; transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .gcal-btn:hover { border-color: #4285F4; color: #4285F4; }
+    .gcal-btn.syncing { opacity: 0.6; pointer-events: none; }
+    .gcal-dot { width: 7px; height: 7px; border-radius: 50%; background: #4285F4; flex-shrink: 0; }
   </style>
 </head>
 <body>
@@ -480,6 +501,13 @@
     <div class="week-strip" id="weekStrip"></div>
     <div class="day-headline" id="dayHeadline"></div>
   </header>
+
+  <!-- Google Calendar bar (shown after page load) -->
+  <div class="gcal-bar" id="gcalBar" style="display:none">
+    <span class="gcal-bar-icon" id="gcalIcon">📅</span>
+    <span class="gcal-bar-text" id="gcalBarText">Sync Google Calendar</span>
+    <button class="gcal-btn" id="gcalBtn">Connect</button>
+  </div>
 
   <!-- Timeline -->
   <div class="timeline-wrap">
@@ -812,13 +840,17 @@ function renderBlocks() {
     const top    = Math.max(0, (startMin - dayStartMin) / 30 * SLOT_H);
     const height = Math.max(SLOT_H/2, (endMin - startMin) / 30 * SLOT_H - 3);
 
-    const col = valueColor(block.value_id);
+    const isGcal = block.source === 'gcal';
+    const col = isGcal
+      ? { bg: 'rgba(66,133,244,0.12)', fg: '#1a4fa0' }
+      : valueColor(block.value_id);
 
     const el = document.createElement('div');
-    el.className = 'block-el';
+    el.className = 'block-el' + (isGcal ? ' gcal-block' : '');
     el.dataset.blockId = block.id;
-    el.style.cssText = `top:${top}px;height:${height}px;background:${col.bg};color:${col.fg};`;
-    el.draggable = true;
+    el.style.cssText = `top:${top}px;height:${height}px;background:${col.bg};color:${col.fg};` +
+      (isGcal ? 'border-left:3px solid #4285F4;' : '');
+    el.draggable = !isGcal;
 
     const title = document.createElement('div');
     title.className = 'block-title';
@@ -830,10 +862,11 @@ function renderBlocks() {
 
     const del = document.createElement('span');
     del.className = 'block-del';
-    del.textContent = '×';
-    del.title = 'Delete block';
+    del.textContent = isGcal ? '↗' : '×';
+    del.title = isGcal ? 'Open in Google Calendar' : 'Delete block';
     del.addEventListener('click', async e => {
       e.stopPropagation();
+      if (isGcal) return; // GCal blocks are read-only
       if (!confirm('Delete this block?')) return;
       const res = await api('DELETE', `/time-blocks/${block.id}`);
       if (res?.success) reloadDay();
@@ -1143,6 +1176,96 @@ document.addEventListener('keydown', e => {
 
 // ── Boot ─────────────────────────────────────────────────────────
 loadAll();
+
+// ── Google Calendar Integration ───────────────────────────────────
+(async function initGcal() {
+  const bar    = document.getElementById('gcalBar');
+  const btn    = document.getElementById('gcalBtn');
+  const icon   = document.getElementById('gcalIcon');
+  const text   = document.getElementById('gcalBarText');
+  if (!bar || !btn) return;
+
+  async function gcalApi(method, path, body) {
+    const opts = { method, headers: { Authorization: `Bearer ${TOKEN}`, 'Content-Type': 'application/json' } };
+    if (body) opts.body = JSON.stringify(body);
+    const r = await fetch('/api/gcal' + path, opts);
+    return r.json();
+  }
+
+  function setConnected(lastSync) {
+    icon.textContent  = '●';
+    icon.style.color  = '#4285F4';
+    text.textContent  = lastSync
+      ? `Google Calendar synced ${new Date(lastSync).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+      : 'Google Calendar connected';
+    btn.textContent = 'Sync now';
+    btn.onclick = doSync;
+    bar.style.display = 'flex';
+  }
+
+  function setDisconnected() {
+    icon.textContent = '📅';
+    icon.style.color = '';
+    text.textContent = 'Sync Google Calendar events to your timeline';
+    btn.textContent  = 'Connect';
+    btn.onclick = doConnect;
+    bar.style.display = 'flex';
+  }
+
+  async function doConnect() {
+    btn.textContent = 'Opening…';
+    btn.classList.add('syncing');
+    try {
+      const r = await gcalApi('GET', '/auth-url');
+      if (r.url) window.location.href = r.url;
+      else throw new Error(r.message);
+    } catch (e) {
+      btn.textContent = 'Connect';
+      btn.classList.remove('syncing');
+    }
+  }
+
+  async function doSync() {
+    btn.textContent = 'Syncing…';
+    btn.classList.add('syncing');
+    try {
+      const r = await gcalApi('POST', '/sync');
+      if (r.success) {
+        setConnected(new Date().toISOString());
+        loadAll(); // refresh timeline with GCal events
+      } else {
+        text.textContent = 'Sync failed — try reconnecting';
+        btn.textContent = 'Retry';
+        btn.classList.remove('syncing');
+      }
+    } catch {
+      btn.textContent = 'Retry';
+      btn.classList.remove('syncing');
+    }
+  }
+
+  // Check ?gcal= param from OAuth callback
+  const urlParams = new URLSearchParams(window.location.search);
+  const gcalParam = urlParams.get('gcal');
+  if (gcalParam) {
+    history.replaceState({}, '', window.location.pathname);
+    if (gcalParam === 'connected') {
+      // Just connected — do an immediate sync
+      setConnected(null);
+      btn.onclick = doSync;
+      setTimeout(doSync, 500);
+    }
+  }
+
+  // Load status
+  try {
+    const status = await gcalApi('GET', '/status');
+    if (status.connected) setConnected(status.lastSync);
+    else setDisconnected();
+  } catch {
+    setDisconnected();
+  }
+})();
 </script>
 </body>
 </html>
