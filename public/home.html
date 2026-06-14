@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#011e5c">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="FocusLedger">
+  <link rel="manifest" href="/manifest.json">
+  <link rel="icon" type="image/svg+xml" href="/icons/fl-icon.svg">
+  <link rel="apple-touch-icon" sizes="180x180" href="/icons/fl-icon.png">
+  <title>FocusLedger</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/shared-nav.css">
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --navy:    #011e5c;
+      --orange:  #F26B3A;
+      --teal:    #5BA4A4;
+      --gold:    #f0b429;
+      --cream:   #faf9f6;
+      --cream2:  #f3f1ed;
+      --text:    #141416;
+      --muted:   rgba(1,30,92,0.45);
+      --border:  rgba(1,30,92,0.07);
+      --shadow:  0 2px 8px rgba(1,30,92,0.07), 0 8px 24px rgba(1,30,92,0.05);
+      --shadow-hover: 0 6px 20px rgba(1,30,92,0.12), 0 16px 40px rgba(1,30,92,0.08);
+      --radius:  18px;
+    }
+
+    html, body {
+      min-height: 100%;
+      background: var(--cream);
+      font-family: 'DM Sans', sans-serif;
+      color: var(--text);
+    }
+
+    /* ── Layout shell (accounts for shared-nav sidebar on desktop) ── */
+    .home-root {
+      min-height: 100vh;
+      padding-bottom: calc(80px + env(safe-area-inset-bottom));
+    }
+
+    /* ── Greeting ─────────────────────────────────────────────── */
+    .greeting-wrap {
+      padding: 28px 24px 16px;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    .greeting-time {
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+    .greeting-name {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: clamp(1.5rem, 5vw, 2.2rem);
+      font-weight: 700;
+      color: var(--navy);
+      line-height: 1.15;
+    }
+    .greeting-sub {
+      margin-top: 6px;
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+    .greeting-dot {
+      display: inline-block;
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      margin-right: 6px;
+      vertical-align: middle;
+      background: var(--teal);
+    }
+
+    /* ── Stats strip ──────────────────────────────────────────── */
+    .stats-strip {
+      display: flex;
+      gap: 12px;
+      padding: 0 24px 20px;
+      max-width: 900px;
+      margin: 0 auto;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+    }
+    .stats-strip::-webkit-scrollbar { display: none; }
+    .stat-chip {
+      flex-shrink: 0;
+      display: flex; align-items: center; gap: 6px;
+      padding: 6px 14px;
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 99px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--navy);
+      white-space: nowrap;
+      box-shadow: 0 1px 4px rgba(1,30,92,0.05);
+    }
+    .stat-chip .chip-val { color: var(--orange); }
+    .stat-chip .chip-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+    }
+
+    /* ── Cards grid ───────────────────────────────────────────── */
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 14px;
+      padding: 0 16px;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    @media (min-width: 500px) {
+      .cards-grid { grid-template-columns: repeat(3, 1fr); }
+    }
+    @media (min-width: 900px) {
+      .cards-grid {
+        grid-template-columns: repeat(4, 1fr);
+        padding: 0 24px;
+      }
+      .greeting-wrap { padding: 36px 24px 20px; }
+      .stats-strip   { padding: 0 24px 24px; }
+    }
+
+    .area-card {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 8px;
+      padding: 20px 18px;
+      background: white;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+      cursor: pointer;
+      text-decoration: none;
+      color: var(--text);
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+      position: relative;
+      overflow: hidden;
+      min-height: 120px;
+    }
+    .area-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: var(--card-accent, var(--navy));
+      border-radius: var(--radius) var(--radius) 0 0;
+    }
+    .area-card:hover, .area-card:focus-visible {
+      transform: translateY(-3px);
+      box-shadow: var(--shadow-hover);
+      outline: none;
+    }
+    .area-card:active { transform: scale(0.97); }
+
+    .card-icon {
+      font-size: 2rem;
+      line-height: 1;
+      flex-shrink: 0;
+    }
+    .card-body { display: flex; flex-direction: column; gap: 3px; }
+    .card-title {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--navy);
+      line-height: 1.2;
+    }
+    .card-sub {
+      font-size: 0.75rem;
+      color: var(--muted);
+      line-height: 1.4;
+    }
+    .card-sub.accent { color: var(--card-accent, var(--orange)); font-weight: 600; }
+    .card-badge {
+      position: absolute;
+      top: 12px; right: 12px;
+      min-width: 20px; height: 20px;
+      background: var(--orange);
+      color: white;
+      border-radius: 99px;
+      font-size: 0.68rem;
+      font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      padding: 0 5px;
+    }
+    .card-badge.hidden { display: none; }
+
+    /* ── Loading skeleton ─────────────────────────────────────── */
+    .skel {
+      display: inline-block;
+      width: 80px; height: 11px;
+      background: linear-gradient(90deg, #eee 25%, #e0e0e0 50%, #eee 75%);
+      background-size: 200% 100%;
+      animation: skel-shine 1.4s infinite;
+      border-radius: 6px;
+    }
+    @keyframes skel-shine {
+      0%   { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+  </style>
+</head>
+<body>
+<script src="/shared-nav.js"></script>
+
+<div class="home-root">
+
+  <!-- Greeting -->
+  <div class="greeting-wrap">
+    <div class="greeting-time" id="greetingTime">Loading…</div>
+    <div class="greeting-name" id="greetingName">Hey there</div>
+    <div class="greeting-sub" id="greetingSub">
+      <span class="greeting-dot"></span><span id="greetingSubText">Ready when you are.</span>
+    </div>
+  </div>
+
+  <!-- Stats strip -->
+  <div class="stats-strip" id="statsStrip" style="display:none">
+    <div class="stat-chip" id="chipTasks">
+      <span class="chip-dot" style="background:#5BA4A4"></span>
+      <span class="chip-val" id="chipTasksVal">—</span> tasks open
+    </div>
+    <div class="stat-chip" id="chipSpend">
+      <span class="chip-dot" style="background:#F26B3A"></span>
+      <span class="chip-val" id="chipSpendVal">—</span> today
+    </div>
+    <div class="stat-chip" id="chipTriage">
+      <span class="chip-dot" style="background:#f0b429"></span>
+      <span class="chip-val" id="chipTriageVal">—</span> to review
+    </div>
+  </div>
+
+  <!-- Area cards -->
+  <div class="cards-grid">
+
+    <a class="area-card" href="/app/buddy" style="--card-accent:#011e5c">
+      <span class="card-icon">🧠</span>
+      <div class="card-body">
+        <div class="card-title">Buddy</div>
+        <div class="card-sub" id="buddySub">Your AI coach</div>
+      </div>
+    </a>
+
+    <a class="area-card" href="/app/tasks" style="--card-accent:#5BA4A4">
+      <span class="card-icon">✅</span>
+      <div class="card-body">
+        <div class="card-title">Tasks</div>
+        <div class="card-sub" id="tasksSub">What needs doing</div>
+      </div>
+      <span class="card-badge hidden" id="tasksBadge"></span>
+    </a>
+
+    <a class="area-card" href="/app/money" style="--card-accent:#F26B3A">
+      <span class="card-icon">💰</span>
+      <div class="card-body">
+        <div class="card-title">Money</div>
+        <div class="card-sub" id="moneySub">Track spending</div>
+      </div>
+      <span class="card-badge hidden" id="moneyBadge"></span>
+    </a>
+
+    <a class="area-card" href="/calendar" style="--card-accent:#f0b429">
+      <span class="card-icon">📅</span>
+      <div class="card-body">
+        <div class="card-title">Calendar</div>
+        <div class="card-sub">Plan your day</div>
+      </div>
+    </a>
+
+    <a class="area-card" href="/routines" style="--card-accent:#4A8C5C">
+      <span class="card-icon">🔄</span>
+      <div class="card-body">
+        <div class="card-title">Routines</div>
+        <div class="card-sub" id="routinesSub">Daily habits</div>
+      </div>
+    </a>
+
+    <a class="area-card" href="/journal" style="--card-accent:#7A5BAD">
+      <span class="card-icon">📓</span>
+      <div class="card-body">
+        <div class="card-title">Journal</div>
+        <div class="card-sub" id="journalSub">How are you feeling?</div>
+      </div>
+    </a>
+
+    <a class="area-card" href="/app/vault" style="--card-accent:#4A6BAD">
+      <span class="card-icon">🗄️</span>
+      <div class="card-body">
+        <div class="card-title">Life Vault</div>
+        <div class="card-sub">Docs &amp; insurance</div>
+      </div>
+    </a>
+
+    <a class="area-card" href="/insights" style="--card-accent:#AD7A4A">
+      <span class="card-icon">📊</span>
+      <div class="card-body">
+        <div class="card-title">Insights</div>
+        <div class="card-sub" id="insightsSub">Your patterns</div>
+      </div>
+    </a>
+
+  </div>
+
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  const token = localStorage.getItem('fl_token');
+  if (!token) { window.location.replace('/login'); return; }
+
+  // ── Greeting ──────────────────────────────────────────────────────────────
+  const hour = new Date().getHours();
+  const timeLabel = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+  const dateStr = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+  document.getElementById('greetingTime').textContent = dateStr;
+
+  // Load user name
+  fetch('/api/auth/me', { headers: { Authorization: 'Bearer ' + token } })
+    .then(r => r.ok ? r.json() : null)
+    .then(data => {
+      const first = (data?.name || data?.email || '').split(/[\s@]/)[0];
+      document.getElementById('greetingName').textContent =
+        first ? `${timeLabel}, ${first}` : timeLabel;
+    })
+    .catch(() => {
+      document.getElementById('greetingName').textContent = timeLabel;
+    });
+
+  // ── Context data ───────────────────────────────────────────────────────────
+  const localHour = new Date().getHours();
+
+  Promise.all([
+    fetch(`/api/buddy-widget/context?localHour=${localHour}`, {
+      headers: { Authorization: 'Bearer ' + token }
+    }).then(r => r.ok ? r.json() : null),
+    fetch('/api/buddy-widget/notification-count', {
+      headers: { Authorization: 'Bearer ' + token }
+    }).then(r => r.ok ? r.json() : null),
+  ]).then(([ctx, notif]) => {
+    if (!ctx?.success) return;
+
+    // Greeting subtitle
+    const parts = [];
+    if (ctx.isEveningTime && !ctx.eveningCheckinDone) parts.push('Evening check-in waiting');
+    else if (!ctx.morningCheckinDone && localHour < 12)  parts.push('Morning check-in waiting');
+    if (ctx.incompleteTaskCount > 0) parts.push(`${ctx.incompleteTaskCount} open task${ctx.incompleteTaskCount === 1 ? '' : 's'}`);
+    if (parts.length) {
+      document.getElementById('greetingSubText').textContent = parts.join(' · ');
+    } else {
+      document.getElementById('greetingSubText').textContent = 'All caught up ✓';
+      document.querySelector('.greeting-dot').style.background = '#5BA4A4';
+    }
+
+    // Stats strip
+    const tasksVal = document.getElementById('chipTasksVal');
+    const triageVal = document.getElementById('chipTriageVal');
+    tasksVal.textContent = ctx.incompleteTaskCount ?? '—';
+    triageVal.textContent = ctx.unclassifiedCount ?? '—';
+
+    // Buddy card subtitle
+    const buddySub = document.getElementById('buddySub');
+    if (ctx.hasNewBuddyMessage) {
+      buddySub.textContent = 'New message ✦';
+      buddySub.className = 'card-sub accent';
+    } else if (ctx.isEveningTime && !ctx.eveningCheckinDone) {
+      buddySub.textContent = 'Evening check-in ready';
+      buddySub.className = 'card-sub accent';
+    } else if (!ctx.morningCheckinDone && localHour < 12) {
+      buddySub.textContent = 'Morning check-in ready';
+      buddySub.className = 'card-sub accent';
+    } else {
+      buddySub.textContent = 'Your AI coach';
+    }
+
+    // Tasks card badge
+    if (ctx.incompleteTaskCount > 0) {
+      const b = document.getElementById('tasksBadge');
+      b.textContent = ctx.incompleteTaskCount > 99 ? '99+' : ctx.incompleteTaskCount;
+      b.classList.remove('hidden');
+    }
+
+    // Tasks subtitle
+    document.getElementById('tasksSub').textContent =
+      ctx.incompleteTaskCount === 0 ? 'All done ✓' :
+      `${ctx.incompleteTaskCount} open`;
+
+    // Money badge for untriaged
+    if (notif?.count > 0) {
+      const mb = document.getElementById('moneyBadge');
+      mb.textContent = notif.count > 99 ? '99+' : notif.count;
+      mb.classList.remove('hidden');
+      document.getElementById('moneySub').textContent = `${notif.count} to review`;
+    }
+
+    // Routines subtitle
+    if (ctx.routineMissed) {
+      const rs = document.getElementById('routinesSub');
+      rs.textContent = ctx.routineName ? `Missed: ${ctx.routineName}` : 'Routine needs attention';
+      rs.className = 'card-sub accent';
+    }
+
+    document.getElementById('statsStrip').style.display = 'flex';
+
+  }).catch(() => {
+    // Context load failed — still show page, just no live data
+    document.getElementById('greetingSubText').textContent = 'Ready when you are.';
+  });
+
+  // ── Spend today ────────────────────────────────────────────────────────────
+  fetch('/api/money/expenses/today', { headers: { Authorization: 'Bearer ' + token } })
+    .then(r => r.ok ? r.json() : null)
+    .then(data => {
+      if (data?.total != null) {
+        const amt = parseFloat(data.total).toFixed(2);
+        document.getElementById('chipSpendVal').textContent = `$${amt}`;
+        // Only override money card sub if there's no triage badge showing
+        const mb = document.getElementById('moneyBadge');
+        if (mb.classList.contains('hidden')) {
+          document.getElementById('moneySub').textContent = `$${amt} today`;
+        }
+      }
+    })
+    .catch(() => {});
+
+})();
+</script>
+</body>
+</html>

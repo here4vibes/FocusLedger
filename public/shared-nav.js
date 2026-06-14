@@ -166,9 +166,11 @@
     nav.setAttribute('aria-label', 'Sidebar navigation');
     nav.setAttribute('aria-hidden', 'false');
 
-    // Brand header
-    var brand = document.createElement('div');
+    // Brand header — links to home
+    var brand = document.createElement('a');
+    brand.href = '/app';
     brand.className = 'shared-sidebar-brand';
+    brand.style.textDecoration = 'none';
     brand.innerHTML = '<img src="/icons/fl-icon.svg" style="height:28px;width:auto;display:block;flex-shrink:0" alt=""> <span style="font-weight:700;color:rgba(255,255,255,0.95)">Focus</span><span style="font-weight:400;color:#f0b429">Ledger</span>';
     brand.style.display = 'flex';
     brand.style.alignItems = 'center';
@@ -235,7 +237,7 @@
     bar.setAttribute('role', 'banner');
 
     var logoLink = document.createElement('a');
-    logoLink.href = '/app/tasks';
+    logoLink.href = '/app';
     logoLink.className = 'shared-top-logo';
     logoLink.setAttribute('aria-label', 'FocusLedger home');
 
