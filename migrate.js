@@ -133,6 +133,42 @@ async function runCoreMigrations(client) {
       console.warn('[migrate] expenses patch skipped:', e.message);
     }
   }
+
+  // buddy_daily_plans: Prisma created with plan_json JSONB; migration added individual columns
+  // that may never have run if the folder runner was blocked by earlier failures.
+  const buddyPlanPatches = [
+    `ALTER TABLE buddy_daily_plans ADD COLUMN IF NOT EXISTS task_1_id       INT`,
+    `ALTER TABLE buddy_daily_plans ADD COLUMN IF NOT EXISTS task_1_reason   TEXT`,
+    `ALTER TABLE buddy_daily_plans ADD COLUMN IF NOT EXISTS task_2_id       INT`,
+    `ALTER TABLE buddy_daily_plans ADD COLUMN IF NOT EXISTS task_2_reason   TEXT`,
+    `ALTER TABLE buddy_daily_plans ADD COLUMN IF NOT EXISTS task_3_id       INT`,
+    `ALTER TABLE buddy_daily_plans ADD COLUMN IF NOT EXISTS task_3_reason   TEXT`,
+    `ALTER TABLE buddy_daily_plans ADD COLUMN IF NOT EXISTS accepted         BOOLEAN NOT NULL DEFAULT false`,
+    `ALTER TABLE buddy_daily_plans ADD COLUMN IF NOT EXISTS tasks_completed  INT NOT NULL DEFAULT 0`,
+    `DO $$
+     BEGIN
+       IF NOT EXISTS (
+         SELECT 1 FROM pg_constraint
+         WHERE conrelid = 'buddy_daily_plans'::regclass
+           AND contype = 'u'
+           AND conname = 'buddy_daily_plans_user_id_plan_date_key'
+       ) THEN
+         DELETE FROM buddy_daily_plans a
+         USING buddy_daily_plans b
+         WHERE a.user_id = b.user_id
+           AND a.plan_date IS NOT DISTINCT FROM b.plan_date
+           AND a.id < b.id;
+         ALTER TABLE buddy_daily_plans
+           ADD CONSTRAINT buddy_daily_plans_user_id_plan_date_key
+           UNIQUE (user_id, plan_date);
+       END IF;
+     END$$`,
+  ];
+  for (const sql of buddyPlanPatches) {
+    try { await client.query(sql); } catch (e) {
+      console.warn('[migrate] buddy_daily_plans patch skipped:', e.message);
+    }
+  }
 }
 
 /**

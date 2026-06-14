@@ -198,6 +198,44 @@
     }
     .card-badge.hidden { display: none; }
 
+    /* ── Quick actions row ────────────────────────────────────── */
+    .quick-wrap {
+      padding: 20px 16px 0;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    .quick-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.09em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+    .quick-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .qa-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 10px 16px;
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 99px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--navy);
+      text-decoration: none;
+      cursor: pointer;
+      box-shadow: 0 1px 4px rgba(1,30,92,0.06);
+      transition: background 0.12s, box-shadow 0.12s;
+    }
+    .qa-btn:hover { background: var(--cream2); box-shadow: 0 3px 10px rgba(1,30,92,0.1); }
+    .qa-btn:active { transform: scale(0.96); }
+
     /* ── Loading skeleton ─────────────────────────────────────── */
     .skel {
       display: inline-block;
@@ -312,6 +350,22 @@
       </div>
     </a>
 
+  </div>
+
+  <!-- Quick actions -->
+  <div class="quick-wrap">
+    <div class="quick-label">Quick actions</div>
+    <div class="quick-row">
+      <a class="qa-btn" href="/app/focus">
+        <span>🍅</span> Focus Timer
+      </a>
+      <a class="qa-btn" href="/app/buddy?tool=brain-dump">
+        <span>🧠</span> Brain Dump
+      </a>
+      <a class="qa-btn" href="/app/buddy?tool=dopamine-menu">
+        <span>⚡</span> Dopamine Menu
+      </a>
+    </div>
   </div>
 
 </div>

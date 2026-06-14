@@ -850,6 +850,19 @@
         <a href="/app/tasks">← Back to tasks</a>
     </div>
 
+    <!-- Task picker (no-taskId entry from home hub) -->
+    <div id="task-picker" style="display:none; position:fixed; inset:0; background:var(--cream-warm); z-index:200; overflow-y:auto; padding: 32px 20px 80px; font-family:'DM Sans',sans-serif;">
+        <div style="max-width:520px; margin:0 auto;">
+            <a href="/app" style="font-size:0.85rem; color:var(--text-muted); text-decoration:none; display:inline-flex; align-items:center; gap:4px; margin-bottom:24px;">← Home</a>
+            <h2 style="font-family:'Space Grotesk',sans-serif; font-size:1.5rem; color:var(--navy); margin-bottom:6px;">Focus Timer</h2>
+            <p style="font-size:0.9rem; color:var(--text-muted); margin-bottom:24px;">Pick a task to focus on, or jump straight into a Pomodoro.</p>
+            <div id="picker-tasks" style="display:flex; flex-direction:column; gap:10px; margin-bottom:20px;"></div>
+            <button id="picker-notask" style="width:100%; padding:14px; background:transparent; border:2px dashed var(--border); border-radius:12px; font-size:0.9rem; color:var(--text-muted); cursor:pointer; font-family:inherit;">
+                🍅 Start Pomodoro without a task
+            </button>
+        </div>
+    </div>
+
     <!-- Focus app -->
     <div id="focus-app">
 
@@ -965,12 +978,48 @@ const AUDIO_TRACKS = {
 
     const authHeader = 'Bearer ' + token;
 
+    // ── Task picker (entry from /app/focus with no taskId) ─────────────────────
+    function showTaskPicker() {
+        document.getElementById('loading').classList.add('hidden');
+        const picker = document.getElementById('task-picker');
+        picker.style.display = 'block';
+
+        fetch('/api/tasks?limit=20&completed=false', { headers: { Authorization: authHeader } })
+            .then(r => r.ok ? r.json() : { tasks: [] })
+            .then(data => {
+                const tasks = (data.tasks || data || []).slice(0, 10);
+                const container = document.getElementById('picker-tasks');
+                if (!tasks.length) {
+                    container.innerHTML = '<p style="font-size:0.85rem;color:var(--text-muted);">No open tasks right now.</p>';
+                    return;
+                }
+                tasks.forEach(t => {
+                    const btn = document.createElement('button');
+                    btn.style.cssText = 'width:100%;text-align:left;padding:14px 16px;background:white;border:1px solid var(--border);border-radius:12px;font-size:0.9rem;color:var(--navy);cursor:pointer;font-family:inherit;line-height:1.3;';
+                    btn.textContent = t.title || t.name || 'Untitled task';
+                    btn.addEventListener('click', () => {
+                        window.location.href = '/app/focus/' + t.id;
+                    });
+                    container.appendChild(btn);
+                });
+            })
+            .catch(() => {
+                document.getElementById('picker-tasks').innerHTML =
+                    '<p style="font-size:0.85rem;color:var(--text-muted);">Couldn\'t load tasks.</p>';
+            });
+
+        document.getElementById('picker-notask').addEventListener('click', () => {
+            // Start focus timer with a synthetic task-less session
+            window.location.href = '/app/focus/free';
+        });
+    }
+
     // ── Task ID from URL ───────────────────────────────────────────────────────
     const pathParts = window.location.pathname.split('/');
     const taskId = pathParts[pathParts.length - 1];
 
     if (!taskId || taskId === 'focus') {
-        window.location.replace('/app');
+        showTaskPicker();
         return;
     }
 
@@ -987,6 +1036,8 @@ const AUDIO_TRACKS = {
             .catch(() => { window.location.replace('/app'); });
         return;
     }
+
+    const freeMode = taskId === 'free';
 
     // ── State ───────────────────────────────────────────────────────────────────
     let sessionId      = null;
@@ -1217,35 +1268,39 @@ const AUDIO_TRACKS = {
         const err = document.getElementById('focus-error');
 
         try {
-            const res = await fetch('/api/tasks/' + taskId, {
-                headers: { Authorization: authHeader }
-            });
+            if (freeMode) {
+                document.getElementById('task-title').textContent = 'Free Focus';
+            } else {
+                const res = await fetch('/api/tasks/' + taskId, {
+                    headers: { Authorization: authHeader }
+                });
 
-            if (res.status === 404) {
-                document.getElementById('loading').classList.add('hidden');
-                document.getElementById('focus-error-title').textContent = 'Task not found';
-                document.getElementById('focus-error-msg').textContent  = 'This task may have been deleted.';
-                err.classList.add('visible');
-                return;
-            }
-            if (res.status === 403 || res.status === 401) {
-                document.getElementById('loading').classList.add('hidden');
-                document.getElementById('focus-error-title').textContent = 'Access denied';
-                document.getElementById('focus-error-msg').textContent  = "You don't own this task.";
-                err.classList.add('visible');
-                return;
-            }
-            if (!res.ok) throw new Error('Task fetch failed');
+                if (res.status === 404) {
+                    document.getElementById('loading').classList.add('hidden');
+                    document.getElementById('focus-error-title').textContent = 'Task not found';
+                    document.getElementById('focus-error-msg').textContent  = 'This task may have been deleted.';
+                    err.classList.add('visible');
+                    return;
+                }
+                if (res.status === 403 || res.status === 401) {
+                    document.getElementById('loading').classList.add('hidden');
+                    document.getElementById('focus-error-title').textContent = 'Access denied';
+                    document.getElementById('focus-error-msg').textContent  = "You don't own this task.";
+                    err.classList.add('visible');
+                    return;
+                }
+                if (!res.ok) throw new Error('Task fetch failed');
 
-            const data = await res.json();
-            const task = data.task || data;
+                const data = await res.json();
+                const task = data.task || data;
 
-            document.getElementById('task-title').textContent = task.title || '(Untitled task)';
+                document.getElementById('task-title').textContent = task.title || '(Untitled task)';
 
-            if (task.duration_minutes === 50) {
-                selectDuration(50);
-            } else if (task.duration_minutes === 90) {
-                selectDuration(90);
+                if (task.duration_minutes === 50) {
+                    selectDuration(50);
+                } else if (task.duration_minutes === 90) {
+                    selectDuration(90);
+                }
             }
 
             // Load saved preferences (activates ambient if previously on)
@@ -1277,6 +1332,7 @@ const AUDIO_TRACKS = {
 
     // ── Start focus session via API ───────────────────────────────────────────
     async function startSession() {
+        if (freeMode) return; // no session tracking for task-less focus
         try {
             const plannedMinutes = Math.round(timerSecs / 60);
             const res = await fetch('/api/v1/focus-sessions/start', {
