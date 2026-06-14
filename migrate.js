@@ -107,6 +107,32 @@ async function runCoreMigrations(client) {
       console.warn('[migrate] plaid_accounts patch skipped:', e.message);
     }
   }
+
+  // expenses.plaid_transaction_id: Prisma created this as INTEGER but Plaid IDs are strings.
+  // Convert unconditionally (DO $$ guards against re-running on already-VARCHAR columns).
+  const expensesPatches = [
+    `ALTER TABLE expenses ADD COLUMN IF NOT EXISTS description TEXT`,
+    `ALTER TABLE expenses ADD COLUMN IF NOT EXISTS plaid_transaction_id VARCHAR(255)`,
+    `DO $$
+     BEGIN
+       IF EXISTS (
+         SELECT 1 FROM information_schema.columns
+         WHERE table_name = 'expenses' AND column_name = 'plaid_transaction_id'
+           AND data_type = 'integer'
+       ) THEN
+         DROP INDEX IF EXISTS expenses_plaid_tx_id_unique;
+         ALTER TABLE expenses ALTER COLUMN plaid_transaction_id TYPE VARCHAR(255)
+           USING plaid_transaction_id::TEXT;
+       END IF;
+     END$$`,
+    `CREATE UNIQUE INDEX IF NOT EXISTS expenses_plaid_tx_id_unique
+       ON expenses (plaid_transaction_id) WHERE plaid_transaction_id IS NOT NULL`,
+  ];
+  for (const sql of expensesPatches) {
+    try { await client.query(sql); } catch (e) {
+      console.warn('[migrate] expenses patch skipped:', e.message);
+    }
+  }
 }
 
 /**
