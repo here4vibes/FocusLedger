@@ -16,3 +16,17 @@ focusledger.zip
 test-results/
 smoke-report/
 playwright-report/
+
+# iOS build artifacts (Xcode project itself is committed)
+ios/App/build/
+ios/App/Pods/
+ios/App/output/
+ios/DerivedData/
+ios/App/App/public/
+*.xcuserstate
+xcuserdata/
+*.ipa
+
+# SPM cache (local only — CI uses --clonedSourcePackagesDirPath)
+.build/
+

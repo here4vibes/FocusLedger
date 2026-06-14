@@ -68,7 +68,10 @@ module.exports = {
             AND column_name = 'mood'
             AND data_type IN ('integer', 'bigint', 'smallint')
         ) THEN
-          -- Set all existing INT mood values to NULL (they're not valid strings anyway)
+          -- Prisma created mood as INT NOT NULL — drop the constraint before
+          -- changing the type, otherwise USING NULL violates the NOT NULL check.
+          ALTER TABLE buddy_daily_plans ALTER COLUMN mood DROP NOT NULL;
+          ALTER TABLE buddy_daily_plans ALTER COLUMN mood DROP DEFAULT;
           ALTER TABLE buddy_daily_plans ALTER COLUMN mood TYPE VARCHAR(50) USING NULL;
         END IF;
       END $$

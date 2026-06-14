@@ -61,6 +61,7 @@ router.get('/routines',  (_, res) => res.sendFile(pub('routines.html')));
 router.get('/settings',  (_, res) => res.sendFile(pub('settings.html')));
 router.get('/ideas',     (_, res) => res.sendFile(pub('ideas.html')));
 router.get('/values',    (_, res) => res.sendFile(pub('values.html')));
+router.get('/insights',  (_, res) => res.sendFile(pub('insights.html')));
 router.get('/calendar',  (_, res) => res.sendFile(pub('calendar.html')));
 router.get('/email',     (_, res) => res.sendFile(pub('email.html')));
 router.get('/journal',   (_, res) => res.sendFile(pub('journal.html')));
