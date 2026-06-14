@@ -123,6 +123,8 @@ router.get('/buddy',        (_, res) => res.redirect(301, '/app/buddy'));
 
 router.get('/app/checkin',  (_, res) => res.sendFile(pub('checkin.html')));
 router.get('/app/checkin/evening', (_, res) => res.sendFile(pub('checkin-evening.html')));
+// /app/focus (no taskId) → task picker mode, handled client-side
+router.get('/app/focus', (_, res) => res.sendFile(pub('app/focus.html')));
 router.get('/app/focus/:taskId', (_, res) => {
     // Validate taskId looks like a UUID before serving the focus page.
     // Auth + task ownership is handled client-side in the focus page.

@@ -1030,7 +1030,7 @@
                     <button class="form-skip-link" id="formSkipLink" type="button">Skip →</button>
                 </div>
             </div>
-            <div class="form-checkin-heading">Morning check-in</div>
+            <div class="form-checkin-heading" id="formCheckinHeading">Morning check-in</div>
 
             <!-- Mood -->
             <div>
@@ -1144,6 +1144,10 @@
         }
         function getLocalHour() { return new Date().getHours(); }
         var isEvening = getLocalHour() >= 17;
+        function checkinLabel() {
+            var h = getLocalHour();
+            return h < 12 ? 'Morning check-in' : h < 17 ? 'Afternoon check-in' : 'Daily plan';
+        }
 
         // ── API helpers ───────────────────────────────────────────────────────
         function apiFetch(url, opts) {
@@ -1348,6 +1352,16 @@
                 hide('loadingState');
                 renderPage(data, sessionStatusData);
                 show('buddyContent');
+                // Update static form heading to match time of day
+                var fh = el('formCheckinHeading');
+                if (fh) fh.textContent = checkinLabel();
+                // Handle ?tool= deep links from home hub quick actions
+                var urlTool = new URLSearchParams(window.location.search).get('tool');
+                if (urlTool === 'brain-dump') {
+                    setTimeout(function() { var b = el('brainDumpBtn'); if (b) b.click(); }, 400);
+                } else if (urlTool === 'dopamine-menu') {
+                    setTimeout(function() { var b = el('dopamineMenuBtn'); if (b) b.click(); }, 400);
+                }
             })
             .catch(function(err) {
                 if (err === 'redirecting') return; // intentional redirect, not an error
@@ -1469,7 +1483,7 @@
         // ── Morning: mood check-in + plan display ─────────────────────────────
         function renderMorningCheckin(data) {
             var html = '<div class="card" id="morningCard">';
-            html += '<div class="card-label">Morning check-in</div>';
+            html += '<div class="card-label">' + checkinLabel() + '</div>';
 
             // Mood selector (always shown before accepting plan)
             var hourLabel = getLocalHour() < 12 ? 'morning' : getLocalHour() < 17 ? 'afternoon' : 'evening';
@@ -1564,7 +1578,7 @@
         function renderAcceptedMorning(data) {
             planAccepted = true;
             var html = '<div class="card">';
-            html += '<div class="card-label">Morning check-in</div>';
+            html += '<div class="card-label">' + checkinLabel() + '</div>';
             html += '<div class="plan-accepted-badge">🎯 Plan locked in for today</div>';
 
             if (data.dailyPlan) {
@@ -2384,7 +2398,7 @@
 
         function buildAcceptedCard(plan) {
             var html = '<div class="card">';
-            html += '<div class="card-label">Morning check-in</div>';
+            html += '<div class="card-label">' + checkinLabel() + '</div>';
             html += '<div class="plan-accepted-badge">🎯 Plan locked in for today</div>';
             html += '<div class="plan-slots">';
             for (var i = 1; i <= 3; i++) {

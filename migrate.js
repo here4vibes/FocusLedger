@@ -65,34 +65,45 @@ async function migrate() {
  * These use CREATE IF NOT EXISTS so they're safe to run repeatedly.
  */
 async function runCoreMigrations(client) {
+  // Every statement in this function uses its own try/catch so that a failure
+  // in any one patch never prevents the remaining patches from running.
+
   // Users table with subscription support
-  // Used by Polsia for syncing end-user subscription status
-  await client.query(`
-    CREATE TABLE IF NOT EXISTS users (
-      id SERIAL PRIMARY KEY,
-      email VARCHAR(255) NOT NULL,
-      name VARCHAR(255),
-      password_hash VARCHAR(255),
-      created_at TIMESTAMPTZ DEFAULT NOW(),
-      updated_at TIMESTAMPTZ DEFAULT NOW(),
-      -- Subscription fields (synced by Polsia when customer subscribes)
-      stripe_subscription_id VARCHAR(255),
-      subscription_status VARCHAR(50),
-      subscription_plan VARCHAR(255),
-      subscription_expires_at TIMESTAMPTZ,
-      subscription_updated_at TIMESTAMPTZ
-    )
-  `);
+  try {
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS users (
+        id SERIAL PRIMARY KEY,
+        email VARCHAR(255) NOT NULL,
+        name VARCHAR(255),
+        password_hash VARCHAR(255),
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW(),
+        stripe_subscription_id VARCHAR(255),
+        subscription_status VARCHAR(50),
+        subscription_plan VARCHAR(255),
+        subscription_expires_at TIMESTAMPTZ,
+        subscription_updated_at TIMESTAMPTZ
+      )
+    `);
+  } catch (e) {
+    console.warn('[migrate] users table create skipped:', e.message);
+  }
 
-  // Unique constraint on email (required for UPSERT)
-  await client.query(`
-    CREATE UNIQUE INDEX IF NOT EXISTS users_email_unique_idx ON users (LOWER(email))
-  `);
+  try {
+    await client.query(`
+      CREATE UNIQUE INDEX IF NOT EXISTS users_email_unique_idx ON users (LOWER(email))
+    `);
+  } catch (e) {
+    console.warn('[migrate] users email index skipped:', e.message);
+  }
 
-  // Index for subscription lookups
-  await client.query(`
-    CREATE INDEX IF NOT EXISTS users_stripe_subscription_id_idx ON users (stripe_subscription_id)
-  `);
+  try {
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS users_stripe_subscription_id_idx ON users (stripe_subscription_id)
+    `);
+  } catch (e) {
+    console.warn('[migrate] users stripe index skipped:', e.message);
+  }
 
   // plaid_accounts balance columns — unconditional, each in its own try/catch
   // so a missing table (fresh DB) or already-existing column never blocks startup.
@@ -131,6 +142,77 @@ async function runCoreMigrations(client) {
   for (const sql of expensesPatches) {
     try { await client.query(sql); } catch (e) {
       console.warn('[migrate] expenses patch skipped:', e.message);
+    }
+  }
+
+  // buddy_daily_plans: ensure table exists with the correct schema.
+  // CREATE TABLE first (handles fresh DBs and Prisma-schema DBs alike),
+  // then ALTER to add any columns the old Prisma schema was missing.
+  const buddyPlanPatches = [
+    // Step 1: create with correct schema if table is missing entirely
+    `CREATE TABLE IF NOT EXISTS buddy_daily_plans (
+       id              SERIAL PRIMARY KEY,
+       user_id         INT  NOT NULL,
+       plan_date       DATE,
+       mood            VARCHAR(50),
+       task_1_id       INT,
+       task_1_reason   TEXT,
+       task_2_id       INT,
+       task_2_reason   TEXT,
+       task_3_id       INT,
+       task_3_reason   TEXT,
+       accepted        BOOLEAN NOT NULL DEFAULT false,
+       tasks_completed INT     NOT NULL DEFAULT 0,
+       created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+     )`,
+    // Step 2: add plan_date if Prisma created it as 'date'
+    `DO $$ BEGIN
+       IF EXISTS (
+         SELECT 1 FROM information_schema.columns
+         WHERE table_name='buddy_daily_plans' AND column_name='date'
+       ) AND NOT EXISTS (
+         SELECT 1 FROM information_schema.columns
+         WHERE table_name='buddy_daily_plans' AND column_name='plan_date'
+       ) THEN
+         ALTER TABLE buddy_daily_plans RENAME COLUMN "date" TO plan_date;
+       END IF;
+     END $$`,
+    `ALTER TABLE buddy_daily_plans ADD COLUMN IF NOT EXISTS plan_date      DATE`,
+    // Step 3: add task slot columns (were missing when table used plan_json)
+    `ALTER TABLE buddy_daily_plans ADD COLUMN IF NOT EXISTS task_1_id       INT`,
+    `ALTER TABLE buddy_daily_plans ADD COLUMN IF NOT EXISTS task_1_reason   TEXT`,
+    `ALTER TABLE buddy_daily_plans ADD COLUMN IF NOT EXISTS task_2_id       INT`,
+    `ALTER TABLE buddy_daily_plans ADD COLUMN IF NOT EXISTS task_2_reason   TEXT`,
+    `ALTER TABLE buddy_daily_plans ADD COLUMN IF NOT EXISTS task_3_id       INT`,
+    `ALTER TABLE buddy_daily_plans ADD COLUMN IF NOT EXISTS task_3_reason   TEXT`,
+    `ALTER TABLE buddy_daily_plans ADD COLUMN IF NOT EXISTS accepted         BOOLEAN NOT NULL DEFAULT false`,
+    `ALTER TABLE buddy_daily_plans ADD COLUMN IF NOT EXISTS tasks_completed  INT NOT NULL DEFAULT 0`,
+    // Step 4: ensure UNIQUE(user_id, plan_date) — required for ON CONFLICT clause
+    `DO $$
+     BEGIN
+       IF NOT EXISTS (
+         SELECT 1 FROM pg_constraint
+         WHERE conrelid = 'buddy_daily_plans'::regclass
+           AND contype = 'u'
+           AND conname = 'buddy_daily_plans_user_id_plan_date_key'
+       ) THEN
+         DELETE FROM buddy_daily_plans a
+         USING buddy_daily_plans b
+         WHERE a.user_id = b.user_id
+           AND a.plan_date IS NOT DISTINCT FROM b.plan_date
+           AND a.id < b.id;
+         BEGIN
+           ALTER TABLE buddy_daily_plans
+             ADD CONSTRAINT buddy_daily_plans_user_id_plan_date_key
+             UNIQUE (user_id, plan_date);
+         EXCEPTION WHEN duplicate_object THEN NULL;
+         END;
+       END IF;
+     END $$`,
+  ];
+  for (const sql of buddyPlanPatches) {
+    try { await client.query(sql); } catch (e) {
+      console.warn('[migrate] buddy_daily_plans patch skipped:', e.message);
     }
   }
 }
