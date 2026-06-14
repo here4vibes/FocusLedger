@@ -1,0 +1,103 @@
+name: iOS Build & TestFlight
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      upload:
+        type: boolean
+        default: true
+        description: "Upload to TestFlight after build"
+
+jobs:
+  build:
+    name: Build iOS & Upload
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Copy web assets into iOS project
+        run: npx cap copy ios
+
+      - name: Set build number to GitHub run number
+        run: |
+          /usr/libexec/PlistBuddy -c \
+            "Set :CFBundleVersion ${{ github.run_number }}" \
+            ios/App/App/Info.plist
+
+      - name: Write App Store Connect API key
+        env:
+          ASC_KEY_CONTENT: ${{ secrets.ASC_KEY_CONTENT }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+        run: |
+          mkdir -p ~/.private_keys
+          echo "$ASC_KEY_CONTENT" | base64 --decode \
+            > ~/.private_keys/AuthKey_${ASC_KEY_ID}.p8
+
+      - name: Resolve Swift Package dependencies
+        run: |
+          xcodebuild -resolvePackageDependencies \
+            -project ios/App/App.xcodeproj \
+            -scheme App \
+            -clonedSourcePackagesDirPath ~/.spm-cache
+
+      - name: Archive
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+        run: |
+          xcodebuild archive \
+            -project ios/App/App.xcodeproj \
+            -scheme App \
+            -configuration Release \
+            -archivePath "$RUNNER_TEMP/FocusLedger.xcarchive" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath ~/.private_keys/AuthKey_${ASC_KEY_ID}.p8 \
+            -authenticationKeyID "$ASC_KEY_ID" \
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID"
+
+      - name: Export & upload to TestFlight
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+        run: |
+          cat > "$RUNNER_TEMP/ExportOptions.plist" << 'PLIST'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key>
+            <string>app-store-connect</string>
+            <key>destination</key>
+            <string>upload</string>
+          </dict>
+          </plist>
+          PLIST
+
+          xcodebuild -exportArchive \
+            -archivePath "$RUNNER_TEMP/FocusLedger.xcarchive" \
+            -exportPath "$RUNNER_TEMP/output" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath ~/.private_keys/AuthKey_${ASC_KEY_ID}.p8 \
+            -authenticationKeyID "$ASC_KEY_ID" \
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID"
+
+      - name: Upload IPA as artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: FocusLedger-${{ github.run_number }}.ipa
+          path: "${{ runner.temp }}/output/*.ipa"
+          retention-days: 30
