@@ -406,7 +406,9 @@ async function getAccounts(req, res) {
       lastSynced: item.last_synced_at,
       accounts: (item.plaid_accounts || []).map(a => ({
         id: a.id,
+        account_id: a.account_id,
         name: a.name,
+        official_name: a.official_name,
         type: a.type,
         subtype: a.subtype,
         mask: a.mask,

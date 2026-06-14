@@ -42,11 +42,11 @@ function parseDatePart(text) {
   // "tomorrow"
   if (/^tomorrow(\b|$)/i.test(text)) {
     const d = new Date(today()); d.setDate(d.getDate() + 1);
-    return { date: fmt(d), hasNext: false };
+    return { date: fmtDateStr(d), hasNext: false };
   }
   // "today"
   if (/^today(\b|$)/i.test(text)) {
-    return { date: fmt(today()), hasNext: false };
+    return { date: fmtDateStr(today()), hasNext: false };
   }
 
   // "next monday" / "next fri" / "next tuesday"
@@ -56,7 +56,7 @@ function parseDatePart(text) {
     if (target !== undefined) {
       const t = today();
       t.setDate(t.getDate() + 7 + ((target - t.getDay() + 7) % 7));
-      return { date: fmt(t), hasNext: false };
+      return { date: fmtDateStr(t), hasNext: false };
     }
   }
 
@@ -68,13 +68,13 @@ function parseDatePart(text) {
       const m = text.match(/^in\b.*?(\b[0-9]+\b)/i);
       const n = m ? parseInt(m[1]) : 1;
       const d = new Date(today()); d.setDate(d.getDate() + n);
-      return { date: fmt(d), hasNext: false };
+      return { date: fmtDateStr(d), hasNext: false };
     }
     if (/^(week|weeks|w)$/.test(unit)) {
       const m = text.match(/^in\b.*?(\b[0-9]+)/i);
       const n = m ? parseInt(m[1]) : 1;
       const d = new Date(today()); d.setDate(d.getDate() + n * 7);
-      return { date: fmt(d), hasNext: false };
+      return { date: fmtDateStr(d), hasNext: false };
     }
   }
 
@@ -88,14 +88,14 @@ function parseDatePart(text) {
       // If it's the same day and it's already passed, next week
       const d = diff === 0 ? null : null; // will be handled as "next week"
       t.setDate(t.getDate() + diff);
-      return { date: fmt(t), hasNext: diff === 0 };
+      return { date: fmtDateStr(t), hasNext: diff === 0 };
     }
   }
 
   return null;
 }
 
-function fmt(d) {
+function fmtDateStr(d) {
   return d.toISOString().slice(0, 10);
 }
 
@@ -159,7 +159,7 @@ function parseNaturalLanguage(text) {
   if (dateResult && dateResult.hasNext) {
     const t = today();
     t.setDate(t.getDate() + ((DAY_MAP[clean.match(/^(sun|mon|tue|wed|thu|fri|sat|sunday|monday|tuesday|wednesday|thursday|friday|saturday)\b/i)?.[1].toLowerCase()] - t.getDay() + 7) % 7 || 7));
-    dateResult = { date: fmt(t), hasNext: false };
+    dateResult = { date: fmtDateStr(t), hasNext: false };
   }
 
   // Remove date phrases from clean title

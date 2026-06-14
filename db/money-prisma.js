@@ -103,14 +103,19 @@ async function getExpenses(pool, userId, period, localDate) {
     ORDER BY e.expense_date DESC, e.created_at DESC
   `;
   const { rows } = await pool.query(sql, vals);
-  return rows;
+  return rows.map(r => ({
+    ...r,
+    expense_date: r.expense_date
+      ? String(r.expense_date).slice(0, 10)
+      : null,
+  }));
 }
 
 // Fetch un-triaged Plaid expenses from last 7 days (amount desc, limit 10)
 async function getUntriagedExpenses(pool, userId, localDate) {
   const refDate = localDate || new Date().toISOString().split('T')[0];
   const cutoff = new Date(refDate + 'T00:00:00Z');
-  cutoff.setDate(cutoff.getDate() - 7);
+  cutoff.setDate(cutoff.getDate() - 30);
   const cutoffStr = cutoff.toISOString().split('T')[0];
 
   const sql = `
@@ -347,6 +352,26 @@ async function getPlaidItemsWithAccounts(pool, userId) {
     [userId]
   );
   if (!items.length) return [];
+
+  // Runtime repair: if any row has id = NULL (sequence migration hasn't run yet),
+  // assign a real integer now so buttons work immediately without waiting for a deploy.
+  for (const item of items) {
+    if (item.id == null) {
+      try {
+        const { rows: fixed } = await pool.query(
+          `UPDATE plaid_items
+           SET id = (SELECT COALESCE(MAX(id), 0) + 1 FROM plaid_items WHERE id IS NOT NULL)
+           WHERE user_id = $1 AND item_id = $2 AND id IS NULL
+           RETURNING id`,
+          [userId, item.item_id]
+        );
+        if (fixed.length > 0) item.id = fixed[0].id;
+      } catch (e) {
+        console.error('[plaid] runtime id repair failed for item_id', item.item_id, e.message);
+      }
+    }
+  }
+
   const { rows: accounts } = await pool.query(
     'SELECT * FROM plaid_accounts WHERE plaid_item_id = ANY($1)',
     [items.map(i => i.id)]
@@ -357,13 +382,35 @@ async function getPlaidItemsWithAccounts(pool, userId) {
 }
 
 // Upsert a plaid_item (called after token exchange)
+// Uses ON CONFLICT (item_id, user_id) to avoid duplicate rows when the user
+// reconnects the same bank. Falls back to INSERT-with-explicit-id if the
+// unique index doesn't exist yet (pre-migration environments).
 async function upsertPlaidItem(pool, userId, encryptedAccessToken, itemId, institutionName, institutionId) {
-  const { rows } = await pool.query(
-    `INSERT INTO plaid_items (user_id, access_token, item_id, institution_name, institution_id)
-     VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-    [userId, encryptedAccessToken, itemId, institutionName || 'Unknown Bank', institutionId || null]
-  );
-  return rows[0];
+  try {
+    const { rows } = await pool.query(
+      `INSERT INTO plaid_items (id, user_id, access_token, item_id, institution_name, institution_id)
+       VALUES ((SELECT COALESCE(MAX(id), 0) + 1 FROM plaid_items), $1, $2, $3, $4, $5)
+       ON CONFLICT (item_id, user_id) DO UPDATE SET
+         access_token     = EXCLUDED.access_token,
+         institution_name = EXCLUDED.institution_name,
+         institution_id   = EXCLUDED.institution_id
+       RETURNING *`,
+      [userId, encryptedAccessToken, itemId, institutionName || 'Unknown Bank', institutionId || null]
+    );
+    return rows[0];
+  } catch (e) {
+    if (e.code === '42P10' || e.message.includes('there is no unique constraint')) {
+      // Unique index not yet created — fall back to plain INSERT
+      const { rows } = await pool.query(
+        `INSERT INTO plaid_items (id, user_id, access_token, item_id, institution_name, institution_id)
+         VALUES ((SELECT COALESCE(MAX(id), 0) + 1 FROM plaid_items), $1, $2, $3, $4, $5)
+         RETURNING *`,
+        [userId, encryptedAccessToken, itemId, institutionName || 'Unknown Bank', institutionId || null]
+      );
+      return rows[0];
+    }
+    throw e;
+  }
 }
 
 // Delete a plaid_item (disconnect)
@@ -383,13 +430,20 @@ async function updateItemCursor(pool, itemId, cursor) {
 }
 
 // Upsert a Plaid account
-async function upsertPlaidAccount(pool, plaidItemId, userId, accountId, name, officialName, type, subtype, mask) {
+async function upsertPlaidAccount(pool, plaidItemId, userId, accountId, name, officialName, type, subtype, mask, currentBalance, availableBalance) {
   const { rows } = await pool.query(
-    `INSERT INTO plaid_accounts (plaid_item_id, user_id, account_id, name, official_name, type, subtype, mask)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-     ON CONFLICT (account_id) DO UPDATE SET name = EXCLUDED.name, mask = EXCLUDED.mask
+    `INSERT INTO plaid_accounts (plaid_item_id, user_id, account_id, name, official_name, type, subtype, mask, current_balance, available_balance, balance_updated_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())
+     ON CONFLICT (account_id) DO UPDATE SET
+       name = EXCLUDED.name,
+       mask = EXCLUDED.mask,
+       current_balance    = COALESCE(EXCLUDED.current_balance,    plaid_accounts.current_balance),
+       available_balance  = COALESCE(EXCLUDED.available_balance,  plaid_accounts.available_balance),
+       balance_updated_at = CASE WHEN EXCLUDED.current_balance IS NOT NULL THEN NOW() ELSE plaid_accounts.balance_updated_at END
      RETURNING *`,
-    [plaidItemId, userId, accountId, name, officialName || null, type, subtype || null, mask || null]
+    [plaidItemId, userId, accountId, name, officialName || null, type, subtype || null, mask || null,
+     currentBalance != null ? currentBalance : null,
+     availableBalance != null ? availableBalance : null]
   );
   return rows[0];
 }

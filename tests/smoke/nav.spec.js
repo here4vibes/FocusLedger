@@ -17,7 +17,8 @@ const PUBLIC_PAGES = ['/', '/pricing', '/adhd-tax', '/science'];
 for (const path of PUBLIC_PAGES) {
   test(`public nav is cream on ${path}`, async ({ page }) => {
     await page.goto(path);
-    await page.waitForSelector('#fl-public-nav', { timeout: 10000 });
+    // WHY 35s: nav is JS-injected; Render cold starts can take ~30s
+    await page.waitForSelector('#fl-public-nav', { timeout: 35000 });
 
     const bg = await page.locator('#fl-public-nav').evaluate(
       el => getComputedStyle(el).backgroundColor

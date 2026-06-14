@@ -93,6 +93,46 @@ async function runCoreMigrations(client) {
   await client.query(`
     CREATE INDEX IF NOT EXISTS users_stripe_subscription_id_idx ON users (stripe_subscription_id)
   `);
+
+  // plaid_accounts balance columns — unconditional, each in its own try/catch
+  // so a missing table (fresh DB) or already-existing column never blocks startup.
+  const balanceCols = [
+    `ALTER TABLE plaid_accounts ADD COLUMN IF NOT EXISTS current_balance    NUMERIC(12,2)`,
+    `ALTER TABLE plaid_accounts ADD COLUMN IF NOT EXISTS available_balance  NUMERIC(12,2)`,
+    `ALTER TABLE plaid_accounts ADD COLUMN IF NOT EXISTS balance_updated_at TIMESTAMPTZ`,
+    `CREATE UNIQUE INDEX IF NOT EXISTS plaid_accounts_account_id_unique ON plaid_accounts (account_id)`,
+  ];
+  for (const sql of balanceCols) {
+    try { await client.query(sql); } catch (e) {
+      console.warn('[migrate] plaid_accounts patch skipped:', e.message);
+    }
+  }
+
+  // expenses.plaid_transaction_id: Prisma created this as INTEGER but Plaid IDs are strings.
+  // Convert unconditionally (DO $$ guards against re-running on already-VARCHAR columns).
+  const expensesPatches = [
+    `ALTER TABLE expenses ADD COLUMN IF NOT EXISTS description TEXT`,
+    `ALTER TABLE expenses ADD COLUMN IF NOT EXISTS plaid_transaction_id VARCHAR(255)`,
+    `DO $$
+     BEGIN
+       IF EXISTS (
+         SELECT 1 FROM information_schema.columns
+         WHERE table_name = 'expenses' AND column_name = 'plaid_transaction_id'
+           AND data_type = 'integer'
+       ) THEN
+         DROP INDEX IF EXISTS expenses_plaid_tx_id_unique;
+         ALTER TABLE expenses ALTER COLUMN plaid_transaction_id TYPE VARCHAR(255)
+           USING plaid_transaction_id::TEXT;
+       END IF;
+     END$$`,
+    `CREATE UNIQUE INDEX IF NOT EXISTS expenses_plaid_tx_id_unique
+       ON expenses (plaid_transaction_id) WHERE plaid_transaction_id IS NOT NULL`,
+  ];
+  for (const sql of expensesPatches) {
+    try { await client.query(sql); } catch (e) {
+      console.warn('[migrate] expenses patch skipped:', e.message);
+    }
+  }
 }
 
 /**
@@ -139,12 +179,14 @@ async function runFolderMigrations(client) {
       console.log(`Migration complete: ${name}`);
     } catch (err) {
       await client.query('ROLLBACK');
-      throw new Error(`Migration failed (${name}): ${err.message}`);
+      // Log but don't crash — a stuck migration shouldn't prevent the server
+      // from starting with new code. The migration will be retried next deploy.
+      console.error(`[migrate] WARNING: migration "${name}" failed and was rolled back: ${err.message}`);
     }
   }
 }
 
 migrate().catch(err => {
-  console.error('Migration failed:', err.message);
+  console.error('Migration runner error:', err.message);
   process.exit(1);
 });

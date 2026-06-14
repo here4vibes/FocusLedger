@@ -265,9 +265,11 @@ async function syncTransactions(pool, item) {
   const accountMap = await getAccountMap(pool, item.id);
   const categoriesByName = await getCategoriesMap(pool);
 
+  let lastSyncAccounts = [];
   while (hasMore) {
     const response = await plaid.transactionsSync({ access_token: accessToken, cursor: cursor || undefined, count: 100 });
-    const { added: newTransactions, removed, next_cursor, has_more } = response.data;
+    const { added: newTransactions, removed, next_cursor, has_more, accounts: syncAccounts } = response.data;
+    if (syncAccounts && syncAccounts.length) lastSyncAccounts = syncAccounts;
 
     for (const tx of newTransactions) {
       if (tx.amount <= 0) continue;
@@ -293,21 +295,25 @@ async function syncTransactions(pool, item) {
       if (plaidTx && !tx.pending) {
         try {
           const expDate = String(tx.date).slice(0, 10);
-          const cols = ['user_id', 'amount', 'description', 'expense_date', 'source', 'plaid_transaction_id'];
-          const vals = [item.user_id, parseFloat(tx.amount), tx.merchant_name || tx.name || 'Unknown', expDate, 'plaid', tx.transaction_id];
-          if (plaidTx.category_id) { cols.push('category_id'); vals.push(plaidTx.category_id); }
-          const ph = vals.map((_, i) => `$${i + 1}`).join(', ');
-          const { rows: expRows } = await pool.query(
-            `INSERT INTO expenses (${cols.join(', ')}) VALUES (${ph}) ON CONFLICT (plaid_transaction_id) DO NOTHING RETURNING *`,
-            vals
-          );
-          let syncExpenseId = expRows[0]?.id;
-          if (!syncExpenseId && tx.transaction_id) {
-            const { rows: existingExp } = await pool.query(
-              'SELECT id FROM expenses WHERE plaid_transaction_id = $1',
+          // Pre-check for duplicate to avoid ON CONFLICT (which requires a UNIQUE INDEX)
+          let syncExpenseId = null;
+          if (tx.transaction_id) {
+            const { rows: dup } = await pool.query(
+              'SELECT id FROM expenses WHERE plaid_transaction_id = $1 LIMIT 1',
               [tx.transaction_id]
             );
-            syncExpenseId = existingExp[0]?.id;
+            syncExpenseId = dup[0]?.id || null;
+          }
+          if (!syncExpenseId) {
+            const cols = ['user_id', 'amount', 'description', 'expense_date', 'source', 'plaid_transaction_id'];
+            const vals = [item.user_id, parseFloat(tx.amount), tx.merchant_name || tx.name || 'Unknown', expDate, 'plaid', tx.transaction_id];
+            if (plaidTx.category_id) { cols.push('category_id'); vals.push(plaidTx.category_id); }
+            const ph = vals.map((_, i) => `$${i + 1}`).join(', ');
+            const { rows: expRows } = await pool.query(
+              `INSERT INTO expenses (${cols.join(', ')}) VALUES (${ph}) RETURNING id`,
+              vals
+            );
+            syncExpenseId = expRows[0]?.id || null;
           }
           if (syncExpenseId) {
             await pool.query(
@@ -337,6 +343,19 @@ async function syncTransactions(pool, item) {
   }
 
   await updateItemCursor(pool, item.id, cursor);
+
+  // Store account balances from last sync page so card can show them without a live Plaid call
+  for (const acc of lastSyncAccounts) {
+    if (acc.balances?.current != null || acc.balances?.available != null) {
+      await pool.query(
+        `UPDATE plaid_accounts
+         SET current_balance = $1, available_balance = $2, balance_updated_at = NOW()
+         WHERE account_id = $3 AND user_id = $4`,
+        [acc.balances.current ?? null, acc.balances.available ?? null, acc.account_id, item.user_id]
+      );
+    }
+  }
+
   console.log(`[Plaid] Synced item ${item.id} for user ${item.user_id}: ${added} new transactions`);
 
   if (billCandidates.length > 0) {
@@ -451,52 +470,75 @@ module.exports = function(pool) {
 
   router.use(requireAuth);
 
-  // GET /api/plaid/balances — returns live balances for all connected Plaid items
+  // GET /api/plaid/balances — live balances; falls back to DB cache if Plaid call fails
   router.get('/balances', async (req, res) => {
     try {
       const userId = req.user.id;
       const plaid = getPlaidClient();
-      if (!plaid) return res.status(503).json({ success: false, message: 'Bank sync not configured' });
 
-      const { rows: items } = await pool.query(
-        `SELECT pi.*, json_agg(json_build_object(
-           'account_id', pa.account_id, 'name', pa.name, 'type', pa.type, 'subtype', pa.subtype, 'mask', pa.mask
-         )) FILTER (WHERE pa.id IS NOT NULL) AS plaid_accounts
-         FROM plaid_items pi
-         LEFT JOIN plaid_accounts pa ON pa.plaid_item_id = pi.id
-         WHERE pi.user_id = $1
-         GROUP BY pi.id
+      // Always load DB accounts (needed for fallback and account_id → name mapping)
+      const { rows: dbAccounts } = await pool.query(
+        `SELECT pa.account_id, pa.name, pa.official_name, pa.type, pa.subtype, pa.mask,
+                pa.current_balance, pa.available_balance, pa.balance_updated_at,
+                pi.id AS item_id, pi.institution_name
+         FROM plaid_accounts pa
+         JOIN plaid_items pi ON pa.plaid_item_id = pi.id
+         WHERE pa.user_id = $1
          ORDER BY pi.created_at DESC`,
         [userId]
       );
 
-      const resultItems = [];
-      for (const item of items) {
-        const accessToken = decryptPlaidToken(item.access_token);
-        if (!accessToken) continue;
+      if (!dbAccounts.length) return res.json({ success: true, items: [] });
 
-        try {
-          const resp = await plaid.accountsBalanceGet({ access_token: accessToken });
-          const accounts = resp.data.accounts.map(a => ({
-            account_id: a.account_id,
-            name: a.name,
-            official_name: a.official_name,
-            type: a.type,
-            subtype: a.subtype,
-            mask: a.mask,
-            balances: {
-              available: a.balances.available,
-              current: a.balances.current,
-              iso_currency_code: a.balances.iso_currency_code,
-            },
-          }));
-          resultItems.push({ item_id: item.id, institution: item.institution_name, accounts });
-        } catch (e) {
-          console.warn('[Plaid] Balance fetch failed for item', item.id, ':', e.message);
+      // Group by item for the response shape the frontend expects
+      const byItem = {};
+      for (const a of dbAccounts) {
+        if (!byItem[a.item_id]) byItem[a.item_id] = { item_id: a.item_id, institution: a.institution_name, accounts: [] };
+        byItem[a.item_id].accounts.push({
+          account_id: a.account_id, name: a.name, official_name: a.official_name,
+          type: a.type, subtype: a.subtype, mask: a.mask,
+          balances: {
+            current: a.current_balance != null ? parseFloat(a.current_balance) : null,
+            available: a.available_balance != null ? parseFloat(a.available_balance) : null,
+          },
+          _from_cache: true,
+        });
+      }
+
+      // Try live Plaid call and overwrite cache entries that succeed
+      if (plaid) {
+        const { rows: items } = await pool.query(
+          'SELECT * FROM plaid_items WHERE user_id = $1 ORDER BY created_at DESC', [userId]
+        );
+        for (const item of items) {
+          const accessToken = decryptPlaidToken(item.access_token);
+          if (!accessToken) continue;
+          try {
+            const resp = await plaid.accountsBalanceGet({ access_token: accessToken });
+            const liveAccounts = resp.data.accounts.map(a => ({
+              account_id: a.account_id, name: a.name, official_name: a.official_name,
+              type: a.type, subtype: a.subtype, mask: a.mask,
+              balances: { available: a.balances.available, current: a.balances.current,
+                          iso_currency_code: a.balances.iso_currency_code },
+            }));
+            byItem[item.id] = { item_id: item.id, institution: item.institution_name, accounts: liveAccounts };
+            // Persist fresh balances to DB
+            for (const a of resp.data.accounts) {
+              if (a.balances.current != null || a.balances.available != null) {
+                pool.query(
+                  `UPDATE plaid_accounts SET current_balance=$1, available_balance=$2, balance_updated_at=NOW()
+                   WHERE account_id=$3 AND user_id=$4`,
+                  [a.balances.current ?? null, a.balances.available ?? null, a.account_id, userId]
+                ).catch(() => {});
+              }
+            }
+          } catch (e) {
+            console.warn('[Plaid] Live balance fetch failed for item', item.id, '(using cached):', e.message);
+          }
         }
       }
 
-      res.json({ success: true, items: resultItems });
+      res.json({ success: true, items: Object.values(byItem) });
     } catch (err) {
       console.error('[Plaid] Balances error:', err);
       res.status(500).json({ success: false, message: 'Failed to fetch balances' });
@@ -610,7 +652,8 @@ module.exports = function(pool) {
       const plaidItem = await upsertPlaidItem(pool, userId, encryptPlaidToken(access_token), item_id, institution_name || 'Unknown Bank', institution_id || null);
       const accountsResponse = await plaid.accountsGet({ access_token });
       for (const acc of accountsResponse.data.accounts) {
-        await upsertPlaidAccount(pool, plaidItem.id, userId, acc.account_id, acc.name, acc.official_name || null, acc.type, acc.subtype || null, acc.mask || null);
+        await upsertPlaidAccount(pool, plaidItem.id, userId, acc.account_id, acc.name, acc.official_name || null, acc.type, acc.subtype || null, acc.mask || null,
+          acc.balances?.current ?? null, acc.balances?.available ?? null);
       }
       syncTransactions(pool, plaidItem).catch(e => console.error('[Plaid] Initial sync error:', e.message));
       res.json({ success: true, message: 'Connected. Bringing in your transactions.', item_id: plaidItem.id, institution_name: plaidItem.institution_name });
@@ -753,25 +796,27 @@ module.exports = function(pool) {
           const tx = txRows[0];
           const expDate = tx.transaction_date ? String(tx.transaction_date).slice(0, 10) : new Date().toISOString().split('T')[0];
 
-          const cols = ['user_id', 'amount', 'description', 'expense_date', 'source'];
-          const vals = [userId, parseFloat(tx.amount), tx.description || tx.merchant_name || 'Unknown', expDate, 'plaid'];
-          if (tx.category_id != null) { cols.push('category_id'); vals.push(tx.category_id); }
-          if (tx.transaction_id) { cols.push('plaid_transaction_id'); vals.push(tx.transaction_id); }
-
-          const ph = vals.map((_, i) => `$${i + 1}`).join(', ');
-          const { rows: expRows } = await pool.query(
-            `INSERT INTO expenses (${cols.join(', ')}) VALUES (${ph}) ON CONFLICT (plaid_transaction_id) DO NOTHING RETURNING id`,
-            vals
-          );
-
-          // If conflict (expense already exists), find its id by plaid_transaction_id
-          let expenseId = expRows[0]?.id;
-          if (!expenseId && tx.transaction_id) {
-            const { rows: existing } = await pool.query(
-              'SELECT id FROM expenses WHERE plaid_transaction_id = $1',
+          // Check for an existing expense first to avoid relying on ON CONFLICT
+          let expenseId = null;
+          if (tx.transaction_id) {
+            const { rows: dup } = await pool.query(
+              'SELECT id FROM expenses WHERE plaid_transaction_id = $1 LIMIT 1',
               [tx.transaction_id]
             );
-            expenseId = existing[0]?.id;
+            expenseId = dup[0]?.id || null;
+          }
+
+          if (!expenseId) {
+            const cols = ['user_id', 'amount', 'description', 'expense_date', 'source'];
+            const vals = [userId, parseFloat(tx.amount), tx.description || tx.merchant_name || 'Unknown', expDate, 'plaid'];
+            if (tx.category_id != null) { cols.push('category_id'); vals.push(tx.category_id); }
+            if (tx.transaction_id) { cols.push('plaid_transaction_id'); vals.push(tx.transaction_id); }
+            const ph = vals.map((_, i) => `$${i + 1}`).join(', ');
+            const { rows: expRows } = await pool.query(
+              `INSERT INTO expenses (${cols.join(', ')}) VALUES (${ph}) RETURNING id`,
+              vals
+            );
+            expenseId = expRows[0]?.id || null;
           }
 
           if (expenseId) {

@@ -499,28 +499,6 @@
       <!-- populated by JS -->
     </div>
 
-    <!-- Reflection card -->
-    <div class="reflection-card" id="reflectionCard">
-      <div class="reflection-title" id="reflectionTitle">Just a moment…</div>
-      <div class="reflection-sub" id="reflectionSub">"Will this still matter to you tomorrow?"</div>
-      <div class="reflection-btns">
-        <button class="btn-reflection-add" id="btnReflectionAdd">Add to plan</button>
-        <button class="btn-reflection-skip" id="btnReflectionSkip">Log anyway</button>
-      </div>
-    </div>
-
-    <!-- Impulse toggle -->
-    <div class="impulse-row">
-      <div class="impulse-label">
-        Was this planned?
-        <small>Impulse data = patterns, not guilt</small>
-      </div>
-      <div class="toggle-wrap">
-        <button class="toggle-btn" id="btnYes">Yes</button>
-        <button class="toggle-btn" id="btnNo">Nope</button>
-      </div>
-    </div>
-
     <!-- Note + Date -->
     <div class="row-inputs">
       <input class="note-input" type="text" id="noteInput" placeholder="Note (optional)">
@@ -590,6 +568,17 @@
   </div>
 </div>
 
+<!-- REFLECTION MODAL — triggered by Log Spend when amount ≥ $25 -->
+<div class="delay-modal-overlay" id="reflectionModal">
+  <div class="delay-modal">
+    <div class="delay-emoji" id="reflectionEmoji">💭</div>
+    <div class="delay-title" id="reflectionTitle">Just a moment…</div>
+    <div class="delay-sub" id="reflectionSub">"Will this still matter to you tomorrow?"</div>
+    <button id="btnReflectionLog" style="width:100%;background:var(--navy,#011e5c);color:white;border:none;border-radius:12px;padding:0.9rem;font-family:'Space Grotesk',sans-serif;font-size:0.95rem;font-weight:700;cursor:pointer;min-height:48px;margin-bottom:0.75rem;">Log it anyway</button>
+    <button class="btn-cancel-delay" id="btnReflectionCancel">← Go back</button>
+  </div>
+</div>
+
 <!-- DELAY MODAL -->
 <div class="delay-modal-overlay" id="delayModal">
   <div class="delay-modal">
@@ -609,6 +598,9 @@
 // ─── Auth ────────────────────────────────────────────────────────────────────
 const token = localStorage.getItem('fl_token');
 if (!token) { window.location.href = '/login'; }
+
+// PlaidService calls this after reconnect/disconnect success
+window.onBankSyncStatusChanged = function() { if (typeof loadAccountCard === 'function') loadAccountCard(); };
 
 function api(path, opts = {}) {
   return fetch(path, {
@@ -648,14 +640,12 @@ const CAT_ICON_MAP = {
 };
 
 let selectedCat = 'other';
-let selectedImpulse = null;
 let currentPeriod = 'week';
 let untriagedList = [];
 let triageIndex = 0;
 let triageCatSelected = null;
 let nudgeConfig = { delayThreshold: 75, reflectionMin: 25 };
 let swipePlanned = 0, swipeImpulse = 0, swipeImpulseAmount = 0;
-let reflectionShown = false;
 let delayCountdownInterval = null;
 let delayRemainingSeconds = 0;
 let pendingExpenseData = null;
@@ -674,18 +664,13 @@ document.addEventListener('DOMContentLoaded', () => {
   checkPendingPlaid();
   loadExpenses(currentPeriod);
 
-  // Watch amount input for reflection card trigger
-  document.getElementById('amountInput').addEventListener('input', onAmountChange);
-
   // ── Button bindings (no inline onclick) ─────────────────────────────────
   document.getElementById('btnCheckIn').addEventListener('click', onCheckIn);
   document.getElementById('btnDismissAlert').addEventListener('click', dismissAlert);
   document.getElementById('btnTriageOpen').addEventListener('click', openTriageModal);
   document.getElementById('scanReceiptBtn').addEventListener('click', function() { openCapture('receipt'); });
-  document.getElementById('btnReflectionAdd').addEventListener('click', function() { proceedWithReflection(true); });
-  document.getElementById('btnReflectionSkip').addEventListener('click', function() { proceedWithReflection(false); });
-  document.getElementById('btnYes').addEventListener('click', function() { setImpulse(false); });
-  document.getElementById('btnNo').addEventListener('click', function() { setImpulse(true); });
+  document.getElementById('btnReflectionLog').addEventListener('click', function() { closeReflectionModal(); doSubmitExpense(); });
+  document.getElementById('btnReflectionCancel').addEventListener('click', function() { closeReflectionModal(); pendingExpenseData = null; });
   document.getElementById('btnSubmit').addEventListener('click', submitExpense);
   document.getElementById('tabWeek').addEventListener('click', function() { setPeriod('week', this); });
   document.getElementById('tabMonth').addEventListener('click', function() { setPeriod('month', this); });
@@ -819,47 +804,16 @@ async function loadAccountCard() {
     // Map from /api/money/accounts response format:
     // { connected, items: [{ id, institution, lastSynced, accounts }] }
     var items = r.items || [];
-    var firstItem = items[0];
+    // Prefer the first item that actually has accounts (duplicate items from
+    // failed connects have no accounts and would otherwise produce a blank balance)
+    var firstItem = items.find(function(i) { return (i.accounts || []).length > 0; }) || items[0];
     var lastSynced = firstItem && firstItem.lastSynced ? PlaidService.relativeTime(firstItem.lastSynced) : null;
     var accounts = firstItem ? (firstItem.accounts || []) : [];
     var primary = accounts.find(function(a) { return a.type === 'depository'; }) || accounts[0];
-    // Merge in live balance from /api/plaid/balances
-    if (primary) {
-      var dbAccountId = primary.id; // this is the DB row id, not Plaid account_id
-      // Find the account in balances by matching account name + type
-      var liveBalances = null;
-      for (var ai = 0; ai < accounts.length; ai++) {
-        var acc = accounts[ai];
-        // Try to match by name
-        for (var bi2 = 0; bi2 < (balances && balances.items ? balances.items.length : 0); bi2++) {
-          var bItem2 = balances.items[bi2];
-          for (var ba2 = 0; ba2 < (bItem2.accounts || []).length; ba2++) {
-            var bAcc2 = bItem2.accounts[ba2];
-            if (bAcc2.name === acc.name && bAcc2.type === acc.type) {
-              liveBalances = bAcc2.balances;
-              break;
-            }
-          }
-          if (liveBalances) break;
-        }
-        if (liveBalances) break;
-      }
-      if (primary._balances) {
-        // Already merged
-      }
-    }
     var balance = null;
-    if (primary && balances && balances.items) {
-      // Try to match primary account by name
-      outer: for (var i = 0; i < balances.items.length; i++) {
-        for (var j = 0; j < (balances.items[i].accounts || []).length; j++) {
-          var accBal = balances.items[i].accounts[j];
-          if (accBal.name === primary.name || accBal.name === (primary.official_name || primary.name)) {
-            balance = accBal.balances && accBal.balances.current != null ? fmt(accBal.balances.current) : null;
-            break outer;
-          }
-        }
-      }
+    if (primary && primary.account_id && balanceMap[primary.account_id]) {
+      var lb = balanceMap[primary.account_id];
+      balance = lb.current != null ? fmt(lb.current) : (lb.available != null ? fmt(lb.available) : null);
     }
     if (balance === null && primary && primary._balances) {
       balance = primary._balances.current != null ? fmt(primary._balances.current) : null;
@@ -869,6 +823,12 @@ async function loadAccountCard() {
     var mask = primary && primary.mask ? ' ••' + primary.mask : '';
     var syncedLine = lastSynced ? 'Updated ' + lastSynced : '';
     var itemId = firstItem ? firstItem.id : null;
+    // Diagnostic: if connected but the item has no usable id, Reconnect/Disconnect
+    // can't target it. Log the shape so the cause (data vs response) is visible.
+    if (firstItem && (itemId === null || itemId === undefined)) {
+      console.warn('[money] account connected but item id is missing. firstItem keys:',
+        Object.keys(firstItem), 'firstItem:', JSON.stringify(firstItem));
+    }
 
     var html = '<div class="dash-card">';
     html += '<div class="card-row">';
@@ -892,35 +852,68 @@ async function loadAccountCard() {
     html += '</div>';
     container.innerHTML = html;
 
+    // showFixedToast: uses the position:fixed #toast (always on-screen), not submitToast
+    function showFixedToast(msg, isError) {
+      var el = document.getElementById('toast');
+      if (!el) return;
+      el.textContent = msg;
+      el.className = isError ? 'error' : 'success';
+      el.style.display = 'block';
+      clearTimeout(el._ft);
+      el._ft = setTimeout(function() { el.style.display = 'none'; }, isError ? 4000 : 3000);
+    }
+
     var syncBtn = document.getElementById('money-sync-btn');
-    if (syncBtn && itemId) {
+    if (syncBtn) {
       syncBtn.addEventListener('click', async function() {
+        // Refresh works even if itemId is missing: the backend syncs ALL of the
+        // user's connected items when no item_id is provided.
         syncBtn.textContent = 'Syncing…';
         syncBtn.disabled = true;
         try {
-          await api('/api/plaid/sync', { method: 'POST', body: JSON.stringify({ item_id: itemId }) });
+          const sr = await api('/api/plaid/sync', { method: 'POST', body: JSON.stringify(itemId ? { item_id: itemId } : {}) });
           await Promise.all([loadAccountCard(), checkPendingPlaid()]);
+          if (!sr.success) {
+            showFixedToast(sr.message || 'Sync failed — try reconnecting your bank', true);
+          } else {
+            const n = sr.transactions_added || 0;
+            showFixedToast(n > 0 ? `✓ ${n} new transaction${n === 1 ? '' : 's'} ready` : '✓ Up to date', false);
+          }
         } catch (e) {
-          syncBtn.textContent = 'Refresh';
-          syncBtn.disabled = false;
+          showFixedToast('Sync failed — try reconnecting your bank', true);
         }
       });
     }
 
     var reconnBtn = document.getElementById('money-reconnect-btn');
-    if (reconnBtn && itemId) {
+    if (reconnBtn) {
       reconnBtn.addEventListener('click', function() {
+        if (!itemId) { showFixedToast('Account not found — try refreshing the page', true); return; }
         PlaidService.reconnectBankAccount(itemId, reconnBtn);
       });
     }
 
     var discBtn = document.getElementById('money-disconnect-btn');
     if (discBtn) {
-      discBtn.addEventListener('click', function() {
-        if (!itemId) return;
-        if (confirm('Disconnect this account? This will stop syncing transactions.')) {
-          PlaidService.disconnectBankAccount(itemId);
-          loadAccountCard();
+      discBtn.addEventListener('click', async function() {
+        if (!itemId) { showFixedToast('Account not found — try refreshing the page', true); return; }
+        if (!confirm('Disconnect this account? This will stop syncing transactions.')) return;
+        discBtn.textContent = 'Disconnecting…';
+        discBtn.disabled = true;
+        try {
+          const dr = await api('/api/plaid/items/' + itemId, { method: 'DELETE' });
+          if (dr.success) {
+            showFixedToast('✓ Account disconnected', false);
+            await loadAccountCard();
+          } else {
+            discBtn.textContent = 'Disconnect';
+            discBtn.disabled = false;
+            showFixedToast(dr.message || 'Disconnect failed — try again', true);
+          }
+        } catch(e) {
+          discBtn.textContent = 'Disconnect';
+          discBtn.disabled = false;
+          showFixedToast('Disconnect failed — try again', true);
         }
       });
     }
@@ -1216,6 +1209,9 @@ function getWeekStart(date) {
 }
 
 function formatDate(d) {
+  if (!d) return '';
+  if (typeof d === 'string') return d.slice(0, 10);
+  if (typeof d.toISOString !== 'function') return '';
   return d.toISOString().split('T')[0];
 }
 
@@ -1249,12 +1245,6 @@ function selectCat(slug) {
   });
   var t = document.getElementById('submitToast');
   if (t) { t.textContent = '✓ ' + slug + ' selected'; t.style.color = '#5BA4A4'; t.classList.add('visible'); setTimeout(function(){ t.classList.remove('visible'); t.textContent = '✓ Logged!'; t.style.color = ''; }, 3000); }
-}
-
-function setImpulse(isImpulse) {
-  selectedImpulse = isImpulse;
-  document.getElementById('btnYes').className = 'toggle-btn' + (!isImpulse ? ' active-no' : '');
-  document.getElementById('btnNo').className  = 'toggle-btn' + (isImpulse  ? ' active-yes' : '');
 }
 
 // ─── Nudge config + spending alerts ──────────────────────────────────────────
@@ -1293,42 +1283,18 @@ function onCheckIn() {
   openTriageModal();
 }
 
-// ─── Reflection card ─────────────────────────────────────────────────────────
-function onAmountChange() {
-  const amount = parseFloat(document.getElementById('amountInput').value) || 0;
-  checkReflectionCard(amount);
+// ─── Reflection modal ─────────────────────────────────────────────────────────
+function showReflectionModal(amount) {
+  document.getElementById('reflectionEmoji').textContent = amount >= 200 ? '🤔' : '💭';
+  document.getElementById('reflectionTitle').textContent = amount >= 200 ? 'Big spend ahead' : 'Just a moment…';
+  document.getElementById('reflectionSub').textContent   = amount >= 200
+    ? '"Will this still matter to you in a week?"'
+    : '"Will this still matter to you tomorrow?"';
+  document.getElementById('reflectionModal').classList.add('open');
 }
 
-function checkReflectionCard(amount) {
-  const card = document.getElementById('reflectionCard');
-  if (!card) return;
-
-  if (amount >= nudgeConfig.reflectionMin && !reflectionShown) {
-    reflectionShown = true;
-    const titleEl = document.getElementById('reflectionTitle');
-    const subEl   = document.getElementById('reflectionSub');
-    if (amount >= 200) {
-      titleEl.textContent = 'Big spend ahead';
-      subEl.textContent   = '"Will this still matter to you in a week?"';
-    } else {
-      titleEl.textContent = 'Just a moment…';
-      subEl.textContent   = '"Will this still matter to you tomorrow?"';
-    }
-    card.classList.add('visible');
-  } else if (amount < nudgeConfig.reflectionMin) {
-    reflectionShown = false;
-    card.classList.remove('visible');
-  }
-}
-
-function proceedWithReflection(addToPlan) {
-  const card = document.getElementById('reflectionCard');
-  card.classList.remove('visible');
-  if (addToPlan) {
-    selectedImpulse = false;
-    setImpulse(false);
-  }
-  doSubmitExpense();
+function closeReflectionModal() {
+  document.getElementById('reflectionModal').classList.remove('open');
 }
 
 // ─── Delay modal ─────────────────────────────────────────────────────────────
@@ -1395,7 +1361,6 @@ function closeDelayModal() {
   if (delayCountdownInterval) clearInterval(delayCountdownInterval);
   delayCountdownInterval = null;
   document.getElementById('delayModal').classList.remove('open');
-  reflectionShown = false;
 }
 
 // ─── Submit expense ───────────────────────────────────────────────────────────
@@ -1411,7 +1376,7 @@ async function submitExpense() {
   pendingExpenseData = {
     amount,
     category: selectedCat,
-    is_impulse: selectedImpulse,
+    is_impulse: null,
     note: document.getElementById('noteInput').value.trim() || null,
     expense_date: document.getElementById('dateInput').value,
   };
@@ -1421,10 +1386,8 @@ async function submitExpense() {
     return;
   }
 
-  const reflCard = document.getElementById('reflectionCard');
-  if (reflCard && reflCard.classList.contains('visible')) {
-    var t = document.getElementById('submitToast');
-    if (t) { t.textContent = 'Dismiss the reflection prompt first ↑'; t.style.color = '#E07A5F'; t.classList.add('visible'); setTimeout(function(){ t.classList.remove('visible'); t.textContent = '✓ Logged!'; t.style.color = ''; }, 3000); }
+  if (amount >= nudgeConfig.reflectionMin) {
+    showReflectionModal(amount);
     return;
   }
 
@@ -1441,19 +1404,22 @@ async function doSubmitExpense() {
     if (res.success) {
       document.getElementById('amountInput').value = '';
       document.getElementById('noteInput').value = '';
-      selectedImpulse = null;
-      document.getElementById('btnYes').className = 'toggle-btn';
-      document.getElementById('btnNo').className  = 'toggle-btn';
-      reflectionShown = false;
-      document.getElementById('reflectionCard').classList.remove('visible');
 
       const toast = document.getElementById('submitToast');
+      toast.textContent = '✓ Logged!';
+      toast.style.color = '';
       toast.classList.add('visible');
       setTimeout(() => toast.classList.remove('visible'), 2000);
 
-      // Mark evening swipe done and refresh dashboard
+      // Mark evening swipe done and refresh dashboard.
+      // The expense is already saved — a refresh failure must NOT make a
+      // successful save look like a failure, so swallow refresh errors here.
       markEveningSwipeDone();
-      await Promise.all([initDashboard(), loadExpenses(currentPeriod)]);
+      try {
+        await Promise.all([initDashboard(), loadExpenses(currentPeriod)]);
+      } catch (refreshErr) {
+        console.warn('[money] post-submit refresh failed (expense was saved):', refreshErr);
+      }
     } else {
       const toast = document.getElementById('submitToast');
       toast.textContent = '[POST /api/money/expenses] ' + (res.message || 'no error detail');
@@ -1516,13 +1482,21 @@ async function importAllPlaidTransactions() {
   btn.disabled = true;
   try {
     const r = await api('/api/plaid/transactions/confirm-all', { method: 'POST' });
-    if (r.success) {
+    // Always reset button first — if checkPendingPlaid re-shows the banner the
+    // button must be in a clickable state, not stuck at "Importing…"
+    btn.textContent = 'Import all';
+    btn.disabled = false;
+    if (r.success && r.confirmed_count > 0) {
       document.getElementById('plaidPendingBanner').style.display = 'none';
+      const t = document.getElementById('submitToast');
+      if (t) { t.textContent = `✓ ${r.confirmed_count} transaction${r.confirmed_count === 1 ? '' : 's'} imported`; t.style.color = '#5BA4A4'; t.classList.add('visible'); setTimeout(() => { t.classList.remove('visible'); t.textContent = '✓ Logged!'; t.style.color = ''; }, 3000); }
       await Promise.all([loadExpenses(currentPeriod), loadTodaySpendingCard(), checkUntriaged(), checkPendingPlaid()]);
-    } else {
-      btn.textContent = 'Import all';
-      btn.disabled = false;
+    } else if (!r.success) {
+      const t = document.getElementById('submitToast');
+      if (t) { t.textContent = r.message || 'Import failed — try Refresh first'; t.style.color = '#E05252'; t.classList.add('visible'); setTimeout(() => { t.classList.remove('visible'); t.textContent = '✓ Logged!'; t.style.color = ''; }, 4000); }
     }
+    // If success but confirmed_count === 0: button is already re-enabled above,
+    // banner stays visible so the user can retry after tapping Refresh.
   } catch (e) {
     btn.textContent = 'Import all';
     btn.disabled = false;
@@ -1531,16 +1505,32 @@ async function importAllPlaidTransactions() {
 
 // ─── Expenses list ────────────────────────────────────────────────────────────
 async function loadExpenses(period) {
+  const list = document.getElementById('expenseList');
+  let expRes, sumRes;
+
+  // Stage 1: fetch. A throw here means a non-JSON response (server crash /
+  // gateway error) or a network failure — surface the real reason.
   try {
-    const [expRes, sumRes] = await Promise.all([
+    [expRes, sumRes] = await Promise.all([
       api(`/api/money/expenses?period=${period}`),
       api(`/api/money/expenses/summary?period=${period}`),
     ]);
-
-    if (sumRes.success) renderSummary(sumRes.summary);
-    if (expRes.success) renderExpenses(expRes.expenses || []);
   } catch (e) {
-    document.getElementById('expenseList').innerHTML = '<div class="empty-state">Could not load expenses.</div>';
+    list.innerHTML = '<div class="empty-state">Could not reach the expenses service (' + (e && e.message ? e.message : e) + '). Pull to refresh.</div>';
+    return;
+  }
+
+  // Stage 2: render. Separate try so a render bug can't masquerade as a
+  // fetch failure, and an API error surfaces its server message.
+  try {
+    if (sumRes && sumRes.success) renderSummary(sumRes.summary);
+    if (expRes && expRes.success) {
+      renderExpenses(expRes.expenses || []);
+    } else {
+      list.innerHTML = '<div class="empty-state">Could not load expenses: ' + ((expRes && expRes.message) || 'unexpected response') + '</div>';
+    }
+  } catch (e) {
+    list.innerHTML = '<div class="empty-state">Could not display expenses (' + (e && e.message ? e.message : e) + ').</div>';
   }
 }
 
@@ -1926,6 +1916,10 @@ function attachSwipeToCard(card, expenseId, amount) {
 
 <!-- Hidden file input — triggers camera -->
 <input type="file" id="captureFileInput" accept="image/*" capture="environment" style="display:none;">
+
+<!-- PlaidService showBankSyncToast target — must exist on every page that loads plaid-service.js -->
+<div id="toast" style="display:none;position:fixed;bottom:80px;left:50%;transform:translateX(-50%);padding:0.65rem 1.25rem;border-radius:10px;font-size:0.85rem;font-weight:600;z-index:9999;max-width:88vw;text-align:center;pointer-events:none;"></div>
+<style>#toast.error{background:#E05252;color:#fff}#toast.success,#toast.visible{background:#011e5c;color:#fff}</style>
 
 <style>
 @keyframes captureSpin { to { transform: rotate(360deg); } }

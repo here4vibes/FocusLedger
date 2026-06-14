@@ -24,7 +24,9 @@ module.exports = defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
   workers: process.env.CI ? 4 : undefined,
-  timeout: 20000,
+  // WHY 50s: public nav is JS-injected; Render free tier cold starts take up to 30s.
+  // 10s timeout caused primary-mobile flakes when the server was cold.
+  timeout: process.env.CI ? 50000 : 20000,
 
   reporter: process.env.CI
     ? [['github'], ['html', { open: 'never', outputFolder: 'smoke-report' }]]
@@ -39,7 +41,9 @@ module.exports = defineConfig({
     // ── focusledger.net ───────────────────────────────────────────────────────
     {
       name: 'primary-mobile',
-      use: { ...devices['iPhone 13'], baseURL: PRIMARY_URL },
+      // iPhone 13 viewport/UA/touch but Chromium engine — CI only installs Chromium.
+      // Layout smoke tests don't need WebKit rendering fidelity.
+      use: { ...devices['iPhone 13'], defaultBrowserType: 'chromium', baseURL: PRIMARY_URL },
     },
     {
       name: 'primary-desktop',
@@ -49,7 +53,7 @@ module.exports = defineConfig({
     // ── focusledger-mwn3.onrender.com ─────────────────────────────────────────
     {
       name: 'render-mobile',
-      use: { ...devices['iPhone 13'], baseURL: RENDER_URL },
+      use: { ...devices['iPhone 13'], defaultBrowserType: 'chromium', baseURL: RENDER_URL },
     },
     {
       name: 'render-desktop',
