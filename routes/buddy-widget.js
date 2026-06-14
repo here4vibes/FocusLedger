@@ -210,7 +210,7 @@ module.exports = function (pool) {
           pool.query(
             `SELECT COUNT(*) as cnt FROM expenses
              WHERE user_id = $1 AND source = 'plaid' AND is_impulse IS NULL
-               AND expense_date >= CURRENT_DATE - INTERVAL '7 days'`,
+               AND expense_date >= CURRENT_DATE - INTERVAL '30 days'`,
             [userId]
           ),
           // Evening check-in done today?

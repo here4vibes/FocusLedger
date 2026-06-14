@@ -115,7 +115,7 @@ async function getExpenses(pool, userId, period, localDate) {
 async function getUntriagedExpenses(pool, userId, localDate) {
   const refDate = localDate || new Date().toISOString().split('T')[0];
   const cutoff = new Date(refDate + 'T00:00:00Z');
-  cutoff.setDate(cutoff.getDate() - 7);
+  cutoff.setDate(cutoff.getDate() - 30);
   const cutoffStr = cutoff.toISOString().split('T')[0];
 
   const sql = `
