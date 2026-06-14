@@ -1296,7 +1296,7 @@ document.getElementById('durSave').addEventListener('click', async () => {
 
   try {
     const res = await api('POST', '/time-blocks', {
-      date: dateStr,
+      block_date: dateStr,
       title: taskTitle,
       start_time: startStr,
       end_time: endStr,
