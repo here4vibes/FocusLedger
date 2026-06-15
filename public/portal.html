@@ -1099,11 +1099,6 @@ No events today — <a href=/calendar style=color:var(--orange)>set up calendar<
     setTimeout(function() { toast.remove(); }, 3300);
   }
 
-  function escHtml(s) {
-    if (!s) return '';
-    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&#34;').replace(/'/g,'&#39;');
-  }
-
   function formatDue(dateStr) {
     if (!dateStr) return '';
     var d = new Date(dateStr);

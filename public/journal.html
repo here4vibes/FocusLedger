@@ -1289,10 +1289,6 @@ function closeDetailModal() {
 // ─────────────────────────────────────────────────────────────
 // Utils
 // ─────────────────────────────────────────────────────────────
-function escHtml(str) {
-    return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-
 function showToast(msg) {
     const t = document.getElementById('toast');
     t.textContent = msg;

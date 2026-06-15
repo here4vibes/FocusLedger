@@ -16,7 +16,7 @@ const {
   updateClassification,
   getTodayClassificationCounts,
 } = require('../db/transactions');
-const { fetchUserTimezone, getUserLocalDate } = require('../lib/timezone');
+const { fetchUserLocalDate } = require('../lib/timezone');
 
 module.exports = function(pool) {
   const router = express.Router();
@@ -28,8 +28,7 @@ module.exports = function(pool) {
   router.get('/evening/spending', async (req, res) => {
     try {
       const userId = req.user.id;
-      const tz = await fetchUserTimezone(pool, userId);
-      const today = getUserLocalDate(tz);
+      const today = await fetchUserLocalDate(pool, userId);
 
       const rows = await getUnclassifiedByDate(pool, userId, today);
 
@@ -79,8 +78,7 @@ module.exports = function(pool) {
   router.get('/evening/spending/summary', async (req, res) => {
     try {
       const userId = req.user.id;
-      const tz = await fetchUserTimezone(pool, userId);
-      const today = getUserLocalDate(tz);
+      const today = await fetchUserLocalDate(pool, userId);
 
       const counts = await getTodayClassificationCounts(pool, userId, today);
       res.json(counts);

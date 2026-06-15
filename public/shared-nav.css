@@ -2,6 +2,38 @@
 /* Injected by shared-nav.js; do NOT import manually alongside it */
 
 :root {
+  /* ── Design tokens (canonical source of truth for the whole app) ──────── */
+  /* Brand */
+  --orange:        #c9a84c;
+  --orange-dk:     #a8892e;
+  --orange-light:  #d4b56a;
+  --navy:          #011e5c;
+  --navy-mid:      #02287a;
+  --navy-light:    #033099;
+  --cream:         #faf9f7;
+  --cream-dark:    #f5f3ef;
+
+  /* Semantic */
+  --surface:       #ffffff;
+  --text:          #1a1a1a;
+  --muted:         #6b6b6b;
+  --border:        #e8e5e0;
+  --planned:       #22c55e;
+  --planned-bg:    #f0fdf4;
+  --impulse:       #f59e0b;
+  --impulse-bg:    #fffbeb;
+  --error:         #e07a5f;
+  --error-bg:      #faeae5;
+  --success:       #7db87d;
+
+  /* Elevation / motion */
+  --card-shadow:   0 2px 8px rgba(0,0,0,0.08);
+  --spring:        cubic-bezier(0.34, 1.56, 0.64, 1);
+  --radius:        12px;
+  --radius-sm:     8px;
+  --radius-lg:     16px;
+
+  /* ── Nav-specific tokens (used only by nav components) ────────────────── */
   --nav-brand: #011e5c;
   --nav-brand-light: rgba(255,255,255,0.08);
   --nav-brand-active: #c9a84c;

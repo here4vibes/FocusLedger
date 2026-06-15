@@ -1658,10 +1658,6 @@
         });
 
         // ── Connected Accounts (Email)
-        function escHtml(s) {
-            return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-        }
-
         function connectGmail() {
             var btn = document.getElementById('connectGmailBtn');
             var statusEl = document.getElementById('gmailStatusMsg');
@@ -3089,10 +3085,6 @@
                 alert(data.message || 'Failed to end partnership.');
             }
         } catch { alert('Network error. Please try again.'); }
-    }
-
-    function escHtml(str) {
-        return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
     }
 
     // Load Tandem status on page load.

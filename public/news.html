@@ -232,11 +232,6 @@ a{color:inherit;text-decoration:none}
     });
   }
 
-  function escHtml(s) {
-    if (!s) return '';
-    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&#34;').replace(/'/g,'&#39;');
-  }
-
   function buildCard(a) {
     var thumbHtml = a.image_url
       ? '<img class=news-thumb src="' + escHtml(a.image_url) + '" alt="" loading=lazy onerror="this.style.display=\'none\'">'

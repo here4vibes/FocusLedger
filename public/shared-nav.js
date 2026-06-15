@@ -8,6 +8,54 @@
 (function () {
   'use strict';
 
+  // ── Global utilities ─────────────────────────────────────────────────────
+  // Set on window so every page can use them.
+  // Guards (window.X || ...) mean page-local definitions always win — no
+  // existing code breaks just because shared-nav.js loads first.
+
+  // DOM shorthand
+  window.el = window.el || function (id) { return document.getElementById(id); };
+
+  // HTML escaping
+  window.escHtml = window.escHtml || function (s) {
+    return String(s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  };
+
+  // Toast helper — looks for #fl-toast, falls back to any element whose id
+  // ends in "Toast" or "toast" (covers existing page-specific elements).
+  window.showToast = window.showToast || function (msg, type, duration) {
+    var t = document.getElementById('fl-toast') ||
+            document.querySelector('[id$="Toast"],[id$="toast"]');
+    if (!t) return;
+    clearTimeout(t._flTimer);
+    t.textContent = msg;
+    t.className = t.className.replace(/\b(show|visible|error|success)\b/g, '').trim() +
+                  (type ? ' show ' + type : ' show');
+    t._flTimer = setTimeout(function () {
+      t.classList.remove('show', 'visible');
+    }, duration || 3000);
+  };
+
+  // Authenticated fetch — reads fl_token from localStorage, adds Bearer header,
+  // redirects to /login on 401. Returns raw Response (caller does .then(r=>r.json())).
+  window.apiFetch = window.apiFetch || function (url, opts) {
+    var tok = localStorage.getItem('fl_token') || '';
+    opts = opts || {};
+    var merged = Object.assign({}, opts, {
+      headers: Object.assign({ 'Authorization': 'Bearer ' + tok }, opts.headers || {})
+    });
+    return fetch(url, merged).then(function (res) {
+      if (res.status === 401) {
+        localStorage.removeItem('fl_token');
+        window.location.href = '/login';
+        return Promise.reject(new Error('401'));
+      }
+      return res;
+    });
+  };
+
   // ── Config ────────────────────────────────────────────────
 
   // Primary tabs — exactly 4, shown in bottom nav (mobile) and sidebar top section (desktop)
