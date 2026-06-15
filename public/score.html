@@ -480,10 +480,6 @@
     }).join('');
   }
 
-  function escHtml(s) {
-    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  }
-
   // ── Load score ─────────────────────────────────────────────────────────
   function renderScore(data) {
     var s = data.score;

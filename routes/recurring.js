@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { authenticateToken } = require('../middleware/auth');
 const { checkProStatus } = require('../middleware/proUtils');
-const { fetchUserTimezone, getUserLocalDate } = require('../lib/timezone');
+const { fetchUserLocalDate } = require('../lib/timezone');
 
 module.exports = function(pool) {
 
@@ -101,8 +101,7 @@ module.exports = function(pool) {
         return res.status(400).json({ success: false, message: 'Invalid frequency' });
       }
 
-      const tz = await fetchUserTimezone(pool, userId);
-      const today = getUserLocalDate(tz);
+      const today = await fetchUserLocalDate(pool, userId);
       const firstDate = start_date || today;
 
       // Check Pro status before transaction — uses checkIsPro which respects admin_pro_override
@@ -318,8 +317,7 @@ module.exports = function(pool) {
         }
       }
 
-      const tz = await fetchUserTimezone(pool, userId);
-      const today = getUserLocalDate(tz);
+      const today = await fetchUserLocalDate(pool, userId);
       const firstDate = start_date || today;
 
       const client = await pool.connect();
@@ -475,8 +473,7 @@ module.exports = function(pool) {
   router.post('/generate', async (req, res) => {
     try {
       const userId = req.user.id;
-      const tz = await fetchUserTimezone(pool, userId);
-      const today = getUserLocalDate(tz);
+      const today = await fetchUserLocalDate(pool, userId);
       const generated = { tasks: [], expenses: [] };
 
       // Check Pro status for task limit
@@ -665,8 +662,7 @@ module.exports = function(pool) {
         // Use today (or the task's due_date if set) as the start date
         // WHY toISOString: task.due_date from PG is a JS Date; String(date).split('T')
         // splits on the 'T' in 'GMT' producing an invalid date like "Fri Aug 07 2026 00:00:00 GM"
-        const tz = await fetchUserTimezone(pool, userId);
-      const today = getUserLocalDate(tz);
+        const today = await fetchUserLocalDate(pool, userId);
         const rawDue = task.due_date;
         const startDate = rawDue
           ? (rawDue instanceof Date ? rawDue.toISOString().split('T')[0] : String(rawDue).split('T')[0])
@@ -743,8 +739,7 @@ module.exports = function(pool) {
         await client.query('BEGIN');
 
         // WHY toISOString: expense_date from PG is a JS Date — same bug as tasks (see above)
-        const tz = await fetchUserTimezone(pool, userId);
-      const today = getUserLocalDate(tz);
+        const today = await fetchUserLocalDate(pool, userId);
         const rawDate = expense.expense_date;
         const startDate = rawDate
           ? (rawDate instanceof Date ? rawDate.toISOString().split('T')[0] : String(rawDate).split('T')[0])

@@ -10520,11 +10520,6 @@
                 '<div class="weekly-suggestion" style="margin-top:1rem;">💡 Your report generates Sunday evening. Check back then for the full weekly summary.</div>';
         }
 
-        function escHtml(str) {
-            if (!str) return '';
-            return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-        }
-
         function closeWeeklyReport() {
             var overlay = document.getElementById('weeklyReportOverlay');
             if (overlay) overlay.classList.remove('visible');

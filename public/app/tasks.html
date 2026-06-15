@@ -903,10 +903,6 @@
         return { text, cls, icon: taskDay < today ? '⚠' : taskDay.getTime() === today.getTime() ? '🎯' : '📅' };
     }
 
-    function escHtml(s) {
-        return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-    }
-
     // Determine readable text color (dark or light) for a hex badge background
     function valueBadgeTextColor(hex) {
         const c = hex.replace('#', '');

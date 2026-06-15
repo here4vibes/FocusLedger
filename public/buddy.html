@@ -1124,8 +1124,7 @@
     (function() {
         'use strict';
 
-        var token = localStorage.getItem('fl_token');
-        if (!token) { window.location.href = '/login'; return; }
+        if (!localStorage.getItem('fl_token')) { window.location.href = '/login'; return; }
 
         // ── Date helpers ──────────────────────────────────────────────────────
         function todayDateString() {
@@ -1149,19 +1148,9 @@
             return h < 12 ? 'Morning check-in' : h < 17 ? 'Afternoon check-in' : 'Daily plan';
         }
 
-        // ── API helpers ───────────────────────────────────────────────────────
-        function apiFetch(url, opts) {
-            var headers = Object.assign({ 'Authorization': 'Bearer ' + token }, (opts && opts.headers) || {});
-            return fetch(url, Object.assign({}, opts, { headers: headers }));
-        }
-
         // ── DOM helpers ───────────────────────────────────────────────────────
-        function el(id) { return document.getElementById(id); }
         function show(id) { var e = el(id); if (e) e.style.display = ''; }
         function hide(id) { var e = el(id); if (e) e.style.display = 'none'; }
-        function escHtml(s) {
-            return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-        }
         function showToast(msg) {
             var t = el('buddyToast');
             if (!t) return;

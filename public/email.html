@@ -2623,16 +2623,6 @@
         toastTimer = setTimeout(function() { el.classList.remove('show'); }, 3200);
     }
 
-    // ── Helpers
-    function escHtml(str) {
-        if (!str) return '';
-        return String(str)
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;');
-    }
-
     function parseFromName(from) {
         if (!from) return '';
         const match = from.match(/^([^<]+)<[^>]+>$/);

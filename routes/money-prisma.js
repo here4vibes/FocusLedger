@@ -1,7 +1,7 @@
 // Phase 3B: Money tab CRUD backed by pg.Pool (Prisma removed).
 // Owns: expense CRUD, Plaid transaction review, Account Summary, spending aggregates.
 // Does NOT own: Plaid Link setup (routes/plaid.js), auth middleware beyond session/JWT support.
-const { fetchUserTimezone, getUserLocalDate } = require('../lib/timezone');
+const { fetchUserLocalDate } = require('../lib/timezone');
 const {
   createExpense,
   getExpenses,
@@ -63,8 +63,7 @@ async function getSummary(req, res) {
     const userId = req.user.id;
     const pool = res.locals._pool;
     const period = req.query.period || 'week';
-    const tz = await fetchUserTimezone(pool, userId);
-    const localDate = getUserLocalDate(tz);
+    const localDate = await fetchUserLocalDate(pool, userId);
     const summary = await getSpendingSummary(pool, userId, period, localDate);
     res.json({ success: true, summary });
   } catch (err) {
@@ -78,8 +77,7 @@ async function getToday(req, res) {
   try {
     const userId = req.user.id;
     const pool = res.locals._pool;
-    const tz = await fetchUserTimezone(pool, userId);
-    const localDate = getUserLocalDate(tz);
+    const localDate = await fetchUserLocalDate(pool, userId);
     const spend = await getTodaySpend(pool, userId, localDate);
     res.json({ success: true, ...spend });
   } catch (err) {
@@ -93,8 +91,7 @@ async function getUntriaged(req, res) {
   try {
     const userId = req.user.id;
     const pool = res.locals._pool;
-    const tz = await fetchUserTimezone(pool, userId);
-    const localDate = getUserLocalDate(tz);
+    const localDate = await fetchUserLocalDate(pool, userId);
     const expenses = await getUntriagedExpenses(pool, userId, localDate);
     res.json({ success: true, expenses, count: expenses.length });
   } catch (err) {
@@ -109,8 +106,7 @@ async function listExpenses(req, res) {
     const userId = req.user.id;
     const pool = res.locals._pool;
     const period = req.query.period || 'week';
-    const tz = await fetchUserTimezone(pool, userId);
-    const localDate = getUserLocalDate(tz);
+    const localDate = await fetchUserLocalDate(pool, userId);
     const expenses = await getExpenses(pool, userId, period, localDate);
     res.json({ success: true, expenses });
   } catch (err) {
@@ -135,8 +131,7 @@ async function addExpense(req, res) {
                        : is_impulse === false || is_impulse === 'false' ? false
                        : null;
 
-    const tz = await fetchUserTimezone(pool, userId);
-    const localDate = getUserLocalDate(tz);
+    const localDate = await fetchUserLocalDate(pool, userId);
     const expense = await createExpense(pool, {
       userId,
       amount: parseFloat(amount),
@@ -244,8 +239,7 @@ async function getTodaySession(req, res) {
   try {
     const userId = req.user.id;
     const pool = res.locals._pool;
-    const tz = await fetchUserTimezone(pool, userId);
-    const today = getUserLocalDate(tz);
+    const today = await fetchUserLocalDate(pool, userId);
 
     const { rows } = await pool.query(
       `SELECT * FROM spending_sessions WHERE user_id = $1 AND started_at::date = $2::date ORDER BY started_at DESC LIMIT 1`,
