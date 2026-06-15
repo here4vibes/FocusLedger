@@ -1048,7 +1048,13 @@
 
     // ── Empty state: Done button ─────────────────────────────────────────────
     el('btnEmptyDone').addEventListener('click', function() {
-        window.location.href = '/money';
+        // Record evening check-in credit even when there's nothing to triage.
+        apiFetch('/api/buddy/evening', { method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ money_tasks_done: 0 })
+        }).catch(function() {}).finally(function() {
+            window.location.href = '/app/buddy';
+        });
     });
 
     // ── Back button ─────────────────────────────────────────────────────────
