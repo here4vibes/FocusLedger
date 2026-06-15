@@ -27,6 +27,6 @@ ios/App/App/public/
 xcuserdata/
 *.ipa
 
-# SPM cache (local only — CI uses --clonedSourcePackagesDirPath)
-.build/
+# Claude Code agent worktrees (local only)
+.claude/
 
