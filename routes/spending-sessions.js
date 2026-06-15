@@ -79,8 +79,8 @@ module.exports = function(pool) {
       await ClassificationService.classify(pool, userId, transaction_id, classification, sessionId);
       res.json({ ok: true });
     } catch (err) {
-      if (err.message.includes('not found')) {
-        return res.status(404).json({ success: false, message: err.message });
+      if (err.message && err.message.includes('not found')) {
+        return res.status(404).json({ success: false, message: 'Transaction not found' });
       }
       console.error('[spending-sessions] Error classifying transaction:', err);
       res.status(500).json({ success: false, message: 'Failed to classify transaction' });

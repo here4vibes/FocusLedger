@@ -511,7 +511,7 @@ async function updateTask(req, res) {
     if (!rows.length) return res.status(404).json({ success: false, message: 'Task not found' });
     res.json({ success: true, task: normTask(rows[0]) });
   } catch (err) {
-    if (err.code === '42703') return res.status(500).json({ success: false, message: 'Column does not exist: ' + err.message });
+    if (err.code === '42703') return res.status(500).json({ success: false, message: 'Failed to update task — schema mismatch' });
     console.error('[tasks] update error:', err);
     res.status(500).json({ success: false, message: 'Failed to update task' });
   }
