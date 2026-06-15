@@ -106,7 +106,7 @@ app.use(corsMiddleware);
 // =============================================================================
 // 2. REQUEST PARSING
 // =============================================================================
-app.use(express.json({ limit: '1mb' }));
+app.use(express.json({ limit: '1mb', verify: (req, _res, buf) => { req.rawBody = buf; } }));
 app.use(express.urlencoded({ extended: false, limit: '1mb' }));
 
 // =============================================================================
