@@ -62,7 +62,6 @@ const {
   signupLimiter
 } = require('./middleware/security');
 const repairTasksSchema  = require('./lib/startup-repair');
-const startBackgroundJobs = require('./lib/startup-jobs');
 const { verifyToken } = require('./middleware/auth');
 const { buildSessionMiddleware } = require('./lib/session');
 
@@ -272,7 +271,4 @@ app.use((err, req, res, next) => {
 
 repairTasksSchema(pool);
 
-app.listen(port, () => {
-  console.log(`Server running on port ${port}`);
-  startBackgroundJobs(pool, newsRouteFactory);
-});
+app.listen(port, () => console.log(`Server running on port ${port}`));

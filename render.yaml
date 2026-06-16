@@ -1,4 +1,5 @@
 services:
+  # ── Web service ──────────────────────────────────────────────────────────────
   - type: web
     runtime: node
     name: app
@@ -8,3 +9,114 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+
+  # ── Cron jobs ─────────────────────────────────────────────────────────────────
+  # All cron jobs need the same env vars as the web service (DATABASE_URL,
+  # RESEND_API_KEY, VAPID keys, PLAID keys, ENCRYPTION_KEY, APNS keys, etc.)
+  # Set these via an Env Group in the Render dashboard and attach to each service,
+  # or copy them individually from the web service's Environment tab.
+
+  - type: cron
+    name: morning-nudge
+    runtime: node
+    schedule: "*/5 * * * *"
+    buildCommand: npm install
+    startCommand: node jobs/morning-nudge.js
+
+  - type: cron
+    name: evening-nudge
+    runtime: node
+    schedule: "*/5 * * * *"
+    buildCommand: npm install
+    startCommand: node jobs/evening-nudge.js
+
+  - type: cron
+    name: task-deadline-nudge
+    runtime: node
+    schedule: "*/15 * * * *"
+    buildCommand: npm install
+    startCommand: node jobs/task-deadline-nudge.js
+
+  - type: cron
+    name: routine-nudge-check
+    runtime: node
+    schedule: "*/15 * * * *"
+    buildCommand: npm install
+    startCommand: node jobs/routineNudgeCheck.js
+
+  - type: cron
+    name: movement-break-check
+    runtime: node
+    schedule: "*/15 * * * *"
+    buildCommand: npm install
+    startCommand: node jobs/movementBreakCheck.js
+
+  - type: cron
+    name: impulse-spending-check
+    runtime: node
+    schedule: "*/15 * * * *"
+    buildCommand: npm install
+    startCommand: node jobs/impulseSpendingCheck.js
+
+  - type: cron
+    name: followup-email-check
+    runtime: node
+    schedule: "*/15 * * * *"
+    buildCommand: npm install
+    startCommand: node jobs/followupEmailCheck.js
+
+  - type: cron
+    name: email-crons
+    runtime: node
+    schedule: "*/10 * * * *"
+    buildCommand: npm install
+    startCommand: node jobs/email-crons.js
+
+  - type: cron
+    name: rss-sync
+    runtime: node
+    schedule: "*/20 * * * *"
+    buildCommand: npm install
+    startCommand: node jobs/rss-sync.js
+
+  - type: cron
+    name: buddy-engagement
+    runtime: node
+    schedule: "0 * * * *"
+    buildCommand: npm install
+    startCommand: node jobs/buddy-engagement.js
+
+  - type: cron
+    name: plaid-daily-sync
+    runtime: node
+    schedule: "0 6 * * *"
+    buildCommand: npm install
+    startCommand: node jobs/plaid-sync.js
+
+  - type: cron
+    name: evening-checkin-sender
+    runtime: node
+    schedule: "0 20 * * *"
+    buildCommand: npm install
+    startCommand: node jobs/evening-checkin.js
+
+  - type: cron
+    name: cold-start-nudge
+    runtime: node
+    schedule: "0 9 * * *"
+    buildCommand: npm install
+    startCommand: node jobs/coldStartNudge.js
+
+  - type: cron
+    name: stash-purge
+    runtime: node
+    schedule: "0 2 * * *"
+    buildCommand: npm install
+    startCommand: node jobs/stash-purge.js
+
+  - type: cron
+    name: pattern-detection
+    runtime: node
+    schedule: "0 3 * * 0"
+    buildCommand: npm install
+    startCommand: node jobs/patternDetectionJob.js

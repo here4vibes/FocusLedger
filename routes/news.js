@@ -583,8 +583,8 @@ module.exports = function(pool) {
   return router;
 };
 
-// Export startRssCron separately so server.js can call it
 module.exports.startRssCron = startRssCron;
+module.exports.fetchAllFeeds = fetchAllFeeds;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // HELPERS

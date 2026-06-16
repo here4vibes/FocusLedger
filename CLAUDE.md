@@ -15,7 +15,7 @@ Node.js + Express · PostgreSQL (Neon) · Render deployment · Vanilla HTML/CSS/
 - `lib/` — shared service utilities: email, AI tagging, nudge generation, queryWithRetry, documentExtraction, ai-service
 - `public/js/services/` — shared frontend service modules (values-service.js, ai-service.js)
 - `services/` — PlaidService, TransactionService, ClassificationService, EventBus, InsightsService, TimeEstimationService
-- `jobs/` — scheduled recurring work declared in polsia.toml `[[crons]]`; no in-process schedulers
+- `jobs/` — scheduled recurring work declared in `render.yaml` cron services; no in-process schedulers
 - `migrations/` — node-postgres JS migrations; each exports `{ name, up: async (client) => {} }`
 - `config/test-users.js` — canonical QA user (qa@focusledger.net)
 
@@ -120,7 +120,7 @@ This section tells Claude Code how to act on your behalf across GitHub, Neon, an
 - **One concern per commit.** Never bundle unrelated changes. Commit message format: `type(scope): what changed` — e.g. `fix(tasks): normalize due_time in GET response`.
 - **Never touch the QA user.** `qa@focusledger.net` is sacred. No data changes, no role changes, no deletions.
 - **No raw SQL outside `db/`.** All queries go through `pool.query` in the appropriate `db/` file.
-- **No in-process schedulers.** All cron jobs go in `jobs/` and are declared in `polsia.toml [[crons]]`.
+- **No in-process schedulers.** All cron jobs go in `jobs/` and are declared in `render.yaml` as `type: cron` services.
 - **server.js hard cap: 300 lines.** If a change would push it over, extract to middleware/ or routes/ first.
 - **migrations/ only, never ALTER in routes.** Schema changes always go through a migration file with `{ name, up: async (client) => {} }`.
 
@@ -252,9 +252,10 @@ If a new env var is needed: add to `.env.example` (with a placeholder value, nev
 4. Commit on `migration/` branch.
 
 **Cron job:**
-1. Write job file in `jobs/`.
-2. Add `[[crons]]` entry to `polsia.toml`.
-3. Never use `setInterval` or `node-cron` in process.
+1. Write job file in `jobs/` — standalone Node.js script: create pool, do work, `pool.end()`, exit.
+2. Add `type: cron` entry to `render.yaml` with schedule, buildCommand, and startCommand.
+3. Env vars: attach the "focusledger" Env Group in the Render dashboard (or copy from web service).
+4. Never use `setInterval` or `node-cron` in process.
 
 ### What Claude Code should NOT do autonomously
 - Merge PRs to `main` without human review
