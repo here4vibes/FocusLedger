@@ -5,6 +5,7 @@ const { sendEmail } = require('../lib/emailService');
 const { welcomeTemplate, passwordResetTemplate, passwordResetGoogleOnlyTemplate } = require('../lib/emailTemplates');
 const { passwordResetLimiter } = require('../middleware/security');
 const { seedDefaultValues } = require('../lib/seedDefaultValues');
+const seedStarterRoutine = require('../lib/seedStarterRoutine');
 const { getSessionData, markSessionMigrated, isSessionMigrated } = require('../db/buddy-demo');
 const { validateTimezone, fetchUserTimezone, getUserLocalDate } = require('../lib/timezone');
 
@@ -202,6 +203,7 @@ module.exports = function(pool, loginLimiter, signupLimiter) {
 
       // Seed Maslow-based default values for new users (fire-and-forget)
       seedDefaultValues(pool, user.id);
+      seedStarterRoutine(pool, user.id).catch(() => {});
     } catch (err) {
       console.error('Signup error:', err);
       if (err.code === '23505') {
@@ -271,6 +273,7 @@ module.exports = function(pool, loginLimiter, signupLimiter) {
 
       // Seed defaults for existing users who have no values (fire-and-forget)
       seedDefaultValues(pool, user.id);
+      seedStarterRoutine(pool, user.id).catch(() => {});
     } catch (err) {
       console.error('[auth/login] ERROR:', err.message, err.stack);
       res.status(500).json({ success: false, message: 'Failed to log in' });
@@ -397,6 +400,7 @@ module.exports = function(pool, loginLimiter, signupLimiter) {
         accountLinked = !!existing.password_hash;
         // Seed defaults for returning Google users who have no values (fire-and-forget)
         seedDefaultValues(pool, user.id);
+      seedStarterRoutine(pool, user.id).catch(() => {});
       } else {
         const result = await pool.query(
           `INSERT INTO users (email, name, google_id, auth_method, avatar_url)
@@ -425,6 +429,7 @@ module.exports = function(pool, loginLimiter, signupLimiter) {
 
         // Seed Maslow-based default values for new Google users (fire-and-forget)
         seedDefaultValues(pool, user.id);
+      seedStarterRoutine(pool, user.id).catch(() => {});
       }
 
       const token = generateToken(user);
@@ -666,6 +671,7 @@ module.exports = function(pool, loginLimiter, signupLimiter) {
         user = { id: existing.id, email, name: existing.name || name };
         // Seed defaults for returning One Tap users who have no values (fire-and-forget)
         seedDefaultValues(pool, user.id);
+      seedStarterRoutine(pool, user.id).catch(() => {});
       } else {
         // New user
         isNewUser = true;
