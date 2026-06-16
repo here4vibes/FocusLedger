@@ -12,7 +12,10 @@ const { sendApnsNotification, isApnsConfigured } = require('../lib/apns-sender')
 // Keys are fetched from Plaid's webhook_verification_key/get endpoint and
 // cached by kid so we make at most one round-trip per new key rotation.
 
-const keyCache = new Map();
+// Keys expire after 24h so a Plaid key rotation is picked up within a day
+// even if no JWT verify failure forces early eviction.
+const KEY_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
+const keyCache = new Map(); // kid → { key: KeyObject, ts: number }
 
 function plaidBaseUrl() {
   return process.env.PLAID_ENV === 'sandbox'
@@ -21,7 +24,9 @@ function plaidBaseUrl() {
 }
 
 async function fetchPlaidKey(kid) {
-  if (keyCache.has(kid)) return keyCache.get(kid);
+  const cached = keyCache.get(kid);
+  if (cached && Date.now() - cached.ts < KEY_CACHE_TTL_MS) return cached.key;
+
   const res = await fetch(`${plaidBaseUrl()}/webhook_verification_key/get`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -35,7 +40,7 @@ async function fetchPlaidKey(kid) {
   const { key } = await res.json();
   if (!key) throw new Error('Plaid key missing in response');
   const publicKey = crypto.createPublicKey({ key, format: 'jwk' });
-  keyCache.set(kid, publicKey);
+  keyCache.set(kid, { key: publicKey, ts: Date.now() });
   return publicKey;
 }
 
@@ -50,7 +55,6 @@ async function verifyPlaidSignature(req) {
   try {
     publicKey = await fetchPlaidKey(decoded.header.kid);
   } catch (e) {
-    // Key not in cache + fetch failed → re-throw so caller can 401
     throw new Error(`Key fetch failed: ${e.message}`);
   }
 
@@ -58,14 +62,15 @@ async function verifyPlaidSignature(req) {
   try {
     payload = jwt.verify(token, publicKey, { algorithms: ['ES256'] });
   } catch (e) {
-    // Signature invalid or token expired; clear cached key in case it rotated
+    // Clear stale cache entry in case Plaid rotated the key
     keyCache.delete(decoded.header.kid);
     throw new Error(`JWT verify failed: ${e.message}`);
   }
 
-  // Verify the body hash matches the raw bytes we received
-  const raw = req.rawBody || Buffer.from(JSON.stringify(req.body));
-  const bodyHash = crypto.createHash('sha256').update(raw).digest('hex');
+  // rawBody must be set by express.json()'s verify callback — if it's missing,
+  // something changed in the middleware stack and we must not silently pass.
+  if (!req.rawBody) throw new Error('rawBody unavailable — verify callback missing from express.json()');
+  const bodyHash = crypto.createHash('sha256').update(req.rawBody).digest('hex');
   if (payload.request_body_sha256 !== bodyHash) throw new Error('Body hash mismatch');
 
   // Reject stale webhooks (Plaid recommends a 5-minute window)
