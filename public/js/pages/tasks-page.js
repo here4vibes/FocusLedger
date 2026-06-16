@@ -59,6 +59,7 @@
   var state = {
     tasks: [],
     values: [],
+    routines: [],
     summary: { total: 0, today_total: 0, completed: 0, completed_this_week: 0 },
     filter: 'all',       // 'all' | 'active' | 'completed'
     sort: 'default',      // 'default' | 'due_date'
@@ -85,7 +86,7 @@
     bindDueDateToggle();
     bindDurationToggle();
     bindDelegatedActions();
-    fetchValues().then(fetchAllTasks);
+    fetchValues().then(function() { return fetchRoutines(); }).then(fetchAllTasks);
     fetchSubscription();
   }
 
@@ -115,6 +116,12 @@
     return flApi('GET', '/values').then(function(data) {
       state.values = data.values || [];
     }).catch(function() { state.values = []; });
+  }
+
+  function fetchRoutines() {
+    return flApi('GET', '/routines').then(function(data) {
+      state.routines = data.routines || [];
+    }).catch(function() { state.routines = []; });
   }
 
   function fetchSubscription() {
@@ -359,6 +366,18 @@
       }
       html += '<span class="value-pill' + (task.value_id ? '' : ' selected') + '" style="border-color:var(--border,#e8e5e0);color:var(--text-muted,#6b6b6b);" data-action="set-value" data-id="' + task.id + '" data-value-id="">None</span>';
       html += '</div></div>';
+
+      // Anchor routine — "Do this after [routine]"
+      html += '<div class="task-detail-section">';
+      html += '<div class="task-detail-section-label">Do after (habit stack)</div>';
+      html += '<select data-action="detail-anchor" data-id="' + task.id + '" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:4px 6px;font-size:0.8rem;background:var(--card-bg,#fff);">';
+      html += '<option value="">None</option>';
+      state.routines.forEach(function(r) {
+        var sel = task.anchor_routine_id === r.id ? ' selected' : '';
+        html += '<option value="' + r.id + '"' + sel + '>' + escapeHtml(r.name) + '</option>';
+      });
+      html += '</select>';
+      html += '</div>';
 
       // Recurring setting
       var recType = task.recurrence_type || 'none';
@@ -1085,6 +1104,18 @@
         }).catch(function() {});
         return;
       }
+    });
+
+    // ── Anchor routine select (change event) ──────────────────────────────────
+    document.addEventListener('change', function(e) {
+      var select = e.target.closest('[data-action="detail-anchor"]');
+      if (!select) return;
+      var id = select.getAttribute('data-id');
+      var newAnchorId = select.value ? parseInt(select.value) : null;
+      flApi('PATCH', '/tasks/' + id, { anchor_routine_id: newAnchorId }).then(function(data) {
+        var idx = state.tasks.findIndex(function(t) { return String(t.id) === String(id); });
+        if (idx >= 0 && data.task) state.tasks[idx].anchor_routine_id = data.task.anchor_routine_id;
+      }).catch(function() {});
     });
 
     // ── Tap-outside to dismiss expanded detail view ─────────────────────────

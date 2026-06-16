@@ -25,6 +25,7 @@
 const express = require('express');
 const { authenticateToken } = require('../middleware/auth');
 const { fetchUserTimezone, getUserLocalDate } = require('../lib/timezone');
+const { sendPushToUser } = require('../lib/sendPushToUser');
 const {
   createRoutine,
   getUserRoutines,
@@ -341,6 +342,25 @@ module.exports = function(pool) {
 
       const streak = await recordRoutineCompletion(pool, userId, routineId, localDate);
       res.json({ success: true, streak });
+
+      // Fire-and-forget push for tasks anchored to this routine
+      setImmediate(async () => {
+        try {
+          const { rows: anchored } = await pool.query(
+            `SELECT id, title, anchor_label FROM tasks
+             WHERE anchor_routine_id = $1 AND user_id = $2 AND is_completed = false`,
+            [routineId, userId]
+          );
+          for (const task of anchored) {
+            const cue = task.anchor_label || `Time for: ${task.title}`;
+            await sendPushToUser(pool, userId, {
+              title: 'Habit stack 🔗',
+              body: cue,
+              url: '/app/tasks',
+            });
+          }
+        } catch { /* non-blocking */ }
+      });
     } catch (err) {
       console.error('[routines] POST /:id/complete error:', err.message);
       res.status(500).json({ success: false, message: 'Failed to record completion' });

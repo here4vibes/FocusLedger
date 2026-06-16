@@ -1752,21 +1752,27 @@
         // ── Auto-routines suggestion card ─────────────────────────────────────
         function renderSuggestionCard(suggestion) {
             if (!suggestion || !suggestion.message) return '';
+            var isSequence = suggestion.patternType === 'sequence';
             var taskTitles = suggestion.taskTitles || [];
             var displayTasks = taskTitles.slice(0, 3).join(', ');
             var more = taskTitles.length > 3 ? ' and ' + (taskTitles.length - 3) + ' more' : '';
-            var confidenceLabel = suggestion.confidenceLevel === 'medium' ? ' (still learning)' : '';
-            var html = '<div class="card" id="autoRoutineCard" style="border-color:var(--orange);border-width:2px;">';
-            html += '<div class="card-label">Pattern detected ✨</div>';
+            var confidenceLabel = (!isSequence && suggestion.confidenceLevel === 'medium') ? ' (still learning)' : '';
+            var cardLabel = isSequence ? 'Habit stack detected 🔗' : 'Pattern detected ✨';
+            var acceptLabel = isSequence ? 'Stack them' : 'Yes, set it up';
+            var borderColor = isSequence ? 'var(--navy)' : 'var(--orange)';
+            var html = '<div class="card" id="autoRoutineCard" style="border-color:' + borderColor + ';border-width:2px;">';
+            html += '<div class="card-label">' + cardLabel + '</div>';
             html += '<div style="font-size:1rem;color:var(--navy);margin-bottom:0.75rem;line-height:1.45;">' + escHtml(suggestion.message) + confidenceLabel + '</div>';
             if (taskTitles.length > 0) {
                 html += '<div style="font-size:0.82rem;color:var(--text-muted);margin-bottom:1rem;padding:0.5rem 0.75rem;background:var(--cream-dark);border-radius:8px;">' + escHtml(displayTasks) + escHtml(more) + '</div>';
             }
             html += '<div style="display:flex;flex-direction:column;gap:0.5rem;">';
-            html += '<button class="auto-routine-accept" data-suggestion-id="' + suggestion.id + '" style="background:var(--green);color:white;border:none;border-radius:12px;padding:0.75rem;font-size:0.9rem;font-weight:600;cursor:pointer;width:100%;">Yes, set it up</button>';
+            html += '<button class="auto-routine-accept" data-suggestion-id="' + suggestion.id + '" style="background:var(--green);color:white;border:none;border-radius:12px;padding:0.75rem;font-size:0.9rem;font-weight:600;cursor:pointer;width:100%;">' + acceptLabel + '</button>';
             html += '<div style="display:flex;gap:0.5rem;">';
             html += '<button class="auto-routine-dismiss" data-suggestion-id="' + suggestion.id + '" style="flex:1;background:var(--cream-dark);color:var(--text-dark);border:1px solid var(--border);border-radius:12px;padding:0.65rem;font-size:0.85rem;font-weight:500;cursor:pointer;">Not right now</button>';
-            html += '<button class="auto-routine-edit" data-suggestion-id="' + suggestion.id + '" style="flex:1;background:var(--orange-light);color:var(--navy);border:1px solid var(--border);border-radius:12px;padding:0.65rem;font-size:0.85rem;font-weight:500;cursor:pointer;">Edit first</button>';
+            if (!isSequence) {
+                html += '<button class="auto-routine-edit" data-suggestion-id="' + suggestion.id + '" style="flex:1;background:var(--orange-light);color:var(--navy);border:1px solid var(--border);border-radius:12px;padding:0.65rem;font-size:0.85rem;font-weight:500;cursor:pointer;">Edit first</button>';
+            }
             html += '</div>';
             html += '</div>';
             html += '</div>';

@@ -460,7 +460,7 @@ async function updateTask(req, res) {
   try {
     const { id } = req.params;
     const { due_date, due_time, title, value_id, notes, is_household, is_shared_with_partner, is_completed,
-            recurrence_type, recurrence_day } = req.body;
+            recurrence_type, recurrence_day, anchor_routine_id, anchor_label } = req.body;
     const userId = req.user.id;
     const pool = res.locals._pool;
 
@@ -498,6 +498,8 @@ async function updateTask(req, res) {
         addSet('recurrence_day', null);
       }
     }
+    if (anchor_routine_id !== undefined) addSet('anchor_routine_id', anchor_routine_id ? parseInt(anchor_routine_id) : null);
+    if (anchor_label !== undefined) addSet('anchor_label', anchor_label || null);
     addSet('updated_at', new Date());
 
     if (setCols.length <= 1) {
