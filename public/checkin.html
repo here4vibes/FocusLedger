@@ -51,18 +51,24 @@
         }
 
         /* ── Top bar ── */
+        /* Hide shared-nav top bar — this page is a focused immersive flow */
+        #shared-top-bar { display: none !important; }
+
+        /* Move the collapsed nav pill to top-right so it's out of the chat area */
+        #shared-bottom-nav.nav-collapsed {
+            top: max(env(safe-area-inset-top, 0px), 0.5rem);
+            bottom: auto !important;
+            left: auto !important;
+            right: 0.75rem;
+            transform: none !important;
+        }
+
         .top-bar {
             display: flex;
-            justify-content: space-between;
+            justify-content: flex-end;
             align-items: center;
             padding: 1rem 1.25rem 0.5rem;
             flex-shrink: 0;
-        }
-        .logo-small {
-            font-family: 'Space Grotesk', sans-serif;
-            font-size: 0.95rem;
-            font-weight: 700;
-            color: rgba(255,255,255,0.5);
         }
         .top-bar-right {
             display: flex;
@@ -535,11 +541,8 @@
 
     <!-- Top bar (always shown) -->
     <div class="top-bar">
-        <span class="logo-small">FocusLedger</span>
-        <div class="top-bar-right">
-            <button class="mode-switch-btn" id="modeSwitchBtn" type="button" style="display:none;">Use form instead</button>
-            <button class="skip-btn" id="skipBtn" type="button">Skip →</button>
-        </div>
+        <button class="mode-switch-btn" id="modeSwitchBtn" type="button" style="display:none;">Use form instead</button>
+        <button class="skip-btn" id="skipBtn" type="button">Skip →</button>
     </div>
 
     <!-- Loading: shown as Buddy typing so there's no blank void -->
