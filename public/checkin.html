@@ -625,7 +625,10 @@
     (function seedImmediateGreeting() {
         var hour = new Date().getHours();
         var timeGreet = hour < 12 ? 'Morning' : hour < 17 ? 'Hey' : 'Evening';
-        var chat = el('chatArea');
+        // Use getElementById directly — el() (from shared-nav.js) is not yet defined when this IIFE runs
+        var chat = document.getElementById('chatArea');
+        if (!chat) return;
+        chat.style.display = 'flex';
         var row = document.createElement('div');
         row.className = 'msg buddy';
         row.id = 'loadingTypingRow';
@@ -637,8 +640,8 @@
         chat.appendChild(row);
 
         // Disable send + textarea until ready
-        var sendBtn = el('sendBtn');
-        var textarea = el('userInput');
+        var sendBtn = document.getElementById('sendBtn');
+        var textarea = document.getElementById('userInput');
         if (sendBtn) sendBtn.disabled = true;
         if (textarea) { textarea.disabled = true; textarea.placeholder = 'One second…'; }
     })();
