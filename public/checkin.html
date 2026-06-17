@@ -593,6 +593,10 @@
 
 </div>
 
+<!-- Load shared utilities before inline script so el/apiFetch/escHtml are available -->
+<script src="/js/haptics.js"></script>
+<script src="/shared-nav.js"></script>
+
 <script>
 (function() {
     'use strict';
@@ -650,14 +654,14 @@
     var parsedTaskData = [];
 
     // ── Skip / bypass ────────────────────────────────────────────────────────
-    el('skipBtn').addEventListener('click', function() {
+    document.getElementById('skipBtn').addEventListener('click', function() {
         // Record skip for preference learning
         recordModeOutcome('conversation', false, true);
         markDoneAndProceed(null, null);
     });
 
     // ── Mode switch ──────────────────────────────────────────────────────────
-    el('modeSwitchBtn').addEventListener('click', function() {
+    document.getElementById('modeSwitchBtn').addEventListener('click', function() {
         // User wants form mode — record manual override and redirect to buddy
         apiFetch('/api/buddy/mode-preference', {
             method: 'POST',
@@ -937,8 +941,8 @@
     }
 
     // ── Send message ──────────────────────────────────────────────────────────
-    var inputEl = el('userInput');
-    var sendBtn = el('sendBtn');
+    var inputEl = document.getElementById('userInput');
+    var sendBtn = document.getElementById('sendBtn');
 
     sendBtn.addEventListener('click', sendMessage);
     inputEl.addEventListener('keydown', function(e) {
@@ -1244,9 +1248,6 @@
 
 })();
 </script>
-<!-- Haptics: no-op in browser, native feedback in iOS Capacitor shell -->
-<script src="/js/haptics.js"></script>
-<script src="/shared-nav.js"></script>
 <script>
   // Tap collapsed circle → expand pill for 4s then collapse back
   (function () {
