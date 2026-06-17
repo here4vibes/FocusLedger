@@ -21,12 +21,6 @@
  *   command = "node jobs/plaid-sync.js"
  */
 
-// Blaxel shadow migration guard
-if (process.env.POLSIA_IN_PROCESS_CRONS_ENABLED !== 'true') {
-  console.log('[plaid-sync] Skipped — POLSIA_IN_PROCESS_CRONS_ENABLED !== true (Blaxel shadow mode)');
-  process.exit(0);
-}
-
 const { Pool } = require('pg');
 const crypto = require('crypto');
 

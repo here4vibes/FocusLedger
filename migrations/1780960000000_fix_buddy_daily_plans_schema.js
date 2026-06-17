@@ -128,4 +128,8 @@ module.exports = {
 
     console.log('[migration] fix_buddy_daily_plans_schema: done');
   },
+
+  // No safe down() — column renames and type changes cannot be auto-reversed
+  // without data loss. Restore from a DB snapshot if a rollback is needed.
+  down: async (_client) => {},
 };

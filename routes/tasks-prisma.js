@@ -460,7 +460,7 @@ async function updateTask(req, res) {
   try {
     const { id } = req.params;
     const { due_date, due_time, title, value_id, notes, is_household, is_shared_with_partner, is_completed,
-            recurrence_type, recurrence_day } = req.body;
+            recurrence_type, recurrence_day, anchor_routine_id, anchor_label } = req.body;
     const userId = req.user.id;
     const pool = res.locals._pool;
 
@@ -498,6 +498,8 @@ async function updateTask(req, res) {
         addSet('recurrence_day', null);
       }
     }
+    if (anchor_routine_id !== undefined) addSet('anchor_routine_id', anchor_routine_id ? parseInt(anchor_routine_id) : null);
+    if (anchor_label !== undefined) addSet('anchor_label', anchor_label || null);
     addSet('updated_at', new Date());
 
     if (setCols.length <= 1) {
@@ -511,7 +513,7 @@ async function updateTask(req, res) {
     if (!rows.length) return res.status(404).json({ success: false, message: 'Task not found' });
     res.json({ success: true, task: normTask(rows[0]) });
   } catch (err) {
-    if (err.code === '42703') return res.status(500).json({ success: false, message: 'Column does not exist: ' + err.message });
+    if (err.code === '42703') return res.status(500).json({ success: false, message: 'Failed to update task — schema mismatch' });
     console.error('[tasks] update error:', err);
     res.status(500).json({ success: false, message: 'Failed to update task' });
   }

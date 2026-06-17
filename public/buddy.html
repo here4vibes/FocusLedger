@@ -1297,16 +1297,21 @@
                         return apiFetch('/api/buddy/daily-plan?mood=' + encodeURIComponent(mood) + '&date=' + TODAY);
                     })
                     .then(function(r) { return r.json(); })
-                    .then(function() {
+                    .then(function(planData) {
+                        // Capture slots so habit-stack overlay knows task titles
+                        window._habitStackSlots = (planData && planData.slots) ? planData.slots : [];
                         return apiFetch('/api/buddy/daily-plan/accept', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ date: TODAY })
                         });
                     })
-                    .catch(function() {})
-                    .finally(function() {
-                        // Close overlay and reload page to show status view
+                    .then(function() {
+                        window.history.replaceState({}, '', '/app/buddy');
+                        if (formOverlay) formOverlay.classList.remove('visible');
+                        showHabitStackOverlay(window._habitStackSlots || []);
+                    })
+                    .catch(function() {
                         window.history.replaceState({}, '', '/app/buddy');
                         if (formOverlay) formOverlay.classList.remove('visible');
                         location.reload();
@@ -1437,6 +1442,12 @@
             var autoSuggestion = sessionStatus && sessionStatus.autoRoutineSuggestion;
             if (autoSuggestion && autoSuggestion.id) {
                 parts.push(renderSuggestionCard(autoSuggestion));
+            }
+
+            // Starter routine card — shown to users with no morning routine
+            var starterSuggestion = sessionStatus && sessionStatus.starterRoutineSuggestion;
+            if (starterSuggestion && starterSuggestion.templateId) {
+                parts.push(renderStarterRoutineCard(starterSuggestion));
             }
 
             // ── STATUS VIEW (same-day return, plan accepted) ───────────────────
@@ -1741,25 +1752,93 @@
         // ── Auto-routines suggestion card ─────────────────────────────────────
         function renderSuggestionCard(suggestion) {
             if (!suggestion || !suggestion.message) return '';
+            var isSequence = suggestion.patternType === 'sequence';
             var taskTitles = suggestion.taskTitles || [];
             var displayTasks = taskTitles.slice(0, 3).join(', ');
             var more = taskTitles.length > 3 ? ' and ' + (taskTitles.length - 3) + ' more' : '';
-            var confidenceLabel = suggestion.confidenceLevel === 'medium' ? ' (still learning)' : '';
-            var html = '<div class="card" id="autoRoutineCard" style="border-color:var(--orange);border-width:2px;">';
-            html += '<div class="card-label">Pattern detected ✨</div>';
+            var confidenceLabel = (!isSequence && suggestion.confidenceLevel === 'medium') ? ' (still learning)' : '';
+            var cardLabel = isSequence ? 'Habit stack detected 🔗' : 'Pattern detected ✨';
+            var acceptLabel = isSequence ? 'Stack them' : 'Yes, set it up';
+            var borderColor = isSequence ? 'var(--navy)' : 'var(--orange)';
+            var html = '<div class="card" id="autoRoutineCard" style="border-color:' + borderColor + ';border-width:2px;">';
+            html += '<div class="card-label">' + cardLabel + '</div>';
             html += '<div style="font-size:1rem;color:var(--navy);margin-bottom:0.75rem;line-height:1.45;">' + escHtml(suggestion.message) + confidenceLabel + '</div>';
             if (taskTitles.length > 0) {
                 html += '<div style="font-size:0.82rem;color:var(--text-muted);margin-bottom:1rem;padding:0.5rem 0.75rem;background:var(--cream-dark);border-radius:8px;">' + escHtml(displayTasks) + escHtml(more) + '</div>';
             }
             html += '<div style="display:flex;flex-direction:column;gap:0.5rem;">';
-            html += '<button class="auto-routine-accept" data-suggestion-id="' + suggestion.id + '" style="background:var(--green);color:white;border:none;border-radius:12px;padding:0.75rem;font-size:0.9rem;font-weight:600;cursor:pointer;width:100%;">Yes, set it up</button>';
+            html += '<button class="auto-routine-accept" data-suggestion-id="' + suggestion.id + '" style="background:var(--green);color:white;border:none;border-radius:12px;padding:0.75rem;font-size:0.9rem;font-weight:600;cursor:pointer;width:100%;">' + acceptLabel + '</button>';
             html += '<div style="display:flex;gap:0.5rem;">';
             html += '<button class="auto-routine-dismiss" data-suggestion-id="' + suggestion.id + '" style="flex:1;background:var(--cream-dark);color:var(--text-dark);border:1px solid var(--border);border-radius:12px;padding:0.65rem;font-size:0.85rem;font-weight:500;cursor:pointer;">Not right now</button>';
-            html += '<button class="auto-routine-edit" data-suggestion-id="' + suggestion.id + '" style="flex:1;background:var(--orange-light);color:var(--navy);border:1px solid var(--border);border-radius:12px;padding:0.65rem;font-size:0.85rem;font-weight:500;cursor:pointer;">Edit first</button>';
+            if (!isSequence) {
+                html += '<button class="auto-routine-edit" data-suggestion-id="' + suggestion.id + '" style="flex:1;background:var(--orange-light);color:var(--navy);border:1px solid var(--border);border-radius:12px;padding:0.65rem;font-size:0.85rem;font-weight:500;cursor:pointer;">Edit first</button>';
+            }
             html += '</div>';
             html += '</div>';
             html += '</div>';
             return html;
+        }
+
+        // ── Starter routine card ──────────────────────────────────────────────
+        function renderStarterRoutineCard(suggestion) {
+            var taskList = (suggestion.taskTitles || []).map(function(t) {
+                return '<span style="display:block;padding:0.2rem 0;">• ' + escHtml(t) + '</span>';
+            }).join('');
+            var html = '<div class="card" id="starterRoutineCard" style="border:2px solid var(--navy);">';
+            html += '<div class="card-label">Morning foundation 🌅</div>';
+            html += '<div style="font-size:1rem;font-weight:700;color:var(--navy);margin-bottom:0.4rem;">Build your Morning Essentials routine</div>';
+            html += '<div style="font-size:0.83rem;color:var(--muted);margin-bottom:0.75rem;line-height:1.45;">The daily basics that help your ADHD brain start strong. Anchoring these 6 habits to a fixed window reduces decision fatigue before 9 AM.</div>';
+            if (taskList) {
+                html += '<div style="font-size:0.82rem;color:var(--text);margin-bottom:1rem;padding:0.5rem 0.75rem;background:var(--cream-dark);border-radius:8px;line-height:1.7;">' + taskList + '</div>';
+            }
+            html += '<div style="display:flex;gap:0.5rem;">';
+            html += '<button id="addStarterRoutineBtn" data-template-id="' + suggestion.templateId + '" style="flex:2;background:var(--navy);color:white;border:none;border-radius:12px;padding:0.75rem;font-size:0.9rem;font-weight:600;cursor:pointer;">Add my routine</button>';
+            html += '<button id="dismissStarterRoutineBtn" style="flex:1;background:var(--cream-dark);color:var(--muted);border:1px solid var(--border);border-radius:12px;padding:0.75rem;font-size:0.85rem;cursor:pointer;">Not now</button>';
+            html += '</div>';
+            html += '</div>';
+            return html;
+        }
+
+        // ── Habit-stack overlay ───────────────────────────────────────────────
+        function showHabitStackOverlay(slots) {
+            var overlay = document.getElementById('habitStackOverlay');
+            var container = document.getElementById('habitStackSlots');
+            var validSlots = (slots || []).filter(function(s) { return s && s.task; });
+            if (!overlay || !validSlots.length) { location.reload(); return; }
+
+            var html = '';
+            validSlots.forEach(function(slot, i) {
+                var n = i + 1;
+                html += '<div style="margin-bottom:1.1rem;">';
+                html += '<div style="font-size:0.76rem;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.3rem;">Task ' + n + '</div>';
+                html += '<div style="font-size:0.88rem;color:var(--navy);font-weight:600;padding:0.5rem 0.65rem;background:var(--cream-dark);border-radius:8px;margin-bottom:0.4rem;">' + escHtml(slot.task.title) + '</div>';
+                html += '<div style="font-size:0.83rem;color:var(--muted);margin-bottom:0.3rem;">After I...</div>';
+                html += '<input type="text" id="hs_cue_' + n + '" placeholder="e.g. make my morning coffee" style="width:100%;padding:0.6rem 0.75rem;border:1.5px solid var(--border);border-radius:10px;font-size:0.88rem;font-family:inherit;background:white;outline:none;color:var(--navy);box-sizing:border-box;" onfocus="this.style.borderColor=\'var(--orange)\'" onblur="this.style.borderColor=\'var(--border)\'">';
+                html += '</div>';
+            });
+
+            container.innerHTML = html;
+            overlay.style.display = 'flex';
+            var first = document.getElementById('hs_cue_1');
+            if (first) setTimeout(function() { first.focus(); }, 150);
+
+            document.getElementById('habitStackSave').onclick = function() {
+                var cues = {};
+                for (var i = 1; i <= validSlots.length; i++) {
+                    var inp = document.getElementById('hs_cue_' + i);
+                    if (inp && inp.value.trim()) cues['task_' + i + '_cue'] = inp.value.trim();
+                }
+                if (Object.keys(cues).length) {
+                    apiFetch('/api/buddy/daily-plan/cues', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(Object.assign({ date: TODAY }, cues))
+                    }).catch(function() {}).finally(function() { location.reload(); });
+                } else {
+                    location.reload();
+                }
+            };
+            document.getElementById('habitStackSkip').onclick = function() { location.reload(); };
         }
 
         // ── Attach handlers after render ──────────────────────────────────────
@@ -1790,6 +1869,34 @@
             wireAcceptBtn();
             wireRegenBtn();
             wireSwapBtns();
+
+            // Starter routine card buttons
+            var addStarterBtn = document.getElementById('addStarterRoutineBtn');
+            if (addStarterBtn) {
+                addStarterBtn.addEventListener('click', function() {
+                    var tid = parseInt(this.dataset.templateId, 10);
+                    this.disabled = true;
+                    this.textContent = 'Adding…';
+                    apiFetch('/api/routines/from-template', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ template_id: tid })
+                    }).then(function() {
+                        var card = document.getElementById('starterRoutineCard');
+                        if (card) card.innerHTML = '<div style="padding:1rem;text-align:center;color:var(--navy);font-weight:600;">✅ Morning Essentials added! Find it in your Routines.</div>';
+                    }).catch(function() {
+                        addStarterBtn.disabled = false;
+                        addStarterBtn.textContent = 'Add my routine';
+                    });
+                });
+            }
+            var dismissStarterBtn = document.getElementById('dismissStarterRoutineBtn');
+            if (dismissStarterBtn) {
+                dismissStarterBtn.addEventListener('click', function() {
+                    var card = document.getElementById('starterRoutineCard');
+                    if (card) card.style.display = 'none';
+                });
+            }
 
             // Swap modal close
             var closeBtn = el('swapModalClose');
@@ -2828,5 +2935,20 @@
   fab=document.createElement('button');fab.className='fab';fab.title='Quick add task';fab.textContent='+';fab.addEventListener('click',openQA);document.body.appendChild(fab);
 })();
 </script>
+<!-- Habit-stack overlay — shown after morning plan acceptance -->
+<div id="habitStackOverlay" style="display:none;position:fixed;inset:0;background:rgba(1,30,92,0.88);z-index:1200;align-items:center;justify-content:center;padding:1.5rem;">
+  <div style="background:white;border-radius:20px;padding:1.75rem;max-width:420px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+    <div style="text-align:center;margin-bottom:1.5rem;">
+      <div style="font-size:2rem;margin-bottom:0.4rem;">🔗</div>
+      <div style="font-size:1.1rem;font-weight:700;color:var(--navy);">Make it stick</div>
+      <div style="font-size:0.82rem;color:var(--muted);margin-top:0.35rem;line-height:1.45;">Link each task to something you already do — this doubles follow-through for ADHD brains.</div>
+    </div>
+    <div id="habitStackSlots"></div>
+    <div style="display:flex;gap:0.75rem;margin-top:1.25rem;">
+      <button id="habitStackSkip" style="flex:1;padding:0.75rem;border:1px solid var(--border);border-radius:12px;background:var(--cream-dark);color:var(--muted);font-size:0.88rem;cursor:pointer;font-weight:500;">Skip</button>
+      <button id="habitStackSave" style="flex:2;padding:0.75rem;border:none;border-radius:12px;background:var(--orange);color:white;font-size:0.9rem;font-weight:600;cursor:pointer;">Save my triggers</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>

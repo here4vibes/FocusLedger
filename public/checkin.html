@@ -542,17 +542,14 @@
         </div>
     </div>
 
-    <!-- Loading -->
-    <div id="loadingScreen">
-        <div class="spinner"></div>
-        <span>Getting things ready…</span>
-    </div>
+    <!-- Loading: shown as Buddy typing so there's no blank void -->
+    <div id="loadingScreen" style="display:none;"></div>
 
-    <!-- Chat area (hidden until ready) -->
-    <div id="chatArea" style="display:none;"></div>
+    <!-- Chat area (visible immediately — pre-seeded with greeting + typing indicator) -->
+    <div id="chatArea"></div>
 
-    <!-- Input area (hidden until chat starts) -->
-    <div class="input-wrap" id="inputWrap" style="display:none;">
+    <!-- Input area (shown immediately, disabled until ready) -->
+    <div class="input-wrap" id="inputWrap">
         <div class="input-row">
             <button id="micBtn" type="button" aria-label="Voice input" title="Speak your answer" style="display:none;">🎤</button>
             <textarea
@@ -623,6 +620,29 @@
         selectedTasks: new Set()
     };
 
+    // ── Immediate pre-load: show chat UI right away so there's no blank void ──
+    // Disable input until the API responds; replace typing indicator with real greeting.
+    (function seedImmediateGreeting() {
+        var hour = new Date().getHours();
+        var timeGreet = hour < 12 ? 'Morning' : hour < 17 ? 'Hey' : 'Evening';
+        var chat = el('chatArea');
+        var row = document.createElement('div');
+        row.className = 'msg buddy';
+        row.id = 'loadingTypingRow';
+        row.innerHTML = '<div class="buddy-avatar">💬</div>' +
+            '<div class="bubble" style="display:flex;flex-direction:column;gap:0.25rem;">' +
+            '<span style="font-size:0.88rem;opacity:0.7;">' + timeGreet + '</span>' +
+            '<div class="typing-dots"><span></span><span></span><span></span></div>' +
+            '</div>';
+        chat.appendChild(row);
+
+        // Disable send + textarea until ready
+        var sendBtn = el('sendBtn');
+        var textarea = el('userInput');
+        if (sendBtn) sendBtn.disabled = true;
+        if (textarea) { textarea.disabled = true; textarea.placeholder = 'One second…'; }
+    })();
+
     // ── Parsed task storage (indexed by position) ─────────────────────────────
     var parsedTaskData = [];
 
@@ -686,9 +706,15 @@
 
     // ── Start conversation ────────────────────────────────────────────────────
     function startConversation(sessionData) {
-        el('loadingScreen').style.display = 'none';
-        el('chatArea').style.display = 'flex';
-        el('inputWrap').style.display = '';
+        // Remove the pre-load typing indicator
+        var typingRow = el('loadingTypingRow');
+        if (typingRow) typingRow.remove();
+
+        // Re-enable input
+        var sendBtn = el('sendBtn');
+        var textarea = el('userInput');
+        if (sendBtn) sendBtn.disabled = false;
+        if (textarea) { textarea.disabled = false; textarea.placeholder = 'What\'s on your mind?'; }
 
         initVoiceInput();
 

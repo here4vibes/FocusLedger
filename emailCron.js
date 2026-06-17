@@ -263,4 +263,10 @@ function scheduleEmailCrons(pool) {
   }, 10 * 60 * 1000);
 }
 
-module.exports = { scheduleEmailCrons };
+module.exports = { scheduleEmailCrons, runEmailCrons };
+
+async function runEmailCrons(pool) {
+  await sendWeeklyNudges(pool);
+  await sendReEngagementEmails(pool);
+  await sendProExpiryReminders(pool);
+}

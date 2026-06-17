@@ -275,6 +275,31 @@ module.exports = function(pool) {
         autoRoutineSuggestion = await getSessionSuggestion(pool, userId);
       } catch (_) { /* non-blocking */ }
 
+      // Starter routine suggestion — shown to users with no morning routine.
+      // Surfaces the Morning Essentials hygiene template for one-tap adoption.
+      let starterRoutineSuggestion = null;
+      try {
+        const amCount = await pool.query(
+          `SELECT COUNT(*) FROM routines WHERE user_id = $1 AND routine_type = 'am' AND is_active = true`,
+          [userId]
+        );
+        if (parseInt(amCount.rows[0].count, 10) === 0) {
+          const tmpl = await pool.query(
+            `SELECT id, name, tasks FROM routine_templates WHERE name = 'Morning Essentials' LIMIT 1`
+          );
+          if (tmpl.rows.length) {
+            const t = tmpl.rows[0];
+            starterRoutineSuggestion = {
+              templateId: t.id,
+              name: t.name,
+              taskTitles: (Array.isArray(t.tasks) ? t.tasks : [])
+                .sort((a, b) => (a.order || 0) - (b.order || 0))
+                .map(x => x.title),
+            };
+          }
+        }
+      } catch (_) { /* non-blocking */ }
+
       let planSummary = null;
       if (!dueToday) {
         const planResult = await pool.query(
@@ -316,7 +341,8 @@ module.exports = function(pool) {
         planSummary,
         greetingInsights,
         routineNudges,
-        autoRoutineSuggestion
+        autoRoutineSuggestion,
+        starterRoutineSuggestion,
       });
     } catch (err) {
       console.error('[buddy] GET /session-status error:', err.message);
@@ -857,6 +883,29 @@ module.exports = function(pool) {
     } catch (err) {
       console.error('[buddy] POST /daily-plan/accept error:', err.message);
       res.status(500).json({ success: false, message: 'Failed to accept plan' });
+    }
+  });
+
+  // ─── POST /api/buddy/daily-plan/cues ────────────────────────────────────
+  // Save implementation-intention cues ("After I X, I will do Y") for each
+  // task slot. Called after plan acceptance from the habit-stack overlay.
+  router.post('/daily-plan/cues', async (req, res) => {
+    try {
+      const userId = req.user.id;
+      const tz = await fetchUserTimezone(pool, userId);
+      const today = req.body.date || getUserLocalDate(tz);
+      const { task_1_cue, task_2_cue, task_3_cue } = req.body;
+
+      await pool.query(
+        `UPDATE buddy_daily_plans
+         SET task_1_cue = $1, task_2_cue = $2, task_3_cue = $3
+         WHERE user_id = $4 AND plan_date = $5`,
+        [task_1_cue || null, task_2_cue || null, task_3_cue || null, userId, today]
+      );
+      res.json({ ok: true });
+    } catch (err) {
+      console.error('[buddy] POST /daily-plan/cues error:', err.message);
+      res.status(500).json({ success: false, message: 'Failed to save cues' });
     }
   });
 

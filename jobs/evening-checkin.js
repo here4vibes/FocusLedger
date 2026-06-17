@@ -22,12 +22,6 @@
  *   command = "node jobs/evening-checkin.js"
  */
 
-// Blaxel shadow migration guard — skip entirely when not the primary host
-if (process.env.POLSIA_IN_PROCESS_CRONS_ENABLED !== 'true') {
-  console.log('[evening-checkin] Skipped — POLSIA_IN_PROCESS_CRONS_ENABLED !== true (Blaxel shadow mode)');
-  process.exit(0);
-}
-
 const { Pool } = require('pg');
 
 if (!process.env.DATABASE_URL) {
