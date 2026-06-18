@@ -188,6 +188,7 @@ app.use('/api/momentum-score',  require('./routes/momentum-score')(pool));
 app.use('/api/outbound-email',  require('./routes/outbound-email')(pool));
 app.use('/api/journal',         require('./routes/journal')(pool));
 app.use('/api/buddy',           require('./routes/buddy')(pool));
+app.use('/api/onboarding',      require('./routes/onboarding')(pool));
 app.use('/api/buddy-widget',    require('./routes/buddy-widget')(pool));
 app.use('/api/documents',       require('./routes/documents')(pool));
 app.use('/api/nudge-system',    require('./routes/nudge-system')(pool));

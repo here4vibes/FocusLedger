@@ -689,11 +689,8 @@ module.exports = function(pool, loginLimiter, signupLimiter) {
           pool.query(`INSERT INTO app_subscription (plan, status, user_id) VALUES ('free', 'active', $1)`, [user.id])
         ]).catch(err => console.error('[auth/google/one-tap] Setup error:', err));
 
-        // Onboarding task — gives new users a concrete first action
-        pool.query(
-          `INSERT INTO tasks (title, priority, user_id, source) VALUES ($1, 'medium', $2, 'onboarding')`,
-          ['Add your first real task', user.id]
-        ).catch(err => console.error('[auth/google/one-tap] Onboarding task error:', err));
+        // Onboarding flag — buddy.html checks /api/onboarding/status and redirects new users
+        // to Buddy-led onboarding conversation before showing the main app.
 
         // Welcome email — fire-and-forget
         const { subject: ws, html: wh } = welcomeTemplate({ name: user.name });
