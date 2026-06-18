@@ -4,7 +4,7 @@ module.exports = {
     await client.query(`
       CREATE TABLE IF NOT EXISTS cross_domain_insights (
         id           SERIAL PRIMARY KEY,
-        user_id      INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        user_id      INTEGER NOT NULL,
         week_start   DATE NOT NULL,
         insight_text TEXT NOT NULL,
         generated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
