@@ -140,6 +140,37 @@ async function isUnlocked(pool, userId, insightKey) {
   `, [userId, insightKey]);
 }
 
+// ── cross_domain_insights ─────────────────────────────────────────────────────
+
+/**
+ * Save (or replace) the weekly AI-generated cross-domain insight for a user.
+ * One row per user per week_start — UPSERT overwrites if the job re-runs.
+ */
+async function saveCrossDomainInsight(pool, userId, weekStart, insightText) {
+  return queryWithRetry(pool, `
+    INSERT INTO cross_domain_insights (user_id, week_start, insight_text, generated_at)
+    VALUES ($1, $2, $3, NOW())
+    ON CONFLICT (user_id, week_start) DO UPDATE SET
+      insight_text = EXCLUDED.insight_text,
+      generated_at = NOW()
+    RETURNING *
+  `, [userId, weekStart, insightText]);
+}
+
+/**
+ * Return the most recent cross-domain insight generated in the last 7 days,
+ * so it can be surfaced as a greeting insight in the Buddy session-status.
+ */
+async function getLatestCrossDomainInsight(pool, userId) {
+  return queryWithRetry(pool, `
+    SELECT insight_text, generated_at, week_start
+    FROM cross_domain_insights
+    WHERE user_id = $1 AND generated_at >= NOW() - INTERVAL '7 days'
+    ORDER BY generated_at DESC
+    LIMIT 1
+  `, [userId]);
+}
+
 module.exports = {
   upsertWeeklyStats,
   getWeeklyStatsRange,
@@ -149,4 +180,6 @@ module.exports = {
   markInteracted,
   getUserUnlocks,
   isUnlocked,
+  saveCrossDomainInsight,
+  getLatestCrossDomainInsight,
 };
