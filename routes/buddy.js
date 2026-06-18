@@ -54,7 +54,7 @@ const {
   getLocalTimeString,
 } = require('../lib/routineNudgeEngine');
 const { getSessionSuggestion } = require('../lib/patternDetection');
-const { getAdhdProfile, updateAdhdProfile, buildProfilePromptAddition } = require('../lib/adhd-profile');
+const { getAdhdProfile, updateAdhdProfile, buildProfilePromptAddition, bootstrapAdhdProfile } = require('../lib/adhd-profile');
 
 // ── Scoring weights ─────────────────────────────────────────────────────────
 // Deadline urgency (40%), values alignment (25%), avoidance detection (20%),
@@ -492,6 +492,13 @@ module.exports = function(pool) {
       // not to repeatedly surface partner info throughout the conversation.
       const partnerContextForPrompt = userTurns <= 2 ? partnerCtx : null;
       const adhdProfile = await getAdhdProfile(pool, userId).catch(() => ({}));
+
+      // Existing users land here with adhd_profile = {} until bootstrapped.
+      // Fire-and-forget: synthesize from history so the NEXT session has a profile.
+      if (Object.keys(adhdProfile).length === 0) {
+        setImmediate(() => bootstrapAdhdProfile(pool, userId).catch(() => {}));
+      }
+
       const systemPrompt = buildConversationSystemPrompt(userTurns, enrichedContext, partnerContextForPrompt, sessionCount, hookRestartCount, adhdProfile);
       const contextHistory = history.map(function(h) {
         return { role: h.role === 'buddy' ? 'assistant' : 'user', content: h.message };
