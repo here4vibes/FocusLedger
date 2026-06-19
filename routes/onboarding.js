@@ -68,9 +68,11 @@ module.exports = function (pool) {
       }));
       contextHistory.push({ role: 'user', content: message.trim() });
 
-      const messages = [{ role: 'system', content: ONBOARDING_SYSTEM_PROMPT }, ...contextHistory];
-
-      const raw = await chatMessages(messages, { maxTokens: 350, model: 'claude-sonnet-4-6' });
+      const raw = await chatMessages(contextHistory, {
+        system: ONBOARDING_SYSTEM_PROMPT,
+        maxTokens: 400,
+        model: 'claude-sonnet-4-6',
+      });
 
       const completeIdx = raw.indexOf('[[ONBOARDING_COMPLETE]]');
       let reply = raw;
