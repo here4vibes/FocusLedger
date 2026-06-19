@@ -326,8 +326,12 @@ async function syncTransactions(pool, item) {
         }
       }
 
-      added++;
-      billCandidates.push({ ...tx, transaction_date: tx.date });
+      if (plaidTx) {
+        added++;
+        billCandidates.push({ ...tx, transaction_date: tx.date });
+      } else if (!tx.pending) {
+        console.warn('[Plaid] Failed to insert tx', tx.transaction_id, '— see insertPlaidTransaction error above');
+      }
     }
 
     for (const removedTx of removed) {
