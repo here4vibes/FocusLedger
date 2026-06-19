@@ -166,9 +166,45 @@
     .area-card:active { transform: scale(0.97); }
 
     .card-icon {
-      font-size: 2rem;
-      line-height: 1;
+      width: 44px;
+      height: 44px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       flex-shrink: 0;
+    }
+    .card-icon svg { display: block; }
+    /* Momentum bar inside the Insights card */
+    .ins-momentum { margin-top: 6px; display: none; }
+    .ins-momentum-score {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 1rem;
+      font-weight: 700;
+      line-height: 1;
+      color: #AD7A4A;
+    }
+    .ins-momentum-label {
+      font-size: 0.6rem;
+      font-weight: 700;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 5px;
+    }
+    .ins-momentum-track {
+      height: 4px;
+      border-radius: 4px;
+      background: rgba(1,30,92,0.08);
+      overflow: hidden;
+      width: 100%;
+    }
+    .ins-momentum-fill {
+      height: 100%;
+      border-radius: 4px;
+      background: linear-gradient(90deg, #5BA4A4, #F26B3A);
+      width: 0;
+      transition: width 0.6s ease;
     }
     .card-body { display: flex; flex-direction: column; gap: 3px; }
     .card-title {
@@ -284,7 +320,9 @@
   <div class="cards-grid">
 
     <a class="area-card" href="/app/buddy" style="--card-accent:#011e5c">
-      <span class="card-icon">🧠</span>
+      <span class="card-icon" style="background:rgba(1,30,92,0.08)">
+        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#011e5c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg>
+      </span>
       <div class="card-body">
         <div class="card-title">Buddy</div>
         <div class="card-sub" id="buddySub">Your AI coach</div>
@@ -292,7 +330,9 @@
     </a>
 
     <a class="area-card" href="/app/tasks" style="--card-accent:#5BA4A4">
-      <span class="card-icon">✅</span>
+      <span class="card-icon" style="background:rgba(91,164,164,0.12)">
+        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#5BA4A4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.801 10A10 10 0 1 1 17 3.335"/><path d="m9 11 3 3L22 4"/></svg>
+      </span>
       <div class="card-body">
         <div class="card-title">Tasks</div>
         <div class="card-sub" id="tasksSub">What needs doing</div>
@@ -301,7 +341,9 @@
     </a>
 
     <a class="area-card" href="/app/money" style="--card-accent:#F26B3A">
-      <span class="card-icon">💰</span>
+      <span class="card-icon" style="background:rgba(242,107,58,0.1)">
+        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#F26B3A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
+      </span>
       <div class="card-body">
         <div class="card-title">Money</div>
         <div class="card-sub" id="moneySub">Track spending</div>
@@ -310,7 +352,9 @@
     </a>
 
     <a class="area-card" href="/calendar" style="--card-accent:#f0b429">
-      <span class="card-icon">📅</span>
+      <span class="card-icon" style="background:rgba(240,180,41,0.12)">
+        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#c49a15" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/><path d="M8 18h.01"/><path d="M12 18h.01"/></svg>
+      </span>
       <div class="card-body">
         <div class="card-title">Calendar</div>
         <div class="card-sub">Plan your day</div>
@@ -318,7 +362,9 @@
     </a>
 
     <a class="area-card" href="/routines" style="--card-accent:#4A8C5C">
-      <span class="card-icon">🔄</span>
+      <span class="card-icon" style="background:rgba(74,140,92,0.1)">
+        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#4A8C5C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
+      </span>
       <div class="card-body">
         <div class="card-title">Routines</div>
         <div class="card-sub" id="routinesSub">Daily habits</div>
@@ -326,7 +372,9 @@
     </a>
 
     <a class="area-card" href="/journal" style="--card-accent:#7A5BAD">
-      <span class="card-icon">📓</span>
+      <span class="card-icon" style="background:rgba(122,91,173,0.1)">
+        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#7A5BAD" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+      </span>
       <div class="card-body">
         <div class="card-title">Journal</div>
         <div class="card-sub" id="journalSub">How are you feeling?</div>
@@ -334,7 +382,9 @@
     </a>
 
     <a class="area-card" href="/app/vault" style="--card-accent:#4A6BAD">
-      <span class="card-icon">🗄️</span>
+      <span class="card-icon" style="background:rgba(74,107,173,0.1)">
+        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#4A6BAD" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/><circle cx="12" cy="13" r="2"/><path d="M12 15v2"/></svg>
+      </span>
       <div class="card-body">
         <div class="card-title">Life Vault</div>
         <div class="card-sub">Docs &amp; insurance</div>
@@ -342,10 +392,17 @@
     </a>
 
     <a class="area-card" href="/insights" style="--card-accent:#AD7A4A">
-      <span class="card-icon" id="insightsIcon">📊</span>
+      <span class="card-icon" style="background:rgba(173,122,74,0.1)">
+        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#AD7A4A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+      </span>
       <div class="card-body">
         <div class="card-title">Insights</div>
         <div class="card-sub" id="insightsSub">Your patterns</div>
+        <div class="ins-momentum" id="insightsMomentum">
+          <div class="ins-momentum-score" id="insightsMomentumScore"></div>
+          <div class="ins-momentum-label">momentum</div>
+          <div class="ins-momentum-track"><div class="ins-momentum-fill" id="insightsMomentumFill"></div></div>
+        </div>
       </div>
     </a>
 
@@ -356,13 +413,16 @@
     <div class="quick-label">Quick actions</div>
     <div class="quick-row">
       <a class="qa-btn" href="/app/focus">
-        <span>🍅</span> Focus Timer
+        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        Focus Timer
       </a>
       <a class="qa-btn" href="/app/buddy?tool=brain-dump">
-        <span>🧠</span> Brain Dump
+        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M8 10h.01"/><path d="M12 10h.01"/><path d="M16 10h.01"/></svg>
+        Brain Dump
       </a>
       <a class="qa-btn" href="/app/buddy?tool=dopamine-menu">
-        <span>⚡</span> Dopamine Menu
+        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        Dopamine Menu
       </a>
     </div>
   </div>
@@ -461,19 +521,17 @@
       rs.className = 'card-sub accent';
     }
 
-    // Insights card — momentum score emoji
+    // Insights card — momentum labeled bar
     if (ctx.momentum) {
       const score = ctx.momentum.score ?? 0;
-      const icon = score === 0 ? '💤'
-                 : score <= 20 ? '🌱'
-                 : score <= 49 ? '🌿'
-                 : score <= 69 ? '✨'
-                 : score <= 84 ? '💪'
-                 :               '🔥';
-      document.getElementById('insightsIcon').textContent = icon;
+      const scoreEl = document.getElementById('insightsMomentumScore');
+      const fillEl  = document.getElementById('insightsMomentumFill');
+      const barWrap = document.getElementById('insightsMomentum');
+      if (scoreEl) scoreEl.textContent = score;
+      if (fillEl)  fillEl.style.width = score + '%';
+      if (barWrap) barWrap.style.display = '';
       const sub = document.getElementById('insightsSub');
-      sub.textContent = ctx.momentum.message || 'Your patterns';
-      if (score >= 50) sub.className = 'card-sub accent';
+      if (sub) sub.textContent = ctx.momentum.message || 'Your patterns';
     }
   });
 
