@@ -693,7 +693,7 @@ module.exports = function(pool) {
         if (force_full) {
           // Reset cursor so Plaid re-delivers full transaction history from the start.
           // Safe to re-run: expenses dedup by plaid_transaction_id, plaid_transactions dedup by UNIQUE index.
-          await pool.query('UPDATE plaid_items SET cursor = NULL WHERE id = $1', [item.id]);
+          await updateItemCursor(pool, item.id, null);
           item.cursor = null;
           console.log('[Plaid] Full resync requested for item', item.id, 'user', userId, '— cursor reset');
         }
