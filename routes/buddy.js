@@ -54,6 +54,7 @@ const {
   getLocalTimeString,
 } = require('../lib/routineNudgeEngine');
 const { getSessionSuggestion } = require('../lib/patternDetection');
+const { getAdhdProfile, updateAdhdProfile, buildProfilePromptAddition, bootstrapAdhdProfile } = require('../lib/adhd-profile');
 
 // ── Scoring weights ─────────────────────────────────────────────────────────
 // Deadline urgency (40%), values alignment (25%), avoidance detection (20%),
@@ -490,7 +491,15 @@ module.exports = function(pool) {
       // Partner context injected only on first 2 turns — Buddy uses it to set coaching tone,
       // not to repeatedly surface partner info throughout the conversation.
       const partnerContextForPrompt = userTurns <= 2 ? partnerCtx : null;
-      const systemPrompt = buildConversationSystemPrompt(userTurns, enrichedContext, partnerContextForPrompt, sessionCount, hookRestartCount);
+      const adhdProfile = await getAdhdProfile(pool, userId).catch(() => ({}));
+
+      // Existing users land here with adhd_profile = {} until bootstrapped.
+      // Fire-and-forget: synthesize from history so the NEXT session has a profile.
+      if (Object.keys(adhdProfile).length === 0) {
+        setImmediate(() => bootstrapAdhdProfile(pool, userId).catch(() => {}));
+      }
+
+      const systemPrompt = buildConversationSystemPrompt(userTurns, enrichedContext, partnerContextForPrompt, sessionCount, hookRestartCount, adhdProfile);
       const contextHistory = history.map(function(h) {
         return { role: h.role === 'buddy' ? 'assistant' : 'user', content: h.message };
       });
@@ -728,6 +737,21 @@ module.exports = function(pool) {
       }
 
       res.json({ success: true });
+
+      // Update ADHD profile from today's conversation (fire-and-forget)
+      setImmediate(async () => {
+        try {
+          const convResult = await pool.query(
+            `SELECT role, message AS content FROM buddy_conversations
+             WHERE user_id = $1 AND session_date = $2
+             ORDER BY turn ASC`,
+            [userId, today]
+          );
+          if (convResult.rows.length > 0) {
+            await updateAdhdProfile(pool, userId, convResult.rows);
+          }
+        } catch { /* non-blocking */ }
+      });
     } catch (err) {
       console.error('[buddy] POST /login-checkin-done error:', err.message);
       res.status(500).json({ success: false, message: 'Failed to save check-in' });
@@ -1970,7 +1994,7 @@ async function enrichPlan(plan, pool) {
 // partnerCtx: Tandem partner awareness (shared task signals, concern topics) — null if no Tandem
 // sessionCount: user's lifetime session count (0-indexed — 0 = first session)
 // hookRestartCount: number of times the hook has been restarted (0 = original run)
-function buildConversationSystemPrompt(userTurnNumber, greetingContext, partnerCtx, sessionCount, hookRestartCount) {
+function buildConversationSystemPrompt(userTurnNumber, greetingContext, partnerCtx, sessionCount, hookRestartCount, adhdProfile) {
   const isFirstEver = (sessionCount || 0) === 0 && userTurnNumber === 1;
   const isReturningAfterLapse = (hookRestartCount || 0) > 0 && userTurnNumber === 1;
 
@@ -2006,7 +2030,7 @@ Keep responses to 2-4 sentences unless the situation genuinely needs more space.
 
 Never shame. Never force positivity onto something that's legitimately hard. Never give advice they didn't ask for.
 
-When the person has landed on a clear intention, made a decision, or gotten what they actually needed from the conversation, close warmly and end your message with [[CONVERSATION_COMPLETE]] on its own line. Don't rush to close — let the conversation reach a real ending.${openingNote}${partnerAddition}`;
+When the person has landed on a clear intention, made a decision, or gotten what they actually needed from the conversation, close warmly and end your message with [[CONVERSATION_COMPLETE]] on its own line. Don't rush to close — let the conversation reach a real ending.${openingNote}${buildProfilePromptAddition(adhdProfile || {})}${partnerAddition}`;
 }
 
 // Fallback Buddy replies when AI is unavailable.
