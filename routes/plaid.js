@@ -682,14 +682,23 @@ module.exports = function(pool) {
   router.post('/sync', async (req, res) => {
     try {
       const userId = req.user.id;
-      const { item_id } = req.body;
+      const { item_id, force_full } = req.body;
       const where = item_id
         ? 'WHERE id = $1 AND user_id = $2'
         : 'WHERE user_id = $1';
       const vals = item_id ? [parseInt(item_id), userId] : [userId];
       const { rows: items } = await pool.query(`SELECT * FROM plaid_items ${where}`, vals);
       let totalAdded = 0;
-      for (const item of items) { totalAdded += await syncTransactions(pool, item); }
+      for (const item of items) {
+        if (force_full) {
+          // Reset cursor so Plaid re-delivers full transaction history from the start.
+          // Safe to re-run: expenses dedup by plaid_transaction_id, plaid_transactions dedup by UNIQUE index.
+          await pool.query('UPDATE plaid_items SET cursor = NULL WHERE id = $1', [item.id]);
+          item.cursor = null;
+          console.log('[Plaid] Full resync requested for item', item.id, 'user', userId, '— cursor reset');
+        }
+        totalAdded += await syncTransactions(pool, item);
+      }
       res.json({ success: true, transactions_added: totalAdded, message: `${totalAdded} new transactions ready to review` });
     } catch (err) {
       const plaidCode = err.response?.data?.error_code;
