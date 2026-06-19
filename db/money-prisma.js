@@ -482,8 +482,9 @@ async function insertPlaidTransaction(pool, params) {
        categoryId || null, plaidCategory || null, txDate, isPending || false]
     );
     return rows[0] || null;
-  } catch {
-    return null; // silently ignore duplicates or schema mismatches
+  } catch (e) {
+    console.error('[Plaid] insertPlaidTransaction failed:', e.message, '| transactionId:', params.transactionId);
+    return null;
   }
 }
 
