@@ -34,11 +34,11 @@ async function upsertDetectedPattern(pool, userId, pattern) {
   const result = await pool.query(
     `INSERT INTO detected_patterns
        (user_id, pattern_type, pattern_data, occurrence_count, total_opportunities,
-        time_consistency_score, confidence_score, last_detected_at)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
-     ON CONFLICT DO NOTHING
+        time_consistency_score, confidence_score, last_detected_at, task_hash)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), $8)
+     ON CONFLICT (user_id, pattern_type, task_hash) DO NOTHING
      RETURNING *`,
-    [userId, patternType, JSON.stringify(patternData), occurrenceCount, totalOpportunities, timeConsistencyScore, confidenceScore]
+    [userId, patternType, JSON.stringify(patternData), occurrenceCount, totalOpportunities, timeConsistencyScore, confidenceScore, taskHash]
   );
   return result.rows[0] || null;
 }
