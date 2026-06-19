@@ -369,8 +369,57 @@
         });
     }
 
+    function urlBase64ToUint8Array(base64String) {
+        var padding = '='.repeat((4 - base64String.length % 4) % 4);
+        var base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+        var raw = window.atob(base64);
+        var arr = new Uint8Array(raw.length);
+        for (var i = 0; i < raw.length; i++) arr[i] = raw.charCodeAt(i);
+        return arr;
+    }
+
+    // If the user said yes to nudges during the conversation, auto-trigger the
+    // OS permission dialog right after seeding — no extra card or tap needed.
+    function maybeSubscribeThenGo(wantsNotifications) {
+        if (!wantsNotifications
+            || !('Notification' in window)
+            || !('PushManager' in window)
+            || !('serviceWorker' in navigator)
+            || Notification.permission === 'denied') {
+            window.location.href = '/app/buddy';
+            return;
+        }
+        Notification.requestPermission().then(function (permission) {
+            if (permission !== 'granted') { window.location.href = '/app/buddy'; return; }
+            return fetch('/api/notifications/vapid-public-key')
+                .then(function (r) { return r.json(); })
+                .then(function (keyData) {
+                    if (!keyData.enabled || !keyData.key) return;
+                    return navigator.serviceWorker.ready
+                        .then(function (reg) {
+                            return reg.pushManager.subscribe({
+                                userVisibleOnly: true,
+                                applicationServerKey: urlBase64ToUint8Array(keyData.key)
+                            });
+                        })
+                        .then(function (sub) {
+                            return apiFetch('/api/notifications/subscribe', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    subscription: sub.toJSON(),
+                                    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+                                })
+                            });
+                        });
+                })
+                .catch(function () {})
+                .then(function () { window.location.href = '/app/buddy'; });
+        }).catch(function () { window.location.href = '/app/buddy'; });
+    }
+
     function completeOnboarding(seedPayload) {
-        // Brief pause so the user reads Buddy's closing message, then show setup screen
+        var wantsNotif = seedPayload.wants_notifications === true;
         setTimeout(function () {
             chatEl.style.display = 'none';
             inputWrap.style.display = 'none';
@@ -387,15 +436,10 @@
                 })
             })
             .then(function () {
-                // Short pause so the spinner feels intentional, not instant
-                setTimeout(function () {
-                    window.location.href = '/app/buddy';
-                }, 1200);
+                setTimeout(function () { maybeSubscribeThenGo(wantsNotif); }, 1200);
             })
             .catch(function () {
-                setTimeout(function () {
-                    window.location.href = '/app/buddy';
-                }, 1200);
+                setTimeout(function () { maybeSubscribeThenGo(wantsNotif); }, 1200);
             });
         }, 1000);
     }
