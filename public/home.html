@@ -342,7 +342,7 @@
     </a>
 
     <a class="area-card" href="/insights" style="--card-accent:#AD7A4A">
-      <span class="card-icon">📊</span>
+      <span class="card-icon" id="insightsIcon">📊</span>
       <div class="card-body">
         <div class="card-title">Insights</div>
         <div class="card-sub" id="insightsSub">Your patterns</div>
@@ -472,6 +472,25 @@
     // Context load failed — still show page, just no live data
     document.getElementById('greetingSubText').textContent = 'Ready when you are.';
   });
+
+  // ── Momentum score → Insights card dynamic icon ────────────────────────────
+  fetch('/api/momentum-score', { headers: { Authorization: 'Bearer ' + token } })
+    .then(r => r.ok ? r.json() : null)
+    .then(data => {
+      if (!data?.success) return;
+      const score = data.score ?? 0;
+      const icon = score === 0 ? '💤'
+                 : score <= 20  ? '🌱'
+                 : score <= 49  ? '🌿'
+                 : score <= 69  ? '✨'
+                 : score <= 84  ? '💪'
+                 :                '🔥';
+      document.getElementById('insightsIcon').textContent = icon;
+      const sub = document.getElementById('insightsSub');
+      sub.textContent = data.message || 'Your patterns';
+      if (score >= 50) sub.className = 'card-sub accent';
+    })
+    .catch(() => {});
 
   // ── Spend today ────────────────────────────────────────────────────────────
   fetch('/api/money/expenses/today', { headers: { Authorization: 'Bearer ' + token } })

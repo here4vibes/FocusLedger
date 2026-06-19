@@ -4945,6 +4945,16 @@
                 </div>
             </a>
 
+            <!-- Insights -->
+            <a href="/insights" class="spoke-card" id="spokeInsightsCard">
+                <div class="spoke-icon" id="spokeInsightsIcon">📊</div>
+                <div class="spoke-title">Insights</div>
+                <div class="spoke-desc" id="spokeInsightsDesc">Your patterns &amp; momentum</div>
+                <div class="spoke-meta">
+                    <span class="spoke-cta" id="spokeInsightsCta">See patterns →</span>
+                </div>
+            </a>
+
             <!-- Journal -->
             <a href="/journal" class="spoke-card" id="spokeJournalCard">
                 <div class="spoke-icon">📓</div>
@@ -10781,6 +10791,19 @@
 
                 // Show card
                 card.classList.add('msw-visible');
+
+                // Insights spoke card — dynamic emoji icon + message
+                var insIcon = document.getElementById('spokeInsightsIcon');
+                var insDesc = document.getElementById('spokeInsightsDesc');
+                if (insIcon) {
+                    insIcon.textContent = score === 0 ? '💤'
+                        : score <= 20 ? '🌱'
+                        : score <= 49 ? '🌿'
+                        : score <= 69 ? '✨'
+                        : score <= 84 ? '💪'
+                        : '🔥';
+                }
+                if (insDesc && data.message) insDesc.textContent = data.message;
             }).catch(function() {
                 // Non-blocking — keep card hidden on error
             });
