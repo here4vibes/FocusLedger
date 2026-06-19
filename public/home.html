@@ -368,6 +368,7 @@
   </div>
 </div>
 
+<script src="/js/services/context-service.js"></script>
 <script>
 (function () {
   'use strict';
@@ -375,42 +376,28 @@
   const token = localStorage.getItem('fl_token');
   if (!token) { window.location.replace('/login'); return; }
 
-  // ── Greeting ──────────────────────────────────────────────────────────────
+  // ── Static greeting (no fetch needed) ────────────────────────────────────
   const hour = new Date().getHours();
   const timeLabel = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
-  const dateStr = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
-  document.getElementById('greetingTime').textContent = dateStr;
+  document.getElementById('greetingTime').textContent =
+    new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+  document.getElementById('greetingName').textContent = timeLabel;
 
-  // Load user name
-  fetch('/api/auth/me', { headers: { Authorization: 'Bearer ' + token } })
-    .then(r => r.ok ? r.json() : null)
-    .then(data => {
-      const first = (data?.name || data?.email || '').split(/[\s@]/)[0];
-      document.getElementById('greetingName').textContent =
-        first ? `${timeLabel}, ${first}` : timeLabel;
-    })
-    .catch(() => {
-      document.getElementById('greetingName').textContent = timeLabel;
-    });
+  // ── Single consolidated fetch (stale-while-revalidate) ───────────────────
+  // Fires immediately with cached data if available, then again on refresh.
+  ContextService.onReady(function (ctx) {
+    if (!ctx || !ctx.success) return;
 
-  // ── Context data ───────────────────────────────────────────────────────────
-  const localHour = new Date().getHours();
+    // Greeting name + subtitle
+    const first = ((ctx.user && (ctx.user.name || ctx.user.email)) || '').split(/[\s@]/)[0];
+    document.getElementById('greetingName').textContent =
+      first ? `${timeLabel}, ${first}` : timeLabel;
 
-  Promise.all([
-    fetch(`/api/buddy-widget/context?localHour=${localHour}`, {
-      headers: { Authorization: 'Bearer ' + token }
-    }).then(r => r.ok ? r.json() : null),
-    fetch('/api/buddy-widget/notification-count', {
-      headers: { Authorization: 'Bearer ' + token }
-    }).then(r => r.ok ? r.json() : null),
-  ]).then(([ctx, notif]) => {
-    if (!ctx?.success) return;
-
-    // Greeting subtitle
     const parts = [];
     if (ctx.isEveningTime && !ctx.eveningCheckinDone) parts.push('Evening check-in waiting');
-    else if (!ctx.morningCheckinDone && localHour < 12)  parts.push('Morning check-in waiting');
-    if (ctx.incompleteTaskCount > 0) parts.push(`${ctx.incompleteTaskCount} open task${ctx.incompleteTaskCount === 1 ? '' : 's'}`);
+    else if (!ctx.morningCheckinDone && hour < 12)    parts.push('Morning check-in waiting');
+    if (ctx.incompleteTaskCount > 0)
+      parts.push(`${ctx.incompleteTaskCount} open task${ctx.incompleteTaskCount === 1 ? '' : 's'}`);
     if (parts.length) {
       document.getElementById('greetingSubText').textContent = parts.join(' · ');
     } else {
@@ -418,11 +405,18 @@
       document.querySelector('.greeting-dot').style.background = '#5BA4A4';
     }
 
-    // Stats strip
-    const tasksVal = document.getElementById('chipTasksVal');
-    const triageVal = document.getElementById('chipTriageVal');
-    tasksVal.textContent = ctx.incompleteTaskCount ?? '—';
-    triageVal.textContent = ctx.unclassifiedCount ?? '—';
+    // Stats strip chips
+    document.getElementById('chipTasksVal').textContent = ctx.incompleteTaskCount ?? '—';
+    document.getElementById('chipTriageVal').textContent = ctx.unclassifiedCount ?? '—';
+
+    // Today's spend chip
+    if (ctx.todaySpend != null) {
+      const amt = parseFloat(ctx.todaySpend.total || 0).toFixed(2);
+      document.getElementById('chipSpendVal').textContent = `$${amt}`;
+    }
+
+    // Stats strip visible
+    document.getElementById('statsStrip').style.display = 'flex';
 
     // Buddy card subtitle
     const buddySub = document.getElementById('buddySub');
@@ -432,81 +426,56 @@
     } else if (ctx.isEveningTime && !ctx.eveningCheckinDone) {
       buddySub.textContent = 'Evening check-in ready';
       buddySub.className = 'card-sub accent';
-    } else if (!ctx.morningCheckinDone && localHour < 12) {
+    } else if (!ctx.morningCheckinDone && hour < 12) {
       buddySub.textContent = 'Morning check-in ready';
       buddySub.className = 'card-sub accent';
     } else {
       buddySub.textContent = 'Your AI coach';
     }
 
-    // Tasks card badge
+    // Tasks card
     if (ctx.incompleteTaskCount > 0) {
       const b = document.getElementById('tasksBadge');
       b.textContent = ctx.incompleteTaskCount > 99 ? '99+' : ctx.incompleteTaskCount;
       b.classList.remove('hidden');
     }
-
-    // Tasks subtitle
     document.getElementById('tasksSub').textContent =
-      ctx.incompleteTaskCount === 0 ? 'All done ✓' :
-      `${ctx.incompleteTaskCount} open`;
+      ctx.incompleteTaskCount === 0 ? 'All done ✓' : `${ctx.incompleteTaskCount} open`;
 
-    // Money badge for untriaged
-    if (notif?.count > 0) {
+    // Money badge (7-day untriaged for the notification dot)
+    const badge = ctx.badgeCount || 0;
+    if (badge > 0) {
       const mb = document.getElementById('moneyBadge');
-      mb.textContent = notif.count > 99 ? '99+' : notif.count;
+      mb.textContent = badge > 99 ? '99+' : badge;
       mb.classList.remove('hidden');
-      document.getElementById('moneySub').textContent = `${notif.count} to review`;
+      document.getElementById('moneySub').textContent = `${badge} to review`;
+    } else if (ctx.todaySpend != null) {
+      const amt = parseFloat(ctx.todaySpend.total || 0).toFixed(2);
+      document.getElementById('moneySub').textContent = `$${amt} today`;
     }
 
-    // Routines subtitle
+    // Routines card
     if (ctx.routineMissed) {
       const rs = document.getElementById('routinesSub');
       rs.textContent = ctx.routineName ? `Missed: ${ctx.routineName}` : 'Routine needs attention';
       rs.className = 'card-sub accent';
     }
 
-    document.getElementById('statsStrip').style.display = 'flex';
-
-  }).catch(() => {
-    // Context load failed — still show page, just no live data
-    document.getElementById('greetingSubText').textContent = 'Ready when you are.';
-  });
-
-  // ── Momentum score → Insights card dynamic icon ────────────────────────────
-  fetch('/api/momentum-score', { headers: { Authorization: 'Bearer ' + token } })
-    .then(r => r.ok ? r.json() : null)
-    .then(data => {
-      if (!data?.success) return;
-      const score = data.score ?? 0;
+    // Insights card — momentum score emoji
+    if (ctx.momentum) {
+      const score = ctx.momentum.score ?? 0;
       const icon = score === 0 ? '💤'
-                 : score <= 20  ? '🌱'
-                 : score <= 49  ? '🌿'
-                 : score <= 69  ? '✨'
-                 : score <= 84  ? '💪'
-                 :                '🔥';
+                 : score <= 20 ? '🌱'
+                 : score <= 49 ? '🌿'
+                 : score <= 69 ? '✨'
+                 : score <= 84 ? '💪'
+                 :               '🔥';
       document.getElementById('insightsIcon').textContent = icon;
       const sub = document.getElementById('insightsSub');
-      sub.textContent = data.message || 'Your patterns';
+      sub.textContent = ctx.momentum.message || 'Your patterns';
       if (score >= 50) sub.className = 'card-sub accent';
-    })
-    .catch(() => {});
-
-  // ── Spend today ────────────────────────────────────────────────────────────
-  fetch('/api/money/expenses/today', { headers: { Authorization: 'Bearer ' + token } })
-    .then(r => r.ok ? r.json() : null)
-    .then(data => {
-      if (data?.total != null) {
-        const amt = parseFloat(data.total).toFixed(2);
-        document.getElementById('chipSpendVal').textContent = `$${amt}`;
-        // Only override money card sub if there's no triage badge showing
-        const mb = document.getElementById('moneyBadge');
-        if (mb.classList.contains('hidden')) {
-          document.getElementById('moneySub').textContent = `$${amt} today`;
-        }
-      }
-    })
-    .catch(() => {});
+    }
+  });
 
 })();
 </script>
