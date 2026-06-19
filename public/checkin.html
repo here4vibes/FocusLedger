@@ -1190,9 +1190,7 @@
             if (btn && btn.disabled) {
                 btn.textContent = 'Continue →';
                 btn.disabled = false;
-                btn.addEventListener('click', function() { window.location.href = '/app/buddy'; });
-            }
-        }, 15000);
+                btn.addEventListener('click', function() { window.location.href = '/home'; });
 
         Promise.all([planPromise, insightPromise]).then(function(results) {
             clearTimeout(completionTimer);
@@ -1213,7 +1211,7 @@
             btn.textContent = 'See my plan →';
             btn.disabled = false;
             btn.addEventListener('click', function() {
-                window.location.href = '/app/buddy';
+                window.location.href = '/home';
             });
         }).catch(function() {
             clearTimeout(completionTimer);
@@ -1221,7 +1219,7 @@
             btn.textContent = 'Continue →';
             btn.disabled = false;
             btn.addEventListener('click', function() {
-                window.location.href = '/app/buddy';
+                window.location.href = '/home';
             });
         });
     }
