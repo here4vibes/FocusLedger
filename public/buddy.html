@@ -1126,6 +1126,12 @@
 
         if (!localStorage.getItem('fl_token')) { window.location.href = '/login'; return; }
 
+        // Redirect first-time users to Buddy-led onboarding before showing the main Buddy page
+        apiFetch('/api/onboarding/status')
+            .then(function(r) { return r.json(); })
+            .then(function(d) { if (d.success && d.needsOnboarding) window.location.href = '/app/onboarding'; })
+            .catch(function() {}); // silent — if check fails, show buddy normally
+
         // ── Date helpers ──────────────────────────────────────────────────────
         function todayDateString() {
             var d = new Date();

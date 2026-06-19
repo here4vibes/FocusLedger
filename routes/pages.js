@@ -122,6 +122,7 @@ router.get('/vault',        (_, res) => res.redirect(301, '/app/vault'));
 router.get('/documents',    (_, res) => res.redirect(301, '/app/vault'));
 router.get('/buddy',        (_, res) => res.redirect(301, '/app/buddy'));
 
+router.get('/app/onboarding', (_, res) => res.sendFile(pub('onboarding.html')));
 router.get('/app/checkin',  (_, res) => res.sendFile(pub('checkin.html')));
 router.get('/app/checkin/evening', (_, res) => res.sendFile(pub('checkin-evening.html')));
 // /app/focus (no taskId) → task picker mode, handled client-side

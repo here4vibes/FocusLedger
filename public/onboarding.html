@@ -18,6 +18,10 @@
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
+        /* Hide shared nav — onboarding has its own top bar and no bottom nav */
+        #shared-top-bar { display: none !important; }
+        #shared-bottom-nav { display: none !important; }
+
         :root {
             --orange: #c9a84c;
             --navy: #011e5c;
@@ -369,8 +373,6 @@
         });
     }
 
-    function goToApp() { window.location.href = '/app/buddy'; }
-
     function urlBase64ToUint8Array(base64String) {
         var padding = '='.repeat((4 - base64String.length % 4) % 4);
         var base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
@@ -380,19 +382,19 @@
         return arr;
     }
 
-    // Called after seeding completes. If the user said yes to nudges during
-    // the conversation, trigger the OS permission dialog now — no extra card needed.
+    // If the user said yes to nudges during the conversation, auto-trigger the
+    // OS permission dialog right after seeding — no extra card or tap needed.
     function maybeSubscribeThenGo(wantsNotifications) {
         if (!wantsNotifications
             || !('Notification' in window)
             || !('PushManager' in window)
             || !('serviceWorker' in navigator)
             || Notification.permission === 'denied') {
-            goToApp();
+            window.location.href = '/app/buddy';
             return;
         }
         Notification.requestPermission().then(function (permission) {
-            if (permission !== 'granted') { goToApp(); return; }
+            if (permission !== 'granted') { window.location.href = '/app/buddy'; return; }
             return fetch('/api/notifications/vapid-public-key')
                 .then(function (r) { return r.json(); })
                 .then(function (keyData) {
@@ -415,19 +417,18 @@
                             });
                         });
                 })
-                .catch(function () { /* non-blocking */ })
-                .then(function () { goToApp(); });
-        }).catch(function () { goToApp(); });
+                .catch(function () {})
+                .then(function () { window.location.href = '/app/buddy'; });
+        }).catch(function () { window.location.href = '/app/buddy'; });
     }
 
     function completeOnboarding(seedPayload) {
-        // Brief pause so the user reads Buddy's closing message, then show setup screen
+        var wantsNotif = seedPayload.wants_notifications === true;
         setTimeout(function () {
             chatEl.style.display = 'none';
             inputWrap.style.display = 'none';
             setupScreen.classList.add('visible');
 
-            var wantsNotif = seedPayload.wants_notifications === true;
             apiFetch('/api/onboarding/complete', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
