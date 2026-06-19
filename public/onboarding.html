@@ -159,60 +159,6 @@
             color: rgba(255,255,255,0.5);
         }
 
-        /* Notification permission prompt (replaces spinner after setup) */
-        #notifPrompt {
-            display: none;
-            flex: 1;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 1.25rem;
-            text-align: center;
-            padding: 2rem;
-            animation: fadeIn 0.4s ease;
-        }
-        #notifPrompt.visible { display: flex; }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(8px); }
-            to   { opacity: 1; transform: translateY(0); }
-        }
-        .notif-icon { font-size: 2.5rem; }
-        .notif-heading {
-            font-family: 'Space Grotesk', sans-serif;
-            font-size: 1.15rem;
-            font-weight: 600;
-            color: rgba(255,255,255,0.92);
-        }
-        .notif-sub {
-            font-size: 0.875rem;
-            color: rgba(255,255,255,0.55);
-            max-width: 280px;
-            line-height: 1.55;
-        }
-        .notif-enable-btn {
-            background: var(--orange);
-            color: white;
-            border: none;
-            border-radius: 24px;
-            padding: 0.75rem 2rem;
-            font-size: 0.95rem;
-            font-family: 'DM Sans', sans-serif;
-            font-weight: 600;
-            cursor: pointer;
-            transition: opacity 0.15s;
-            min-width: 200px;
-        }
-        .notif-enable-btn:disabled { opacity: 0.55; cursor: default; }
-        .notif-skip {
-            font-size: 0.82rem;
-            color: rgba(255,255,255,0.35);
-            cursor: pointer;
-            background: none;
-            border: none;
-            padding: 0;
-            text-decoration: underline;
-        }
-
         /* Input wrap */
         .input-wrap {
             padding: 0.75rem 1rem;
@@ -272,14 +218,6 @@
         <div class="setup-spinner"></div>
         <div class="setup-heading">Setting up your space…</div>
         <div class="setup-sub">This takes just a second.</div>
-    </div>
-
-    <div id="notifPrompt">
-        <div class="notif-icon">🔔</div>
-        <div class="notif-heading">Want a morning check-in?</div>
-        <div class="notif-sub">Buddy can nudge you each morning so you start your day with intention — not just open your phone and spiral.</div>
-        <button class="notif-enable-btn" id="notifEnableBtn">Enable morning nudges</button>
-        <button class="notif-skip" id="notifSkipBtn">Maybe later</button>
     </div>
 
     <div class="input-wrap" id="inputWrap">
@@ -431,25 +369,7 @@
         });
     }
 
-    var notifPrompt = document.getElementById('notifPrompt');
-    var notifEnableBtn = document.getElementById('notifEnableBtn');
-    var notifSkipBtn = document.getElementById('notifSkipBtn');
-
     function goToApp() { window.location.href = '/app/buddy'; }
-
-    function showNotifPrompt() {
-        setupScreen.classList.remove('visible');
-        // Skip prompt entirely if browser doesn't support push
-        if (!('Notification' in window) || !('PushManager' in window) || !('serviceWorker' in navigator)) {
-            goToApp();
-            return;
-        }
-        // Already granted — no need to prompt again
-        if (Notification.permission === 'granted') { goToApp(); return; }
-        // Already denied — browser won't show it again, don't waste their time
-        if (Notification.permission === 'denied') { goToApp(); return; }
-        notifPrompt.classList.add('visible');
-    }
 
     function urlBase64ToUint8Array(base64String) {
         var padding = '='.repeat((4 - base64String.length % 4) % 4);
@@ -460,15 +380,23 @@
         return arr;
     }
 
-    notifEnableBtn.addEventListener('click', function () {
-        notifEnableBtn.textContent = 'Enabling…';
-        notifEnableBtn.disabled = true;
+    // Called after seeding completes. If the user said yes to nudges during
+    // the conversation, trigger the OS permission dialog now — no extra card needed.
+    function maybeSubscribeThenGo(wantsNotifications) {
+        if (!wantsNotifications
+            || !('Notification' in window)
+            || !('PushManager' in window)
+            || !('serviceWorker' in navigator)
+            || Notification.permission === 'denied') {
+            goToApp();
+            return;
+        }
         Notification.requestPermission().then(function (permission) {
             if (permission !== 'granted') { goToApp(); return; }
             return fetch('/api/notifications/vapid-public-key')
                 .then(function (r) { return r.json(); })
                 .then(function (keyData) {
-                    if (!keyData.enabled || !keyData.key) { goToApp(); return; }
+                    if (!keyData.enabled || !keyData.key) return;
                     return navigator.serviceWorker.ready
                         .then(function (reg) {
                             return reg.pushManager.subscribe({
@@ -490,9 +418,7 @@
                 .catch(function () { /* non-blocking */ })
                 .then(function () { goToApp(); });
         }).catch(function () { goToApp(); });
-    });
-
-    notifSkipBtn.addEventListener('click', goToApp);
+    }
 
     function completeOnboarding(seedPayload) {
         // Brief pause so the user reads Buddy's closing message, then show setup screen
@@ -501,6 +427,7 @@
             inputWrap.style.display = 'none';
             setupScreen.classList.add('visible');
 
+            var wantsNotif = seedPayload.wants_notifications === true;
             apiFetch('/api/onboarding/complete', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -512,10 +439,10 @@
                 })
             })
             .then(function () {
-                setTimeout(showNotifPrompt, 1200);
+                setTimeout(function () { maybeSubscribeThenGo(wantsNotif); }, 1200);
             })
             .catch(function () {
-                setTimeout(showNotifPrompt, 1200);
+                setTimeout(function () { maybeSubscribeThenGo(wantsNotif); }, 1200);
             });
         }, 1000);
     }
