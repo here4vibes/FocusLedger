@@ -115,6 +115,39 @@ Before any shared CSS change ships, verify all of the following:
 
 This section tells Claude Code how to act on your behalf across GitHub, Neon, and Render. Read this before starting any task.
 
+### Engineering philosophy (Palantir/Addepar standard)
+
+FocusLedger handles financial data and personal mental-health habits. Apply the same rigor expected of serious fintech infrastructure.
+
+**Correctness over velocity.**
+Ship slower and right. A silent bug in financial data (wrong balance, missed transaction, miscounted streak) erodes trust faster than a late feature.
+
+**No silent failures. Ever.**
+Every `catch` block must either re-throw or log the error with enough context to diagnose it from Render logs alone. A bare `catch {}` or `catch (e) {}` with no logging is a defect, not a style choice. The canonical pattern:
+```javascript
+} catch (e) {
+  console.error('[Module] operationName failed:', e.message, '| contextKey:', contextValue);
+  return null; // or throw, depending on caller contract
+}
+```
+
+**Logs must reflect reality.**
+A log line like "Synced 42 transactions" must mean 42 rows were actually written. Never log a count of attempted operations as if they were successful operations. Gate counters and success-path logic on confirmed outcomes.
+
+**Enforce data integrity at the database layer, not just the application layer.**
+Unique constraints, foreign keys, NOT NULL, and check constraints belong in the schema. Application-level dedup is a second line of defense, not the first. When adding a uniqueness assumption to code (e.g. `ON CONFLICT (col) DO NOTHING`), verify the corresponding DB constraint exists — and write a migration if it doesn't.
+
+**Financial amounts use NUMERIC, not float arithmetic.**
+PostgreSQL `NUMERIC(12,2)` for all money columns. `parseFloat()` is acceptable only for display formatting, never for aggregation or storage.
+
+**Observability is a feature.**
+Structured log prefixes like `[Plaid]`, `[BillTasks]`, `[home-context]` are required on every server-side log line. This makes Render log filtering useful in production incidents.
+
+**Fail at the boundary, not in the interior.**
+Validate inputs (auth, required fields, enum values) at the route layer. Inside `db/` functions, trust the caller and throw on unexpected errors rather than returning null silently.
+
+---
+
 ### Ground rules
 - **Always read before writing.** Before touching any file, read it. Before touching any route, read the route file and the db/ file it calls.
 - **One concern per commit.** Never bundle unrelated changes. Commit message format: `type(scope): what changed` — e.g. `fix(tasks): normalize due_time in GET response`.
