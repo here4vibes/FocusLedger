@@ -462,6 +462,54 @@
             text-align: left;
             max-width: 340px;
         }
+        /* ── Plan task cards on completion screen ── */
+        #planTasksList {
+            display: none;
+            flex-direction: column;
+            gap: 10px;
+            width: 100%;
+            max-width: 360px;
+            margin: 4px 0;
+        }
+        .plan-task-card {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.18);
+            border-radius: 14px;
+            padding: 13px 14px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-align: left;
+        }
+        .plan-task-info { flex: 1; min-width: 0; }
+        .plan-task-title {
+            font-weight: 600;
+            font-size: 0.88rem;
+            color: rgba(255,255,255,0.95);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .plan-task-reason {
+            font-size: 0.72rem;
+            color: rgba(255,255,255,0.5);
+            margin-top: 2px;
+            line-height: 1.35;
+        }
+        .plan-task-start {
+            flex-shrink: 0;
+            background: rgba(255,255,255,0.15);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.25);
+            border-radius: 8px;
+            padding: 7px 11px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: background 0.15s;
+        }
+        .plan-task-start:hover { background: rgba(255,255,255,0.25); }
         .complete-btn {
             width: 100%;
             max-width: 340px;
@@ -588,9 +636,10 @@
     <!-- Completion screen -->
     <div id="completionScreen">
         <div class="completion-icon">🎯</div>
-        <div class="completion-heading">Plan's being built</div>
-        <div class="completion-sub">Based on what you shared, I'm picking your top 3 tasks for today.</div>
+        <div class="completion-heading" id="completionHeading">Plan's being built</div>
+        <div class="completion-sub" id="completionSub">Based on what you shared, I'm picking your top 3 tasks for today.</div>
         <div id="insightBox" style="display:none;"></div>
+        <div id="planTasksList"></div>
         <button class="complete-btn" id="completionBtn" type="button" disabled>Building your plan…</button>
     </div>
 
@@ -1207,8 +1256,34 @@
                 body: JSON.stringify({ date: TODAY })
             }).catch(function() {});
 
+            // Render task cards so user can jump straight into a session
+            var planData = results[0];
+            var slots = (planData && planData.slots) ? planData.slots : [];
+            var validSlots = slots.filter(function(s) { return s && s.task && !s.task.is_completed; });
+            if (validSlots.length > 0) {
+                var list = el('planTasksList');
+                list.style.display = 'flex';
+                validSlots.forEach(function(slot) {
+                    var t = slot.task;
+                    var card = document.createElement('div');
+                    card.className = 'plan-task-card';
+                    card.innerHTML =
+                        '<div class="plan-task-info">' +
+                            '<div class="plan-task-title">' + escHtml(t.title) + '</div>' +
+                            (slot.reason ? '<div class="plan-task-reason">' + escHtml(slot.reason) + '</div>' : '') +
+                        '</div>' +
+                        '<button class="plan-task-start" type="button">Start 🎯</button>';
+                    card.querySelector('.plan-task-start').addEventListener('click', function() {
+                        window.location.href = '/app/focus/' + t.id;
+                    });
+                    list.appendChild(card);
+                });
+                el('completionHeading').textContent = 'Your plan for today';
+                el('completionSub').textContent = 'Start one now — small wins build real momentum.';
+            }
+
             var btn = el('completionBtn');
-            btn.textContent = 'See my plan →';
+            btn.textContent = validSlots.length > 0 ? 'Go to app →' : 'See my plan →';
             btn.disabled = false;
             btn.addEventListener('click', function() {
                 window.location.href = '/app';
