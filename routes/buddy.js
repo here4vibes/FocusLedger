@@ -1921,27 +1921,40 @@ async function generatePlan(userId, today, mood, pool) {
   // Fill nulls if fewer than 3 tasks exist
   const slots = [0, 1, 2].map(i => top3[i] || null);
 
-  // Store plan
-  const insertResult = await pool.query(`
-    INSERT INTO buddy_daily_plans
-      (user_id, plan_date, mood,
-       task_1_id, task_1_reason,
-       task_2_id, task_2_reason,
-       task_3_id, task_3_reason)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-    ON CONFLICT (user_id, plan_date) DO UPDATE
-      SET mood = EXCLUDED.mood,
-          task_1_id = EXCLUDED.task_1_id, task_1_reason = EXCLUDED.task_1_reason,
-          task_2_id = EXCLUDED.task_2_id, task_2_reason = EXCLUDED.task_2_reason,
-          task_3_id = EXCLUDED.task_3_id, task_3_reason = EXCLUDED.task_3_reason,
-          accepted = false, tasks_completed = 0
-    RETURNING *
-  `, [
+  // Store plan — use UPDATE-or-INSERT to avoid dependency on a specific
+  // UNIQUE constraint name (the Prisma-era DB may have it under a different name).
+  const params = [
     userId, today, mood || null,
     slots[0]?.task?.id || null, slots[0]?.reason || null,
     slots[1]?.task?.id || null, slots[1]?.reason || null,
     slots[2]?.task?.id || null, slots[2]?.reason || null,
-  ]);
+  ];
+
+  const updateResult = await pool.query(`
+    UPDATE buddy_daily_plans
+       SET mood = $3,
+           task_1_id = $4, task_1_reason = $5,
+           task_2_id = $6, task_2_reason = $7,
+           task_3_id = $8, task_3_reason = $9,
+           accepted = false, tasks_completed = 0
+     WHERE user_id = $1 AND plan_date = $2
+     RETURNING *
+  `, params);
+
+  let insertResult;
+  if (updateResult.rows.length > 0) {
+    insertResult = updateResult;
+  } else {
+    insertResult = await pool.query(`
+      INSERT INTO buddy_daily_plans
+        (user_id, plan_date, mood,
+         task_1_id, task_1_reason,
+         task_2_id, task_2_reason,
+         task_3_id, task_3_reason)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      RETURNING *
+    `, params);
+  }
 
   const plan = insertResult.rows[0];
 
