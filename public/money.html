@@ -845,6 +845,7 @@ async function loadAccountCard() {
     html += '<span style="font-size:0.72rem;color:var(--text-muted);">Bank via Plaid · AES-256 encrypted</span>';
     html += '<div style="display:flex;gap:0.75rem;">';
     html += '<button id="money-sync-btn" style="font-size:0.72rem;color:var(--navy,#011e5c);background:none;border:none;cursor:pointer;text-decoration:underline;text-underline-offset:2px;">Refresh</button>';
+    html += '<button id="money-full-resync-btn" style="font-size:0.72rem;color:#4A9292;background:none;border:none;cursor:pointer;text-decoration:underline;text-underline-offset:2px;display:none;">Full Resync</button>';
     html += '<button id="money-reconnect-btn" style="font-size:0.72rem;color:var(--orange,#F26B3A);background:none;border:none;cursor:pointer;text-decoration:underline;text-underline-offset:2px;">Reconnect</button>';
     html += '<button id="money-disconnect-btn" style="font-size:0.72rem;color:var(--text-muted);background:none;border:none;cursor:pointer;text-decoration:underline;text-underline-offset:2px;">Disconnect</button>';
     html += '</div>';
@@ -881,10 +882,32 @@ async function loadAccountCard() {
             }
           } else {
             const n = sr.transactions_added || 0;
-            showFixedToast(n > 0 ? `✓ ${n} new transaction${n === 1 ? '' : 's'} ready` : '✓ Up to date', false);
+            if (n > 0) {
+              showFixedToast(`✓ ${n} new transaction${n === 1 ? '' : 's'} ready`, false);
+            } else {
+              showFixedToast('✓ Up to date — missing transactions? Try Full Resync below', false);
+              var fullResyncEl = document.getElementById('money-full-resync-btn');
+              if (fullResyncEl) fullResyncEl.style.display = 'inline';
+            }
           }
         } catch (e) {
           showFixedToast('Sync failed — try reconnecting your bank', true);
+        }
+      });
+    }
+
+    var fullResyncBtn = document.getElementById('money-full-resync-btn');
+    if (fullResyncBtn) {
+      fullResyncBtn.addEventListener('click', async function() {
+        fullResyncBtn.textContent = 'Resyncing…';
+        fullResyncBtn.disabled = true;
+        try {
+          const sr = await api('/api/plaid/sync', { method: 'POST', body: JSON.stringify(Object.assign(itemId ? { item_id: itemId } : {}, { force_full: true })) });
+          await Promise.all([loadAccountCard(), checkPendingPlaid()]);
+          const n = sr.transactions_added || 0;
+          showFixedToast(n > 0 ? `✓ ${n} transaction${n === 1 ? '' : 's'} recovered` : (sr.success ? '✓ All caught up' : sr.message || 'Resync failed'), !sr.success);
+        } catch (e) {
+          showFixedToast('Full resync failed — try reconnecting your bank', true);
         }
       });
     }
