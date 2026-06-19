@@ -162,11 +162,11 @@
         return;
       }
       if (window.Plaid) {
-        openReconnectLink(data.link_token, btn);
+        openReconnectLink(data.link_token, btn, itemId);
       } else {
         var script = document.createElement('script');
         script.src = 'https://cdn.plaid.com/link/v2/stable/link-initialize.js';
-        script.onload = function () { openReconnectLink(data.link_token, btn); };
+        script.onload = function () { openReconnectLink(data.link_token, btn, itemId); };
         script.onerror = function () {
           if (btn) { btn.disabled = false; btn.textContent = 'Reconnect'; }
           showBankSyncToast('error', "Couldn't load the connection tool. Check your internet.");
@@ -180,13 +180,21 @@
     });
   }
 
-  function openReconnectLink(linkToken, btn) {
+  function openReconnectLink(linkToken, btn, itemId) {
     var handler = window.Plaid.create({
       token: linkToken,
       onSuccess: function () {
         if (btn) { btn.disabled = false; btn.textContent = 'Reconnect'; }
-        showBankSyncToast('', '✓ Connection refreshed.');
-        if (typeof onBankSyncStatusChanged === 'function') onBankSyncStatusChanged();
+        showBankSyncToast('', '✓ Reconnected. Pulling in transactions…');
+        fetch('/api/plaid/sync', {
+          method: 'POST',
+          headers: authHeaders(),
+          body: JSON.stringify(itemId ? { item_id: itemId } : {}),
+        }).then(function () {
+          if (typeof onBankSyncStatusChanged === 'function') onBankSyncStatusChanged();
+        }).catch(function () {
+          if (typeof onBankSyncStatusChanged === 'function') onBankSyncStatusChanged();
+        });
       },
       onExit: function (err) {
         if (btn) { btn.disabled = false; btn.textContent = 'Reconnect'; }

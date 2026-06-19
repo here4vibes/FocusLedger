@@ -875,6 +875,10 @@ async function loadAccountCard() {
           await Promise.all([loadAccountCard(), checkPendingPlaid()]);
           if (!sr.success) {
             showFixedToast(sr.message || 'Sync failed — try reconnecting your bank', true);
+            if (sr.needs_reconnect) {
+              var rb = document.getElementById('money-reconnect-btn');
+              if (rb) { rb.style.color = '#E05252'; rb.style.fontWeight = '700'; }
+            }
           } else {
             const n = sr.transactions_added || 0;
             showFixedToast(n > 0 ? `✓ ${n} new transaction${n === 1 ? '' : 's'} ready` : '✓ Up to date', false);

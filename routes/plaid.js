@@ -627,13 +627,15 @@ module.exports = function(pool) {
         user: { client_user_id: String(userId) },
         client_name: 'FocusLedger',
         country_codes: ['US'],
+        language: 'en',
         access_token: accessToken,
       };
       if (process.env.PLAID_WEBHOOK_URL) linkTokenParams.webhook = process.env.PLAID_WEBHOOK_URL;
       const response = await plaid.linkTokenCreate(linkTokenParams);
       res.json({ success: true, link_token: response.data.link_token });
     } catch (err) {
-      console.error('[Plaid] Error creating update token:', err.response?.data || err.message);
+      const plaidErr = err.response?.data || err.message;
+      console.error('[Plaid] Error creating update token:', plaidErr);
       res.status(500).json({ success: false, message: 'Could not start reconnect. Try again?' });
     }
   });
@@ -686,7 +688,11 @@ module.exports = function(pool) {
       for (const item of items) { totalAdded += await syncTransactions(pool, item); }
       res.json({ success: true, transactions_added: totalAdded, message: `${totalAdded} new transactions ready to review` });
     } catch (err) {
+      const plaidCode = err.response?.data?.error_code;
       console.error('[Plaid] Error syncing:', err.response?.data || err.message);
+      if (plaidCode === 'ITEM_LOGIN_REQUIRED') {
+        return res.json({ success: false, needs_reconnect: true, message: 'Bank connection expired — click Reconnect to re-authenticate.' });
+      }
       res.status(500).json({ success: false, message: 'Sync did not complete. Try again in a moment.' });
     }
   });
