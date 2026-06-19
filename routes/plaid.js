@@ -254,16 +254,23 @@ function getPlaidClient() {
 // ── Sync transactions ────────────────────────────────────────────────────────
 async function syncTransactions(pool, item) {
   const plaid = getPlaidClient();
-  if (!plaid) return 0;
+  if (!plaid) { console.error('[Plaid] syncTransactions: Plaid client not initialized — skipping'); return 0; }
 
   const accessToken = decryptPlaidToken(item.access_token);
   let cursor = item.cursor || null;
   let hasMore = true;
   let added = 0;
+  let skippedCredit = 0;   // amount <= 0 (credits/refunds)
+  let skippedNoAcct = 0;   // account_id not in accountMap
   const billCandidates = [];
 
   const accountMap = await getAccountMap(pool, item.id);
   const categoriesByName = await getCategoriesMap(pool);
+
+  console.log(`[Plaid] syncTransactions start: item=${item.id} user=${item.user_id} cursor=${cursor ? 'set' : 'null (full)'} accountMapSize=${Object.keys(accountMap).length}`);
+  if (Object.keys(accountMap).length === 0) {
+    console.error('[Plaid] syncTransactions: accountMap is EMPTY for item', item.id, '— all transactions will be skipped. Check plaid_accounts rows.');
+  }
 
   let lastSyncAccounts = [];
   while (hasMore) {
@@ -271,10 +278,18 @@ async function syncTransactions(pool, item) {
     const { added: newTransactions, removed, next_cursor, has_more, accounts: syncAccounts } = response.data;
     if (syncAccounts && syncAccounts.length) lastSyncAccounts = syncAccounts;
 
+    console.log(`[Plaid] page: ${newTransactions.length} added, ${removed.length} removed, has_more=${has_more}`);
+
     for (const tx of newTransactions) {
-      if (tx.amount <= 0) continue;
+      if (tx.amount <= 0) { skippedCredit++; continue; }
       const plaidAccountId = accountMap[tx.account_id];
-      if (!plaidAccountId) continue;
+      if (!plaidAccountId) {
+        skippedNoAcct++;
+        if (skippedNoAcct <= 3) {
+          console.warn(`[Plaid] No accountMap entry for account_id=${tx.account_id} tx=${tx.transaction_id} — known accounts: ${Object.keys(accountMap).join(',')}`);
+        }
+        continue;
+      }
 
       const categoryName = classifyTransaction(tx);
       const category = categoriesByName[categoryName.toLowerCase()] || categoriesByName['other'];
@@ -360,7 +375,7 @@ async function syncTransactions(pool, item) {
     }
   }
 
-  console.log(`[Plaid] Synced item ${item.id} for user ${item.user_id}: ${added} new transactions`);
+  console.log(`[Plaid] Synced item ${item.id} for user ${item.user_id}: ${added} inserted, ${skippedCredit} credits skipped, ${skippedNoAcct} skipped (no account mapping)`);
 
   if (billCandidates.length > 0) {
     detectAndCreateBillTasks(pool, item.user_id, billCandidates).catch(e => console.error('[BillTasks] Error:', e.message));
@@ -473,6 +488,66 @@ module.exports = function(pool) {
   });
 
   router.use(requireAuth);
+
+  // GET /api/plaid/db-status — authenticated DB-state diagnostic; shows exactly what's stored
+  // for this user's Plaid setup so we can pinpoint sync failures without reading Render logs.
+  router.get('/db-status', async (req, res) => {
+    try {
+      const userId = req.user.id;
+      const { rows: items } = await pool.query(
+        `SELECT id, item_id, institution_name, cursor IS NOT NULL AS has_cursor,
+                last_synced_at, created_at
+         FROM plaid_items WHERE user_id = $1 ORDER BY created_at DESC`,
+        [userId]
+      );
+      const itemIds = items.map(i => i.id);
+      const { rows: accounts } = itemIds.length
+        ? await pool.query(
+            `SELECT id, plaid_item_id, account_id, name, type, subtype
+             FROM plaid_accounts WHERE plaid_item_id = ANY($1) ORDER BY plaid_item_id, id`,
+            [itemIds]
+          )
+        : { rows: [] };
+      const { rows: txStats } = await pool.query(
+        `SELECT COUNT(*)::int AS total,
+                COUNT(*) FILTER (WHERE is_confirmed = true)::int  AS confirmed,
+                COUNT(*) FILTER (WHERE is_pending   = true)::int  AS pending,
+                MIN(transaction_date) AS earliest, MAX(transaction_date) AS latest
+         FROM plaid_transactions WHERE user_id = $1`,
+        [userId]
+      );
+      const { rows: expStats } = await pool.query(
+        `SELECT COUNT(*)::int AS total,
+                COUNT(*) FILTER (WHERE is_impulse IS NULL)::int AS untriaged,
+                MIN(expense_date) AS earliest, MAX(expense_date) AS latest
+         FROM expenses WHERE user_id = $1 AND source = 'plaid'`,
+        [userId]
+      );
+      const { rows: constraintCheck } = await pool.query(
+        `SELECT COUNT(*)::int AS unique_indexes
+         FROM pg_indexes
+         WHERE tablename = 'plaid_transactions'
+           AND indexdef ILIKE '%transaction_id%'
+           AND indexdef ILIKE '%unique%'`
+      );
+      res.json({
+        success: true,
+        plaid_env: (process.env.PLAID_ENV || 'sandbox').trim(),
+        items: items.map(item => ({
+          ...item,
+          accounts: accounts.filter(a => a.plaid_item_id === item.id),
+        })),
+        plaid_transactions: txStats[0] || {},
+        plaid_expenses: expStats[0] || {},
+        schema: {
+          plaid_transactions_has_unique_on_transaction_id: constraintCheck[0]?.unique_indexes > 0,
+        },
+      });
+    } catch (err) {
+      console.error('[Plaid] db-status error:', err.message);
+      res.status(500).json({ success: false, message: err.message });
+    }
+  });
 
   // GET /api/plaid/balances — live balances; falls back to DB cache if Plaid call fails
   router.get('/balances', async (req, res) => {
@@ -656,10 +731,13 @@ module.exports = function(pool) {
       const exchangeResponse = await plaid.itemPublicTokenExchange({ public_token });
       const { access_token, item_id } = exchangeResponse.data;
       const plaidItem = await upsertPlaidItem(pool, userId, encryptPlaidToken(access_token), item_id, institution_name || 'Unknown Bank', institution_id || null);
+      console.log(`[Plaid] exchange-token: upserted item id=${plaidItem.id} item_id=${item_id} user=${userId}`);
       const accountsResponse = await plaid.accountsGet({ access_token });
+      console.log(`[Plaid] exchange-token: Plaid returned ${accountsResponse.data.accounts.length} account(s)`);
       for (const acc of accountsResponse.data.accounts) {
-        await upsertPlaidAccount(pool, plaidItem.id, userId, acc.account_id, acc.name, acc.official_name || null, acc.type, acc.subtype || null, acc.mask || null,
+        const saved = await upsertPlaidAccount(pool, plaidItem.id, userId, acc.account_id, acc.name, acc.official_name || null, acc.type, acc.subtype || null, acc.mask || null,
           acc.balances?.current ?? null, acc.balances?.available ?? null);
+        console.log(`[Plaid] exchange-token: upserted account db_id=${saved?.id} plaid_item_id=${saved?.plaid_item_id} account_id=${acc.account_id} name="${acc.name}"`);
       }
       syncTransactions(pool, plaidItem).catch(e => console.error('[Plaid] Initial sync error:', e.message));
       res.json({ success: true, message: 'Connected. Bringing in your transactions.', item_id: plaidItem.id, institution_name: plaidItem.institution_name });
