@@ -132,6 +132,11 @@
 
     /* Account summary specific */
     .account-inst{font-size:0.78rem;color:var(--text-muted);margin-top:0.2rem}
+    /* Account carousel */
+    .acct-dot{width:6px;height:6px;border-radius:50%;background:var(--border);transition:background .15s;flex-shrink:0}
+    .acct-dot.active{background:var(--navy)}
+    .acct-nav{width:22px;height:22px;border-radius:50%;border:1.5px solid var(--border);background:white;font-size:0.8rem;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--navy);padding:0;line-height:1;flex-shrink:0;transition:background .12s}
+    .acct-nav:active{background:var(--surface)}
     .last-updated{font-size:0.7rem;color:var(--text-muted);margin-top:0.15rem}
 
     /* This Week card */
@@ -789,7 +794,6 @@ async function loadAccountCard() {
   }
 
   function renderConnectedState(r, balances) {
-    // balances: { items: [{ item_id, institution, accounts: [{ account_id, balances }] }] }
     var balanceMap = {};
     if (balances && balances.success && balances.items) {
       for (var bi = 0; bi < balances.items.length; bi++) {
@@ -801,46 +805,85 @@ async function loadAccountCard() {
       }
     }
 
-    // Map from /api/money/accounts response format:
-    // { connected, items: [{ id, institution, lastSynced, accounts }] }
-    var items = r.items || [];
-    // Prefer the first item that actually has accounts (duplicate items from
-    // failed connects have no accounts and would otherwise produce a blank balance)
-    var firstItem = items.find(function(i) { return (i.accounts || []).length > 0; }) || items[0];
-    var lastSynced = firstItem && firstItem.lastSynced ? PlaidService.relativeTime(firstItem.lastSynced) : null;
-    var accounts = firstItem ? (firstItem.accounts || []) : [];
-    var primary = accounts.find(function(a) { return a.type === 'depository'; }) || accounts[0];
-    var balance = null;
-    if (primary && primary.account_id && balanceMap[primary.account_id]) {
-      var lb = balanceMap[primary.account_id];
-      balance = lb.current != null ? fmt(lb.current) : (lb.available != null ? fmt(lb.available) : null);
-    }
-    if (balance === null && primary && primary._balances) {
-      balance = primary._balances.current != null ? fmt(primary._balances.current) : null;
-    }
+    var items = (r.items || []).filter(function(i) { return i.id != null; });
+    if (!items.length) { renderConnectCTA(); return; }
 
-    var accountName = primary ? primary.name : (firstItem && firstItem.institution ? firstItem.institution : 'Connected Account');
-    var mask = primary && primary.mask ? ' ••' + primary.mask : '';
-    var syncedLine = lastSynced ? 'Updated ' + lastSynced : '';
-    var itemId = firstItem ? firstItem.id : null;
-    // Diagnostic: if connected but the item has no usable id, Reconnect/Disconnect
-    // can't target it. Log the shape so the cause (data vs response) is visible.
-    if (firstItem && (itemId === null || itemId === undefined)) {
-      console.warn('[money] account connected but item id is missing. firstItem keys:',
-        Object.keys(firstItem), 'firstItem:', JSON.stringify(firstItem));
-    }
+    // Build slide data — one slide per connected institution
+    var slides = items.map(function(item) {
+      var accounts = item.accounts || [];
+      // For balance: prefer credit over depository (credit card is the primary product for most connections)
+      var primary = accounts.find(function(a) { return a.type === 'credit'; })
+                 || accounts.find(function(a) { return a.type === 'depository'; })
+                 || accounts[0];
+      var balance = null;
+      if (primary && balanceMap[primary.account_id]) {
+        var lb = balanceMap[primary.account_id];
+        balance = lb.current != null ? fmt(lb.current) : (lb.available != null ? fmt(lb.available) : null);
+      }
+      // Sub-label: deduplicated account names with masks
+      var seen = {};
+      var acctLabels = accounts.filter(function(a) {
+        var key = a.name + (a.mask || '');
+        if (seen[key]) return false;
+        seen[key] = true;
+        return true;
+      }).map(function(a) { return a.name + (a.mask ? ' ••' + a.mask : ''); }).join(' · ');
 
+      if (item.id == null || item.id === undefined) {
+        console.warn('[money] item missing id — Reconnect/Disconnect will not work:', JSON.stringify(item));
+      }
+      return {
+        id: item.id,
+        institution: item.institution || 'Connected Account',
+        balance: balance,
+        acctLabels: acctLabels,
+        lastSynced: item.lastSynced ? PlaidService.relativeTime(item.lastSynced) : null,
+      };
+    });
+
+    var currentIdx = 0;
+    var multi = slides.length > 1;
+
+    // ── Build HTML ─────────────────────────────────────────────────────────
     var html = '<div class="dash-card">';
-    html += '<div class="card-row">';
-    html += '<div class="card-left">';
+
+    // Header row: label + dots (if >1)
+    html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.35rem;">';
     html += '<div class="card-label">Account</div>';
-    html += '<div class="card-amount">' + (balance || '—') + '</div>';
-    html += '<div class="account-inst">' + accountName + mask + '</div>';
-    if (syncedLine) html += '<div class="last-updated">' + syncedLine + '</div>';
+    if (multi) {
+      html += '<div id="acct-dots" style="display:flex;gap:5px;align-items:center;">';
+      slides.forEach(function(_, i) {
+        html += '<div class="acct-dot' + (i === 0 ? ' active' : '') + '" data-idx="' + i + '"></div>';
+      });
+      html += '</div>';
+    }
     html += '</div>';
-    html += '<div class="card-right"><div class="card-icon-badge">💳</div></div>';
-    html += '</div>';
-    // Disconnect / Reconnect options
+
+    // Slide panels (one per institution; only active is visible)
+    slides.forEach(function(s, i) {
+      html += '<div class="acct-slide" id="acct-slide-' + i + '" data-item-id="' + s.id + '"' + (i > 0 ? ' style="display:none"' : '') + '>';
+      html += '<div style="display:flex;align-items:flex-start;justify-content:space-between;">';
+      html += '<div>';
+      html += '<div class="card-amount" style="font-size:1.45rem;">' + (s.balance != null ? s.balance : '—') + '</div>';
+      html += '<div class="account-inst" style="font-size:0.85rem;font-weight:600;color:var(--navy);margin-top:0.1rem;">' + s.institution + '</div>';
+      if (s.acctLabels) {
+        html += '<div style="font-size:0.7rem;color:var(--text-muted);margin-top:0.1rem;line-height:1.4;">' + s.acctLabels + '</div>';
+      }
+      if (s.lastSynced) html += '<div class="last-updated">Updated ' + s.lastSynced + '</div>';
+      html += '</div>';
+      if (multi) {
+        html += '<div style="display:flex;gap:0.3rem;margin-top:0.1rem;">';
+        html += '<button class="acct-nav" data-dir="-1" aria-label="Previous">‹</button>';
+        html += '<button class="acct-nav" data-dir="1" aria-label="Next">›</button>';
+        html += '</div>';
+      } else {
+        html += '<div class="card-icon-badge">💳</div>';
+      }
+      html += '</div>';
+      html += '</div>'; // .acct-slide
+    });
+
+    // Shared footer: Plaid badge + action buttons
     html += '<div style="margin-top:0.5rem;padding-top:0.5rem;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">';
     html += '<span style="font-size:0.72rem;color:var(--text-muted);">Bank via Plaid · AES-256 encrypted</span>';
     html += '<div style="display:flex;gap:0.75rem;">';
@@ -850,8 +893,30 @@ async function loadAccountCard() {
     html += '<button id="money-disconnect-btn" style="font-size:0.72rem;color:var(--text-muted);background:none;border:none;cursor:pointer;text-decoration:underline;text-underline-offset:2px;">Disconnect</button>';
     html += '</div>';
     html += '</div>';
-    html += '</div>';
+
+    html += '</div>'; // .dash-card
     container.innerHTML = html;
+
+    // ── Carousel navigation ────────────────────────────────────────────────
+    function getActiveItemId() {
+      var slide = document.getElementById('acct-slide-' + currentIdx);
+      return slide ? parseInt(slide.dataset.itemId, 10) : null;
+    }
+
+    function goTo(idx) {
+      var prev = document.getElementById('acct-slide-' + currentIdx);
+      if (prev) prev.style.display = 'none';
+      currentIdx = (idx + slides.length) % slides.length;
+      var curr = document.getElementById('acct-slide-' + currentIdx);
+      if (curr) curr.style.display = '';
+      document.querySelectorAll('.acct-dot').forEach(function(d) {
+        d.classList.toggle('active', parseInt(d.dataset.idx, 10) === currentIdx);
+      });
+    }
+
+    container.querySelectorAll('.acct-nav').forEach(function(btn) {
+      btn.addEventListener('click', function() { goTo(currentIdx + parseInt(btn.dataset.dir, 10)); });
+    });
 
     // showFixedToast: uses the position:fixed #toast (always on-screen), not submitToast
     function showFixedToast(msg, isError) {
@@ -867,12 +932,11 @@ async function loadAccountCard() {
     var syncBtn = document.getElementById('money-sync-btn');
     if (syncBtn) {
       syncBtn.addEventListener('click', async function() {
-        // Refresh works even if itemId is missing: the backend syncs ALL of the
-        // user's connected items when no item_id is provided.
+        var activeId = getActiveItemId();
         syncBtn.textContent = 'Syncing…';
         syncBtn.disabled = true;
         try {
-          const sr = await api('/api/plaid/sync', { method: 'POST', body: JSON.stringify(itemId ? { item_id: itemId } : {}) });
+          const sr = await api('/api/plaid/sync', { method: 'POST', body: JSON.stringify(activeId ? { item_id: activeId } : {}) });
           await Promise.all([loadAccountCard(), checkPendingPlaid()]);
           if (!sr.success) {
             showFixedToast(sr.message || 'Sync failed — try reconnecting your bank', true);
@@ -899,10 +963,11 @@ async function loadAccountCard() {
     var fullResyncBtn = document.getElementById('money-full-resync-btn');
     if (fullResyncBtn) {
       fullResyncBtn.addEventListener('click', async function() {
+        var activeId = getActiveItemId();
         fullResyncBtn.textContent = 'Resyncing…';
         fullResyncBtn.disabled = true;
         try {
-          const sr = await api('/api/plaid/sync', { method: 'POST', body: JSON.stringify(Object.assign(itemId ? { item_id: itemId } : {}, { force_full: true })) });
+          const sr = await api('/api/plaid/sync', { method: 'POST', body: JSON.stringify(Object.assign(activeId ? { item_id: activeId } : {}, { force_full: true })) });
           await Promise.all([loadAccountCard(), checkPendingPlaid()]);
           const n = sr.transactions_added || 0;
           showFixedToast(n > 0 ? `✓ ${n} transaction${n === 1 ? '' : 's'} recovered` : (sr.success ? '✓ All caught up' : sr.message || 'Resync failed'), !sr.success);
@@ -915,20 +980,23 @@ async function loadAccountCard() {
     var reconnBtn = document.getElementById('money-reconnect-btn');
     if (reconnBtn) {
       reconnBtn.addEventListener('click', function() {
-        if (!itemId) { showFixedToast('Account not found — try refreshing the page', true); return; }
-        PlaidService.reconnectBankAccount(itemId, reconnBtn);
+        var activeId = getActiveItemId();
+        if (!activeId) { showFixedToast('Account not found — try refreshing the page', true); return; }
+        PlaidService.reconnectBankAccount(activeId, reconnBtn);
       });
     }
 
     var discBtn = document.getElementById('money-disconnect-btn');
     if (discBtn) {
       discBtn.addEventListener('click', async function() {
-        if (!itemId) { showFixedToast('Account not found — try refreshing the page', true); return; }
-        if (!confirm('Disconnect this account? This will stop syncing transactions.')) return;
+        var activeId = getActiveItemId();
+        if (!activeId) { showFixedToast('Account not found — try refreshing the page', true); return; }
+        var activeName = slides[currentIdx] ? slides[currentIdx].institution : 'this account';
+        if (!confirm('Disconnect ' + activeName + '? This will stop syncing transactions.')) return;
         discBtn.textContent = 'Disconnecting…';
         discBtn.disabled = true;
         try {
-          const dr = await api('/api/plaid/items/' + itemId, { method: 'DELETE' });
+          const dr = await api('/api/plaid/items/' + activeId, { method: 'DELETE' });
           if (dr.success) {
             showFixedToast('✓ Account disconnected', false);
             await loadAccountCard();
