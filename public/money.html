@@ -809,7 +809,11 @@ async function loadAccountCard() {
     var firstItem = items.find(function(i) { return (i.accounts || []).length > 0; }) || items[0];
     var lastSynced = firstItem && firstItem.lastSynced ? PlaidService.relativeTime(firstItem.lastSynced) : null;
     var accounts = firstItem ? (firstItem.accounts || []) : [];
-    var primary = accounts.find(function(a) { return a.type === 'depository'; }) || accounts[0];
+    // Prefer credit accounts (e.g. Amex Delta card) over any linked depository
+    // accounts that surface under the same OAuth item (e.g. linked Chase checking).
+    var primary = accounts.find(function(a) { return a.type === 'credit'; })
+               || accounts.find(function(a) { return a.type === 'depository'; })
+               || accounts[0];
     var balance = null;
     if (primary && primary.account_id && balanceMap[primary.account_id]) {
       var lb = balanceMap[primary.account_id];
@@ -819,7 +823,10 @@ async function loadAccountCard() {
       balance = primary._balances.current != null ? fmt(primary._balances.current) : null;
     }
 
-    var accountName = primary ? primary.name : (firstItem && firstItem.institution ? firstItem.institution : 'Connected Account');
+    // Show institution name (e.g. "American Express") rather than raw account name
+    // (e.g. "TOTAL CHECKING") so the card reflects the bank, not a linked sub-account.
+    var accountName = (firstItem && firstItem.institution) ? firstItem.institution
+                    : (primary ? primary.name : 'Connected Account');
     var mask = primary && primary.mask ? ' ••' + primary.mask : '';
     var syncedLine = lastSynced ? 'Updated ' + lastSynced : '';
     var itemId = firstItem ? firstItem.id : null;
