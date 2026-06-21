@@ -226,6 +226,10 @@ function classifyTransaction(transaction) {
   return 'Other';
 }
 
+// Tracks which items have had their webhook URL registered this server session.
+// Avoids a Plaid API call on every sync after the first registration.
+const _webhookRegistered = new Set();
+
 // ── Plaid client factory ────────────────────────────────────────────────────
 function getPlaidClient() {
   // WHY trim: env vars set via dashboard UIs sometimes include trailing whitespace/newlines
@@ -858,6 +862,14 @@ module.exports = function(pool) {
           acc.balances?.current ?? null, acc.balances?.available ?? null);
         console.log(`[Plaid] exchange-token: upserted account db_id=${saved?.id} plaid_item_id=${saved?.plaid_item_id} account_id=${acc.account_id} name="${acc.name}"`);
       }
+      if (process.env.PLAID_WEBHOOK_URL) {
+        plaid.itemWebhookUpdate({ access_token, webhook: process.env.PLAID_WEBHOOK_URL })
+          .then(() => {
+            _webhookRegistered.add(plaidItem.id);
+            console.log(`[Plaid] Registered webhook for item ${plaidItem.id}`);
+          })
+          .catch(e => console.warn('[Plaid] itemWebhookUpdate error:', e.message));
+      }
       syncTransactions(pool, plaidItem).catch(e => console.error('[Plaid] Initial sync error:', e.message));
       res.json({ success: true, message: 'Connected. Bringing in your transactions.', item_id: plaidItem.id, institution_name: plaidItem.institution_name });
     } catch (err) {
@@ -886,6 +898,7 @@ module.exports = function(pool) {
       const vals = item_id ? [parseInt(item_id), userId] : [userId];
       const { rows: items } = await pool.query(`SELECT * FROM plaid_items ${where}`, vals);
       let totalAdded = 0;
+      const syncPlaid = getPlaidClient();
       for (const item of items) {
         if (force_full) {
           // Reset cursor so Plaid re-delivers full transaction history from the start.
@@ -893,6 +906,13 @@ module.exports = function(pool) {
           await updateItemCursor(pool, item.id, null);
           item.cursor = null;
           console.log('[Plaid] Full resync requested for item', item.id, 'user', userId, '— cursor reset');
+        }
+        // Register webhook URL for existing items that were connected before PLAID_WEBHOOK_URL was set.
+        if (syncPlaid && process.env.PLAID_WEBHOOK_URL && !_webhookRegistered.has(item.id)) {
+          _webhookRegistered.add(item.id);
+          syncPlaid.itemWebhookUpdate({ access_token: decryptPlaidToken(item.access_token), webhook: process.env.PLAID_WEBHOOK_URL })
+            .then(() => console.log(`[Plaid] Registered webhook for existing item ${item.id}`))
+            .catch(e => console.warn('[Plaid] itemWebhookUpdate error for item', item.id, ':', e.message));
         }
         totalAdded += await syncTransactions(pool, item);
       }
