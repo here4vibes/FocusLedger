@@ -814,13 +814,23 @@ async function loadAccountCard() {
     var primary = accounts.find(function(a) { return a.type === 'credit'; })
                || accounts.find(function(a) { return a.type === 'depository'; })
                || accounts[0];
-    var balance = null;
+    var isCredit = primary && primary.type === 'credit';
+    var balanceRaw = null;
     if (primary && primary.account_id && balanceMap[primary.account_id]) {
       var lb = balanceMap[primary.account_id];
-      balance = lb.current != null ? fmt(lb.current) : (lb.available != null ? fmt(lb.available) : null);
+      balanceRaw = lb.current != null ? parseFloat(lb.current) : (lb.available != null ? parseFloat(lb.available) : null);
     }
-    if (balance === null && primary && primary._balances) {
-      balance = primary._balances.current != null ? fmt(primary._balances.current) : null;
+    if (balanceRaw === null && primary && primary._balances) {
+      balanceRaw = primary._balances.current != null ? parseFloat(primary._balances.current) : null;
+    }
+    // Credit balances from Plaid are positive numbers representing money owed (a liability).
+    // Negate them so they read correctly on a balance sheet: -$450 means you owe $450.
+    var balance = null;
+    var balanceColor = 'var(--navy)';
+    if (balanceRaw !== null) {
+      var displayVal = isCredit ? -Math.abs(balanceRaw) : balanceRaw;
+      balance = (displayVal < 0 ? '-' : '') + '$' + Math.abs(displayVal).toFixed(2);
+      balanceColor = displayVal < 0 ? 'var(--error)' : 'var(--green)';
     }
 
     // Show institution name (e.g. "American Express") rather than raw account name
@@ -840,8 +850,8 @@ async function loadAccountCard() {
     var html = '<div class="dash-card">';
     html += '<div class="card-row">';
     html += '<div class="card-left">';
-    html += '<div class="card-label">Account</div>';
-    html += '<div class="card-amount">' + (balance || '—') + '</div>';
+    html += '<div class="card-label">' + (isCredit ? 'Balance Owed' : 'Available Balance') + '</div>';
+    html += '<div class="card-amount" style="color:' + balanceColor + '">' + (balance || '—') + '</div>';
     html += '<div class="account-inst">' + accountName + mask + '</div>';
     if (syncedLine) html += '<div class="last-updated">' + syncedLine + '</div>';
     html += '</div>';
