@@ -275,10 +275,10 @@ async function syncTransactions(pool, item) {
   let lastSyncAccounts = [];
   while (hasMore) {
     const response = await plaid.transactionsSync({ access_token: accessToken, cursor: cursor || undefined, count: 100 });
-    const { added: newTransactions, removed, next_cursor, has_more, accounts: syncAccounts } = response.data;
+    const { added: newTransactions, modified: modifiedTransactions = [], removed, next_cursor, has_more, accounts: syncAccounts } = response.data;
     if (syncAccounts && syncAccounts.length) lastSyncAccounts = syncAccounts;
 
-    console.log(`[Plaid] page: ${newTransactions.length} added, ${removed.length} removed, has_more=${has_more}`);
+    console.log(`[Plaid] page: ${newTransactions.length} added, ${modifiedTransactions.length} modified, ${removed.length} removed, has_more=${has_more}`);
 
     for (const tx of newTransactions) {
       if (tx.amount <= 0) { skippedCredit++; continue; }
@@ -354,6 +354,52 @@ async function syncTransactions(pool, item) {
         'DELETE FROM plaid_transactions WHERE transaction_id = $1 AND user_id = $2 AND is_confirmed = false',
         [removedTx.transaction_id, item.user_id]
       );
+    }
+
+    // Handle modified transactions — Plaid sends these when a pending transaction settles
+    // without changing its transaction_id (common for some institutions). The record already
+    // exists in plaid_transactions; we update is_pending and auto-confirm if now settled.
+    for (const tx of modifiedTransactions) {
+      if (tx.pending) continue; // still pending — no action needed
+      if (tx.amount <= 0) continue; // credit/refund — skip
+      try {
+        await pool.query(
+          'UPDATE plaid_transactions SET is_pending = false, updated_at = NOW() WHERE transaction_id = $1 AND user_id = $2',
+          [tx.transaction_id, item.user_id]
+        );
+        const { rows: existingTx } = await pool.query(
+          'SELECT * FROM plaid_transactions WHERE transaction_id = $1 AND user_id = $2 AND is_confirmed = false LIMIT 1',
+          [tx.transaction_id, item.user_id]
+        );
+        if (!existingTx.length) continue;
+        const ptx = existingTx[0];
+        const expDate = String(tx.date).slice(0, 10);
+        const { rows: dup } = await pool.query(
+          'SELECT id FROM expenses WHERE plaid_transaction_id = $1 LIMIT 1',
+          [tx.transaction_id]
+        );
+        let expenseId = dup[0]?.id || null;
+        if (!expenseId) {
+          const cols = ['user_id', 'amount', 'description', 'expense_date', 'source', 'plaid_transaction_id'];
+          const vals = [item.user_id, parseFloat(tx.amount), tx.merchant_name || tx.name || 'Unknown', expDate, 'plaid', tx.transaction_id];
+          if (ptx.category_id) { cols.push('category_id'); vals.push(ptx.category_id); }
+          const ph = vals.map((_, i) => `$${i + 1}`).join(', ');
+          const { rows: expRows } = await pool.query(
+            `INSERT INTO expenses (${cols.join(', ')}) VALUES (${ph}) RETURNING id`, vals
+          );
+          expenseId = expRows[0]?.id || null;
+        }
+        if (expenseId) {
+          await pool.query(
+            'UPDATE plaid_transactions SET is_confirmed = true, expense_id = $1, updated_at = NOW() WHERE id = $2',
+            [expenseId, ptx.id]
+          );
+          added++;
+          console.log(`[Plaid] Modified tx settled and confirmed: ${tx.transaction_id} → expense ${expenseId}`);
+        }
+      } catch (e) {
+        console.error('[Plaid] Error handling modified tx', tx.transaction_id, e.message);
+      }
     }
 
     cursor = next_cursor;
