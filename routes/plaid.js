@@ -549,6 +549,79 @@ module.exports = function(pool) {
     }
   });
 
+  // GET /api/plaid/sync-diagnostic — calls Plaid transactionsSync directly and returns raw result.
+  // Use this when the money tab shows 0 transactions and you can't read Render logs.
+  router.get('/sync-diagnostic', async (req, res) => {
+    try {
+      const userId = req.user.id;
+      const { rows: items } = await pool.query(
+        'SELECT * FROM plaid_items WHERE user_id = $1 ORDER BY id DESC LIMIT 5',
+        [userId]
+      );
+      if (!items.length) return res.json({ success: false, message: 'No plaid_items for this user.' });
+
+      const plaid = getPlaidClient();
+      if (!plaid) return res.json({ success: false, message: 'Plaid client not initialized — check PLAID_CLIENT_ID / PLAID_SECRET env vars.', plaid_env: process.env.PLAID_ENV || 'sandbox' });
+
+      const results = [];
+      for (const item of items) {
+        const accessToken = decryptPlaidToken(item.access_token);
+        const itemResult = {
+          item_db_id: item.id,
+          institution_name: item.institution_name,
+          plaid_item_id: item.item_id,
+          cursor_set: !!item.cursor,
+          last_synced_at: item.last_synced_at,
+        };
+        try {
+          const resp = await plaid.transactionsSync({
+            access_token: accessToken,
+            cursor: undefined,  // always start from beginning for diagnostic
+            count: 5,
+          });
+          const { added, next_cursor, has_more, accounts } = resp.data;
+          itemResult.success = true;
+          itemResult.transactions_returned = added.length;
+          itemResult.has_more = has_more;
+          itemResult.cursor_returned = !!next_cursor;
+          itemResult.account_ids_in_response = accounts.map(a => a.account_id);
+          itemResult.sample_transactions = added.slice(0, 3).map(tx => ({
+            id: tx.transaction_id,
+            account_id: tx.account_id,
+            date: tx.date,
+            amount: tx.amount,
+            name: tx.merchant_name || tx.name,
+            pending: tx.pending,
+          }));
+          const { rows: accts } = await pool.query(
+            'SELECT account_id FROM plaid_accounts WHERE plaid_item_id = $1', [item.id]
+          );
+          const storedIds = accts.map(a => a.account_id);
+          const unmapped = [...new Set(added.map(tx => tx.account_id))].filter(id => !storedIds.includes(id));
+          itemResult.stored_account_ids = storedIds;
+          itemResult.unmapped_account_ids_in_response = unmapped;
+          if (unmapped.length) itemResult.warning = 'Plaid returned transactions for account_ids not in plaid_accounts — these will be skipped by syncTransactions.';
+        } catch (e) {
+          itemResult.success = false;
+          itemResult.plaid_error_code = e.response?.data?.error_code || null;
+          itemResult.plaid_error_type = e.response?.data?.error_type || null;
+          itemResult.plaid_error_message = e.response?.data?.error_message || e.message;
+          itemResult.http_status = e.response?.status || null;
+        }
+        results.push(itemResult);
+      }
+
+      res.json({
+        success: true,
+        plaid_env: (process.env.PLAID_ENV || 'sandbox').trim(),
+        items: results,
+      });
+    } catch (err) {
+      console.error('[Plaid] sync-diagnostic error:', err.message);
+      res.status(500).json({ success: false, message: err.message });
+    }
+  });
+
   // GET /api/plaid/balances — live balances; falls back to DB cache if Plaid call fails
   router.get('/balances', async (req, res) => {
     try {
