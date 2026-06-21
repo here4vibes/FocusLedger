@@ -21,14 +21,14 @@
       .replace(/>/g, '&gt;');
   }
 
-  function showBankSyncToast(type, message) {
+  function showBankSyncToast(type, message, duration) {
     var toast = document.getElementById('toast');
     if (!toast) return;
     toast.textContent = message;
     toast.className = 'toast visible ' + type;
     toast.style.display = 'block';
     clearTimeout(toast._timer);
-    toast._timer = setTimeout(function () { toast.style.display = 'none'; }, 4000);
+    toast._timer = setTimeout(function () { toast.style.display = 'none'; }, duration || 4000);
   }
 
   function relativeTime(isoString) {
@@ -66,7 +66,7 @@
         .then(function (data) {
           if (btn) { btn.disabled = false; if (originalText) btn.textContent = originalText; }
           if (data.success) {
-            showBankSyncToast('', '\u2713 Connected to ' + (data.institution_name || institutionName) + '.');
+            showBankSyncToast('', '\u2713 Connected to ' + (data.institution_name || institutionName) + '. Historical transactions can take 30\u201360 min to load \u2014 we\u2019ll notify you when they arrive.', 8000);
             if (typeof onBankSyncStatusChanged === 'function') onBankSyncStatusChanged();
           } else {
             var errDetail = '';
@@ -185,7 +185,7 @@
       token: linkToken,
       onSuccess: function () {
         if (btn) { btn.disabled = false; btn.textContent = 'Reconnect'; }
-        showBankSyncToast('', '✓ Reconnected. Pulling in transactions…');
+        showBankSyncToast('', '✓ Reconnected. Pulling in transactions — history may take 30–60 min for new connections.');
         fetch('/api/plaid/sync', {
           method: 'POST',
           headers: authHeaders(),
@@ -263,7 +263,7 @@
         var item = items[i];
         var instName = escHtml(item.institution_name || 'Connected Account');
         var synced    = relativeTime(item.last_synced_at);
-        var accounts  = item.accounts || [];
+        var accounts  = item.plaid_accounts || [];
         html += '<div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;padding:0.75rem 0;border-bottom:1px solid #F0EEE9;">';
         html += '<div style="display:flex;align-items:center;gap:0.75rem;">';
         html += '<div style="width:36px;height:36px;border-radius:8px;background:#F0F5F5;display:flex;align-items:center;justify-content:center;font-size:1.1rem;">🏦</div>';
@@ -275,6 +275,18 @@
         html += '<span style="font-size:0.78rem;font-weight:600;color:var(--green-muted,#4A9292);background:rgba(91,164,164,0.1);border-radius:20px;padding:2px 10px;">● Synced</span>';
         html += '<button id="disconnectBankBtn' + i + '" style="font-size:0.78rem;color:var(--text-muted);background:none;border:none;cursor:pointer;text-decoration:underline;text-underline-offset:2px;font-family:inherit;min-height:44px;min-width:44px;">Disconnect</button>';
         html += '</div></div>';
+      }
+
+      // Show a notice when an account was just connected but history hasn't arrived yet.
+      // Plaid loads historical data asynchronously — it can take 30–60 min, especially for Amex OAuth.
+      var recentItem = items.find(function(it) {
+        if (!it.created_at) return false;
+        return (Date.now() - new Date(it.created_at).getTime()) < 4 * 60 * 60 * 1000;
+      });
+      if (recentItem && data.pending_review_count === 0) {
+        html += '<div style="margin-top:0.75rem;padding:0.65rem 0.9rem;background:#FFF9EF;border:1.5px solid #F5E5C0;border-radius:8px;font-size:0.82rem;color:#8A6810;line-height:1.4;">';
+        html += '⏳ Pulling in your transaction history — this can take 30–60 min for new bank connections. We’ll push a notification when it’s ready.';
+        html += '</div>';
       }
 
       if (data.pending_review_count > 0) {

@@ -98,7 +98,7 @@ module.exports = function (pool) {
 
     const { webhook_type, webhook_code, item_id } = req.body || {};
     if (webhook_type !== 'TRANSACTIONS' || !item_id) return;
-    if (!['SYNC_UPDATES_AVAILABLE', 'DEFAULT_UPDATE', 'INITIAL_UPDATE'].includes(webhook_code)) return;
+    if (!['SYNC_UPDATES_AVAILABLE', 'DEFAULT_UPDATE', 'INITIAL_UPDATE', 'HISTORICAL_UPDATE'].includes(webhook_code)) return;
 
     handleWebhookAsync(pool, item_id).catch(err =>
       console.error('[plaid-webhook]', err.message)
