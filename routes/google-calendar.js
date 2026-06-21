@@ -35,7 +35,7 @@ function authMiddleware(req, res, next) {
 }
 
 function getOAuthBase(req) {
-  const host = req.headers['x-forwarded-host'] || req.headers.host || 'app.focusledger.com';
+  const host = req.headers['x-forwarded-host'] || req.headers.host || 'app.focusledger.net';
   const proto = req.headers['x-forwarded-proto'] || (host.includes('localhost') ? 'http' : 'https');
   return `${proto}://${host}`;
 }
