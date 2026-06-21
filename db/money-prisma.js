@@ -386,31 +386,34 @@ async function getPlaidItemsWithAccounts(pool, userId) {
 // reconnects the same bank. Falls back to INSERT-with-explicit-id if the
 // unique index doesn't exist yet (pre-migration environments).
 async function upsertPlaidItem(pool, userId, encryptedAccessToken, itemId, institutionName, institutionId) {
-  try {
+  // Conflict on institution_id so that reconnecting the same bank updates the existing
+  // row's access_token instead of creating an orphan. Each Amex/OAuth reconnect gives
+  // Plaid a brand-new item_id, so (item_id, user_id) alone would always insert a new row.
+  if (institutionId) {
     const { rows } = await pool.query(
       `INSERT INTO plaid_items (id, user_id, access_token, item_id, institution_name, institution_id)
        VALUES ((SELECT COALESCE(MAX(id), 0) + 1 FROM plaid_items), $1, $2, $3, $4, $5)
-       ON CONFLICT (item_id, user_id) DO UPDATE SET
+       ON CONFLICT (institution_id, user_id) WHERE institution_id IS NOT NULL DO UPDATE SET
          access_token     = EXCLUDED.access_token,
-         institution_name = EXCLUDED.institution_name,
-         institution_id   = EXCLUDED.institution_id
+         item_id          = EXCLUDED.item_id,
+         institution_name = COALESCE(EXCLUDED.institution_name, plaid_items.institution_name),
+         cursor           = NULL
        RETURNING *`,
-      [userId, encryptedAccessToken, itemId, institutionName || 'Unknown Bank', institutionId || null]
+      [userId, encryptedAccessToken, itemId, institutionName || 'Unknown Bank', institutionId]
     );
     return rows[0];
-  } catch (e) {
-    if (e.code === '42P10' || e.message.includes('there is no unique constraint')) {
-      // Unique index not yet created — fall back to plain INSERT
-      const { rows } = await pool.query(
-        `INSERT INTO plaid_items (id, user_id, access_token, item_id, institution_name, institution_id)
-         VALUES ((SELECT COALESCE(MAX(id), 0) + 1 FROM plaid_items), $1, $2, $3, $4, $5)
-         RETURNING *`,
-        [userId, encryptedAccessToken, itemId, institutionName || 'Unknown Bank', institutionId || null]
-      );
-      return rows[0];
-    }
-    throw e;
   }
+  // Fallback for items without institution_id (edge case)
+  const { rows } = await pool.query(
+    `INSERT INTO plaid_items (id, user_id, access_token, item_id, institution_name, institution_id)
+     VALUES ((SELECT COALESCE(MAX(id), 0) + 1 FROM plaid_items), $1, $2, $3, $4, $5)
+     ON CONFLICT (item_id, user_id) WHERE item_id IS NOT NULL DO UPDATE SET
+       access_token     = EXCLUDED.access_token,
+       institution_name = COALESCE(EXCLUDED.institution_name, plaid_items.institution_name)
+     RETURNING *`,
+    [userId, encryptedAccessToken, itemId, institutionName || 'Unknown Bank', null]
+  );
+  return rows[0];
 }
 
 // Delete a plaid_item (disconnect)
