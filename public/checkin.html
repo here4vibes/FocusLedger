@@ -775,7 +775,7 @@
         if (sendBtn) sendBtn.disabled = false;
         if (textarea) { textarea.disabled = false; textarea.placeholder = 'What\'s on your mind?'; }
 
-        initVoiceInput();
+        try { initVoiceInput(); } catch (e) { console.warn('[checkin] voice init failed:', e.message); }
 
         var sessionCount = sessionData.sessionCount || 0;
         var prevSummary = sessionData.previousCheckinSummary || null;
@@ -813,9 +813,10 @@
 
     function initVoiceInput() {
         var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-        if (!SpeechRecognition) return; // browser doesn't support — hide mic button
+        if (!SpeechRecognition) return; // browser doesn't support
 
         var micBtn = el('micBtn');
+        if (!micBtn) return; // element missing — skip voice setup silently
         micBtn.style.display = '';
 
         recognition = new SpeechRecognition();
