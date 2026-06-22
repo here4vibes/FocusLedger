@@ -266,6 +266,7 @@ async function syncTransactions(pool, item) {
   let added = 0;
   let skippedCredit = 0;   // amount <= 0 (credits/refunds)
   let skippedNoAcct = 0;   // account_id not in accountMap
+  let totalFromPlaid = 0;  // raw count of transactions Plaid returned across all pages
   const billCandidates = [];
 
   const accountMap = await getAccountMap(pool, item.id);
@@ -282,6 +283,7 @@ async function syncTransactions(pool, item) {
     const { added: newTransactions, modified: modifiedTransactions = [], removed, next_cursor, has_more, accounts: syncAccounts } = response.data;
     if (syncAccounts && syncAccounts.length) lastSyncAccounts = syncAccounts;
 
+    totalFromPlaid += newTransactions.length;
     console.log(`[Plaid] page: ${newTransactions.length} added, ${modifiedTransactions.length} modified, ${removed.length} removed, has_more=${has_more}`);
 
     for (const tx of newTransactions) {
@@ -425,7 +427,7 @@ async function syncTransactions(pool, item) {
     }
   }
 
-  console.log(`[Plaid] Synced item ${item.id} for user ${item.user_id}: ${added} inserted, ${skippedCredit} credits skipped, ${skippedNoAcct} skipped (no account mapping)`);
+  console.log(`[Plaid] Synced item ${item.id} for user ${item.user_id}: plaid_returned=${totalFromPlaid}, inserted=${added}, skipped_credits=${skippedCredit}, skipped_no_acct=${skippedNoAcct}`);
 
   if (billCandidates.length > 0) {
     detectAndCreateBillTasks(pool, item.user_id, billCandidates).catch(e => console.error('[BillTasks] Error:', e.message));
@@ -624,33 +626,55 @@ module.exports = function(pool) {
           last_synced_at: item.last_synced_at,
         };
         try {
-          const resp = await plaid.transactionsSync({
-            access_token: accessToken,
-            cursor: undefined,  // always start from beginning for diagnostic
-            count: 5,
-          });
-          const { added, next_cursor, has_more, accounts } = resp.data;
+          // Page through ALL available transactions to get a true total count.
+          let diagCursor;
+          let diagHasMore = true;
+          let totalAdded = 0, totalPending = 0, totalSettled = 0, totalCredits = 0;
+          let sampleTxs = [];
+          let allAccountIds = new Set();
+          let firstPage = true;
+          while (diagHasMore) {
+            const resp = await plaid.transactionsSync({
+              access_token: accessToken,
+              cursor: diagCursor,
+              count: 100,
+            });
+            const { added, next_cursor, has_more, accounts } = resp.data;
+            if (firstPage) {
+              itemResult.account_ids_in_response = accounts.map(a => a.account_id);
+              firstPage = false;
+            }
+            for (const tx of added) {
+              allAccountIds.add(tx.account_id);
+              totalAdded++;
+              if (tx.pending) totalPending++;
+              else totalSettled++;
+              if (tx.amount <= 0) totalCredits++;
+              if (sampleTxs.length < 5) sampleTxs.push({ id: tx.transaction_id, account_id: tx.account_id, date: tx.date, amount: tx.amount, name: tx.merchant_name || tx.name, pending: tx.pending });
+            }
+            diagCursor = next_cursor;
+            diagHasMore = has_more;
+          }
           itemResult.success = true;
-          itemResult.transactions_returned = added.length;
-          itemResult.has_more = has_more;
-          itemResult.cursor_returned = !!next_cursor;
-          itemResult.account_ids_in_response = accounts.map(a => a.account_id);
-          itemResult.sample_transactions = added.slice(0, 3).map(tx => ({
-            id: tx.transaction_id,
-            account_id: tx.account_id,
-            date: tx.date,
-            amount: tx.amount,
-            name: tx.merchant_name || tx.name,
-            pending: tx.pending,
-          }));
+          itemResult.total_available_from_plaid = totalAdded;
+          itemResult.settled = totalSettled;
+          itemResult.pending = totalPending;
+          itemResult.credits_refunds = totalCredits;
+          itemResult.sample_transactions = sampleTxs;
           const { rows: accts } = await pool.query(
             'SELECT account_id FROM plaid_accounts WHERE plaid_item_id = $1', [item.id]
           );
           const storedIds = accts.map(a => a.account_id);
-          const unmapped = [...new Set(added.map(tx => tx.account_id))].filter(id => !storedIds.includes(id));
+          const unmapped = [...allAccountIds].filter(id => !storedIds.includes(id));
           itemResult.stored_account_ids = storedIds;
           itemResult.unmapped_account_ids_in_response = unmapped;
           if (unmapped.length) itemResult.warning = 'Plaid returned transactions for account_ids not in plaid_accounts — these will be skipped by syncTransactions.';
+          // Also show what's in DB for comparison
+          const { rows: dbStats } = await pool.query(
+            `SELECT COUNT(*)::int total, COUNT(*) FILTER (WHERE is_pending)::int pending, COUNT(*) FILTER (WHERE is_confirmed)::int confirmed FROM plaid_transactions WHERE user_id = $1`,
+            [userId]
+          );
+          itemResult.in_db = dbStats[0];
         } catch (e) {
           itemResult.success = false;
           itemResult.plaid_error_code = e.response?.data?.error_code || null;
