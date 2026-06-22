@@ -258,7 +258,7 @@ function getPlaidClient() {
 // ── Sync transactions ────────────────────────────────────────────────────────
 async function syncTransactions(pool, item) {
   const plaid = getPlaidClient();
-  if (!plaid) { console.error('[Plaid] syncTransactions: Plaid client not initialized — skipping'); return 0; }
+  if (!plaid) { console.error('[Plaid] syncTransactions: Plaid client not initialized — skipping'); return { added: 0, plaidReturned: 0, skippedCredit: 0, skippedNoAcct: 0, insertFailed: 0 }; }
 
   const accessToken = decryptPlaidToken(item.access_token);
   let cursor = item.cursor || null;
@@ -266,6 +266,7 @@ async function syncTransactions(pool, item) {
   let added = 0;
   let skippedCredit = 0;   // amount <= 0 (credits/refunds)
   let skippedNoAcct = 0;   // account_id not in accountMap
+  let insertFailed = 0;    // insertPlaidTransaction returned null (DB error)
   let totalFromPlaid = 0;  // raw count of transactions Plaid returned across all pages
   const billCandidates = [];
 
@@ -350,8 +351,11 @@ async function syncTransactions(pool, item) {
       if (plaidTx) {
         added++;
         billCandidates.push({ ...tx, transaction_date: tx.date });
-      } else if (!tx.pending) {
-        console.warn('[Plaid] Failed to insert tx', tx.transaction_id, '— see insertPlaidTransaction error above');
+      } else {
+        insertFailed++;
+        if (insertFailed <= 3) {
+          console.warn('[Plaid] insertPlaidTransaction returned null for tx', tx.transaction_id, '(isPending:', tx.pending, ') — check error above');
+        }
       }
     }
 
@@ -427,12 +431,12 @@ async function syncTransactions(pool, item) {
     }
   }
 
-  console.log(`[Plaid] Synced item ${item.id} for user ${item.user_id}: plaid_returned=${totalFromPlaid}, inserted=${added}, skipped_credits=${skippedCredit}, skipped_no_acct=${skippedNoAcct}`);
+  console.log(`[Plaid] Synced item ${item.id} for user ${item.user_id}: plaid_returned=${totalFromPlaid}, inserted=${added}, skipped_credits=${skippedCredit}, skipped_no_acct=${skippedNoAcct}, insert_failed=${insertFailed}`);
 
   if (billCandidates.length > 0) {
     detectAndCreateBillTasks(pool, item.user_id, billCandidates).catch(e => console.error('[BillTasks] Error:', e.message));
   }
-  return added;
+  return { added, plaidReturned: totalFromPlaid, skippedCredit, skippedNoAcct, insertFailed };
 }
 
 // ── Bill detection + auto-task creation ──────────────────────────────────────
@@ -921,7 +925,7 @@ module.exports = function(pool) {
         : 'WHERE user_id = $1';
       const vals = item_id ? [parseInt(item_id), userId] : [userId];
       const { rows: items } = await pool.query(`SELECT * FROM plaid_items ${where}`, vals);
-      let totalAdded = 0;
+      let totalAdded = 0, totalPlaidReturned = 0, totalSkippedCredit = 0, totalSkippedNoAcct = 0, totalInsertFailed = 0;
       const syncPlaid = getPlaidClient();
       for (const item of items) {
         if (force_full) {
@@ -938,9 +942,25 @@ module.exports = function(pool) {
             .then(() => console.log(`[Plaid] Registered webhook for existing item ${item.id}`))
             .catch(e => console.warn('[Plaid] itemWebhookUpdate error for item', item.id, ':', e.message));
         }
-        totalAdded += await syncTransactions(pool, item);
+        const result = await syncTransactions(pool, item);
+        totalAdded += result.added;
+        totalPlaidReturned += result.plaidReturned;
+        totalSkippedCredit += result.skippedCredit;
+        totalSkippedNoAcct += result.skippedNoAcct;
+        totalInsertFailed += result.insertFailed;
       }
-      res.json({ success: true, transactions_added: totalAdded, message: `${totalAdded} new transactions ready to review` });
+      const diagMsg = totalInsertFailed > 0
+        ? `${totalAdded} inserted, ${totalInsertFailed} failed — check server logs`
+        : `${totalAdded} new transactions ready to review`;
+      res.json({
+        success: true,
+        transactions_added: totalAdded,
+        plaid_returned: totalPlaidReturned,
+        skipped_credits: totalSkippedCredit,
+        skipped_no_account: totalSkippedNoAcct,
+        insert_failed: totalInsertFailed,
+        message: diagMsg,
+      });
     } catch (err) {
       const plaidCode = err.response?.data?.error_code;
       console.error('[Plaid] Error syncing:', err.response?.data || err.message);
