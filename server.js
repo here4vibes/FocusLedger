@@ -147,7 +147,15 @@ app.get('/health', async (req, res) => {
       pool.query('SELECT 1'),
       new Promise((_, reject) => setTimeout(() => reject(new Error('DB timeout')), 4000)),
     ]);
-    res.json({ status: 'ok', db: 'ok', latency_ms: Date.now() - start, commit: process.env.RENDER_GIT_COMMIT || 'unknown' });
+    // Include last 5 applied migrations so deploys can be verified without Render log access
+    let migrations = [];
+    try {
+      const { rows } = await pool.query(
+        'SELECT name, applied_at FROM _migrations ORDER BY applied_at DESC LIMIT 5'
+      );
+      migrations = rows;
+    } catch (_) { /* _migrations table may not exist on fresh DB */ }
+    res.json({ status: 'ok', db: 'ok', latency_ms: Date.now() - start, commit: process.env.RENDER_GIT_COMMIT || 'unknown', migrations });
   } catch (err) {
     res.status(503).json({ status: 'degraded', db: 'error', error: err.message, latency_ms: Date.now() - start });
   }
