@@ -3,8 +3,8 @@ services:
   - type: web
     runtime: node
     name: app
-    buildCommand: npm install && npm run db:generate && npm test
-    startCommand: npm run migrate && npm start
+    buildCommand: npm install && npm test
+    startCommand: npm start
     healthCheckPath: /health
     envVars:
       - key: NODE_ENV

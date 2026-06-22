@@ -62,6 +62,7 @@ const {
   signupLimiter
 } = require('./middleware/security');
 const repairTasksSchema  = require('./lib/startup-repair');
+const repairPlaidSchema  = require('./lib/plaid-startup-repair');
 const { verifyToken } = require('./middleware/auth');
 const { buildSessionMiddleware } = require('./lib/session');
 
@@ -151,7 +152,11 @@ app.get('/health', async (req, res) => {
     let migrations = [];
     try {
       const { rows } = await pool.query(
-        'SELECT name, applied_at FROM _migrations ORDER BY applied_at DESC LIMIT 5'
+        `SELECT name, MAX(applied_at) AS applied_at
+         FROM _migrations
+         GROUP BY name
+         ORDER BY MAX(applied_at) DESC NULLS LAST
+         LIMIT 5`
       );
       migrations = rows;
     } catch (_) { /* _migrations table may not exist on fresh DB */ }
@@ -280,5 +285,6 @@ app.use((err, req, res, next) => {
 });
 
 repairTasksSchema(pool);
+repairPlaidSchema(pool);
 
 app.listen(port, () => console.log(`Server running on port ${port}`));
