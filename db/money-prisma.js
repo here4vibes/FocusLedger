@@ -447,15 +447,20 @@ async function upsertPlaidAccount(pool, plaidItemId, userId, accountId, name, of
       // while the current sync is running against a newer item.
       const { rows } = await pool.query(
         `UPDATE plaid_accounts SET
-           plaid_item_id = $1,
-           name = $2,
-           mask = $3,
-           current_balance    = COALESCE($4, current_balance),
-           available_balance  = COALESCE($5, available_balance),
-           balance_updated_at = CASE WHEN $4 IS NOT NULL THEN NOW() ELSE balance_updated_at END
-         WHERE account_id = $6
+           plaid_item_id      = $1,
+           user_id            = COALESCE($2, user_id),
+           name               = $3,
+           official_name      = COALESCE($4, official_name),
+           type               = COALESCE($5, type),
+           subtype            = COALESCE($6, subtype),
+           mask               = COALESCE($7, mask),
+           current_balance    = COALESCE($8, current_balance),
+           available_balance  = COALESCE($9, available_balance),
+           balance_updated_at = CASE WHEN $8 IS NOT NULL THEN NOW() ELSE balance_updated_at END
+         WHERE account_id = $10
          RETURNING *`,
-        [plaidItemId, name, mask || null,
+        [plaidItemId, userId || null, name,
+         officialName || null, type || null, subtype || null, mask || null,
          currentBalance != null ? currentBalance : null,
          availableBalance != null ? availableBalance : null,
          accountId]
