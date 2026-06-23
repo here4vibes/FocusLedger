@@ -470,7 +470,10 @@ async function getCategoriesMap(pool) {
   return map;
 }
 
-// Insert a Plaid transaction (dedup by transaction_id)
+// Insert a Plaid transaction (dedup by transaction_id).
+// Uses DO UPDATE so that on conflict the existing row is returned — this lets
+// syncTransactions() auto-confirm transactions that were staged by the cron but
+// never pushed to expenses (e.g. from a Full Resync after a previous failed sync).
 async function insertPlaidTransaction(pool, params) {
   const { plaidAccountId, userId, transactionId, amount, description, merchantName, categoryId, plaidCategory, transactionDate, isPending } = params;
   try {
@@ -479,7 +482,7 @@ async function insertPlaidTransaction(pool, params) {
       `INSERT INTO plaid_transactions
          (plaid_account_id, user_id, transaction_id, amount, description, merchant_name, category_id, plaid_category, transaction_date, is_pending)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-       ON CONFLICT (transaction_id) DO NOTHING
+       ON CONFLICT (transaction_id) DO UPDATE SET updated_at = NOW()
        RETURNING *`,
       [plaidAccountId, userId, transactionId, parseFloat(amount), description, merchantName || null,
        categoryId || null, plaidCategory || null, txDate, isPending || false]
