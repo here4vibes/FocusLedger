@@ -270,7 +270,7 @@ async function syncTransactions(pool, item) {
   let totalFromPlaid = 0;  // raw count of transactions Plaid returned across all pages
   const billCandidates = [];
 
-  const accountMap = await getAccountMap(pool, item.id);
+  const accountMap = await getAccountMap(pool, item.id, item.user_id);
   const categoriesByName = await getCategoriesMap(pool);
 
   console.log(`[Plaid] syncTransactions start: item=${item.id} user=${item.user_id} cursor=${cursor ? 'set' : 'null (full)'} accountMapSize=${Object.keys(accountMap).length}`);

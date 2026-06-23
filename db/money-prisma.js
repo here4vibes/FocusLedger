@@ -434,28 +434,58 @@ async function updateItemCursor(pool, itemId, cursor) {
 
 // Upsert a Plaid account
 async function upsertPlaidAccount(pool, plaidItemId, userId, accountId, name, officialName, type, subtype, mask, currentBalance, availableBalance) {
-  const { rows } = await pool.query(
-    `INSERT INTO plaid_accounts (plaid_item_id, user_id, account_id, name, official_name, type, subtype, mask, current_balance, available_balance, balance_updated_at)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())
-     ON CONFLICT (account_id) DO UPDATE SET
-       name = EXCLUDED.name,
-       mask = EXCLUDED.mask,
-       current_balance    = COALESCE(EXCLUDED.current_balance,    plaid_accounts.current_balance),
-       available_balance  = COALESCE(EXCLUDED.available_balance,  plaid_accounts.available_balance),
-       balance_updated_at = CASE WHEN EXCLUDED.current_balance IS NOT NULL THEN NOW() ELSE plaid_accounts.balance_updated_at END
-     RETURNING *`,
-    [plaidItemId, userId, accountId, name, officialName || null, type, subtype || null, mask || null,
-     currentBalance != null ? currentBalance : null,
-     availableBalance != null ? availableBalance : null]
-  );
-  return rows[0];
+  // Use SELECT-then-INSERT/UPDATE to avoid ON CONFLICT (account_id) which requires
+  // a UNIQUE constraint that may not exist on pre-existing tables.
+  try {
+    const { rows: existing } = await pool.query(
+      'SELECT * FROM plaid_accounts WHERE account_id = $1 LIMIT 1',
+      [accountId]
+    );
+    if (existing.length) {
+      // Migrate account to the current item — this fixes the case where the account
+      // was stored under an old plaid_item_id (from a previous connect/reconnect)
+      // while the current sync is running against a newer item.
+      const { rows } = await pool.query(
+        `UPDATE plaid_accounts SET
+           plaid_item_id = $1,
+           name = $2,
+           mask = $3,
+           current_balance    = COALESCE($4, current_balance),
+           available_balance  = COALESCE($5, available_balance),
+           balance_updated_at = CASE WHEN $4 IS NOT NULL THEN NOW() ELSE balance_updated_at END
+         WHERE account_id = $6
+         RETURNING *`,
+        [plaidItemId, name, mask || null,
+         currentBalance != null ? currentBalance : null,
+         availableBalance != null ? availableBalance : null,
+         accountId]
+      );
+      return rows[0];
+    }
+    const { rows } = await pool.query(
+      `INSERT INTO plaid_accounts (plaid_item_id, user_id, account_id, name, official_name, type, subtype, mask, current_balance, available_balance, balance_updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())
+       RETURNING *`,
+      [plaidItemId, userId, accountId, name, officialName || null, type, subtype || null, mask || null,
+       currentBalance != null ? currentBalance : null,
+       availableBalance != null ? availableBalance : null]
+    );
+    return rows[0];
+  } catch (e) {
+    console.error('[Plaid] upsertPlaidAccount failed for', accountId, ':', e.message);
+    return null;
+  }
 }
 
-// Get account_id → db id map for a plaid_item
-async function getAccountMap(pool, plaidItemId) {
+// Get account_id → db id map for a plaid_item.
+// Queries by user_id (not just plaid_item_id) so accounts stored under older
+// plaid_item rows (from past reconnects) are still found. Each Plaid account_id
+// is globally unique, so the broader query is safe across multiple items.
+async function getAccountMap(pool, plaidItemId, userId) {
   const { rows } = await pool.query(
-    'SELECT id, account_id FROM plaid_accounts WHERE plaid_item_id = $1',
-    [plaidItemId]
+    `SELECT id, account_id FROM plaid_accounts
+     WHERE plaid_item_id = $1 OR (user_id = $2 AND plaid_item_id IS NOT NULL)`,
+    [plaidItemId, userId]
   );
   const map = {};
   for (const a of rows) map[a.account_id] = a.id;
