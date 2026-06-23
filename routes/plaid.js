@@ -282,7 +282,33 @@ async function syncTransactions(pool, item) {
   while (hasMore) {
     const response = await plaid.transactionsSync({ access_token: accessToken, cursor: cursor || undefined, count: 100 });
     const { added: newTransactions, modified: modifiedTransactions = [], removed, next_cursor, has_more, accounts: syncAccounts } = response.data;
-    if (syncAccounts && syncAccounts.length) lastSyncAccounts = syncAccounts;
+    if (syncAccounts && syncAccounts.length) {
+      lastSyncAccounts = syncAccounts;
+      // Ensure every account from this sync response exists in plaid_accounts.
+      // transactionsSync always returns the full account list — use it to self-heal
+      // missing rows caused by orphan item cleanup or failed initial upserts.
+      // Without this, transactions for an account not in plaid_accounts are silently dropped.
+      for (const acc of syncAccounts) {
+        if (!accountMap[acc.account_id]) {
+          try {
+            const saved = await upsertPlaidAccount(
+              pool, item.id, item.user_id, acc.account_id,
+              acc.name, acc.official_name || null,
+              acc.type, acc.subtype || null, acc.mask || null,
+              acc.balances?.current ?? null, acc.balances?.available ?? null
+            );
+            if (saved) {
+              accountMap[acc.account_id] = saved.id;
+              console.log(`[Plaid] syncTransactions: auto-upserted missing account ${acc.account_id} → plaid_accounts.id=${saved.id}`);
+            } else {
+              console.error(`[Plaid] syncTransactions: upsertPlaidAccount returned null for account ${acc.account_id} — transactions for this account will be skipped`);
+            }
+          } catch (e) {
+            console.error('[Plaid] syncTransactions: account upsert from sync response failed | accountId:', acc.account_id, '|', e.message);
+          }
+        }
+      }
+    }
 
     totalFromPlaid += newTransactions.length;
     console.log(`[Plaid] page: ${newTransactions.length} added, ${modifiedTransactions.length} modified, ${removed.length} removed, has_more=${has_more}`);

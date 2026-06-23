@@ -472,7 +472,7 @@ async function upsertPlaidAccount(pool, plaidItemId, userId, accountId, name, of
     );
     return rows[0];
   } catch (e) {
-    console.error('[Plaid] upsertPlaidAccount failed for', accountId, ':', e.message);
+    console.error('[Plaid] upsertPlaidAccount failed for', accountId, ':', e.message, '| plaidItemId:', plaidItemId, '| userId:', userId);
     return null;
   }
 }
