@@ -126,9 +126,12 @@ async function syncOneItem(item) {
   let added = 0;
 
   // Build account_id → plaid_accounts.id map
+  // Query by user_id (not just plaid_item_id) so accounts stored under older
+  // plaid_item rows from past reconnects are still found.
   const accResult = await pool.query(
-    'SELECT id, account_id FROM plaid_accounts WHERE plaid_item_id = $1',
-    [item.id]
+    `SELECT id, account_id FROM plaid_accounts
+     WHERE plaid_item_id = $1 OR (user_id = $2 AND plaid_item_id IS NOT NULL)`,
+    [item.id, item.user_id]
   );
   const accMap = {};
   for (const a of accResult.rows) accMap[a.account_id] = a.id;
