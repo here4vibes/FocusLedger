@@ -258,7 +258,7 @@ function getPlaidClient() {
 // ── Sync transactions ────────────────────────────────────────────────────────
 async function syncTransactions(pool, item) {
   const plaid = getPlaidClient();
-  if (!plaid) { console.error('[Plaid] syncTransactions: Plaid client not initialized — skipping'); return { added: 0, plaidReturned: 0, skippedCredit: 0, skippedNoAcct: 0, insertFailed: 0, accountMapSize: 0 }; }
+  if (!plaid) { console.error('[Plaid] syncTransactions: Plaid client not initialized — skipping'); return { added: 0, plaidReturned: 0, skippedCredit: 0, skippedNoAcct: 0, insertFailed: 0, accountMapSize: 0, unknownAccountIds: [] }; }
 
   const accessToken = decryptPlaidToken(item.access_token);
   let cursor = item.cursor || null;
@@ -268,6 +268,7 @@ async function syncTransactions(pool, item) {
   let skippedNoAcct = 0;   // account_id not in accountMap
   let insertFailed = 0;    // insertPlaidTransaction returned null (DB error)
   let totalFromPlaid = 0;  // raw count of transactions Plaid returned across all pages
+  const unknownAccountIds = new Set(); // account_ids skipped due to no map entry
   const billCandidates = [];
 
   const accountMap = await getAccountMap(pool, item.id, item.user_id);
@@ -336,6 +337,7 @@ async function syncTransactions(pool, item) {
       }
       if (!plaidAccountId) {
         skippedNoAcct++;
+        unknownAccountIds.add(tx.account_id);
         if (skippedNoAcct <= 3) {
           console.warn(`[Plaid] No accountMap entry for account_id=${tx.account_id} tx=${tx.transaction_id} — known accounts: ${Object.keys(accountMap).join(',')}`);
         }
@@ -475,12 +477,17 @@ async function syncTransactions(pool, item) {
     }
   }
 
-  console.log(`[Plaid] Synced item ${item.id} for user ${item.user_id}: plaid_returned=${totalFromPlaid}, inserted=${added}, skipped_credits=${skippedCredit}, skipped_no_acct=${skippedNoAcct}, insert_failed=${insertFailed}`);
+  const unknownIds = [...unknownAccountIds];
+  if (unknownIds.length > 0) {
+    console.error(`[Plaid] Synced item ${item.id}: ${skippedNoAcct} tx skipped — unknown account_ids: ${unknownIds.join(',')} | plaid_accounts map had: ${Object.keys(accountMap).join(',')}`);
+  } else {
+    console.log(`[Plaid] Synced item ${item.id} for user ${item.user_id}: plaid_returned=${totalFromPlaid}, inserted=${added}, skipped_credits=${skippedCredit}, skipped_no_acct=${skippedNoAcct}, insert_failed=${insertFailed}`);
+  }
 
   if (billCandidates.length > 0) {
     detectAndCreateBillTasks(pool, item.user_id, billCandidates).catch(e => console.error('[BillTasks] Error:', e.message));
   }
-  return { added, plaidReturned: totalFromPlaid, skippedCredit, skippedNoAcct, insertFailed, accountMapSize: Object.keys(accountMap).length };
+  return { added, plaidReturned: totalFromPlaid, skippedCredit, skippedNoAcct, insertFailed, accountMapSize: Object.keys(accountMap).length, unknownAccountIds: unknownIds };
 }
 
 // ── Bill detection + auto-task creation ──────────────────────────────────────
@@ -970,6 +977,7 @@ module.exports = function(pool) {
       const vals = item_id ? [parseInt(item_id), userId] : [userId];
       const { rows: items } = await pool.query(`SELECT * FROM plaid_items ${where}`, vals);
       let totalAdded = 0, totalPlaidReturned = 0, totalSkippedCredit = 0, totalSkippedNoAcct = 0, totalInsertFailed = 0, totalAccountMapSize = 0;
+      const allUnknownAccountIds = new Set();
       const syncPlaid = getPlaidClient();
       for (const item of items) {
         if (force_full) {
@@ -1011,6 +1019,7 @@ module.exports = function(pool) {
         totalSkippedNoAcct += result.skippedNoAcct;
         totalInsertFailed += result.insertFailed;
         totalAccountMapSize += result.accountMapSize || 0;
+        for (const id of (result.unknownAccountIds || [])) allUnknownAccountIds.add(id);
       }
       const diagMsg = totalInsertFailed > 0
         ? `${totalAdded} inserted, ${totalInsertFailed} failed — check server logs`
@@ -1023,6 +1032,7 @@ module.exports = function(pool) {
         skipped_no_account: totalSkippedNoAcct,
         insert_failed: totalInsertFailed,
         account_map_size: totalAccountMapSize,
+        unknown_account_ids: [...allUnknownAccountIds],
         message: diagMsg,
       });
     } catch (err) {

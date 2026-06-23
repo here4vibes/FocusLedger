@@ -932,7 +932,8 @@ async function loadAccountCard() {
           } else if ((sr.account_map_size || 0) === 0) {
             resyncMsg = `Account mapping is missing — try disconnecting and reconnecting your bank`;
           } else if ((sr.skipped_no_account || 0) > 0) {
-            resyncMsg = `Plaid returned ${sr.plaid_returned} tx but ${sr.skipped_no_account} had unknown account IDs — try disconnecting and reconnecting your bank`;
+            var unknownIds = (sr.unknown_account_ids || []).join(', ') || 'unknown';
+            resyncMsg = `Plaid returned ${sr.plaid_returned} tx but ${sr.skipped_no_account} had unknown account IDs (${unknownIds}) — try disconnecting and reconnecting your bank`;
           } else if ((sr.insert_failed || 0) > 0) {
             resyncMsg = `Plaid returned ${sr.plaid_returned} tx but ${sr.insert_failed} failed to save — please try again`;
           } else {
