@@ -12,10 +12,6 @@ function createTestApp(pool, routeName) {
     const authRoutes = require('../../routes/auth')(pool);
     app.use('/api/auth', authRoutes);
   }
-  if (routeName === 'tasks' || !routeName) {
-    const taskRoutes = require('../../routes/tasks')(pool);
-    app.use('/api/tasks', taskRoutes);
-  }
   if (routeName === 'expenses' || !routeName) {
     const expenseRoutes = require('../../routes/expenses')(pool);
     app.use('/api/expenses', expenseRoutes);
