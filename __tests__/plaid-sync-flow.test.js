@@ -81,7 +81,7 @@ describe('upsertPlaidAccount', () => {
 // ── getAccountMap ─────────────────────────────────────────────────────────────
 
 describe('getAccountMap', () => {
-  test('builds map from JOIN query result', async () => {
+  test('builds map using both direct item-id and user-id JOIN queries', async () => {
     const pool = makePool({
       query: jest.fn().mockResolvedValue({
         rows: [
@@ -93,8 +93,9 @@ describe('getAccountMap', () => {
     const map = await getAccountMap(pool, 3, 42);
     expect(map).toEqual({ acc_a: 10, acc_b: 11 });
     const [sql, params] = pool.query.mock.calls[0];
-    expect(sql).toMatch(/JOIN plaid_items/);
-    expect(params).toEqual([42]);
+    expect(sql).toMatch(/plaid_item_id = \$1/);   // direct item-id lookup
+    expect(sql).toMatch(/JOIN plaid_items/);        // user-id JOIN fallback
+    expect(params).toEqual([3, 42]);
   });
 
   test('returns empty object when no accounts', async () => {

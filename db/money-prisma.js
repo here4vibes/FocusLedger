@@ -478,17 +478,22 @@ async function upsertPlaidAccount(pool, plaidItemId, userId, accountId, name, of
 }
 
 // Get account_id → db id map for all accounts belonging to this user.
-// Joins through plaid_items so the lookup works regardless of whether
-// plaid_accounts.user_id is populated — avoids the multiple-items problem
-// where the same Amex account_id is stored under an older plaid_item_id
-// while the current sync runs against a newer item.
+// Uses UNION of two queries so accounts are found regardless of which path stored them:
+//   1. Direct by plaid_item_id — same query the sync-diagnostic uses; guaranteed to
+//      return the active item's accounts even if plaid_items.user_id is stale/wrong.
+//   2. JOIN through plaid_items by user_id — catches accounts stored under any item
+//      the user owns (handles multiple items from past reconnects).
 async function getAccountMap(pool, plaidItemId, userId) {
   const { rows } = await pool.query(
     `SELECT pa.id, pa.account_id
      FROM plaid_accounts pa
+     WHERE pa.plaid_item_id = $1
+     UNION
+     SELECT pa.id, pa.account_id
+     FROM plaid_accounts pa
      JOIN plaid_items pi ON pa.plaid_item_id = pi.id
-     WHERE pi.user_id = $1`,
-    [userId]
+     WHERE pi.user_id = $2`,
+    [plaidItemId, userId]
   );
   const map = {};
   for (const a of rows) map[a.account_id] = a.id;

@@ -469,8 +469,8 @@ async function syncTransactions(pool, item) {
       await pool.query(
         `UPDATE plaid_accounts
          SET current_balance = $1, available_balance = $2, balance_updated_at = NOW()
-         WHERE account_id = $3 AND user_id = $4`,
-        [acc.balances.current ?? null, acc.balances.available ?? null, acc.account_id, item.user_id]
+         WHERE account_id = $3`,
+        [acc.balances.current ?? null, acc.balances.available ?? null, acc.account_id]
       );
     }
   }
@@ -801,8 +801,8 @@ module.exports = function(pool) {
               if (a.balances.current != null || a.balances.available != null) {
                 pool.query(
                   `UPDATE plaid_accounts SET current_balance=$1, available_balance=$2, balance_updated_at=NOW()
-                   WHERE account_id=$3 AND user_id=$4`,
-                  [a.balances.current ?? null, a.balances.available ?? null, a.account_id, userId]
+                   WHERE account_id=$3`,
+                  [a.balances.current ?? null, a.balances.available ?? null, a.account_id]
                 ).catch(e => console.warn('[plaid] balance cache update failed:', e.message));
               }
             }
