@@ -105,13 +105,23 @@ async function runCoreMigrations(client) {
     console.warn('[migrate] users stripe index skipped:', e.message);
   }
 
-  // plaid_accounts balance columns — unconditional, each in its own try/catch
+  // plaid_accounts columns — unconditional, each in its own try/catch
   // so a missing table (fresh DB) or already-existing column never blocks startup.
+  // user_id + official_name: Prisma may have created plaid_accounts without these.
+  // Without user_id, every upsertPlaidAccount INSERT fails silently ("column does not exist"),
+  // causing all Plaid transactions to be dropped as "unknown account IDs" during sync.
   const balanceCols = [
+    `ALTER TABLE plaid_accounts ADD COLUMN IF NOT EXISTS user_id            INT`,
+    `ALTER TABLE plaid_accounts ADD COLUMN IF NOT EXISTS official_name      VARCHAR(255)`,
+    `ALTER TABLE plaid_accounts ADD COLUMN IF NOT EXISTS type               VARCHAR(50)`,
+    `ALTER TABLE plaid_accounts ADD COLUMN IF NOT EXISTS subtype            VARCHAR(50)`,
+    `ALTER TABLE plaid_accounts ADD COLUMN IF NOT EXISTS mask               VARCHAR(10)`,
     `ALTER TABLE plaid_accounts ADD COLUMN IF NOT EXISTS current_balance    NUMERIC(12,2)`,
     `ALTER TABLE plaid_accounts ADD COLUMN IF NOT EXISTS available_balance  NUMERIC(12,2)`,
     `ALTER TABLE plaid_accounts ADD COLUMN IF NOT EXISTS balance_updated_at TIMESTAMPTZ`,
     `CREATE UNIQUE INDEX IF NOT EXISTS plaid_accounts_account_id_unique ON plaid_accounts (account_id)`,
+    // Backfill user_id from plaid_items for rows that were inserted before this column existed
+    `UPDATE plaid_accounts pa SET user_id = pi.user_id FROM plaid_items pi WHERE pa.plaid_item_id = pi.id AND pa.user_id IS NULL`,
   ];
   for (const sql of balanceCols) {
     try { await client.query(sql); } catch (e) {
