@@ -159,17 +159,53 @@ async function syncOneItem(item) {
         : (tx.category ? tx.category.join(' > ') : null);
 
       try {
-        await pool.query(
+        const { rows: ptRows } = await pool.query(
           `INSERT INTO plaid_transactions
              (plaid_account_id, user_id, transaction_id, amount, description, merchant_name,
               category_id, plaid_category, transaction_date, is_pending)
            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-           ON CONFLICT (transaction_id) DO NOTHING`,
+           ON CONFLICT (transaction_id) DO NOTHING
+           RETURNING id, transaction_id, amount, description, merchant_name, category_id, transaction_date`,
           [plaidAccountId, item.user_id, tx.transaction_id, tx.amount,
            tx.merchant_name || tx.name || 'Unknown', tx.merchant_name || null,
            catId, plaidCat, tx.date, tx.pending || false]
         );
-        added++;
+        const plaidTx = ptRows[0] || null;
+
+        // Auto-confirm new non-pending transactions directly into expenses.
+        // is_impulse stays NULL so the check-in flow classifies them later.
+        if (plaidTx && !tx.pending) {
+          try {
+            const expDate = String(tx.date).slice(0, 10);
+            let expenseId = null;
+            if (tx.transaction_id) {
+              const { rows: dup } = await pool.query(
+                'SELECT id FROM expenses WHERE plaid_transaction_id = $1 LIMIT 1',
+                [tx.transaction_id]
+              );
+              expenseId = dup[0]?.id || null;
+            }
+            if (!expenseId) {
+              const cols = ['user_id', 'amount', 'description', 'expense_date', 'source', 'plaid_transaction_id'];
+              const vals = [item.user_id, tx.amount, tx.merchant_name || tx.name || 'Unknown', expDate, 'plaid', tx.transaction_id];
+              if (catId) { cols.push('category_id'); vals.push(catId); }
+              const ph = vals.map((_, i) => `$${i + 1}`).join(', ');
+              const { rows: expRows } = await pool.query(
+                `INSERT INTO expenses (${cols.join(', ')}) VALUES (${ph}) RETURNING id`, vals
+              );
+              expenseId = expRows[0]?.id || null;
+            }
+            if (expenseId) {
+              await pool.query(
+                'UPDATE plaid_transactions SET is_confirmed = true, expense_id = $1, updated_at = NOW() WHERE id = $2',
+                [expenseId, plaidTx.id]
+              );
+            }
+          } catch (e) {
+            console.warn(`[plaid-sync] Confirm error tx ${tx.transaction_id}:`, e.message);
+          }
+          added++;
+        }
       } catch (e) {
         console.warn(`[plaid-sync] Insert error tx ${tx.transaction_id}:`, e.message);
       }
