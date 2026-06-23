@@ -934,6 +934,24 @@ module.exports = function(pool) {
           await updateItemCursor(pool, item.id, null);
           item.cursor = null;
           console.log('[Plaid] Full resync requested for item', item.id, 'user', userId, '— cursor reset');
+
+          // Re-fetch accounts from Plaid so the accountMap is always current.
+          // This fixes the case where plaid_accounts has stale / missing rows,
+          // which would cause every transaction to be skipped (skipped_no_account++).
+          if (syncPlaid) {
+            try {
+              const accessToken = decryptPlaidToken(item.access_token);
+              const acctResp = await syncPlaid.accountsGet({ access_token: accessToken });
+              for (const acc of acctResp.data.accounts) {
+                await upsertPlaidAccount(pool, item.id, userId, acc.account_id, acc.name,
+                  acc.official_name || null, acc.type, acc.subtype || null, acc.mask || null,
+                  acc.balances?.current ?? null, acc.balances?.available ?? null);
+              }
+              console.log(`[Plaid] Full resync: refreshed ${acctResp.data.accounts.length} account(s) for item ${item.id}`);
+            } catch (e) {
+              console.warn('[Plaid] Full resync: account refresh failed for item', item.id, ':', e.message);
+            }
+          }
         }
         // Register webhook URL for existing items that were connected before PLAID_WEBHOOK_URL was set.
         if (syncPlaid && process.env.PLAID_WEBHOOK_URL && !_webhookRegistered.has(item.id)) {
