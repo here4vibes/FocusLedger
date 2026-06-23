@@ -336,6 +336,27 @@ async function syncTransactions(pool, item) {
         }
       }
       if (!plaidAccountId) {
+        // Last resort: Plaid OAuth reconnects (especially Amex) can change account_ids.
+        // Historical transactions then reference the OLD account_id which never appears
+        // in accountsGet or syncAccounts. Create a minimal placeholder row so the FK
+        // constraint is satisfied and the transaction is not silently dropped.
+        // Ghost accounts have NULL balances and are overwritten by the live Plaid call
+        // in GET /api/plaid/balances, so they don't appear as duplicate cards in the UI.
+        try {
+          const ghost = await upsertPlaidAccount(
+            pool, item.id, item.user_id, tx.account_id,
+            `...${tx.account_id.slice(-4)}`, null, null, null, null, null, null
+          );
+          if (ghost) {
+            plaidAccountId = ghost.id;
+            accountMap[tx.account_id] = plaidAccountId;
+            console.log(`[Plaid] Ghost plaid_account created for remapped account_id ${tx.account_id} → db id ${ghost.id}`);
+          }
+        } catch (e) {
+          console.error('[Plaid] Ghost account creation failed for', tx.account_id, ':', e.message);
+        }
+      }
+      if (!plaidAccountId) {
         skippedNoAcct++;
         unknownAccountIds.add(tx.account_id);
         if (skippedNoAcct <= 3) {
