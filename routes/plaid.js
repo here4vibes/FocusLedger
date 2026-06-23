@@ -258,7 +258,7 @@ function getPlaidClient() {
 // ── Sync transactions ────────────────────────────────────────────────────────
 async function syncTransactions(pool, item) {
   const plaid = getPlaidClient();
-  if (!plaid) { console.error('[Plaid] syncTransactions: Plaid client not initialized — skipping'); return { added: 0, plaidReturned: 0, skippedCredit: 0, skippedNoAcct: 0, insertFailed: 0 }; }
+  if (!plaid) { console.error('[Plaid] syncTransactions: Plaid client not initialized — skipping'); return { added: 0, plaidReturned: 0, skippedCredit: 0, skippedNoAcct: 0, insertFailed: 0, accountMapSize: 0 }; }
 
   const accessToken = decryptPlaidToken(item.access_token);
   let cursor = item.cursor || null;
@@ -436,7 +436,7 @@ async function syncTransactions(pool, item) {
   if (billCandidates.length > 0) {
     detectAndCreateBillTasks(pool, item.user_id, billCandidates).catch(e => console.error('[BillTasks] Error:', e.message));
   }
-  return { added, plaidReturned: totalFromPlaid, skippedCredit, skippedNoAcct, insertFailed };
+  return { added, plaidReturned: totalFromPlaid, skippedCredit, skippedNoAcct, insertFailed, accountMapSize: Object.keys(accountMap).length };
 }
 
 // ── Bill detection + auto-task creation ──────────────────────────────────────
@@ -925,7 +925,7 @@ module.exports = function(pool) {
         : 'WHERE user_id = $1';
       const vals = item_id ? [parseInt(item_id), userId] : [userId];
       const { rows: items } = await pool.query(`SELECT * FROM plaid_items ${where}`, vals);
-      let totalAdded = 0, totalPlaidReturned = 0, totalSkippedCredit = 0, totalSkippedNoAcct = 0, totalInsertFailed = 0;
+      let totalAdded = 0, totalPlaidReturned = 0, totalSkippedCredit = 0, totalSkippedNoAcct = 0, totalInsertFailed = 0, totalAccountMapSize = 0;
       const syncPlaid = getPlaidClient();
       for (const item of items) {
         if (force_full) {
@@ -934,6 +934,24 @@ module.exports = function(pool) {
           await updateItemCursor(pool, item.id, null);
           item.cursor = null;
           console.log('[Plaid] Full resync requested for item', item.id, 'user', userId, '— cursor reset');
+
+          // Re-fetch accounts from Plaid so the accountMap is always current.
+          // This fixes the case where plaid_accounts has stale / missing rows,
+          // which would cause every transaction to be skipped (skipped_no_account++).
+          if (syncPlaid) {
+            try {
+              const accessToken = decryptPlaidToken(item.access_token);
+              const acctResp = await syncPlaid.accountsGet({ access_token: accessToken });
+              for (const acc of acctResp.data.accounts) {
+                await upsertPlaidAccount(pool, item.id, userId, acc.account_id, acc.name,
+                  acc.official_name || null, acc.type, acc.subtype || null, acc.mask || null,
+                  acc.balances?.current ?? null, acc.balances?.available ?? null);
+              }
+              console.log(`[Plaid] Full resync: refreshed ${acctResp.data.accounts.length} account(s) for item ${item.id}`);
+            } catch (e) {
+              console.warn('[Plaid] Full resync: account refresh failed for item', item.id, ':', e.message);
+            }
+          }
         }
         // Register webhook URL for existing items that were connected before PLAID_WEBHOOK_URL was set.
         if (syncPlaid && process.env.PLAID_WEBHOOK_URL && !_webhookRegistered.has(item.id)) {
@@ -948,6 +966,7 @@ module.exports = function(pool) {
         totalSkippedCredit += result.skippedCredit;
         totalSkippedNoAcct += result.skippedNoAcct;
         totalInsertFailed += result.insertFailed;
+        totalAccountMapSize += result.accountMapSize || 0;
       }
       const diagMsg = totalInsertFailed > 0
         ? `${totalAdded} inserted, ${totalInsertFailed} failed — check server logs`
@@ -959,6 +978,7 @@ module.exports = function(pool) {
         skipped_credits: totalSkippedCredit,
         skipped_no_account: totalSkippedNoAcct,
         insert_failed: totalInsertFailed,
+        account_map_size: totalAccountMapSize,
         message: diagMsg,
       });
     } catch (err) {

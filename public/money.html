@@ -922,7 +922,23 @@ async function loadAccountCard() {
           const sr = await api('/api/plaid/sync', { method: 'POST', body: JSON.stringify(Object.assign(itemId ? { item_id: itemId } : {}, { force_full: true })) });
           await Promise.all([loadAccountCard(), checkPendingPlaid()]);
           const n = sr.transactions_added || 0;
-          showFixedToast(n > 0 ? `✓ ${n} transaction${n === 1 ? '' : 's'} recovered` : (sr.success ? 'Plaid is still loading your history — check back in 30–60 min' : sr.message || 'Resync failed'), !sr.success);
+          let resyncMsg;
+          if (n > 0) {
+            resyncMsg = `✓ ${n} transaction${n === 1 ? '' : 's'} recovered`;
+          } else if (!sr.success) {
+            resyncMsg = sr.message || 'Resync failed';
+          } else if ((sr.plaid_returned || 0) === 0) {
+            resyncMsg = 'Plaid returned 0 transactions — bank may need a few minutes to load history';
+          } else if ((sr.account_map_size || 0) === 0) {
+            resyncMsg = `Account mapping is missing — try disconnecting and reconnecting your bank`;
+          } else if ((sr.skipped_no_account || 0) > 0) {
+            resyncMsg = `Plaid returned ${sr.plaid_returned} tx but ${sr.skipped_no_account} had unknown account IDs — try disconnecting and reconnecting your bank`;
+          } else if ((sr.insert_failed || 0) > 0) {
+            resyncMsg = `Plaid returned ${sr.plaid_returned} tx but ${sr.insert_failed} failed to save — please try again`;
+          } else {
+            resyncMsg = 'Plaid is still loading your history — check back in 30–60 min';
+          }
+          showFixedToast(resyncMsg, !sr.success);
         } catch (e) {
           showFixedToast('Full resync failed — try reconnecting your bank', true);
         }

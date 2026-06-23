@@ -159,18 +159,31 @@ async function syncOneItem(item) {
         : (tx.category ? tx.category.join(' > ') : null);
 
       try {
-        const { rows: ptRows } = await pool.query(
-          `INSERT INTO plaid_transactions
-             (plaid_account_id, user_id, transaction_id, amount, description, merchant_name,
-              category_id, plaid_category, transaction_date, is_pending)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-           ON CONFLICT (transaction_id) DO NOTHING
-           RETURNING id, transaction_id, amount, description, merchant_name, category_id, transaction_date`,
-          [plaidAccountId, item.user_id, tx.transaction_id, tx.amount,
-           tx.merchant_name || tx.name || 'Unknown', tx.merchant_name || null,
-           catId, plaidCat, tx.date, tx.pending || false]
-        );
-        const plaidTx = ptRows[0] || null;
+        // Dedup by SELECT first — avoids ON CONFLICT (transaction_id) which requires
+        // a non-partial UNIQUE index. Works regardless of schema state.
+        let plaidTx = null;
+        if (tx.transaction_id) {
+          const { rows: existingRows } = await pool.query(
+            'SELECT id, transaction_id, amount, description, merchant_name, category_id, transaction_date FROM plaid_transactions WHERE transaction_id = $1 LIMIT 1',
+            [tx.transaction_id]
+          );
+          if (existingRows.length) {
+            plaidTx = existingRows[0];
+          }
+        }
+        if (!plaidTx) {
+          const { rows: ptRows } = await pool.query(
+            `INSERT INTO plaid_transactions
+               (plaid_account_id, user_id, transaction_id, amount, description, merchant_name,
+                category_id, plaid_category, transaction_date, is_pending)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+             RETURNING id, transaction_id, amount, description, merchant_name, category_id, transaction_date`,
+            [plaidAccountId, item.user_id, tx.transaction_id, tx.amount,
+             tx.merchant_name || tx.name || 'Unknown', tx.merchant_name || null,
+             catId, plaidCat, tx.date, tx.pending || false]
+          );
+          plaidTx = ptRows[0] || null;
+        }
 
         // Auto-confirm new non-pending transactions directly into expenses.
         // is_impulse stays NULL so the check-in flow classifies them later.

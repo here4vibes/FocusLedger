@@ -471,18 +471,30 @@ async function getCategoriesMap(pool) {
 }
 
 // Insert a Plaid transaction (dedup by transaction_id).
-// Uses DO UPDATE so that on conflict the existing row is returned — this lets
-// syncTransactions() auto-confirm transactions that were staged by the cron but
-// never pushed to expenses (e.g. from a Full Resync after a previous failed sync).
+// Uses SELECT-then-INSERT to avoid dependence on ON CONFLICT (transaction_id),
+// which requires the UNIQUE index to be present and non-partial. This approach
+// works regardless of the DB schema state and is equivalent in behavior.
 async function insertPlaidTransaction(pool, params) {
   const { plaidAccountId, userId, transactionId, amount, description, merchantName, categoryId, plaidCategory, transactionDate, isPending } = params;
   try {
     const txDate = transactionDate ? String(transactionDate).slice(0, 10) : null;
+
+    // Check for existing row first — dedup without relying on ON CONFLICT
+    if (transactionId) {
+      const { rows: existing } = await pool.query(
+        'SELECT * FROM plaid_transactions WHERE transaction_id = $1 LIMIT 1',
+        [transactionId]
+      );
+      if (existing.length) {
+        await pool.query('UPDATE plaid_transactions SET updated_at = NOW() WHERE id = $1', [existing[0].id]);
+        return existing[0];
+      }
+    }
+
     const { rows } = await pool.query(
       `INSERT INTO plaid_transactions
          (plaid_account_id, user_id, transaction_id, amount, description, merchant_name, category_id, plaid_category, transaction_date, is_pending)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-       ON CONFLICT (transaction_id) DO UPDATE SET updated_at = NOW()
        RETURNING *`,
       [plaidAccountId, userId, transactionId, parseFloat(amount), description, merchantName || null,
        categoryId || null, plaidCategory || null, txDate, isPending || false]
