@@ -1,24 +1,35 @@
 'use strict';
 /**
- * Ensure plaid_accounts.user_id column exists.
+ * Ensure plaid_accounts has all columns that upsertPlaidAccount INSERT requires.
  *
- * Root cause: Prisma may have created plaid_accounts without the user_id column
- * (if it ran before migration 1780925000000 added it to the schema). When user_id
- * is missing, every upsertPlaidAccount INSERT fails silently — causing ALL Plaid
- * transactions to be skipped with "unknown account IDs" during sync, even though
- * the account_id is valid and plaid_items is correct.
+ * Root cause: Prisma created plaid_accounts before migration 1780925000000 ran,
+ * so CREATE TABLE IF NOT EXISTS was a no-op and any columns Prisma omitted are
+ * still missing. upsertPlaidAccount explicitly names user_id, official_name,
+ * type, subtype, mask in its INSERT — a missing column throws a Postgres error
+ * that the catch block swallows, returning null. The account never enters
+ * plaid_accounts, getAccountMap can't find it, and all transactions for that
+ * account are dropped as "unknown account IDs".
  *
- * Core migrate.js also adds this column unconditionally on every boot, but this
- * migration creates a permanent tracked record that it ran.
+ * Core migrate.js also adds these unconditionally on every boot, but this
+ * migration creates a permanent tracked record.
  */
 module.exports = {
   name: 'ensure_plaid_accounts_user_id',
 
   up: async (client) => {
-    await client.query(
-      `ALTER TABLE plaid_accounts ADD COLUMN IF NOT EXISTS user_id INT`
-    );
-    // Backfill from plaid_items for rows inserted before this column existed
+    const patches = [
+      `ALTER TABLE plaid_accounts ADD COLUMN IF NOT EXISTS user_id       INT`,
+      `ALTER TABLE plaid_accounts ADD COLUMN IF NOT EXISTS official_name VARCHAR(255)`,
+      `ALTER TABLE plaid_accounts ADD COLUMN IF NOT EXISTS type          VARCHAR(50)`,
+      `ALTER TABLE plaid_accounts ADD COLUMN IF NOT EXISTS subtype       VARCHAR(50)`,
+      `ALTER TABLE plaid_accounts ADD COLUMN IF NOT EXISTS mask          VARCHAR(10)`,
+    ];
+    for (const sql of patches) {
+      try { await client.query(sql); } catch (e) {
+        console.warn('[migration] ensure_plaid_accounts_user_id patch skipped:', e.message);
+      }
+    }
+    // Backfill user_id from plaid_items for rows inserted before this column existed
     await client.query(
       `UPDATE plaid_accounts pa
        SET user_id = pi.user_id
@@ -28,8 +39,7 @@ module.exports = {
     );
   },
 
-  down: async (client) => {
-    // Cannot safely DROP NOT NULL column — downgrade just removes the backfill effect
-    // by leaving the column in place (removing it would break other code).
+  down: async (_client) => {
+    // Columns left in place — removing them would break upsertPlaidAccount
   },
 };

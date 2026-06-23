@@ -107,11 +107,15 @@ async function runCoreMigrations(client) {
 
   // plaid_accounts columns — unconditional, each in its own try/catch
   // so a missing table (fresh DB) or already-existing column never blocks startup.
-  // user_id: Prisma may have created plaid_accounts without this column.
-  // Without it, every upsertPlaidAccount INSERT fails ("column user_id does not exist"),
-  // causing all Plaid transactions to be silently skipped during sync.
+  // user_id + official_name: Prisma may have created plaid_accounts without these.
+  // Without user_id, every upsertPlaidAccount INSERT fails silently ("column does not exist"),
+  // causing all Plaid transactions to be dropped as "unknown account IDs" during sync.
   const balanceCols = [
     `ALTER TABLE plaid_accounts ADD COLUMN IF NOT EXISTS user_id            INT`,
+    `ALTER TABLE plaid_accounts ADD COLUMN IF NOT EXISTS official_name      VARCHAR(255)`,
+    `ALTER TABLE plaid_accounts ADD COLUMN IF NOT EXISTS type               VARCHAR(50)`,
+    `ALTER TABLE plaid_accounts ADD COLUMN IF NOT EXISTS subtype            VARCHAR(50)`,
+    `ALTER TABLE plaid_accounts ADD COLUMN IF NOT EXISTS mask               VARCHAR(10)`,
     `ALTER TABLE plaid_accounts ADD COLUMN IF NOT EXISTS current_balance    NUMERIC(12,2)`,
     `ALTER TABLE plaid_accounts ADD COLUMN IF NOT EXISTS available_balance  NUMERIC(12,2)`,
     `ALTER TABLE plaid_accounts ADD COLUMN IF NOT EXISTS balance_updated_at TIMESTAMPTZ`,
