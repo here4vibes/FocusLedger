@@ -289,7 +289,25 @@ async function syncTransactions(pool, item) {
 
     for (const tx of newTransactions) {
       if (tx.amount <= 0) { skippedCredit++; continue; }
-      const plaidAccountId = accountMap[tx.account_id];
+      let plaidAccountId = accountMap[tx.account_id];
+      if (!plaidAccountId) {
+        // Fallback: direct lookup by account_id — handles account stored under a
+        // different plaid_item_id (e.g. multiple items from past reconnects).
+        // Plaid account_id strings are globally unique so no user_id filter needed.
+        try {
+          const { rows: fb } = await pool.query(
+            'SELECT id FROM plaid_accounts WHERE account_id = $1 LIMIT 1',
+            [tx.account_id]
+          );
+          if (fb.length) {
+            plaidAccountId = fb[0].id;
+            accountMap[tx.account_id] = plaidAccountId; // cache for subsequent txs
+            console.log(`[Plaid] account ${tx.account_id} found via fallback lookup — caching`);
+          }
+        } catch (e) {
+          console.error('[Plaid] fallback account lookup failed:', e.message);
+        }
+      }
       if (!plaidAccountId) {
         skippedNoAcct++;
         if (skippedNoAcct <= 3) {
