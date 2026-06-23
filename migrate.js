@@ -122,6 +122,15 @@ async function runCoreMigrations(client) {
     `CREATE UNIQUE INDEX IF NOT EXISTS plaid_accounts_account_id_unique ON plaid_accounts (account_id)`,
     // Backfill user_id from plaid_items for rows that were inserted before this column existed
     `UPDATE plaid_accounts pa SET user_id = pi.user_id FROM plaid_items pi WHERE pa.plaid_item_id = pi.id AND pa.user_id IS NULL`,
+    // Drop NOT NULL on columns Prisma may have created as non-nullable.
+    // Ghost account rows (created for Amex OAuth reconnect account_id remapping) pass
+    // NULL for these fields — a NOT NULL constraint causes the INSERT to fail silently
+    // and every transaction for the remapped account is dropped.
+    `ALTER TABLE plaid_accounts ALTER COLUMN type          DROP NOT NULL`,
+    `ALTER TABLE plaid_accounts ALTER COLUMN subtype       DROP NOT NULL`,
+    `ALTER TABLE plaid_accounts ALTER COLUMN name          DROP NOT NULL`,
+    `ALTER TABLE plaid_accounts ALTER COLUMN official_name DROP NOT NULL`,
+    `ALTER TABLE plaid_accounts ALTER COLUMN mask          DROP NOT NULL`,
   ];
   for (const sql of balanceCols) {
     try { await client.query(sql); } catch (e) {
