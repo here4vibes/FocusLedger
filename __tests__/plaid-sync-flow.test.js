@@ -68,7 +68,11 @@ describe('upsertPlaidAccount', () => {
       expect.stringContaining('[Plaid] upsertPlaidAccount failed'),
       'acc_err',
       ':',
-      'connection refused'
+      'connection refused',
+      '| plaidItemId:',
+      1,
+      '| userId:',
+      1
     );
     consoleSpy.mockRestore();
   });
