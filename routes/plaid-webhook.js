@@ -154,7 +154,9 @@ async function handleWebhookAsync(pool, item_id) {
           }
         });
       }
-    } catch {}
+    } catch (e) {
+      console.error('[plaid-webhook] web push notification failed | userId:', userId, '|', e.message);
+    }
   }
 
   // APNs
