@@ -1040,6 +1040,8 @@ module.exports = function(pool) {
       let successfulItems = 0;
       const syncPlaid = getPlaidClient();
       for (const item of items) {
+        let result;
+        try {
         if (force_full) {
           // Reset cursor so Plaid re-delivers full transaction history from the start.
           // Safe to re-run: expenses dedup by plaid_transaction_id, plaid_transactions dedup by UNIQUE index.
@@ -1072,14 +1074,12 @@ module.exports = function(pool) {
             .then(() => console.log(`[Plaid] Registered webhook for existing item ${item.id}`))
             .catch(e => console.warn('[Plaid] itemWebhookUpdate error for item', item.id, ':', e.message));
         }
-        let result;
-        try {
           result = await syncTransactions(pool, item);
         } catch (itemErr) {
           const plaidErrCode = itemErr.response?.data?.error_code;
           const plaidErrMsg = itemErr.response?.data?.error_message || itemErr.message;
           const itemLabel = item.institution_name || `item ${item.id}`;
-          console.error('[Plaid] per-item sync error | item:', item.id, '| code:', plaidErrCode, '|', plaidErrMsg);
+          console.error('[Plaid] per-item error | item:', item.id, '| code:', plaidErrCode, '|', plaidErrMsg);
           if (plaidErrCode === 'ITEM_LOGIN_REQUIRED') {
             staleItems.push(itemLabel);
             deactivatePlaidItem(pool, item.id).catch(e =>
@@ -1090,15 +1090,17 @@ module.exports = function(pool) {
           }
           continue;
         }
-        successfulItems++;
-        totalAdded += result.added;
-        totalPlaidReturned += result.plaidReturned;
-        totalSkippedCredit += result.skippedCredit;
-        totalSkippedNoAcct += result.skippedNoAcct;
-        totalInsertFailed += result.insertFailed;
-        totalAccountMapSize += result.accountMapSize || 0;
-        for (const id of (result.unknownAccountIds || [])) allUnknownAccountIds.add(id);
-        for (const msg of (result.ghostFailures || [])) allGhostFailures.push(msg);
+        if (result) {
+          successfulItems++;
+          totalAdded += result.added;
+          totalPlaidReturned += result.plaidReturned;
+          totalSkippedCredit += result.skippedCredit;
+          totalSkippedNoAcct += result.skippedNoAcct;
+          totalInsertFailed += result.insertFailed;
+          totalAccountMapSize += result.accountMapSize || 0;
+          for (const id of (result.unknownAccountIds || [])) allUnknownAccountIds.add(id);
+          for (const msg of (result.ghostFailures || [])) allGhostFailures.push(msg);
+        }
       }
       // Only surface stale (ITEM_LOGIN_REQUIRED) items in the toast if nothing synced successfully.
       // If at least one item worked, the user already got their transactions — no point alarming them
