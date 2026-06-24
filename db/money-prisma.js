@@ -445,8 +445,11 @@ async function upsertPlaidAccount(pool, plaidItemId, userId, accountId, name, of
       // Migrate account to the current item — this fixes the case where the account
       // was stored under an old plaid_item_id (from a previous connect/reconnect)
       // while the current sync is running against a newer item.
+      // Also fixes id = null rows (Prisma schema omitted SERIAL default) inline so
+      // getAccountMap returns a truthy id on the next lookup.
       const { rows } = await pool.query(
         `UPDATE plaid_accounts SET
+           id                 = CASE WHEN id IS NULL THEN nextval('plaid_accounts_id_seq') ELSE id END,
            plaid_item_id      = $1,
            user_id            = COALESCE($2, user_id),
            name               = $3,
