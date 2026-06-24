@@ -1066,7 +1066,20 @@ module.exports = function(pool) {
             .then(() => console.log(`[Plaid] Registered webhook for existing item ${item.id}`))
             .catch(e => console.warn('[Plaid] itemWebhookUpdate error for item', item.id, ':', e.message));
         }
-        const result = await syncTransactions(pool, item);
+        let result;
+        try {
+          result = await syncTransactions(pool, item);
+        } catch (itemErr) {
+          const plaidErrCode = itemErr.response?.data?.error_code;
+          const plaidErrMsg = itemErr.response?.data?.error_message || itemErr.message;
+          const itemLabel = item.institution_name || `item ${item.id}`;
+          const msg = plaidErrCode === 'ITEM_LOGIN_REQUIRED'
+            ? `${itemLabel} needs reconnect (login expired) — other banks synced normally`
+            : `${itemLabel} sync failed: ${plaidErrCode ? plaidErrCode + ' — ' : ''}${plaidErrMsg}`;
+          console.error('[Plaid] per-item sync error | item:', item.id, '| code:', plaidErrCode, '|', plaidErrMsg);
+          allGhostFailures.push(msg);
+          continue;
+        }
         totalAdded += result.added;
         totalPlaidReturned += result.plaidReturned;
         totalSkippedCredit += result.skippedCredit;
