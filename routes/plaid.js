@@ -21,6 +21,7 @@ function requireAuth(req, res, next) {
 
 const {
   upsertPlaidItem,
+  deactivatePlaidItem,
   deletePlaidItem,
   updateItemCursor,
   upsertPlaidAccount,
@@ -1025,8 +1026,8 @@ module.exports = function(pool) {
       const userId = req.user.id;
       const { item_id, force_full } = req.body;
       const where = item_id
-        ? 'WHERE id = $1 AND user_id = $2'
-        : 'WHERE user_id = $1';
+        ? 'WHERE id = $1 AND user_id = $2 AND is_active = true'
+        : 'WHERE user_id = $1 AND is_active = true';
       const vals = item_id ? [parseInt(item_id), userId] : [userId];
       const { rows: items } = await pool.query(`SELECT * FROM plaid_items ${where}`, vals);
       let totalAdded = 0, totalPlaidReturned = 0, totalSkippedCredit = 0, totalSkippedNoAcct = 0, totalInsertFailed = 0, totalAccountMapSize = 0;
@@ -1078,6 +1079,9 @@ module.exports = function(pool) {
           console.error('[Plaid] per-item sync error | item:', item.id, '| code:', plaidErrCode, '|', plaidErrMsg);
           if (plaidErrCode === 'ITEM_LOGIN_REQUIRED') {
             staleItems.push(itemLabel);
+            deactivatePlaidItem(pool, item.id).catch(e =>
+              console.error('[Plaid] deactivatePlaidItem failed for item', item.id, ':', e.message)
+            );
           } else {
             allGhostFailures.push(`${itemLabel} sync failed: ${plaidErrCode ? plaidErrCode + ' — ' : ''}${plaidErrMsg}`);
           }
