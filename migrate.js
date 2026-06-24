@@ -131,6 +131,12 @@ async function runCoreMigrations(client) {
     `ALTER TABLE plaid_accounts ALTER COLUMN name          DROP NOT NULL`,
     `ALTER TABLE plaid_accounts ALTER COLUMN official_name DROP NOT NULL`,
     `ALTER TABLE plaid_accounts ALTER COLUMN mask          DROP NOT NULL`,
+    // Attach a sequence to plaid_accounts.id so INSERT without explicit id auto-generates it.
+    // Prisma-created tables omit the SERIAL default; without this the id column stays NULL
+    // after every INSERT, making accountMap lookups return null and dropping all transactions.
+    `CREATE SEQUENCE IF NOT EXISTS plaid_accounts_id_seq`,
+    `SELECT setval('plaid_accounts_id_seq', COALESCE((SELECT MAX(id) FROM plaid_accounts WHERE id IS NOT NULL), 0) + 1, false)`,
+    `ALTER TABLE plaid_accounts ALTER COLUMN id SET DEFAULT nextval('plaid_accounts_id_seq')`,
   ];
   for (const sql of balanceCols) {
     try { await client.query(sql); } catch (e) {
