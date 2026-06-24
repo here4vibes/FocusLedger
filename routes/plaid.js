@@ -348,10 +348,15 @@ async function syncTransactions(pool, item) {
             pool, item.id, item.user_id, tx.account_id,
             `...${tx.account_id.slice(-4)}`, null, null, null, null, null, null
           );
-          if (ghost) {
+          if (ghost && ghost.id) {
             plaidAccountId = ghost.id;
             accountMap[tx.account_id] = plaidAccountId;
             console.log(`[Plaid] Ghost plaid_account created for remapped account_id ${tx.account_id} → db id ${ghost.id}`);
+          } else if (ghost) {
+            // ghost object returned but id is falsy — plaid_accounts may lack an id column
+            const msg = `ghost created but ghost.id is falsy (${ghost.id}) for ${tx.account_id} — ghost keys: ${Object.keys(ghost).join(',')}`;
+            console.error('[Plaid]', msg);
+            ghostFailures.push(msg);
           } else {
             const msg = `upsertPlaidAccount returned null for ghost ${tx.account_id} (item ${item.id})`;
             console.error('[Plaid]', msg);
@@ -364,6 +369,26 @@ async function syncTransactions(pool, item) {
         }
       }
       if (!plaidAccountId) {
+        // Last-resort DB check: see if the account IS in plaid_accounts so we can
+        // distinguish "ghost created but id column is null" from "ghost never inserted".
+        // Only run on the first skipped transaction to avoid 231 extra DB queries.
+        if (skippedNoAcct === 0) {
+          try {
+            const { rows: dbChk } = await pool.query(
+              'SELECT id, account_id, type FROM plaid_accounts WHERE account_id = $1 LIMIT 1',
+              [tx.account_id]
+            );
+            if (dbChk.length) {
+              const msg = `account ${tx.account_id} IS in plaid_accounts (id=${dbChk[0].id}, type=${dbChk[0].type}) but plaidAccountId is still falsy — id column may be null`;
+              console.error('[Plaid]', msg);
+              ghostFailures.push(msg);
+            } else {
+              ghostFailures.push(`account ${tx.account_id} is NOT in plaid_accounts after ghost attempt`);
+            }
+          } catch (dbErr) {
+            console.error('[Plaid] db-check for ghost account failed:', dbErr.message);
+          }
+        }
         skippedNoAcct++;
         unknownAccountIds.add(tx.account_id);
         if (skippedNoAcct <= 3) {
