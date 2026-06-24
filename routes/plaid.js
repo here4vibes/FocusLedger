@@ -1026,8 +1026,8 @@ module.exports = function(pool) {
       const userId = req.user.id;
       const { item_id, force_full } = req.body;
       const where = item_id
-        ? 'WHERE id = $1 AND user_id = $2'
-        : 'WHERE user_id = $1';
+        ? 'WHERE id = $1 AND user_id = $2 AND is_active = true'
+        : 'WHERE user_id = $1 AND is_active = true';
       const vals = item_id ? [parseInt(item_id), userId] : [userId];
       const { rows: allItems } = await pool.query(`SELECT * FROM plaid_items ${where}`, vals);
       // Filter inactive items in JS so this works even if the is_active column
