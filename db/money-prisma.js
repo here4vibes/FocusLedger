@@ -467,9 +467,12 @@ async function upsertPlaidAccount(pool, plaidItemId, userId, accountId, name, of
       );
       return rows[0];
     }
+    // WHY explicit id: plaid_accounts.id has no sequence/DEFAULT in Prisma-generated schema
+    // (same issue as plaid_items — see upsertPlaidItem). Without specifying id, PostgreSQL
+    // inserts NULL and every accountMap lookup returns null, silently dropping all transactions.
     const { rows } = await pool.query(
-      `INSERT INTO plaid_accounts (plaid_item_id, user_id, account_id, name, official_name, type, subtype, mask, current_balance, available_balance, balance_updated_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())
+      `INSERT INTO plaid_accounts (id, plaid_item_id, user_id, account_id, name, official_name, type, subtype, mask, current_balance, available_balance, balance_updated_at)
+       VALUES ((SELECT COALESCE(MAX(id), 0) + 1 FROM plaid_accounts), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())
        RETURNING *`,
       [plaidItemId, userId, accountId, name, officialName || null, type, subtype || null, mask || null,
        currentBalance != null ? currentBalance : null,
