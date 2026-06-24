@@ -1032,6 +1032,8 @@ module.exports = function(pool) {
       let totalAdded = 0, totalPlaidReturned = 0, totalSkippedCredit = 0, totalSkippedNoAcct = 0, totalInsertFailed = 0, totalAccountMapSize = 0;
       const allUnknownAccountIds = new Set();
       const allGhostFailures = [];
+      const staleItems = []; // ITEM_LOGIN_REQUIRED — only surface if everything failed
+      let successfulItems = 0;
       const syncPlaid = getPlaidClient();
       for (const item of items) {
         if (force_full) {
@@ -1073,13 +1075,15 @@ module.exports = function(pool) {
           const plaidErrCode = itemErr.response?.data?.error_code;
           const plaidErrMsg = itemErr.response?.data?.error_message || itemErr.message;
           const itemLabel = item.institution_name || `item ${item.id}`;
-          const msg = plaidErrCode === 'ITEM_LOGIN_REQUIRED'
-            ? `${itemLabel} needs reconnect (login expired) — other banks synced normally`
-            : `${itemLabel} sync failed: ${plaidErrCode ? plaidErrCode + ' — ' : ''}${plaidErrMsg}`;
           console.error('[Plaid] per-item sync error | item:', item.id, '| code:', plaidErrCode, '|', plaidErrMsg);
-          allGhostFailures.push(msg);
+          if (plaidErrCode === 'ITEM_LOGIN_REQUIRED') {
+            staleItems.push(itemLabel);
+          } else {
+            allGhostFailures.push(`${itemLabel} sync failed: ${plaidErrCode ? plaidErrCode + ' — ' : ''}${plaidErrMsg}`);
+          }
           continue;
         }
+        successfulItems++;
         totalAdded += result.added;
         totalPlaidReturned += result.plaidReturned;
         totalSkippedCredit += result.skippedCredit;
@@ -1089,13 +1093,20 @@ module.exports = function(pool) {
         for (const id of (result.unknownAccountIds || [])) allUnknownAccountIds.add(id);
         for (const msg of (result.ghostFailures || [])) allGhostFailures.push(msg);
       }
-      const diagMsg = allGhostFailures.length > 0
-        ? `Ghost account creation failed: ${allGhostFailures[0]}`
+      // Only surface stale (ITEM_LOGIN_REQUIRED) items in the toast if nothing synced successfully.
+      // If at least one item worked, the user already got their transactions — no point alarming them
+      // about an old disconnected bank they may not care about anymore.
+      const effectiveFailures = successfulItems === 0 && staleItems.length > 0
+        ? [`${staleItems.join(', ')} needs reconnect — click Reconnect to re-authenticate`]
+        : allGhostFailures;
+      const diagMsg = effectiveFailures.length > 0
+        ? effectiveFailures[0]
         : totalInsertFailed > 0
         ? `${totalAdded} inserted, ${totalInsertFailed} failed — check server logs`
         : `${totalAdded} new transactions ready to review`;
       res.json({
-        success: true,
+        success: successfulItems > 0 || staleItems.length === 0,
+        needs_reconnect: successfulItems === 0 && staleItems.length > 0 && allGhostFailures.length === 0,
         transactions_added: totalAdded,
         plaid_returned: totalPlaidReturned,
         skipped_credits: totalSkippedCredit,
@@ -1103,7 +1114,7 @@ module.exports = function(pool) {
         insert_failed: totalInsertFailed,
         account_map_size: totalAccountMapSize,
         unknown_account_ids: [...allUnknownAccountIds],
-        ghost_failures: allGhostFailures,
+        ghost_failures: effectiveFailures,
         message: diagMsg,
       });
     } catch (err) {
