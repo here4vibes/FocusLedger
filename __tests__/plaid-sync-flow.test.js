@@ -32,7 +32,7 @@ describe('upsertPlaidAccount', () => {
     const pool = makePool({
       query: jest.fn().mockImplementation((sql) => {
         callCount++;
-        if (sql.includes('SELECT') && sql.includes('account_id')) {
+        if (sql.trimStart().startsWith('SELECT') && sql.includes('account_id')) {
           return Promise.resolve({ rows: [] }); // no existing row
         }
         return Promise.resolve({ rows: [{ id: 1, account_id: 'acc_abc' }] });
