@@ -397,7 +397,8 @@ async function upsertPlaidItem(pool, userId, encryptedAccessToken, itemId, insti
          access_token     = EXCLUDED.access_token,
          item_id          = EXCLUDED.item_id,
          institution_name = COALESCE(EXCLUDED.institution_name, plaid_items.institution_name),
-         cursor           = NULL
+         cursor           = NULL,
+         is_active        = true
        RETURNING *`,
       [userId, encryptedAccessToken, itemId, institutionName || 'Unknown Bank', institutionId]
     );
@@ -414,6 +415,16 @@ async function upsertPlaidItem(pool, userId, encryptedAccessToken, itemId, insti
     [userId, encryptedAccessToken, itemId, institutionName || 'Unknown Bank', null]
   );
   return rows[0];
+}
+
+// Mark a plaid_item inactive so it is skipped by future syncs.
+// Called automatically when Plaid returns ITEM_LOGIN_REQUIRED.
+// Reactivated automatically when the user reconnects (upsertPlaidItem sets is_active = true).
+async function deactivatePlaidItem(pool, itemId) {
+  await pool.query(
+    'UPDATE plaid_items SET is_active = false WHERE id = $1',
+    [itemId]
+  );
 }
 
 // Delete a plaid_item (disconnect)
@@ -702,6 +713,7 @@ module.exports = {
   recategorizeTransaction,
   getPlaidItemsWithAccounts,
   upsertPlaidItem,
+  deactivatePlaidItem,
   deletePlaidItem,
   updateItemCursor,
   upsertPlaidAccount,
