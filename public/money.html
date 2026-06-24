@@ -931,6 +931,8 @@ async function loadAccountCard() {
             resyncMsg = 'Plaid returned 0 transactions — bank may need a few minutes to load history';
           } else if ((sr.account_map_size || 0) === 0) {
             resyncMsg = `Account mapping is missing — try disconnecting and reconnecting your bank`;
+          } else if ((sr.ghost_failures || []).length > 0) {
+            resyncMsg = `Ghost account error: ${sr.ghost_failures[0]}`;
           } else if ((sr.skipped_no_account || 0) > 0) {
             var unknownIds = (sr.unknown_account_ids || []).join(', ') || 'unknown';
             resyncMsg = `Plaid returned ${sr.plaid_returned} tx but ${sr.skipped_no_account} had unknown account IDs (${unknownIds}) — try disconnecting and reconnecting your bank`;
