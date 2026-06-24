@@ -1029,7 +1029,10 @@ module.exports = function(pool) {
         ? 'WHERE id = $1 AND user_id = $2 AND is_active = true'
         : 'WHERE user_id = $1 AND is_active = true';
       const vals = item_id ? [parseInt(item_id), userId] : [userId];
-      const { rows: items } = await pool.query(`SELECT * FROM plaid_items ${where}`, vals);
+      const { rows: allItems } = await pool.query(`SELECT * FROM plaid_items ${where}`, vals);
+      // Filter inactive items in JS so this works even if the is_active column
+      // hasn't been added yet (migration pending or failed on previous deploy).
+      const items = allItems.filter(item => item.is_active !== false);
       let totalAdded = 0, totalPlaidReturned = 0, totalSkippedCredit = 0, totalSkippedNoAcct = 0, totalInsertFailed = 0, totalAccountMapSize = 0;
       const allUnknownAccountIds = new Set();
       const allGhostFailures = [];
