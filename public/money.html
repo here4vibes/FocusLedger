@@ -1796,17 +1796,17 @@ async function triageExpense(expenseId, isImpulse, amount) {
   if (isImpulse) { swipeImpulse++; swipeImpulseAmount += (amount || 0); }
   else swipePlanned++;
   try {
-    await api(`/api/money/expenses/${expenseId}/triage`, {
+    const r = await api(`/api/money/expenses/${expenseId}/triage`, {
       method: 'PATCH',
       body: JSON.stringify({ is_impulse: isImpulse, category: triageCatSelected }),
     });
-  } catch (e) { /* continue regardless */ }
-
-  triageIndex++;
-  if (untriagedList.length > 5 && triageIndex >= 5) {
-    renderTriageCard();
-    return;
+    if (!r || !r.success) {
+      console.error('[triage] PATCH failed expense', expenseId, r?.message || '');
+    }
+  } catch (e) {
+    console.error('[triage] network error expense', expenseId, ':', e.message);
   }
+  triageIndex++;
   renderTriageCard();
 }
 
