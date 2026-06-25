@@ -165,11 +165,14 @@ async function patchTriage(req, res) {
     const categorySlug = (category && VALID_CATEGORIES[category]) ? category : null;
 
     const expense = await triageExpense(pool, parseInt(id), userId, impulseValue, categorySlug);
-    if (!expense) return res.status(404).json({ success: false, message: 'Expense not found' });
+    if (!expense) {
+      console.error('[money] triage 404: expense', id, 'not found for user', userId);
+      return res.status(404).json({ success: false, message: 'Expense not found' });
+    }
 
     res.json({ success: true, expense });
   } catch (err) {
-    console.error('[money] triage error:', err);
+    console.error('[money] triage error for expense', req.params?.id, 'user', req.user?.id, ':', err.message);
     res.status(500).json({ success: false, message: 'Failed to triage expense' });
   }
 }

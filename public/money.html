@@ -692,7 +692,13 @@ document.addEventListener('DOMContentLoaded', () => {
     var chip = e.target.closest('.triage-cat');
     if (chip) { selectTriageCat(chip.dataset.slug); return; }
     var btn = e.target.closest('[data-expense-id]');
-    if (btn) triageExpense(parseInt(btn.dataset.expenseId, 10), btn.dataset.impulse === 'true');
+    if (btn) {
+      var card = document.getElementById('swipeCard');
+      var expId = parseInt(btn.dataset.expenseId, 10);
+      var isImp = btn.dataset.impulse === 'true';
+      var curExp = untriagedList[triageIndex];
+      flyOut(card, isImp, expId, parseFloat(curExp && curExp.amount) || 0);
+    }
   });
 
   // Load dashboard data
@@ -1762,8 +1768,8 @@ function renderTriageCard() {
         </div>
         <div class="triage-cats" id="triageCats">${catChips}</div>
         <div class="triage-btns">
-          <button class="btn-planned" data-expense-id="${exp.id}" data-impulse="false">✓ Planned</button>
           <button class="btn-impulse" data-expense-id="${exp.id}" data-impulse="true">⚡ Impulse</button>
+          <button class="btn-planned" data-expense-id="${exp.id}" data-impulse="false">✓ Planned</button>
         </div>
       </div>
     </div>`;
@@ -1796,17 +1802,17 @@ async function triageExpense(expenseId, isImpulse, amount) {
   if (isImpulse) { swipeImpulse++; swipeImpulseAmount += (amount || 0); }
   else swipePlanned++;
   try {
-    await api(`/api/money/expenses/${expenseId}/triage`, {
+    const r = await api(`/api/money/expenses/${expenseId}/triage`, {
       method: 'PATCH',
       body: JSON.stringify({ is_impulse: isImpulse, category: triageCatSelected }),
     });
-  } catch (e) { /* continue regardless */ }
-
-  triageIndex++;
-  if (untriagedList.length > 5 && triageIndex >= 5) {
-    renderTriageCard();
-    return;
+    if (!r || !r.success) {
+      console.error('[triage] PATCH failed expense', expenseId, r?.message || '');
+    }
+  } catch (e) {
+    console.error('[triage] network error expense', expenseId, ':', e.message);
   }
+  triageIndex++;
   renderTriageCard();
 }
 
