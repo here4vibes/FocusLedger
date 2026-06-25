@@ -1241,6 +1241,8 @@
                 btn.textContent = 'Continue →';
                 btn.disabled = false;
                 btn.addEventListener('click', function() { window.location.href = '/app'; });
+            }
+        }, 15000);
 
         Promise.all([planPromise, insightPromise]).then(function(results) {
             clearTimeout(completionTimer);
