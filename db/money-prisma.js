@@ -137,7 +137,7 @@ async function triageExpense(pool, expenseId, userId, isImpulse, categorySlug) {
     categoryId = await resolveCategoryId(pool, categorySlug);
   }
 
-  const setCols = ['is_impulse = $1', 'updated_at = NOW()'];
+  const setCols = ['is_impulse = $1'];
   const vals = [isImpulse];
   let idx = 2;
 
