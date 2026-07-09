@@ -1194,6 +1194,22 @@
         btn.textContent = count > 0 ? ('Add ' + count + ' task' + (count === 1 ? '' : 's')) : 'Add selected';
     }
 
+    // Peak-end: a warm, identity-based close that varies day to day (keyed off
+    // the date so it's fresh without being random). "You showed up" affirms the
+    // act, not just the output — the move that lands for ADHD brains.
+    function warmCloseLine() {
+        var lines = [
+            'You showed up — that’s the hard part. Start one when you’re ready.',
+            'Plan’s set. Pick the one that feels easiest and just begin.',
+            'Small start beats perfect start. Grab the first one.',
+            'You did the thinking. Now let momentum do the rest.',
+            'One tiny move and you’re rolling. I’ve got the rest.'
+        ];
+        var seed = 0;
+        for (var i = 0; i < TODAY.length; i++) { seed += TODAY.charCodeAt(i); }
+        return lines[seed % lines.length];
+    }
+
     // ── Completion flow ───────────────────────────────────────────────────────
     function proceeedToCompletion() {
         el('taskPreview').classList.remove('visible');
@@ -1282,7 +1298,7 @@
                     list.appendChild(card);
                 });
                 el('completionHeading').textContent = 'Your plan for today';
-                el('completionSub').textContent = 'Start one now — small wins build real momentum.';
+                el('completionSub').textContent = warmCloseLine();
             }
 
             var btn = el('completionBtn');
