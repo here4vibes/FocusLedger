@@ -19,6 +19,7 @@
 const { getLocalDateParts } = require('./lib/timezone');
 const { sendApnsNotification, isApnsConfigured } = require('./lib/apns-sender');
 const { getPushTokens, deletePushToken } = require('./db/push-tokens');
+const { resolveMorningHour } = require('./lib/energy-timing');
 
 async function sendMorningNudges(pool) {
   const webPushEnabled = !!(process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY);
@@ -54,7 +55,8 @@ async function sendMorningNudges(pool) {
         COALESCE(NULLIF(u.timezone, ''), 'America/New_York') AS timezone,
         u.last_active_at,
         COALESCE(u.notif_morning_enabled, true)  AS notif_morning_enabled,
-        COALESCE(u.notif_morning_hour, 8)         AS notif_morning_hour
+        COALESCE(u.notif_morning_hour, 8)         AS notif_morning_hour,
+        u.adhd_profile->>'peak_energy'            AS peak_energy
       FROM users u
       WHERE u.id IN (
         SELECT user_id FROM push_subscriptions WHERE enabled = true
@@ -69,9 +71,9 @@ async function sendMorningNudges(pool) {
         if (!user.notif_morning_enabled) continue;
 
         const tz = user.timezone;
-        const targetHour = typeof user.notif_morning_hour === 'number'
-          ? user.notif_morning_hour
-          : 8;
+        // Honor an explicit custom hour; otherwise time the nudge to the user's
+        // peak-energy window so a plan-the-day prompt lands when they can act on it.
+        const targetHour = resolveMorningHour(user.notif_morning_hour, user.peak_energy);
         const { date: localDate, hour: localHour } = getLocalDateParts(tz, now);
 
         // Only send during the configured morning hour window
