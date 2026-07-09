@@ -977,7 +977,10 @@
       btn.textContent = '✓ Done';
       btn.classList.add('done');
       const streak = data.streak;
-      if (streak && streak.current_streak > 1) {
+      if (streak && streak.freeze_used) {
+        // A slip was forgiven — name it warmly, no shame, streak stays alive.
+        showToast(`🧊 Missed a day — I saved your streak. Still going: ${streak.current_streak} 🔥`);
+      } else if (streak && streak.current_streak > 1) {
         showToast(`🔥 ${streak.current_streak}-day streak!`);
       } else {
         showToast('Routine complete!');
