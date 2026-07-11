@@ -127,3 +127,12 @@ services:
     schedule: "0 2 * * *"
     buildCommand: npm install
     startCommand: node jobs/crossDomainInsightsJob.js
+
+  # 09:00 UTC = pre-dawn across US timezones — the reveal is staged before the
+  # user wakes, and after cross-domain-insights (02:00) + pattern-detection.
+  - type: cron
+    name: daily-reveal
+    runtime: node
+    schedule: "0 9 * * *"
+    buildCommand: npm install
+    startCommand: node jobs/dailyRevealJob.js

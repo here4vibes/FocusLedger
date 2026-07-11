@@ -126,7 +126,17 @@ async function sendTaskDeadlineNudges(pool) {
         }
 
         const notifTitle = 'FocusLedger';
-        const notifUrl   = '/app';
+        // One-tap = one decision: a single-task nudge deep-links straight to that
+        // task (and offers "Start focus"), instead of dumping the user on /app to
+        // re-find it. Multiple tasks fall back to the task list.
+        const onlyTask = tasksToNotify.length === 1 ? tasksToNotify[0] : null;
+        const notifUrl = onlyTask ? `/app/task/${onlyTask.id}` : '/app/tasks';
+        const notifActions = onlyTask
+          ? [{ action: 'focus', title: 'Start focus ⏱' }, { action: 'view', title: 'View' }]
+          : null;
+        const notifActionUrls = onlyTask
+          ? { focus: `/app/focus/${onlyTask.id}`, view: `/app/task/${onlyTask.id}` }
+          : null;
         let sentCount = 0;
 
         // ── Web Push (VAPID) ──────────────────────────────────────────────
@@ -134,7 +144,8 @@ async function sendTaskDeadlineNudges(pool) {
         if (webpush) {
           const payload = JSON.stringify({
             title: notifTitle, body, url: notifUrl,
-            tag: 'fl-task-deadline', renotify: false
+            tag: 'fl-task-deadline', renotify: false,
+            ...(notifActions ? { actions: notifActions, actionUrls: notifActionUrls } : {})
           });
           const subscriptions = await getActiveSubscriptions(pool, userId);
           for (const row of subscriptions) {

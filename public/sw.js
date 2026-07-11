@@ -13,7 +13,7 @@
  * when offline. The ~50ms latency cost is invisible on modern connections.
  */
 
-const CACHE_VERSION = 'fl-v51';
+const CACHE_VERSION = 'fl-v52';
 const OFFLINE_URL = '/offline.html';
 
 // Assets to precache on install (app shell)
@@ -216,17 +216,22 @@ self.addEventListener('push', event => {
   // instead of stacking duplicates. renotify=false means no re-alert sound/vibration
   // when the notification is silently replaced. Server-side dedup is the primary
   // guard; this is the browser-level safety net.
+  // Per-notification action buttons: when the server supplies `actions` (and an
+  // `actionUrls` map), render those so a tap = one specific decision (e.g. "Start
+  // focus" on the exact task) instead of a generic "View Tasks". Falls back to the
+  // generic open/dismiss pair. `actionUrls` is carried in data for the click handler.
+  const actions = Array.isArray(data.actions) && data.actions.length
+    ? data.actions.slice(0, 2)
+    : [{ action: 'open', title: 'Open' }, { action: 'dismiss', title: 'Dismiss' }];
+
   const options = {
     body: data.body,
     icon: '/icons/icon-192.png',
     badge: '/icons/icon-192.png',
     tag: data.tag || 'focusledger-nudge',
     renotify: false,
-    data: { url: data.url || '/app' },
-    actions: [
-      { action: 'open', title: 'View Tasks' },
-      { action: 'dismiss', title: 'Dismiss' }
-    ],
+    data: { url: data.url || '/app', actionUrls: data.actionUrls || null },
+    actions,
     requireInteraction: false
   };
 
@@ -241,7 +246,12 @@ self.addEventListener('notificationclick', event => {
 
   if (event.action === 'dismiss') return;
 
-  const targetUrl = event.notification.data?.url || '/app';
+  // Route to the tapped action's URL if the server mapped one; otherwise the
+  // notification's primary url. Body taps (no action) always use the primary url.
+  const actionUrls = event.notification.data?.actionUrls;
+  const targetUrl =
+    (event.action && actionUrls && actionUrls[event.action]) ||
+    event.notification.data?.url || '/app';
 
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clients => {

@@ -212,6 +212,7 @@ app.use('/api/account-deletion', require('./routes/account-deletion')(pool));
 app.use('/api/email-to-tasks',  require('./routes/email-to-tasks')(pool));
 app.use('/api/buddy-demo',      require('./routes/buddy-demo')(pool));
 app.use('/api/daily-brief',     require('./routes/daily-brief')(pool));
+app.use('/api/reveals',         require('./routes/reveals')(pool));
 app.use('/api/weekly-recap',    require('./routes/weekly-recap')(pool));
 app.use('/api/evening',         require('./routes/evening-checkin')(pool));
 app.use('/api/partnerships',    require('./routes/partnerships')(pool));

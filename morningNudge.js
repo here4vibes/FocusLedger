@@ -19,6 +19,8 @@
 const { getLocalDateParts } = require('./lib/timezone');
 const { sendApnsNotification, isApnsConfigured } = require('./lib/apns-sender');
 const { getPushTokens, deletePushToken } = require('./db/push-tokens');
+const { resolveMorningHour } = require('./lib/energy-timing');
+const { getUnviewedRevealForDate } = require('./db/reveals');
 
 async function sendMorningNudges(pool) {
   const webPushEnabled = !!(process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY);
@@ -54,7 +56,8 @@ async function sendMorningNudges(pool) {
         COALESCE(NULLIF(u.timezone, ''), 'America/New_York') AS timezone,
         u.last_active_at,
         COALESCE(u.notif_morning_enabled, true)  AS notif_morning_enabled,
-        COALESCE(u.notif_morning_hour, 8)         AS notif_morning_hour
+        u.notif_morning_hour                      AS notif_morning_hour,
+        u.adhd_profile->>'peak_energy'            AS peak_energy
       FROM users u
       WHERE u.id IN (
         SELECT user_id FROM push_subscriptions WHERE enabled = true
@@ -69,9 +72,9 @@ async function sendMorningNudges(pool) {
         if (!user.notif_morning_enabled) continue;
 
         const tz = user.timezone;
-        const targetHour = typeof user.notif_morning_hour === 'number'
-          ? user.notif_morning_hour
-          : 8;
+        // Honor an explicit custom hour; otherwise time the nudge to the user's
+        // peak-energy window so a plan-the-day prompt lands when they can act on it.
+        const targetHour = resolveMorningHour(user.notif_morning_hour, user.peak_energy);
         const { date: localDate, hour: localHour } = getLocalDateParts(tz, now);
 
         // Only send during the configured morning hour window
@@ -92,9 +95,25 @@ async function sendMorningNudges(pool) {
 
         // Always send the morning prompt — even if no tasks yet.
         // The nudge itself is the prompt to plan.
-        const notifTitle = 'Good morning \u2600\uFE0F';
-        const notifBody  = "What\u2019s on tap for today?";
-        const notifUrl   = '/home';
+        let notifTitle = 'Good morning \u2600\uFE0F';
+        let notifBody  = "What\u2019s on tap for today?";
+        let notifUrl   = '/home';
+
+        // Curiosity-gap upgrade: if a Daily Reveal is staged for today, tease
+        // its headline instead \u2014 "Buddy noticed something" out-pulls a generic
+        // prompt. Guarded separately: daily_reveals may not exist yet on a
+        // fresh deploy (cron images can start before the web service migrates),
+        // and the default copy must survive that.
+        try {
+          const reveal = await getUnviewedRevealForDate(pool, user.id, localDate);
+          if (reveal && reveal.headline) {
+            notifTitle = 'Buddy found something \uD83D\uDC40';
+            notifBody  = reveal.headline;
+            notifUrl   = '/app';
+          }
+        } catch (revealErr) {
+          console.warn('[MorningNudge] reveal lookup failed (using default copy):', revealErr.message);
+        }
 
         let sentCount = 0;
 

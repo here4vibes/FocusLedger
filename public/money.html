@@ -1732,7 +1732,9 @@ function renderTriageCard() {
       </div>`;
     document.querySelector('.btn-skip-all').style.display = 'none';
     localStorage.setItem('fl_evening_swipe_done', 'true');
-    setTimeout(closeTriageModal, 3000);
+    // Peak-end: let the summary + "awareness is the first step" line actually land
+    // before auto-dismissing — 3s was too quick to read the close.
+    setTimeout(closeTriageModal, 4500);
     return;
   }
 

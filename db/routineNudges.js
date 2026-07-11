@@ -147,38 +147,78 @@ async function getOrCreateStreak(pool, userId, routineId) {
 
 /**
  * Record that a routine was completed on a given local date.
- * Increments current_streak if consecutive; resets to 1 if not.
- * Updates best_streak if current_streak exceeds it.
+ *
+ * Streak math with forgiveness ("streak-freeze"):
+ *   - same day (gap 0): no change — re-completing today doesn't inflate or reset
+ *   - consecutive (gap 1): increment
+ *   - one day missed (gap 2) AND a freeze is available: forgive — increment and
+ *     spend the freeze so a single slip doesn't reset a hard-won streak
+ *   - larger gap or no freeze: reset to 1 (a fresh start, with a fresh freeze)
+ * A freeze replenishes every 7 consecutive completions.
  *
  * @param {import('pg').Pool} pool
  * @param {number} userId
  * @param {number} routineId
  * @param {string} localDate — YYYY-MM-DD in user's timezone
+ * @returns {Promise<{current_streak:number,best_streak:number,freeze_used:boolean,freeze_available:boolean}>}
  */
 async function recordRoutineCompletion(pool, userId, routineId, localDate) {
   const streak = await getOrCreateStreak(pool, userId, routineId);
   const last = streak.last_completed_date;
+  // freeze_available may be undefined on rows created before the migration ran;
+  // treat missing as "available" (the forgiving default).
+  const freezeAvailable = streak.freeze_available !== false;
 
   let newStreak;
+  let freezeUsed = false;
+  let freezeLeft = freezeAvailable;
+
   if (last) {
     const lastDate = new Date(last + 'T12:00:00Z');
     const todayDate = new Date(localDate + 'T12:00:00Z');
     const diffDays = Math.round((todayDate - lastDate) / (1000 * 60 * 60 * 24));
-    newStreak = diffDays === 1 ? streak.current_streak + 1 : 1;
+
+    if (diffDays <= 0) {
+      // Same day (or clock skew) — don't double-count or reset.
+      newStreak = Math.max(streak.current_streak, 1);
+    } else if (diffDays === 1) {
+      newStreak = streak.current_streak + 1;
+    } else if (diffDays === 2 && freezeAvailable) {
+      // Missed exactly one day — forgive it and spend the freeze.
+      newStreak = streak.current_streak + 1;
+      freezeUsed = true;
+      freezeLeft = false;
+    } else {
+      // Streak broke — fresh start, with a fresh freeze in hand.
+      newStreak = 1;
+      freezeLeft = true;
+    }
   } else {
     newStreak = 1;
   }
 
+  // Replenish a freeze every 7 consecutive days (only when not just consumed).
+  if (!freezeUsed && newStreak % 7 === 0) {
+    freezeLeft = true;
+  }
+
   const newBest = Math.max(newStreak, streak.best_streak);
+  const freezeUsedDate = freezeUsed ? localDate : (streak.last_freeze_used_date || null);
 
   await pool.query(
     `UPDATE routine_streaks
-     SET current_streak = $1, best_streak = $2, last_completed_date = $3, updated_at = NOW()
-     WHERE routine_id = $4`,
-    [newStreak, newBest, localDate, routineId]
+     SET current_streak = $1, best_streak = $2, last_completed_date = $3,
+         freeze_available = $4, last_freeze_used_date = $5, updated_at = NOW()
+     WHERE routine_id = $6`,
+    [newStreak, newBest, localDate, freezeLeft, freezeUsedDate, routineId]
   );
 
-  return { current_streak: newStreak, best_streak: newBest };
+  return {
+    current_streak: newStreak,
+    best_streak: newBest,
+    freeze_used: freezeUsed,
+    freeze_available: freezeLeft,
+  };
 }
 
 /**

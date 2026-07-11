@@ -68,15 +68,15 @@ async function sendApnsPush(userId, payload) {
   if (!isApnsConfigured()) return 0;
   const tokens = await getPushTokens(pool, userId).catch(() => []);
   if (!tokens.length) return 0;
-  const apnsPayload = {
-    aps: { alert: { title: 'FocusLedger', body: JSON.parse(payload).body }, sound: 'default', badge: 1 },
-    url: '/app',
-  };
-  let sent = 0;
-  await sendApnsNotification(tokens.map(t => t.token), apnsPayload, async (invalidToken) => {
-    await deletePushToken(pool, userId, invalidToken).catch(() => {});
-  });
-  sent = tokens.length;
+  // sendApnsNotification expects { title, body, url } — NOT a raw aps envelope
+  // (it builds the aps alert itself). Passing an aps-shaped object dropped the
+  // title/body and hard-coded url to /app. Forward the real payload fields.
+  const parsed = JSON.parse(payload);
+  const { sent } = await sendApnsNotification(
+    tokens.map(t => t.token),
+    { title: parsed.title, body: parsed.body, url: parsed.url },
+    async (invalidToken) => { await deletePushToken(pool, invalidToken).catch(() => {}); }
+  );
   return sent;
 }
 
@@ -122,12 +122,17 @@ async function run() {
       if (alreadySent) continue;
 
       const body = `Want one tiny first step to get "${title.slice(0, 50)}" moving?`;
+      // Deep-link to the task itself (where the "I'm stuck" micro-step flow lives)
+      // and offer a one-tap "Start focus" — the nudge asks for a first step, so
+      // land the user exactly where they can take one.
       const payload = JSON.stringify({
         title: 'FocusLedger',
         body,
-        url: '/app',
+        url: `/app/task/${task_id}`,
         tag: `fl-cold-start-${task_id}`,
         renotify: false,
+        actions: [{ action: 'focus', title: 'Start focus ⏱' }, { action: 'view', title: 'View' }],
+        actionUrls: { focus: `/app/focus/${task_id}`, view: `/app/task/${task_id}` },
       });
 
       // Web push
