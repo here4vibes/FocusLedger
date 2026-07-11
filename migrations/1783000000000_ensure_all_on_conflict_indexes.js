@@ -191,16 +191,24 @@ module.exports = {
   name: 'ensure_all_on_conflict_indexes',
 
   up: async (client) => {
+    // The runner wraps up() in ONE transaction. A plain try/catch is not enough
+    // here: the first failed statement aborts the whole transaction and every
+    // later statement dies with "current transaction is aborted" — which is
+    // exactly how this migration failed wholesale in production. SAVEPOINTs
+    // make each index independently skippable while keeping the txn healthy.
     for (const idx of indexes) {
+      await client.query('SAVEPOINT idx_sp');
       try {
         if (idx.dedup) {
           await client.query(idx.dedup);
         }
         await client.query(idx.ddl);
+        await client.query('RELEASE SAVEPOINT idx_sp');
         console.log(`[migration] created index: ${idx.name}`);
       } catch (e) {
         // Non-fatal: table may not exist yet (feature not deployed) or index
         // already exists under a Prisma-generated constraint name.
+        await client.query('ROLLBACK TO SAVEPOINT idx_sp');
         console.warn(`[migration] ${idx.name} skipped: ${e.message}`);
       }
     }

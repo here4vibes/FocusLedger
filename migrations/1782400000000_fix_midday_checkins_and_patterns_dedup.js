@@ -68,16 +68,44 @@ module.exports = {
         ADD COLUMN IF NOT EXISTS task_hash TEXT NOT NULL DEFAULT ''
     `);
 
-    // Backfill task_hash from existing pattern_data for any rows without it
+    // Backfill task_hash from existing pattern_data for any rows without it.
+    // In production pattern_data is TEXT (Prisma-era), not JSONB — the `?` and
+    // `->` operators fail with "operator does not exist: text ? unknown". Detect
+    // the column type and cast when needed; if any row holds invalid JSON, skip
+    // the backfill (patterns are regenerated weekly by cron) rather than abort.
     await client.query(`
-      UPDATE detected_patterns
-      SET task_hash = COALESCE(
-        (SELECT string_agg(elem::text, ',' ORDER BY elem::text)
-         FROM jsonb_array_elements(pattern_data->'task_ids') AS elem),
-        ''
-      )
-      WHERE task_hash = ''
-        AND pattern_data ? 'task_ids'
+      DO $$
+      DECLARE
+        coltype text;
+      BEGIN
+        SELECT data_type INTO coltype
+        FROM information_schema.columns
+        WHERE table_name = 'detected_patterns' AND column_name = 'pattern_data';
+
+        IF coltype = 'jsonb' THEN
+          UPDATE detected_patterns
+          SET task_hash = COALESCE(
+            (SELECT string_agg(elem::text, ',' ORDER BY elem::text)
+             FROM jsonb_array_elements(pattern_data->'task_ids') AS elem),
+            ''
+          )
+          WHERE task_hash = ''
+            AND pattern_data ? 'task_ids';
+        ELSIF coltype IS NOT NULL THEN
+          BEGIN
+            UPDATE detected_patterns
+            SET task_hash = COALESCE(
+              (SELECT string_agg(elem::text, ',' ORDER BY elem::text)
+               FROM jsonb_array_elements((pattern_data::jsonb)->'task_ids') AS elem),
+              ''
+            )
+            WHERE task_hash = ''
+              AND pattern_data IS NOT NULL;
+          EXCEPTION WHEN OTHERS THEN
+            RAISE NOTICE 'task_hash backfill skipped (non-JSON pattern_data): %', SQLERRM;
+          END;
+        END IF;
+      END $$
     `);
 
     await client.query(`
