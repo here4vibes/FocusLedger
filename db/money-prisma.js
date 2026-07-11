@@ -137,7 +137,7 @@ async function triageExpense(pool, expenseId, userId, isImpulse, categorySlug) {
     categoryId = await resolveCategoryId(pool, categorySlug);
   }
 
-  const setCols = ['is_impulse = $1'];
+  const setCols = ['is_impulse = $1', 'updated_at = NOW()'];
   const vals = [isImpulse];
   let idx = 2;
 
@@ -397,7 +397,8 @@ async function upsertPlaidItem(pool, userId, encryptedAccessToken, itemId, insti
          access_token     = EXCLUDED.access_token,
          item_id          = EXCLUDED.item_id,
          institution_name = COALESCE(EXCLUDED.institution_name, plaid_items.institution_name),
-         cursor           = NULL
+         cursor           = NULL,
+         is_active        = true
        RETURNING *`,
       [userId, encryptedAccessToken, itemId, institutionName || 'Unknown Bank', institutionId]
     );
@@ -409,7 +410,8 @@ async function upsertPlaidItem(pool, userId, encryptedAccessToken, itemId, insti
      VALUES ((SELECT COALESCE(MAX(id), 0) + 1 FROM plaid_items), $1, $2, $3, $4, $5)
      ON CONFLICT (item_id, user_id) WHERE item_id IS NOT NULL DO UPDATE SET
        access_token     = EXCLUDED.access_token,
-       institution_name = COALESCE(EXCLUDED.institution_name, plaid_items.institution_name)
+       institution_name = COALESCE(EXCLUDED.institution_name, plaid_items.institution_name),
+       is_active        = true
      RETURNING *`,
     [userId, encryptedAccessToken, itemId, institutionName || 'Unknown Bank', null]
   );

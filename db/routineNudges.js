@@ -198,7 +198,7 @@ async function recordRoutineCompletion(pool, userId, routineId, localDate) {
   }
 
   // Replenish a freeze every 7 consecutive days (only when not just consumed).
-  if (!freezeUsed && newStreak > 0 && newStreak % 7 === 0) {
+  if (!freezeUsed && newStreak % 7 === 0) {
     freezeLeft = true;
   }
 

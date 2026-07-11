@@ -56,6 +56,21 @@ async function markRevealViewed(pool, userId, revealId) {
 }
 
 /**
+ * Fetch the still-sealed reveal for user + date (null if none or already viewed).
+ * Used by the morning nudge to tease the headline — a viewed reveal has no
+ * curiosity gap left to tease.
+ */
+async function getUnviewedRevealForDate(pool, userId, localDate) {
+  const { rows } = await pool.query(
+    `SELECT id, headline FROM daily_reveals
+     WHERE user_id = $1 AND reveal_date = $2 AND viewed_at IS NULL
+     LIMIT 1`,
+    [userId, localDate]
+  );
+  return rows[0] || null;
+}
+
+/**
  * Whether a reveal already exists for user + date (job idempotency check).
  */
 async function revealExists(pool, userId, revealDate) {
@@ -66,4 +81,10 @@ async function revealExists(pool, userId, revealDate) {
   return rows.length > 0;
 }
 
-module.exports = { upsertReveal, getRevealForDate, markRevealViewed, revealExists };
+module.exports = {
+  upsertReveal,
+  getRevealForDate,
+  getUnviewedRevealForDate,
+  markRevealViewed,
+  revealExists,
+};

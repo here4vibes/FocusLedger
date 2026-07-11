@@ -55,7 +55,7 @@ async function fetchUserData(pool, userId, sinceDate) {
       [userId, sinceDate]
     ),
     pool.query(
-      `SELECT e.amount_cents, e.is_impulse, e.expense_date,
+      `SELECT e.amount, e.is_impulse, e.expense_date,
               c.name AS category_name
        FROM expenses e
        LEFT JOIN categories c ON c.id = e.category_id
@@ -112,13 +112,15 @@ function summariseForPrompt({ tasks, expenses, checkins, focus }) {
 
   if (expenses.length > 0) {
     const impulseCount = expenses.filter(e => e.is_impulse === true).length;
-    const totalCents = expenses.reduce((s, e) => s + (e.amount_cents || 0), 0);
+    // expenses.amount is NUMERIC (string from pg) — accumulate as integer cents
+    const toCents = (a) => Math.round(parseFloat(a || 0) * 100) || 0;
+    const totalCents = expenses.reduce((s, e) => s + toCents(e.amount), 0);
     lines.push(`SPENDING (last 7 days): ${expenses.length} transactions, $${(totalCents / 100).toFixed(0)} total, ${impulseCount} impulse`);
 
     const byDay = {};
     for (const e of expenses) {
       const d = String(e.expense_date).slice(0, 10);
-      byDay[d] = (byDay[d] || 0) + (e.amount_cents || 0);
+      byDay[d] = (byDay[d] || 0) + toCents(e.amount);
     }
     const dayEntries = Object.entries(byDay).sort(([a], [b]) => a.localeCompare(b));
     if (dayEntries.length > 0) {

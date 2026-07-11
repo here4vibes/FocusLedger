@@ -20,6 +20,7 @@ const { getLocalDateParts } = require('./lib/timezone');
 const { sendApnsNotification, isApnsConfigured } = require('./lib/apns-sender');
 const { getPushTokens, deletePushToken } = require('./db/push-tokens');
 const { resolveMorningHour } = require('./lib/energy-timing');
+const { getUnviewedRevealForDate } = require('./db/reveals');
 
 async function sendMorningNudges(pool) {
   const webPushEnabled = !!(process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY);
@@ -55,7 +56,7 @@ async function sendMorningNudges(pool) {
         COALESCE(NULLIF(u.timezone, ''), 'America/New_York') AS timezone,
         u.last_active_at,
         COALESCE(u.notif_morning_enabled, true)  AS notif_morning_enabled,
-        COALESCE(u.notif_morning_hour, 8)         AS notif_morning_hour,
+        u.notif_morning_hour                      AS notif_morning_hour,
         u.adhd_profile->>'peak_energy'            AS peak_energy
       FROM users u
       WHERE u.id IN (
@@ -104,13 +105,10 @@ async function sendMorningNudges(pool) {
         // fresh deploy (cron images can start before the web service migrates),
         // and the default copy must survive that.
         try {
-          const { rows: rv } = await pool.query(
-            'SELECT headline FROM daily_reveals WHERE user_id = $1 AND reveal_date = $2 AND viewed_at IS NULL LIMIT 1',
-            [user.id, localDate]
-          );
-          if (rv.length > 0 && rv[0].headline) {
+          const reveal = await getUnviewedRevealForDate(pool, user.id, localDate);
+          if (reveal && reveal.headline) {
             notifTitle = 'Buddy found something \uD83D\uDC40';
-            notifBody  = rv[0].headline;
+            notifBody  = reveal.headline;
             notifUrl   = '/app';
           }
         } catch (revealErr) {

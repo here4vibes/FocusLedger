@@ -75,7 +75,7 @@ async function sendApnsPush(userId, payload) {
   const { sent } = await sendApnsNotification(
     tokens.map(t => t.token),
     { title: parsed.title, body: parsed.body, url: parsed.url },
-    async (invalidToken) => { await deletePushToken(pool, userId, invalidToken).catch(() => {}); }
+    async (invalidToken) => { await deletePushToken(pool, invalidToken).catch(() => {}); }
   );
   return sent;
 }
