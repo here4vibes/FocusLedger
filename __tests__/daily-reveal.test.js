@@ -8,6 +8,9 @@
 const {
   buildFallbackReveal,
   parseRevealJson,
+  pickFunFact,
+  isFunFactDay,
+  FUN_FACTS,
   SCIENCE_TAGS,
 } = require('../jobs/dailyRevealJob');
 
@@ -99,6 +102,64 @@ describe('buildFallbackReveal', () => {
       expect(r.body.length).toBeGreaterThan(20);
       expect(SCIENCE_TAGS).toContain(r.scienceTag);
     }
+  });
+});
+
+describe('fun-fact reveals', () => {
+  test('every fact in the bank has valid shape and science tag', () => {
+    expect(FUN_FACTS.length).toBeGreaterThanOrEqual(10);
+    for (const f of FUN_FACTS) {
+      expect(f.headline.length).toBeGreaterThan(4);
+      expect(f.headline.length).toBeLessThanOrEqual(60);
+      expect(f.body.length).toBeGreaterThan(40);
+      expect(SCIENCE_TAGS).toContain(f.scienceTag);
+      expect(f.themes.length).toBeGreaterThan(0);
+    }
+  });
+
+  test('pickFunFact never returns null and marks type fun_fact', () => {
+    const r = pickFunFact(42, '2026-07-11', {});
+    expect(r).not.toBeNull();
+    expect(r.revealType).toBe('fun_fact');
+    expect(SCIENCE_TAGS).toContain(r.scienceTag);
+  });
+
+  test('pickFunFact is deterministic for the same user+date', () => {
+    const a = pickFunFact(7, '2026-07-11', null);
+    const b = pickFunFact(7, '2026-07-11', null);
+    expect(a.headline).toBe(b.headline);
+  });
+
+  test('different dates rotate the fact', () => {
+    const picks = new Set(
+      ['2026-07-11', '2026-07-12', '2026-07-13', '2026-07-14', '2026-07-15']
+        .map(d => pickFunFact(7, d, null).headline)
+    );
+    expect(picks.size).toBeGreaterThan(1); // rotates, not stuck
+  });
+
+  test('profile mentioning money prefers money-themed facts', () => {
+    const profile = { primary_struggle: 'impulse money spending' };
+    const moneyHeadlines = FUN_FACTS.filter(f => f.themes.includes('money')).map(f => f.headline);
+    // With a money-heavy profile, picks come from the preferred pool
+    const picks = new Set(
+      ['2026-07-11', '2026-07-12', '2026-07-13', '2026-07-14']
+        .map(d => pickFunFact(7, d, profile).headline)
+    );
+    for (const h of picks) {
+      expect(moneyHeadlines).toContain(h);
+    }
+  });
+
+  test('isFunFactDay is deterministic and fires roughly 1 in 4', () => {
+    expect(isFunFactDay(5, '2026-07-11')).toBe(isFunFactDay(5, '2026-07-11'));
+    let hits = 0;
+    for (let day = 1; day <= 28; day++) {
+      const date = `2026-07-${String(day).padStart(2, '0')}`;
+      if (isFunFactDay(9, date)) hits++;
+    }
+    expect(hits).toBeGreaterThanOrEqual(2);  // not never
+    expect(hits).toBeLessThanOrEqual(14);    // not most days
   });
 });
 

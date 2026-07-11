@@ -134,10 +134,12 @@ function summariseForPrompt({ tasks, expenses, checkins, focus, streaks }) {
 
   if (expenses.length) {
     const impulse = expenses.filter(e => e.is_impulse === true);
-    const total = expenses.reduce((s, e) => s + (parseFloat(e.amount) || 0), 0);
-    lines.push(`SPENDING: ${expenses.length} transactions, $${total.toFixed(0)} total, ${impulse.length} impulse`);
-    const impulseTotal = impulse.reduce((s, e) => s + (parseFloat(e.amount) || 0), 0);
-    if (impulse.length) lines.push(`  Impulse total: $${impulseTotal.toFixed(0)}`);
+    // NUMERIC comes back as a string — accumulate as integer cents, never float-sum money
+    const toCents = (a) => Math.round(parseFloat(a || 0) * 100) || 0;
+    const totalCents = expenses.reduce((s, e) => s + toCents(e.amount), 0);
+    lines.push(`SPENDING: ${expenses.length} transactions, $${(totalCents / 100).toFixed(0)} total, ${impulse.length} impulse`);
+    const impulseCents = impulse.reduce((s, e) => s + toCents(e.amount), 0);
+    if (impulse.length) lines.push(`  Impulse total: $${(impulseCents / 100).toFixed(0)}`);
   }
 
   if (checkins.length) {
@@ -164,7 +166,14 @@ function parseRevealJson(text) {
   const match = text.match(/\{[\s\S]*\}/);
   if (!match) return null;
   let obj;
-  try { obj = JSON.parse(match[0]); } catch { return null; }
+  try {
+    obj = JSON.parse(match[0]);
+  } catch (e) {
+    // Parse failure feeds the deterministic fallback, but must be visible in
+    // Render logs — a persistent AI-format regression is otherwise undiagnosable.
+    console.warn('[daily-reveal] AI JSON parse failed:', e.message, '| raw:', text.slice(0, 120));
+    return null;
+  }
   if (!obj.headline || !obj.body) return null;
   const headline = String(obj.headline).trim().slice(0, 80);
   const body = String(obj.body).trim();
@@ -282,7 +291,93 @@ function buildFallbackReveal({ tasks, expenses, checkins, focus, streaks }) {
     };
   }
 
-  return null; // genuinely nothing to say — stage no reveal rather than a hollow one
+  return null; // genuinely nothing to say — personal-data-wise (fun fact covers this)
+}
+
+// ── Fun-fact reveals ──────────────────────────────────────────────────────────
+// Snapple-lid energy, on-brand: every fact is about brains, habits, or money
+// psychology, so a "just for fun" day still reinforces the science identity.
+// Two jobs: (1) variable reward — the reveal TYPE varies, so the unwrap never
+// becomes predictable; (2) day-one coverage — a user with no data yet still
+// wakes up to something worth opening.
+
+const FUN_FACTS = [
+  { themes: ['focus', 'brain'],
+    headline: 'Your brain bills you for focus',
+    body: 'Your brain is about 2% of your body weight but burns roughly 20% of your energy. Focus is literally expensive — that afternoon crash is a fuel gauge, not a character flaw.',
+    scienceTag: 'executive_function' },
+  { themes: ['dopamine', 'brain'],
+    headline: 'The dopamine hit isn’t where you think',
+    body: 'Dopamine spikes at the *anticipation* of a reward, not the reward itself — which is why starting a task is harder than finishing one, and why this card was sealed until you tapped it.',
+    scienceTag: 'habit_formation' },
+  { themes: ['tasks', 'brain'],
+    headline: 'Unfinished tasks are squatters',
+    body: 'The Zeigarnik effect: unfinished tasks keep occupying working memory rent-free until you either finish them or write them down. That’s the entire science behind Brain Dump.',
+    scienceTag: 'executive_function' },
+  { themes: ['focus', 'social'],
+    headline: 'Why working next to someone works',
+    body: 'Body doubling — just having another person present while you work — measurably improves task initiation for ADHD brains. Nobody fully knows why yet. It just works.',
+    scienceTag: 'accountability' },
+  { themes: ['money'],
+    headline: 'Your card is a painkiller',
+    body: 'Paying with cash activates the same brain regions as physical pain — cards numb it. Behavioral economists call it the "pain of paying," and it’s why tap-to-pay feels like free money.',
+    scienceTag: 'impulse_spending' },
+  { themes: ['habits'],
+    headline: 'The 21-day habit thing is a myth',
+    body: 'The real median time to form a habit is 66 days — and missing a single day made no measurable difference in the research. One slip never broke anyone’s habit. Science says so.',
+    scienceTag: 'habit_formation' },
+  { themes: ['focus', 'movement'],
+    headline: 'The cheapest focus drug is legal',
+    body: 'A 20-minute walk produces a short-term focus boost comparable to a low stimulant dose for ADHD brains. It’s why Buddy nags you to stand up mid-focus-session.',
+    scienceTag: 'executive_function' },
+  { themes: ['sleep', 'brain'],
+    headline: 'Your brain takes out the trash at night',
+    body: 'During sleep, your brain physically flushes metabolic waste through the glymphatic system. Skimping on sleep means running today on yesterday’s unfiltered brain.',
+    scienceTag: 'executive_function' },
+  { themes: ['tasks', 'habits'],
+    headline: 'A sentence that doubles follow-through',
+    body: 'Saying "After I make coffee, I’ll start the report" — instead of "I’ll do it today" — roughly doubles completion rates. Implementation intentions turn vague plans into reflexes.',
+    scienceTag: 'habit_formation' },
+  { themes: ['time', 'brain'],
+    headline: 'ADHD time comes in exactly two sizes',
+    body: 'Research describes ADHD time perception as binary: "now" and "not now." Deadlines feel fake until they’re emergencies — which is a clock problem, not a character problem.',
+    scienceTag: 'avoidance_loops' },
+  { themes: ['money', 'brain'],
+    headline: 'Future-you is a stranger (literally)',
+    body: 'Brain scans show people process "future me" in the same region as *strangers* — which is why saving feels like giving money away. Seeing tomorrow’s plan tonight shrinks that gap.',
+    scienceTag: 'impulse_spending' },
+  { themes: ['dopamine', 'habits'],
+    headline: 'Boredom is a dopamine invoice',
+    body: 'ADHD brains run lower baseline dopamine, so boredom isn’t laziness — it’s a chemical shortfall the brain tries to fix (hello, impulse purchases). Novelty is the legitimate refill.',
+    scienceTag: 'salutogenesis' },
+];
+
+// Small deterministic hash — keeps fact choice stable for a given user+date so
+// job re-runs are idempotent (revealExists guards anyway; this is belt+braces).
+function hashSeed(str) {
+  let h = 0;
+  for (let i = 0; i < str.length; i++) h = ((h << 5) - h + str.charCodeAt(i)) | 0;
+  return Math.abs(h);
+}
+
+// ~1 in 4 days is a deliberate fun-fact day even when personal data exists —
+// the type variance is what keeps the reveal from becoming predictable.
+function isFunFactDay(userId, localDate) {
+  return hashSeed(`${userId}:${localDate}`) % 4 === 0;
+}
+
+/**
+ * Pick a fun fact for user+date. When the user's adhd_profile names a struggle
+ * or interest area that matches a fact theme, prefer those facts; otherwise
+ * rotate through the whole bank. Never returns null.
+ */
+function pickFunFact(userId, localDate, adhdProfile) {
+  let pool = FUN_FACTS;
+  const profileText = JSON.stringify(adhdProfile || {}).toLowerCase();
+  const preferred = FUN_FACTS.filter(f => f.themes.some(t => profileText.includes(t)));
+  if (preferred.length >= 2) pool = preferred; // enough variety to rotate within
+  const pick = pool[hashSeed(`fact:${userId}:${localDate}`) % pool.length];
+  return { ...pick, revealType: 'fun_fact' };
 }
 
 // ── Main ──────────────────────────────────────────────────────────────────────
@@ -303,7 +398,8 @@ async function run() {
 
   try {
     const { rows: users } = await pool.query(
-      `SELECT u.id, COALESCE(NULLIF(u.timezone, ''), 'America/New_York') AS timezone
+      `SELECT u.id, COALESCE(NULLIF(u.timezone, ''), 'America/New_York') AS timezone,
+              u.adhd_profile
        FROM users u
        WHERE u.is_qa_user IS NOT TRUE
          AND (
@@ -316,29 +412,39 @@ async function run() {
 
     console.log(`[daily-reveal] candidates=${users.length}`);
 
-    let ai = 0, fallback = 0, skipped = 0, empty = 0;
+    let ai = 0, fallback = 0, funFacts = 0, skipped = 0;
     for (const user of users) {
       try {
         const localDate = getUserLocalDate(user.timezone);
         if (await revealExists(pool, user.id, localDate)) { skipped++; continue; }
 
-        const data = await fetchUserWeek(pool, user.id, sinceDate);
-
         let reveal = null;
-        if (process.env.ANTHROPIC_API_KEY) {
-          try {
-            reveal = await generateAiReveal(summariseForPrompt(data));
-          } catch (aiErr) {
-            console.warn(`[daily-reveal] AI failed user=${user.id}:`, aiErr.message, '— using fallback');
+
+        // ~1 in 4 days is a deliberate fun-fact day — type variance keeps the
+        // unwrap unpredictable. Other days try personal insight first.
+        if (!isFunFactDay(user.id, localDate)) {
+          const data = await fetchUserWeek(pool, user.id, sinceDate);
+
+          if (process.env.ANTHROPIC_API_KEY) {
+            try {
+              reveal = await generateAiReveal(summariseForPrompt(data));
+            } catch (aiErr) {
+              console.warn(`[daily-reveal] AI failed user=${user.id}:`, aiErr.message, '— using fallback');
+            }
+          }
+
+          if (reveal) { ai++; } else {
+            reveal = buildFallbackReveal(data);
+            if (reveal) fallback++;
           }
         }
 
-        if (reveal) { ai++; } else {
-          reveal = buildFallbackReveal(data);
-          if (reveal) fallback++;
+        // Fun-fact day, or no personal reveal available (e.g. brand-new user):
+        // a fact means every user wakes up to something worth opening.
+        if (!reveal) {
+          reveal = pickFunFact(user.id, localDate, user.adhd_profile);
+          funFacts++;
         }
-
-        if (!reveal) { empty++; continue; }
 
         await upsertReveal(pool, {
           userId: user.id,
@@ -353,7 +459,7 @@ async function run() {
       }
     }
 
-    console.log(`[daily-reveal] Done. ai=${ai} fallback=${fallback} skipped=${skipped} no_data=${empty} total=${users.length}`);
+    console.log(`[daily-reveal] Done. ai=${ai} fallback=${fallback} fun_facts=${funFacts} skipped=${skipped} total=${users.length}`);
   } catch (err) {
     console.error('[daily-reveal] Fatal:', err.message);
     process.exitCode = 1;
@@ -363,5 +469,8 @@ async function run() {
 }
 
 // Export pure functions for tests; only run when invoked as a script.
-module.exports = { buildFallbackReveal, parseRevealJson, summariseForPrompt, SCIENCE_TAGS };
+module.exports = {
+  buildFallbackReveal, parseRevealJson, summariseForPrompt,
+  pickFunFact, isFunFactDay, FUN_FACTS, SCIENCE_TAGS,
+};
 if (require.main === module) run();
