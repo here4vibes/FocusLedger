@@ -8,10 +8,18 @@
  */
 'use strict';
 
-require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
+// dotenv is not an installed dependency — requiring it crashed the job with
+// MODULE_NOT_FOUND on every run. Render injects env vars directly, matching
+// every other job in this folder.
 const { Pool } = require('pg');
 
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.DATABASE_URL?.includes('localhost') ? false : { rejectUnauthorized: false },
+  max: 3,
+  connectionTimeoutMillis: 10000,
+  statement_timeout: 20000,
+});
 
 const {
   getWeeklySpendingStats,

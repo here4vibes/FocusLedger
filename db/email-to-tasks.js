@@ -4,9 +4,11 @@ const MAX_LINKED_EMAILS = 5;
 
 async function findUserByEmail(pool, fromEmail) {
   const { rows } = await pool.query(
-    `SELECT u.id, u.admin_pro_override, u.pro_granted_until, u.plan, u.sub_status
+    `SELECT u.id, u.admin_pro_override, u.pro_granted_until,
+            s.plan AS plan, s.status AS sub_status
      FROM linked_emails le
      JOIN users u ON u.id = le.user_id
+     LEFT JOIN app_subscription s ON s.user_id = u.id AND s.status = 'active'
      WHERE le.email = $1 AND le.verified = true
      LIMIT 1`,
     [fromEmail.toLowerCase().trim()]

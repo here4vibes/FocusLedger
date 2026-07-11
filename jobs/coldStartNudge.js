@@ -10,7 +10,8 @@
  */
 'use strict';
 
-require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
+// dotenv is not an installed dependency — requiring it crashes the job with
+// MODULE_NOT_FOUND. Render injects env vars directly.
 const { Pool } = require('pg');
 const { fetchUserTimezone, getUserLocalDate } = require('../lib/timezone');
 const {

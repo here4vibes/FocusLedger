@@ -63,8 +63,12 @@ async function getProUsersWithPrefs(pool) {
             COALESCE(p.follow_through_hour, 9) AS follow_through_hour
      FROM users u
      LEFT JOIN user_followup_prefs p ON p.user_id = u.id
-     WHERE u.plan IN ('pro','autopilot') OR u.admin_pro_override = true
-       OR (u.pro_granted_until IS NOT NULL AND u.pro_granted_until > NOW())`
+     WHERE u.admin_pro_override = true
+       OR (u.pro_granted_until IS NOT NULL AND u.pro_granted_until > NOW())
+       OR EXISTS (
+         SELECT 1 FROM app_subscription s
+         WHERE s.user_id = u.id AND s.status = 'active' AND s.plan IN ('pro','autopilot')
+       )`
   );
   return rows;
 }
