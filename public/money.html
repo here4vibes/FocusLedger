@@ -1522,9 +1522,13 @@ async function checkUntriaged() {
     if (!r.success) return;
     untriagedList = r.expenses || [];
     const count = untriagedList.length;
-    if (count === 0) return;
-
     const banner = document.getElementById('triageBanner');
+    if (count === 0) {
+      // Finishing the last batch must HIDE the banner — the early return here
+      // used to leave a stale badge up forever after the final review.
+      banner.classList.remove('visible');
+      return;
+    }
     document.getElementById('triageBadge').textContent = count;
     document.getElementById('triageDesc').textContent =
       count === 1

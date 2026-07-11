@@ -346,9 +346,13 @@ async function recategorizeTransaction(pool, plaidTxId, userId, categorySlug) {
 
 // Get Plaid items with accounts for a user (for Account Summary card)
 async function getPlaidItemsWithAccounts(pool, userId) {
-  // Avoid GROUP BY pi.id (fails with 42803 if id lacks PK constraint) — two queries + JS merge
+  // Avoid GROUP BY pi.id (fails with 42803 if id lacks PK constraint) — two queries + JS merge.
+  // Dead connections excluded: the Account Summary card picks its "primary"
+  // account from THIS list and then looks the balance up in /api/plaid/balances
+  // (which filters is_active) — a dead item here means the account_id lookup
+  // misses and the card renders a blank balance.
   const { rows: items } = await pool.query(
-    'SELECT * FROM plaid_items WHERE user_id = $1 ORDER BY created_at DESC',
+    'SELECT * FROM plaid_items WHERE user_id = $1 AND is_active IS DISTINCT FROM false ORDER BY created_at DESC',
     [userId]
   );
   if (!items.length) return [];
@@ -376,8 +380,22 @@ async function getPlaidItemsWithAccounts(pool, userId) {
     'SELECT * FROM plaid_accounts WHERE plaid_item_id = ANY($1)',
     [items.map(i => i.id)]
   );
+  // Repeated reconnects leave several rows for the same physical account (new
+  // account_id per relink). Keep the freshest per (name, mask) — must match the
+  // dedup in /api/plaid/balances or the frontend's account_id join misses.
   const accByItem = {};
-  for (const a of accounts) (accByItem[a.plaid_item_id] = accByItem[a.plaid_item_id] || []).push(a);
+  for (const a of accounts) {
+    const list = (accByItem[a.plaid_item_id] = accByItem[a.plaid_item_id] || []);
+    const key = `${a.name}|${a.mask}`;
+    const idx = list.findIndex(x => `${x.name}|${x.mask}` === key);
+    if (idx >= 0) {
+      const prevT = list[idx].balance_updated_at ? new Date(list[idx].balance_updated_at).getTime() : 0;
+      const curT = a.balance_updated_at ? new Date(a.balance_updated_at).getTime() : 0;
+      if (curT > prevT) list[idx] = a;
+    } else {
+      list.push(a);
+    }
+  }
   return items.map(item => ({ ...item, plaid_accounts: accByItem[item.id] || [] }));
 }
 
