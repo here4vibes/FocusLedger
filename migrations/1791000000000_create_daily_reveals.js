@@ -6,6 +6,11 @@
  * hidden behind the open (curiosity gap → variable reward). The nightly job
  * stages it; the home page renders it sealed; the morning push teases its
  * headline. One row per user per local date.
+ *
+ * No FK to users(id): the production users table predates migrations and has
+ * no PK/unique on id, so PostgreSQL rejects any REFERENCES users(id)
+ * (SQLSTATE 42830). All access filters by user_id at the app layer; orphan
+ * rows on account deletion are acceptable for this table.
  */
 module.exports = {
   name: 'create_daily_reveals',
@@ -14,7 +19,7 @@ module.exports = {
     await client.query(`
       CREATE TABLE IF NOT EXISTS daily_reveals (
         id           SERIAL PRIMARY KEY,
-        user_id      INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        user_id      INTEGER NOT NULL,
         reveal_date  DATE NOT NULL,
         headline     TEXT NOT NULL,
         body         TEXT NOT NULL,
