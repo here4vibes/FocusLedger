@@ -811,25 +811,39 @@ module.exports = function(pool) {
       const userId = req.user.id;
       const plaid = getPlaidClient();
 
-      // Always load DB accounts (needed for fallback and account_id → name mapping)
+      // Always load DB accounts (needed for fallback and account_id → name mapping).
+      // Dead connections (is_active = false) are excluded — rendering a graveyard
+      // of disconnected banks with NULL balances is what made the card look empty.
       const { rows: dbAccounts } = await pool.query(
         `SELECT pa.account_id, pa.name, pa.official_name, pa.type, pa.subtype, pa.mask,
                 pa.current_balance, pa.available_balance, pa.balance_updated_at,
                 pi.id AS item_id, pi.institution_name
          FROM plaid_accounts pa
          JOIN plaid_items pi ON pa.plaid_item_id = pi.id
-         WHERE pa.user_id = $1
+         WHERE pa.user_id = $1 AND pi.is_active IS DISTINCT FROM false
          ORDER BY pi.created_at DESC`,
         [userId]
       );
 
       if (!dbAccounts.length) return res.json({ success: true, items: [] });
 
-      // Group by item for the response shape the frontend expects
+      // Group by item for the response shape the frontend expects. Repeated
+      // reconnects leave several rows for the SAME physical account (new
+      // account_id each relink) — dedupe per item by (name, mask), keeping the
+      // row with the freshest balance so stale copies never mask a live one.
       const byItem = {};
+      const bestByKey = {};
       for (const a of dbAccounts) {
+        const key = `${a.item_id}|${a.name}|${a.mask}`;
+        const prev = bestByKey[key];
+        if (prev) {
+          const prevTime = prev.balance_updated_at ? new Date(prev.balance_updated_at).getTime() : 0;
+          const curTime = a.balance_updated_at ? new Date(a.balance_updated_at).getTime() : 0;
+          if (curTime <= prevTime) continue; // keep the fresher row
+          byItem[a.item_id].accounts.splice(byItem[a.item_id].accounts.indexOf(prev.rendered), 1);
+        }
         if (!byItem[a.item_id]) byItem[a.item_id] = { item_id: a.item_id, institution: a.institution_name, accounts: [] };
-        byItem[a.item_id].accounts.push({
+        const rendered = {
           account_id: a.account_id, name: a.name, official_name: a.official_name,
           type: a.type, subtype: a.subtype, mask: a.mask,
           balances: {
@@ -837,16 +851,27 @@ module.exports = function(pool) {
             available: a.available_balance != null ? parseFloat(a.available_balance) : null,
           },
           _from_cache: true,
-        });
+        };
+        byItem[a.item_id].accounts.push(rendered);
+        bestByKey[key] = { balance_updated_at: a.balance_updated_at, rendered };
       }
 
       // Try live Plaid call and overwrite cache entries that succeed
       if (plaid) {
-        const { rows: items } = await pool.query(
+        const { rows: allItems } = await pool.query(
           'SELECT * FROM plaid_items WHERE user_id = $1 ORDER BY created_at DESC', [userId]
         );
+        const items = allItems.filter(i => i.is_active !== false);
         for (const item of items) {
-          const accessToken = decryptPlaidToken(item.access_token);
+          // decryptPlaidToken can THROW on legacy/corrupt tokens — one bad old
+          // item must not 500 the entire balances endpoint.
+          let accessToken = null;
+          try {
+            accessToken = decryptPlaidToken(item.access_token);
+          } catch (e) {
+            console.warn('[Plaid] balances: token decrypt failed for item', item.id, '(skipping):', e.message);
+            continue;
+          }
           if (!accessToken) continue;
           // balance/get is restricted for some OAuth institutions (Amex,
           // Capital One): they 400 without min_last_updated_datetime, or
