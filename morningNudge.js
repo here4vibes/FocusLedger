@@ -94,9 +94,28 @@ async function sendMorningNudges(pool) {
 
         // Always send the morning prompt — even if no tasks yet.
         // The nudge itself is the prompt to plan.
-        const notifTitle = 'Good morning \u2600\uFE0F';
-        const notifBody  = "What\u2019s on tap for today?";
-        const notifUrl   = '/home';
+        let notifTitle = 'Good morning \u2600\uFE0F';
+        let notifBody  = "What\u2019s on tap for today?";
+        let notifUrl   = '/home';
+
+        // Curiosity-gap upgrade: if a Daily Reveal is staged for today, tease
+        // its headline instead \u2014 "Buddy noticed something" out-pulls a generic
+        // prompt. Guarded separately: daily_reveals may not exist yet on a
+        // fresh deploy (cron images can start before the web service migrates),
+        // and the default copy must survive that.
+        try {
+          const { rows: rv } = await pool.query(
+            'SELECT headline FROM daily_reveals WHERE user_id = $1 AND reveal_date = $2 AND viewed_at IS NULL LIMIT 1',
+            [user.id, localDate]
+          );
+          if (rv.length > 0 && rv[0].headline) {
+            notifTitle = 'Buddy found something \uD83D\uDC40';
+            notifBody  = rv[0].headline;
+            notifUrl   = '/app';
+          }
+        } catch (revealErr) {
+          console.warn('[MorningNudge] reveal lookup failed (using default copy):', revealErr.message);
+        }
 
         let sentCount = 0;
 
