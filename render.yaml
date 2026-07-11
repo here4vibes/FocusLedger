@@ -1,14 +1,10 @@
 services:
   # ── Web service ──────────────────────────────────────────────────────────────
-  - type: web
-    runtime: node
-    name: app
-    buildCommand: npm install && npm test
-    startCommand: npm start
-    healthCheckPath: /health
-    envVars:
-      - key: NODE_ENV
-        value: production
+  # NOT declared here on purpose. The production web service predates this file
+  # and is managed directly in the Render dashboard (settings: buildCommand
+  # `npm install && npm test`, startCommand `npm start`, health check /health).
+  # Declaring it here would make a Blueprint sync create a DUPLICATE web
+  # service next to the real one. This file manages cron jobs only.
 
   # ── Cron jobs ─────────────────────────────────────────────────────────────────
   # Every cron declares `envVars: fromGroup: focusledger` — the shared Env Group
