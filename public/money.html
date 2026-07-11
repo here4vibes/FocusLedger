@@ -646,6 +646,7 @@ let triageIndex = 0;
 let triageCatSelected = null;
 let nudgeConfig = { delayThreshold: 75, reflectionMin: 25 };
 let swipePlanned = 0, swipeImpulse = 0, swipeImpulseAmount = 0;
+let swipeFailed = 0, lastTriageError = '';
 let delayCountdownInterval = null;
 let delayRemainingSeconds = 0;
 let pendingExpenseData = null;
@@ -1684,6 +1685,7 @@ function openTriageModal() {
   triageIndex = 0;
   triageCatSelected = null;
   swipePlanned = 0; swipeImpulse = 0; swipeImpulseAmount = 0;
+  swipeFailed = 0; lastTriageError = '';
   document.querySelector('.btn-skip-all').style.display = '';
   document.getElementById('triageModal').classList.add('open');
   renderTriageCard();
@@ -1710,14 +1712,20 @@ function renderTriageCard() {
   document.getElementById('progressText').textContent = `${done} / ${total}`;
 
   if (remaining.length === 0) {
+    const esc = s => String(s).replace(/[<>&"]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
     const impulseFooter = swipeImpulse > 0
       ? `<div class="triage-complete-footer"><strong style="color:var(--impulse)">$${swipeImpulseAmount.toFixed(2)}</strong> tagged as impulse — awareness is the first step.</div>`
       : `<div class="triage-complete-footer">Zero impulse spend today. That's a win. 🎯</div>`;
+    // Honest completion: never show a clean ✅ over failed saves.
+    const allFailed = swipeFailed > 0 && swipeFailed >= total;
+    const failWarn = swipeFailed > 0
+      ? `<div class="triage-complete-footer" style="color:#E05252">⚠️ ${swipeFailed} of ${total} didn't save (${esc(lastTriageError)}). They'll reappear so you can retry.</div>`
+      : '';
     document.getElementById('triageCardContainer').innerHTML = `
       <div class="triage-complete">
-        <div class="triage-complete-icon">✅</div>
-        <div class="triage-complete-title">Check-in complete</div>
-        <div class="triage-complete-sub">Here's how today looked:</div>
+        <div class="triage-complete-icon">${allFailed ? '⚠️' : '✅'}</div>
+        <div class="triage-complete-title">${allFailed ? "That didn't work" : 'Check-in complete'}</div>
+        <div class="triage-complete-sub">${allFailed ? 'None of your answers saved:' : "Here's how today looked:"}</div>
         <div class="triage-complete-stats">
           <div class="triage-complete-stat">
             <div class="triage-complete-val planned">${swipePlanned}</div>
@@ -1728,20 +1736,27 @@ function renderTriageCard() {
             <div class="triage-complete-lbl">Impulse</div>
           </div>
         </div>
-        ${impulseFooter}
+        ${failWarn || impulseFooter}
       </div>`;
     document.querySelector('.btn-skip-all').style.display = 'none';
     localStorage.setItem('fl_evening_swipe_done', 'true');
-    // Peak-end: let the summary + "awareness is the first step" line actually land
-    // before auto-dismissing — 3s was too quick to read the close.
-    setTimeout(closeTriageModal, 4500);
+    // Peak-end: let the summary line land before auto-dismissing — and leave
+    // an error on screen much longer so it can be read (and screenshotted).
+    setTimeout(closeTriageModal, swipeFailed > 0 ? 12000 : 4500);
     return;
   }
 
   const showBatch = total > 5 && done === 0;
-  document.getElementById('triageModalSubtitle').textContent = showBatch
-    ? `You have ${total} transactions. Let's check the top ones by amount.`
-    : `Takes 30 seconds — impulse vs planned?`;
+  const subEl = document.getElementById('triageModalSubtitle');
+  if (lastTriageError) {
+    subEl.textContent = `⚠️ Last one didn't save: ${lastTriageError}`;
+    subEl.style.color = '#E05252';
+  } else {
+    subEl.textContent = showBatch
+      ? `You have ${total} transactions. Let's check the top ones by amount.`
+      : `Takes 30 seconds — impulse vs planned?`;
+    subEl.style.color = '';
+  }
 
   const exp = remaining[0];
   triageCatSelected = guessSlugFromCategory(exp.category_name);
@@ -1803,16 +1818,25 @@ function selectTriageCat(slug) {
 async function triageExpense(expenseId, isImpulse, amount) {
   if (isImpulse) { swipeImpulse++; swipeImpulseAmount += (amount || 0); }
   else swipePlanned++;
+  let err = null;
   try {
     const r = await api(`/api/money/expenses/${expenseId}/triage`, {
       method: 'PATCH',
       body: JSON.stringify({ is_impulse: isImpulse, category: triageCatSelected }),
     });
-    if (!r || !r.success) {
-      console.error('[triage] PATCH failed expense', expenseId, r?.message || '');
-    }
+    if (!r || !r.success) err = (r && r.message) || 'server rejected the save';
   } catch (e) {
-    console.error('[triage] network error expense', expenseId, ':', e.message);
+    err = 'network error — ' + e.message;
+  }
+  if (err) {
+    // Surface the failure to the USER, not just the console — a silent failure
+    // here is exactly how "my swipes vanished" went undiagnosed for a week.
+    swipeFailed++;
+    lastTriageError = err;
+    console.error('[triage] save failed expense', expenseId, ':', err);
+    // Roll back the optimistic tally so the completion summary stays honest.
+    if (isImpulse) { swipeImpulse--; swipeImpulseAmount -= (amount || 0); }
+    else swipePlanned--;
   }
   triageIndex++;
   renderTriageCard();

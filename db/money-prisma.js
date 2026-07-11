@@ -397,7 +397,8 @@ async function upsertPlaidItem(pool, userId, encryptedAccessToken, itemId, insti
          access_token     = EXCLUDED.access_token,
          item_id          = EXCLUDED.item_id,
          institution_name = COALESCE(EXCLUDED.institution_name, plaid_items.institution_name),
-         cursor           = NULL
+         cursor           = NULL,
+         is_active        = true
        RETURNING *`,
       [userId, encryptedAccessToken, itemId, institutionName || 'Unknown Bank', institutionId]
     );
