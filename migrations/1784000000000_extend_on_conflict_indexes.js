@@ -188,14 +188,20 @@ module.exports = {
   name: 'extend_on_conflict_indexes',
 
   up: async (client) => {
+    // SAVEPOINT per index — a plain try/catch inside the runner's single
+    // transaction lets one failure abort every statement after it (see the
+    // matching fix in ensure_all_on_conflict_indexes).
     for (const idx of indexes) {
+      await client.query('SAVEPOINT idx_sp');
       try {
         if (idx.dedup) {
           await client.query(idx.dedup);
         }
         await client.query(idx.ddl);
+        await client.query('RELEASE SAVEPOINT idx_sp');
         console.log(`[migration] created index: ${idx.name}`);
       } catch (e) {
+        await client.query('ROLLBACK TO SAVEPOINT idx_sp');
         console.warn(`[migration] ${idx.name} skipped: ${e.message}`);
       }
     }
