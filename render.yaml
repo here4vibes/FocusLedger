@@ -1,20 +1,17 @@
 services:
   # ── Web service ──────────────────────────────────────────────────────────────
-  - type: web
-    runtime: node
-    name: app
-    buildCommand: npm install && npm test
-    startCommand: npm start
-    healthCheckPath: /health
-    envVars:
-      - key: NODE_ENV
-        value: production
+  # NOT declared here on purpose. The production web service predates this file
+  # and is managed directly in the Render dashboard (settings: buildCommand
+  # `npm install && npm test`, startCommand `npm start`, health check /health).
+  # Declaring it here would make a Blueprint sync create a DUPLICATE web
+  # service next to the real one. This file manages cron jobs only.
 
   # ── Cron jobs ─────────────────────────────────────────────────────────────────
-  # All cron jobs need the same env vars as the web service (DATABASE_URL,
-  # RESEND_API_KEY, VAPID keys, PLAID keys, ENCRYPTION_KEY, APNS keys, etc.)
-  # Set these via an Env Group in the Render dashboard and attach to each service,
-  # or copy them individually from the web service's Environment tab.
+  # Every cron declares `envVars: fromGroup: focusledger` — the shared Env Group
+  # (DATABASE_URL, RESEND_API_KEY, VAPID/PLAID/APNS keys, ENCRYPTION_KEY, etc.).
+  # With Blueprint sync this attaches automatically; on manually-created services
+  # (this account's current state) link the "focusledger" group once in the
+  # dashboard: service → Environment → Link environment group.
 
   - type: cron
     name: morning-nudge
@@ -22,6 +19,8 @@ services:
     schedule: "*/5 * * * *"
     buildCommand: npm install
     startCommand: node jobs/morning-nudge.js
+    envVars:
+      - fromGroup: focusledger
 
   - type: cron
     name: evening-nudge
@@ -29,6 +28,8 @@ services:
     schedule: "*/5 * * * *"
     buildCommand: npm install
     startCommand: node jobs/evening-nudge.js
+    envVars:
+      - fromGroup: focusledger
 
   - type: cron
     name: task-deadline-nudge
@@ -36,6 +37,8 @@ services:
     schedule: "*/15 * * * *"
     buildCommand: npm install
     startCommand: node jobs/task-deadline-nudge.js
+    envVars:
+      - fromGroup: focusledger
 
   - type: cron
     name: routine-nudge-check
@@ -43,6 +46,8 @@ services:
     schedule: "*/15 * * * *"
     buildCommand: npm install
     startCommand: node jobs/routineNudgeCheck.js
+    envVars:
+      - fromGroup: focusledger
 
   - type: cron
     name: movement-break-check
@@ -50,6 +55,8 @@ services:
     schedule: "*/15 * * * *"
     buildCommand: npm install
     startCommand: node jobs/movementBreakCheck.js
+    envVars:
+      - fromGroup: focusledger
 
   - type: cron
     name: impulse-spending-check
@@ -57,6 +64,8 @@ services:
     schedule: "*/15 * * * *"
     buildCommand: npm install
     startCommand: node jobs/impulseSpendingCheck.js
+    envVars:
+      - fromGroup: focusledger
 
   - type: cron
     name: followup-email-check
@@ -64,6 +73,8 @@ services:
     schedule: "*/15 * * * *"
     buildCommand: npm install
     startCommand: node jobs/followupEmailCheck.js
+    envVars:
+      - fromGroup: focusledger
 
   - type: cron
     name: email-crons
@@ -71,6 +82,8 @@ services:
     schedule: "*/10 * * * *"
     buildCommand: npm install
     startCommand: node jobs/email-crons.js
+    envVars:
+      - fromGroup: focusledger
 
   - type: cron
     name: rss-sync
@@ -78,6 +91,8 @@ services:
     schedule: "*/20 * * * *"
     buildCommand: npm install
     startCommand: node jobs/rss-sync.js
+    envVars:
+      - fromGroup: focusledger
 
   - type: cron
     name: buddy-engagement
@@ -85,6 +100,8 @@ services:
     schedule: "0 * * * *"
     buildCommand: npm install
     startCommand: node jobs/buddy-engagement.js
+    envVars:
+      - fromGroup: focusledger
 
   - type: cron
     name: plaid-daily-sync
@@ -92,6 +109,8 @@ services:
     schedule: "0 6 * * *"
     buildCommand: npm install
     startCommand: node jobs/plaid-sync.js
+    envVars:
+      - fromGroup: focusledger
 
   - type: cron
     name: evening-checkin-sender
@@ -99,6 +118,8 @@ services:
     schedule: "0 20 * * *"
     buildCommand: npm install
     startCommand: node jobs/evening-checkin.js
+    envVars:
+      - fromGroup: focusledger
 
   - type: cron
     name: cold-start-nudge
@@ -106,6 +127,8 @@ services:
     schedule: "0 9 * * *"
     buildCommand: npm install
     startCommand: node jobs/coldStartNudge.js
+    envVars:
+      - fromGroup: focusledger
 
   - type: cron
     name: stash-purge
@@ -113,6 +136,8 @@ services:
     schedule: "0 2 * * *"
     buildCommand: npm install
     startCommand: node jobs/stash-purge.js
+    envVars:
+      - fromGroup: focusledger
 
   - type: cron
     name: pattern-detection
@@ -120,6 +145,8 @@ services:
     schedule: "0 3 * * 0"
     buildCommand: npm install
     startCommand: node jobs/patternDetectionJob.js
+    envVars:
+      - fromGroup: focusledger
 
   - type: cron
     name: cross-domain-insights
@@ -127,6 +154,8 @@ services:
     schedule: "0 2 * * *"
     buildCommand: npm install
     startCommand: node jobs/crossDomainInsightsJob.js
+    envVars:
+      - fromGroup: focusledger
 
   # 09:00 UTC = pre-dawn across US timezones — the reveal is staged before the
   # user wakes, and after cross-domain-insights (02:00) + pattern-detection.
@@ -136,3 +165,5 @@ services:
     schedule: "0 9 * * *"
     buildCommand: npm install
     startCommand: node jobs/dailyRevealJob.js
+    envVars:
+      - fromGroup: focusledger
