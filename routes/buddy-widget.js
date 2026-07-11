@@ -199,10 +199,11 @@ module.exports = function (pool) {
     try {
       const [taskResult, untriagedResult, checkinsResult, morningResult, routineResult, buddyResult] =
         await Promise.all([
-          // Incomplete task count (not done, not archived)
+          // Incomplete task count — column is is_completed (there is no
+          // "completed" or "archived" column; this query 500'd on every load)
           pool.query(
             `SELECT COUNT(*) as cnt FROM tasks
-             WHERE user_id = $1 AND completed = false AND archived = false
+             WHERE user_id = $1 AND is_completed = false
                AND (due_date IS NULL OR due_date >= CURRENT_DATE - INTERVAL '7 days')`,
             [userId]
           ),

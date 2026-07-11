@@ -848,27 +848,47 @@ module.exports = function(pool) {
         for (const item of items) {
           const accessToken = decryptPlaidToken(item.access_token);
           if (!accessToken) continue;
+          // balance/get is restricted for some OAuth institutions (Amex,
+          // Capital One): they 400 without min_last_updated_datetime, or
+          // reject the endpoint entirely. Fall back to accounts/get, which
+          // returns Plaid's own cached balances — still far fresher than our
+          // DB cache from the last sync.
+          let liveResp = null;
           try {
-            const resp = await plaid.accountsBalanceGet({ access_token: accessToken });
-            const liveAccounts = resp.data.accounts.map(a => ({
-              account_id: a.account_id, name: a.name, official_name: a.official_name,
-              type: a.type, subtype: a.subtype, mask: a.mask,
-              balances: { available: a.balances.available, current: a.balances.current,
-                          iso_currency_code: a.balances.iso_currency_code },
-            }));
-            byItem[item.id] = { item_id: item.id, institution: item.institution_name, accounts: liveAccounts };
-            // Persist fresh balances to DB
-            for (const a of resp.data.accounts) {
-              if (a.balances.current != null || a.balances.available != null) {
-                pool.query(
-                  `UPDATE plaid_accounts SET current_balance=$1, available_balance=$2, balance_updated_at=NOW()
-                   WHERE account_id=$3`,
-                  [a.balances.current ?? null, a.balances.available ?? null, a.account_id]
-                ).catch(e => console.warn('[plaid] balance cache update failed:', e.message));
-              }
-            }
+            liveResp = await plaid.accountsBalanceGet({
+              access_token: accessToken,
+              options: {
+                min_last_updated_datetime: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+              },
+            });
           } catch (e) {
-            console.warn('[Plaid] Live balance fetch failed for item', item.id, '(using cached):', e.message);
+            const code = e.response?.data?.error_code || e.message;
+            console.warn('[Plaid] balance/get failed for item', item.id, '| code:', code, '— trying accounts/get');
+            try {
+              liveResp = await plaid.accountsGet({ access_token: accessToken });
+            } catch (e2) {
+              const code2 = e2.response?.data?.error_code || e2.message;
+              console.warn('[Plaid] accounts/get fallback failed for item', item.id, '(using cached) | code:', code2);
+            }
+          }
+          if (!liveResp) continue;
+
+          const liveAccounts = liveResp.data.accounts.map(a => ({
+            account_id: a.account_id, name: a.name, official_name: a.official_name,
+            type: a.type, subtype: a.subtype, mask: a.mask,
+            balances: { available: a.balances.available, current: a.balances.current,
+                        iso_currency_code: a.balances.iso_currency_code },
+          }));
+          byItem[item.id] = { item_id: item.id, institution: item.institution_name, accounts: liveAccounts };
+          // Persist fresh balances to DB
+          for (const a of liveResp.data.accounts) {
+            if (a.balances.current != null || a.balances.available != null) {
+              pool.query(
+                `UPDATE plaid_accounts SET current_balance=$1, available_balance=$2, balance_updated_at=NOW()
+                 WHERE account_id=$3`,
+                [a.balances.current ?? null, a.balances.available ?? null, a.account_id]
+              ).catch(e => console.warn('[plaid] balance cache update failed:', e.message));
+            }
           }
         }
       }
