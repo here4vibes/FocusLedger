@@ -12,10 +12,12 @@ const config: CapacitorConfig = {
   server: {
     // Live server load — the app hits the real backend on every open.
     // Remove this block only if shipping a fully offline build (not planned).
-    url: 'https://focusledger.polsia.app',
+    // NOTE: was focusledger.polsia.app (pre-domain-move) — building against
+    // that would have shipped an app aimed at the wrong server.
+    url: 'https://focusledger.net',
     cleartext: false,
     allowNavigation: [
-      'focusledger.polsia.app',
+      'focusledger.net',
       '*.focusledger.net',
       // Google OAuth redirect domains
       'accounts.google.com',
