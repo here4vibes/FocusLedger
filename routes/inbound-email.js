@@ -238,6 +238,29 @@ module.exports = function(pool) {
 
       console.log(`[inbound-email] ✓ Stored inbound email from=${fromEmail} subject="${subject}" thread=${threadId}`);
 
+      // Opt-out detection: campaign footers promise "reply 'no more' and we'll
+      // never email you again" — this is the mechanism that keeps that promise.
+      // The reply still lands in the admin inbox above, so it stays visible.
+      try {
+        const { isOptOutMessage, suppressEmail } = require('../lib/emailSuppression');
+        if (fromEmail && isOptOutMessage(subject, bodyText)) {
+          await suppressEmail(pool, fromEmail, 'reply_opt_out', `subject="${subject}"`);
+          // One transactional confirmation (expected + polite; never repeated
+          // because the address is now suppressed for everything marketing)
+          const { sendEmail } = require('../lib/emailService');
+          sendEmail(pool, {
+            to: fromEmail,
+            subject: 'You’re unsubscribed',
+            html: '<div style="font-family:-apple-system,Segoe UI,Roboto,sans-serif;font-size:15px;color:#141416;line-height:1.6;padding:16px;"><p>Done — you won’t get any more emails from FocusLedger.</p><p style="color:#888;font-size:13px;">(Account-related emails like password resets still work if you ever need them.)</p></div>',
+            text: 'Done — you won\'t get any more emails from FocusLedger. (Account-related emails like password resets still work if you ever need them.)',
+            templateType: 'unsubscribe_confirmation',
+          }).catch(() => {});
+          console.log(`[inbound-email] opt-out honored for ${fromEmail}`);
+        }
+      } catch (optErr) {
+        console.error('[inbound-email] opt-out detection failed:', optErr.message, '| from:', fromEmail);
+      }
+
       // Fire-and-forget forward notification to Sean
       sendForwardNotification(resend, { fromName, fromEmail, subject, bodyText, bodyHtml });
 
