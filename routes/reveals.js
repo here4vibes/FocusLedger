@@ -38,6 +38,8 @@ module.exports = function (pool) {
           reveal_type: reveal.reveal_type,
           science_tag: reveal.science_tag,
           science_label: SCIENCE_LABELS[reveal.science_tag] || null,
+          source_label: reveal.source_label || null,
+          source_url: reveal.source_url || null,
           viewed: !!reveal.viewed_at,
         },
       });

@@ -389,6 +389,7 @@
       <div class="reveal-headline" id="revealHeadline"></div>
       <span class="reveal-tap">Tap to open</span>
       <div class="reveal-body" id="revealBody"></div>
+      <div class="reveal-science" id="revealSource"></div>
       <div class="reveal-science" id="revealScience"></div>
     </div>
   </div>
@@ -547,6 +548,20 @@
       var card = document.getElementById('revealCard');
       document.getElementById('revealHeadline').textContent = rv.headline;
       document.getElementById('revealBody').textContent = rv.body;
+      if (rv.source_url && rv.source_label) {
+        // textContent for the label (server-curated, but belt and braces),
+        // href only if it's a real http(s) URL
+        if (/^https?:\/\//.test(rv.source_url)) {
+          var srcEl = document.getElementById('revealSource');
+          var a = document.createElement('a');
+          a.href = rv.source_url;
+          a.target = '_blank';
+          a.rel = 'noopener noreferrer';
+          a.textContent = rv.source_label;
+          srcEl.appendChild(document.createTextNode('Source: '));
+          srcEl.appendChild(a);
+        }
+      }
       if (rv.science_label) {
         document.getElementById('revealScience').innerHTML =
           'Why this works: <a href="/science">' + rv.science_label + '</a>';

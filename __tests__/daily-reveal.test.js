@@ -16,6 +16,8 @@ const {
   revealSlotFor,
   buildInterestFallback,
   interestsLine,
+  INTEREST_KEYWORDS,
+  INTEREST_FACTS,
 } = require('../jobs/dailyRevealJob');
 
 const empty = { tasks: [], expenses: [], checkins: [], focus: [], streaks: [] };
@@ -245,16 +247,49 @@ describe('revealSlotFor', () => {
 });
 
 describe('buildInterestFallback', () => {
-  test('builds from real evidence, marks type interest', () => {
+  test('builds from real evidence, marks type interest, carries the curated source', () => {
     const r = buildInterestFallback({ tag: 'coffee', count: 5, evidence: ['Blue Bottle', 'Espresso beans'] });
     expect(r.revealType).toBe('interest');
     expect(r.headline).toContain('coffee');
     expect(r.body).toContain('"Blue Bottle"');
     expect(r.body).toContain('5');
+    expect(r.source.url).toMatch(/^https:\/\//);
+    expect(r.source.label.length).toBeGreaterThan(5);
   });
 
   test('null interest → null', () => {
     expect(buildInterestFallback(null)).toBeNull();
+  });
+});
+
+describe('source credibility — every external claim is cited', () => {
+  test('every fun fact carries a real https source', () => {
+    for (const f of FUN_FACTS) {
+      expect(f.source).toBeDefined();
+      expect(f.source.url).toMatch(/^https:\/\//);
+      expect(f.source.label.length).toBeGreaterThan(5);
+    }
+  });
+
+  test('every interest tag has a sourced fact (no tag can produce an unsourced claim)', () => {
+    for (const tag of Object.keys(INTEREST_KEYWORDS)) {
+      const f = INTEREST_FACTS[tag];
+      expect(f).toBeDefined();
+      expect(f.fact.length).toBeGreaterThan(30);
+      expect(f.source.url).toMatch(/^https:\/\//);
+    }
+  });
+
+  test('pickFunFact passes the source through', () => {
+    const r = pickFunFact(42, '2026-07-13', {});
+    expect(r.source.url).toMatch(/^https:\/\//);
+  });
+
+  test('sources are stable resolver/edu URLs, not homepage guesses', () => {
+    const all = [...FUN_FACTS.map(f => f.source.url), ...Object.values(INTEREST_FACTS).map(f => f.source.url)];
+    for (const url of all) {
+      expect(url).toMatch(/^https:\/\/(doi\.org|www\.additudemag\.com)\//);
+    }
   });
 });
 

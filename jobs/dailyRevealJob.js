@@ -58,19 +58,61 @@ BODY rules (the payoff — shown after the tap):
 
 science_tag: exactly one of ${JSON.stringify(SCIENCE_TAGS)} — the concept this discovery demonstrates.`;
 
-const INTEREST_PROMPT = `You are Buddy, an ADHD co-pilot inside FocusLedger. Tonight's Daily Reveal is an INTEREST reveal: a delightful, surprising discovery connected to something this user demonstrably loves (evidence from their own tasks and spending is provided).
+const INTEREST_PROMPT = `You are Buddy, an ADHD co-pilot inside FocusLedger. Tonight's Daily Reveal is an INTEREST reveal: a delightful discovery connected to something this user demonstrably loves (evidence from their own tasks and spending is provided).
+
+You are given ONE research-backed FACT (already sourced and verified — a citation link is attached by the system, not by you). Your job is to deliver THAT fact, personalized to this user's evidence.
 
 Return ONLY a JSON object, no other text:
 {"headline": "...", "body": "...", "science_tag": "..."}
 
-The reveal can be:
-- a genuinely surprising, TRUE fact about their interest domain, or
-- a connection between their interest and how brains/habits/money work, or
-- a connection between their interest and their own week.
-
 HEADLINE: curiosity gap, max 60 chars, no emoji, must not give the payoff away. Reference the interest obliquely ("The climbing thing goes deeper") not generically ("Your interest reveal").
-BODY: 1-3 short sentences, Buddy's voice — like a friend who shares your obsession. Accurate; never invent statistics. May end with a tiny nudge to enjoy the interest today.
+BODY: 1-3 short sentences, Buddy's voice — like a friend who shares your obsession. Deliver the provided fact and connect it to their own evidence. CRITICAL: do not add any statistic, study, or claim beyond the provided fact — the citation only covers what you were given. May end with a tiny nudge to enjoy the interest today.
 science_tag: one of ${JSON.stringify(SCIENCE_TAGS)} if one genuinely fits, otherwise "none".`;
+
+// One research-backed, SOURCED fact per interest tag. The AI personalizes the
+// delivery but may not add claims — the attached citation only covers these.
+const INTEREST_FACTS = {
+  fitness: {
+    fact: 'A single session of moderate exercise measurably improves executive function for up to two hours afterward.',
+    source: { label: 'Chang et al., Brain Research (2012)', url: 'https://doi.org/10.1016/j.brainres.2012.02.068' },
+  },
+  cooking: {
+    fact: 'People who cook dinner at home most nights consume significantly fewer calories, less sugar, and less fat overall — even when they are not trying to lose weight.',
+    source: { label: 'Wolfson & Bleich, Public Health Nutrition (2015)', url: 'https://doi.org/10.1017/S1368980014001943' },
+  },
+  gaming: {
+    fact: 'Action video game players show measurably better visual attention and faster target detection than non-players — and training non-players on action games produces the same gains.',
+    source: { label: 'Green & Bavelier, Nature (2003)', url: 'https://doi.org/10.1038/nature01647' },
+  },
+  music: {
+    fact: 'Musical training physically reshapes the brain — changing auditory and motor regions and strengthening the connections between them, at any age.',
+    source: { label: 'Herholz & Zatorre, Neuron (2012)', url: 'https://doi.org/10.1016/j.neuron.2012.10.011' },
+  },
+  outdoors: {
+    fact: 'A 90-minute walk in nature measurably reduces rumination and quiets the brain region associated with brooding self-focus, compared to the same walk in an urban setting.',
+    source: { label: 'Bratman et al., PNAS (2015)', url: 'https://doi.org/10.1073/pnas.1510459112' },
+  },
+  reading: {
+    fact: 'Reading literary fiction measurably improves theory of mind — the ability to read other people’s mental states — even after a single session.',
+    source: { label: 'Kidd & Castano, Science (2013)', url: 'https://doi.org/10.1126/science.1239918' },
+  },
+  pets: {
+    fact: 'Dog ownership is associated with a 24% lower risk of all-cause mortality across 3.8 million people studied — likely via activity, routine, and companionship.',
+    source: { label: 'Kramer et al., Circulation: CQO (2019)', url: 'https://doi.org/10.1161/CIRCOUTCOMES.119.005554' },
+  },
+  travel: {
+    fact: 'The happiness boost from a vacation peaks BEFORE the trip — anticipation of travel raises happiness for weeks, often more than the trip itself.',
+    source: { label: 'Nawijn et al., Applied Research in Quality of Life (2010)', url: 'https://doi.org/10.1007/s11482-009-9091-9' },
+  },
+  coffee: {
+    fact: 'Caffeine reliably improves sustained attention, vigilance, and reaction time — the effect is one of the most replicated findings in nutrition science.',
+    source: { label: 'McLellan et al., Neuroscience & Biobehavioral Reviews (2016)', url: 'https://doi.org/10.1016/j.neubiorev.2016.09.001' },
+  },
+  making: {
+    fact: 'Small everyday creative acts — crafting, making, building — predict higher flourishing and more positive emotion the NEXT day, in daily-diary research.',
+    source: { label: 'Conner et al., Journal of Positive Psychology (2016)', url: 'https://doi.org/10.1080/17439760.2016.1257049' },
+  },
+};
 
 // ── Interest detection ────────────────────────────────────────────────────────
 // Interests are gleaned ONLY from this wholesome whitelist — detection can
@@ -290,29 +332,37 @@ async function generateAiReveal(userContext) {
 }
 
 async function generateInterestReveal(interest, userContext) {
+  const curated = INTEREST_FACTS[interest.tag];
+  if (!curated) return null; // no sourced fact for this tag → caller falls back
   const { complete } = require('../lib/claude-client');
   const text = await complete({
     system: INTEREST_PROMPT,
     messages: [{
       role: 'user',
-      content: `Interest: ${interest.tag}\nEvidence from their own tasks/spending: ${interest.evidence.map(e => `"${e}"`).join(', ')} (${interest.count} signals over 90 days)\n\nTheir week, for optional context:\n${userContext}\n\nStage tonight's interest reveal as JSON.`,
+      content: `Interest: ${interest.tag}\nEvidence from their own tasks/spending: ${interest.evidence.map(e => `"${e}"`).join(', ')} (${interest.count} signals over 90 days)\n\nTHE FACT TO DELIVER (already sourced — do not add other claims):\n${curated.fact}\n\nTheir week, for optional personal connection:\n${userContext}\n\nStage tonight's interest reveal as JSON.`,
     }],
     model: 'claude-haiku-4-5-20251001',
     maxTokens: 300,
   });
   // science_tag "none" (or invalid) → no footer; interest reveals don't have
-  // to teach science every time.
-  return parseRevealJson(text, { defaultScienceTag: null, revealType: 'interest' });
+  // to teach science every time. Source is attached from the curated bank —
+  // NEVER from the model, which cannot be trusted to produce real URLs.
+  const parsed = parseRevealJson(text, { defaultScienceTag: null, revealType: 'interest' });
+  if (!parsed) return null;
+  return { ...parsed, source: curated.source };
 }
 
-// Deterministic interest fallback — real evidence, no invented facts.
+// Deterministic interest fallback — curated sourced fact + their own evidence.
 function buildInterestFallback(interest) {
   if (!interest) return null;
+  const curated = INTEREST_FACTS[interest.tag];
+  const factLine = curated ? ` And here's one for you: ${curated.fact}` : ' Today, park your hardest task right next to it.';
   return {
     headline: `The ${interest.tag} thing left a trail`,
-    body: `${interest.count} of your recent tasks and purchases orbit ${interest.tag} — ${interest.evidence.map(e => `"${e}"`).join(', ')}. Brains work better inside things they love: today, park your hardest task right next to it.`,
-    scienceTag: 'habit_formation',
+    body: `${interest.count} of your recent tasks and purchases orbit ${interest.tag} — ${interest.evidence.map(e => `"${e}"`).join(', ')}.${factLine}`,
+    scienceTag: curated ? null : 'habit_formation',
     revealType: 'interest',
+    source: curated ? curated.source : null,
   };
 }
 
@@ -423,51 +473,63 @@ const FUN_FACTS = [
   { themes: ['focus', 'brain'],
     headline: 'Your brain bills you for focus',
     body: 'Your brain is about 2% of your body weight but burns roughly 20% of your energy. Focus is literally expensive — that afternoon crash is a fuel gauge, not a character flaw.',
-    scienceTag: 'executive_function' },
+    scienceTag: 'executive_function',
+    source: { label: 'Raichle & Gusnard, PNAS (2002)', url: 'https://doi.org/10.1073/pnas.172399499' } },
   { themes: ['dopamine', 'brain'],
     headline: 'The dopamine hit isn’t where you think',
     body: 'Dopamine spikes at the *anticipation* of a reward, not the reward itself — which is why starting a task is harder than finishing one, and why this card was sealed until you tapped it.',
-    scienceTag: 'habit_formation' },
+    scienceTag: 'habit_formation',
+    source: { label: 'Schultz et al., Science (1997)', url: 'https://doi.org/10.1126/science.275.5306.1593' } },
   { themes: ['tasks', 'brain'],
     headline: 'Unfinished tasks are squatters',
     body: 'The Zeigarnik effect: unfinished tasks keep occupying working memory rent-free until you either finish them or write them down. That’s the entire science behind Brain Dump.',
-    scienceTag: 'executive_function' },
+    scienceTag: 'executive_function',
+    source: { label: 'Masicampo & Baumeister, JPSP (2011)', url: 'https://doi.org/10.1037/a0024192' } },
   { themes: ['focus', 'social'],
     headline: 'Why working next to someone works',
     body: 'Body doubling — just having another person present while you work — measurably improves task initiation for ADHD brains. Nobody fully knows why yet. It just works.',
-    scienceTag: 'accountability' },
+    scienceTag: 'accountability',
+    source: { label: 'ADDitude Magazine — Body Doubling', url: 'https://www.additudemag.com/body-doubling-adhd/' } },
   { themes: ['money'],
     headline: 'Your card is a painkiller',
     body: 'Paying with cash activates the same brain regions as physical pain — cards numb it. Behavioral economists call it the "pain of paying," and it’s why tap-to-pay feels like free money.',
-    scienceTag: 'impulse_spending' },
+    scienceTag: 'impulse_spending',
+    source: { label: 'Prelec & Loewenstein, Marketing Science (1998)', url: 'https://doi.org/10.1287/mksc.17.1.4' } },
   { themes: ['habits'],
     headline: 'The 21-day habit thing is a myth',
     body: 'The real median time to form a habit is 66 days — and missing a single day made no measurable difference in the research. One slip never broke anyone’s habit. Science says so.',
-    scienceTag: 'habit_formation' },
+    scienceTag: 'habit_formation',
+    source: { label: 'Lally et al., Eur. J. Social Psychology (2010)', url: 'https://doi.org/10.1002/ejsp.674' } },
   { themes: ['focus', 'movement'],
     headline: 'The cheapest focus drug is legal',
     body: 'A 20-minute walk produces a short-term focus boost comparable to a low stimulant dose for ADHD brains. It’s why Buddy nags you to stand up mid-focus-session.',
-    scienceTag: 'executive_function' },
+    scienceTag: 'executive_function',
+    source: { label: 'Chang et al., Brain Research (2012)', url: 'https://doi.org/10.1016/j.brainres.2012.02.068' } },
   { themes: ['sleep', 'brain'],
     headline: 'Your brain takes out the trash at night',
     body: 'During sleep, your brain physically flushes metabolic waste through the glymphatic system. Skimping on sleep means running today on yesterday’s unfiltered brain.',
-    scienceTag: 'executive_function' },
+    scienceTag: 'executive_function',
+    source: { label: 'Xie et al., Science (2013)', url: 'https://doi.org/10.1126/science.1241224' } },
   { themes: ['tasks', 'habits'],
     headline: 'A sentence that doubles follow-through',
     body: 'Saying "After I make coffee, I’ll start the report" — instead of "I’ll do it today" — roughly doubles completion rates. Implementation intentions turn vague plans into reflexes.',
-    scienceTag: 'habit_formation' },
+    scienceTag: 'habit_formation',
+    source: { label: 'Gollwitzer & Sheeran, Adv. Exp. Social Psychology (2006)', url: 'https://doi.org/10.1016/S0065-2601(06)38002-1' } },
   { themes: ['time', 'brain'],
     headline: 'ADHD time comes in exactly two sizes',
     body: 'Research describes ADHD time perception as binary: "now" and "not now." Deadlines feel fake until they’re emergencies — which is a clock problem, not a character problem.',
-    scienceTag: 'avoidance_loops' },
+    scienceTag: 'avoidance_loops',
+    source: { label: 'Barkley, Psychological Bulletin (1997)', url: 'https://doi.org/10.1037/0033-2909.121.1.65' } },
   { themes: ['money', 'brain'],
     headline: 'Future-you is a stranger (literally)',
     body: 'Brain scans show people process "future me" in the same region as *strangers* — which is why saving feels like giving money away. Seeing tomorrow’s plan tonight shrinks that gap.',
-    scienceTag: 'impulse_spending' },
+    scienceTag: 'impulse_spending',
+    source: { label: 'Ersner-Hershfield et al., SCAN (2009)', url: 'https://doi.org/10.1093/scan/nsn042' } },
   { themes: ['dopamine', 'habits'],
     headline: 'Boredom is a dopamine invoice',
     body: 'ADHD brains run lower baseline dopamine, so boredom isn’t laziness — it’s a chemical shortfall the brain tries to fix (hello, impulse purchases). Novelty is the legitimate refill.',
-    scienceTag: 'salutogenesis' },
+    scienceTag: 'salutogenesis',
+    source: { label: 'Volkow et al., JAMA (2009)', url: 'https://doi.org/10.1001/jama.2009.1308' } },
 ];
 
 // Small deterministic hash — keeps fact choice stable for a given user+date so
@@ -600,6 +662,8 @@ async function run() {
           body: reveal.body,
           scienceTag: reveal.scienceTag,
           revealType: reveal.revealType,
+          sourceLabel: reveal.source?.label || null,
+          sourceUrl: reveal.source?.url || null,
         });
       } catch (userErr) {
         console.error(`[daily-reveal] Error user=${user.id}:`, userErr.message);
@@ -619,6 +683,7 @@ async function run() {
 module.exports = {
   buildFallbackReveal, parseRevealJson, summariseForPrompt,
   pickFunFact, isFunFactDay, FUN_FACTS, SCIENCE_TAGS,
-  deriveInterests, revealSlotFor, buildInterestFallback, interestsLine, INTEREST_KEYWORDS,
+  deriveInterests, revealSlotFor, buildInterestFallback, interestsLine,
+  INTEREST_KEYWORDS, INTEREST_FACTS,
 };
 if (require.main === module) run();
