@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#011e5c">
+    <link rel="icon" type="image/svg+xml" href="/icons/fl-icon.svg">
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/fl-icon.png">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="light">
+    <title>Security — FocusLedger</title>
+    <meta name="description" content="How FocusLedger protects your financial data: Plaid bank connections (credentials never touch our servers), AES-256-GCM encryption at rest, Stripe hosted payments, and self-service data deletion.">
+    <link rel="canonical" href="https://focusledger.net/security">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --navy: #011e5c;
+            --gold: #f0b429;
+            --teal: #5BA4A4;
+            --cream: #FAF9F6;
+            --cream-dark: #F0EEE9;
+            --text-dark: #141416;
+            --text-muted: #6B6560;
+            --border: rgba(1,30,92,0.09);
+        }
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: var(--cream);
+            color: var(--text-dark);
+            line-height: 1.7;
+        }
+        .wrap { max-width: 720px; margin: 0 auto; padding: 2.5rem 1.5rem 5rem; }
+        .back {
+            display: inline-block; margin-bottom: 2rem; color: var(--navy);
+            text-decoration: none; font-weight: 600; font-size: 0.9rem;
+        }
+        .eyebrow {
+            font-size: 0.75rem; font-weight: 700; letter-spacing: 0.12em;
+            text-transform: uppercase; color: var(--gold); margin-bottom: 0.5rem;
+        }
+        h1 {
+            font-family: 'Space Grotesk', sans-serif; font-size: clamp(1.8rem, 5vw, 2.6rem);
+            color: var(--navy); line-height: 1.15; margin-bottom: 0.75rem;
+        }
+        .lede { font-size: 1.05rem; color: var(--text-muted); margin-bottom: 2.5rem; }
+        .card {
+            background: #fff; border: 1px solid var(--border); border-radius: 16px;
+            padding: 1.5rem 1.6rem; margin-bottom: 1.1rem;
+        }
+        .card h2 {
+            font-family: 'Space Grotesk', sans-serif; font-size: 1.1rem;
+            color: var(--navy); margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;
+        }
+        .card p { font-size: 0.95rem; margin-bottom: 0.6rem; }
+        .card p:last-child { margin-bottom: 0; }
+        .card code {
+            background: var(--cream-dark); padding: 0.1em 0.4em; border-radius: 5px;
+            font-size: 0.85em;
+        }
+        .fine {
+            font-size: 0.85rem; color: var(--text-muted); margin-top: 2rem;
+            border-top: 1px solid var(--border); padding-top: 1.25rem;
+        }
+        .fine a { color: var(--navy); }
+        @media (max-width: 600px) { .card { padding: 1.2rem 1.1rem; } }
+    </style>
+</head>
+<body>
+<div class="wrap">
+    <a href="/" class="back">← FocusLedger</a>
+
+    <div class="eyebrow">Security</div>
+    <h1>Your money data, treated like money.</h1>
+    <p class="lede">FocusLedger connects to your bank and knows your spending, so this page states exactly how that data is protected — specifically, not vaguely. Built by a CPA; audited like one.</p>
+
+    <div class="card">
+        <h2>🏦 We never see your bank credentials</h2>
+        <p>Bank connections run through <strong>Plaid</strong>, the same infrastructure used by Venmo and American Express. You log in on Plaid's screens — your bank username and password are <strong>never sent to, stored by, or visible to FocusLedger</strong>.</p>
+        <p>Our access is <strong>read-only</strong>: we can see transactions and balances to help you track them. We cannot move money, ever.</p>
+    </div>
+
+    <div class="card">
+        <h2>🔐 Encryption, at rest and in transit</h2>
+        <p>The access tokens Plaid gives us are encrypted at rest with <strong>AES-256-GCM</strong> — the same class of encryption banks use. Everything travels over TLS (HTTPS), enforced with strict transport security so connections can't be downgraded.</p>
+    </div>
+
+    <div class="card">
+        <h2>💳 We never see your card number</h2>
+        <p>Subscription payments run entirely through <strong>Stripe's hosted checkout</strong>. Your card details go directly to Stripe — they never pass through or get stored on FocusLedger's servers.</p>
+    </div>
+
+    <div class="card">
+        <h2>🔑 Passwords &amp; sign-in</h2>
+        <p>Passwords are hashed with <strong>PBKDF2-SHA512 at 100,000 iterations</strong> with a unique 32-byte salt per account — never stored in a recoverable form. Prefer not to have a password at all? Sign in with Google.</p>
+        <p>Password-reset and account-deletion links are single-use, stored only as SHA-256 hashes, and expire fast (1 hour and 24 hours respectively). Login endpoints are rate-limited against guessing attacks.</p>
+    </div>
+
+    <div class="card">
+        <h2>📊 Analytics that can't follow you</h2>
+        <p>Inside the app there are <strong>no third-party trackers</strong>. Our own analytics use an anonymous identifier that is re-scrambled every day (daily-salted hashing), which makes tracking any person across days mathematically impossible — even for us. No analytics cookies.</p>
+        <p>Honest footnote: our public marketing pages use a standard ad-conversion pixel. Your in-app life — tasks, money, check-ins — is never shared with ad platforms.</p>
+    </div>
+
+    <div class="card">
+        <h2>🚪 Your data, your exit</h2>
+        <p>Account deletion is <strong>self-service</strong> — no emails to write, no retention dark patterns. Request it in Settings, confirm via a single-use link, and your data is removed.</p>
+        <p>Unsubscribing from email is one reply ("no more") and it is honored automatically, immediately, and permanently.</p>
+    </div>
+
+    <div class="card">
+        <h2>🐛 Found a vulnerability?</h2>
+        <p>Tell us: <a href="mailto:hello@focusledger.net"><strong>hello@focusledger.net</strong></a>. Security reports go to the founder directly and get read same-day. We'll credit you (or keep you anonymous — your call) and tell you when it's fixed.</p>
+    </div>
+
+    <p class="fine">
+        This page describes current practice and is kept in sync with the codebase — when the implementation changes, this page changes in the same release. See also our <a href="/privacy">Privacy Policy</a> and <a href="/terms">Terms</a>. Questions? <a href="mailto:hello@focusledger.net">hello@focusledger.net</a>.
+    </p>
+</div>
+</body>
+</html>
