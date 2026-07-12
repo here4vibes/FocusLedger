@@ -157,6 +157,30 @@
             border-bottom-color: var(--orange);
         }
 
+        /* Grouped nav: pill sections above, contextual sub-tabs below */
+        .group-bar {
+            display: flex;
+            gap: 0.4rem;
+            margin-bottom: 0.9rem;
+            flex-wrap: wrap;
+        }
+        .group-btn {
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 700;
+            font-size: 0.85rem;
+            padding: 0.5rem 1.1rem;
+            border: 1.5px solid var(--cream-dark);
+            background: #fff;
+            border-radius: 999px;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: all 0.15s;
+            min-height: 40px;
+        }
+        .group-btn:hover { color: var(--navy); border-color: var(--navy); }
+        .group-btn.active { background: var(--navy); border-color: var(--navy); color: #fff; }
+        .tab-bar { flex-wrap: wrap; margin-bottom: 1.25rem; }
+
         /* GRID */
         .stats-grid {
             display: grid;
@@ -1116,18 +1140,14 @@
         <h1>Admin</h1>
     </div>
 
-    <div class="tab-bar">
-        <button class="tab-btn active" data-tab="stats" id="tab-stats">Stats</button>
-        <button class="tab-btn" data-tab="users" id="tab-users">Users</button>
-        <button class="tab-btn" data-tab="analytics" id="tab-analytics">Analytics</button>
-        <button class="tab-btn" data-tab="email-log" id="tab-email-log">Email Log</button>
-        <button class="tab-btn" data-tab="explorer" id="tab-explorer">Data Explorer</button>
-        <button class="tab-btn" data-tab="subscriptions" id="tab-subscriptions">Subscriptions</button>
-        <button class="tab-btn" data-tab="inbox" id="tab-inbox">Inbox <span id="inbox-unread-badge" style="display:none;background:var(--orange);color:#fff;font-size:0.65rem;font-weight:700;padding:1px 6px;border-radius:20px;margin-left:4px;vertical-align:middle;"></span></button>
-        <button class="tab-btn" data-tab="promo-codes" id="tab-promo-codes">Promo Codes</button>
-        <button class="tab-btn" data-tab="unconverted-leads" id="tab-unconverted-leads">Unconverted Leads</button>
-        <button class="tab-btn" data-tab="campaigns" id="tab-campaigns">Campaigns</button>
+    <div class="group-bar" id="group-bar">
+        <button class="group-btn active" data-group="overview">Overview</button>
+        <button class="group-btn" data-group="people">People</button>
+        <button class="group-btn" data-group="email">Email <span id="inbox-unread-badge" style="display:none;background:var(--orange);color:#fff;font-size:0.65rem;font-weight:700;padding:1px 6px;border-radius:20px;margin-left:4px;vertical-align:middle;"></span></button>
+        <button class="group-btn" data-group="growth">Growth</button>
+        <button class="group-btn" data-group="tools">Tools</button>
     </div>
+    <div class="tab-bar" id="sub-tab-bar" style="display:none;"></div>
 
     <!-- STATS PANEL -->
     <div id="panel-stats">
@@ -1404,8 +1424,42 @@
 
     var activeTab = 'stats';
 
+    // ── Grouped navigation ──────────────────────────────────────────────────
+    // Panels + loaders are unchanged; groups only organize which sub-tabs show.
+    var TAB_GROUPS = {
+        overview: { tabs: [['stats', 'Stats']] },
+        people:   { tabs: [['users', 'Users'], ['subscriptions', 'Subscriptions'], ['unconverted-leads', 'Leads']] },
+        email:    { tabs: [['inbox', 'Inbox'], ['campaigns', 'Campaigns'], ['email-log', 'Send Log']] },
+        growth:   { tabs: [['analytics', 'Analytics'], ['promo-codes', 'Promo Codes']] },
+        tools:    { tabs: [['explorer', 'Data Explorer']] },
+    };
+    var lastTabInGroup = {}; // remember where you were per group
+
+    function groupOfTab(tab) {
+        for (var g in TAB_GROUPS) {
+            if (TAB_GROUPS[g].tabs.some(function(t) { return t[0] === tab; })) return g;
+        }
+        return 'overview';
+    }
+
+    function renderNavBars(tab) {
+        var group = groupOfTab(tab);
+        lastTabInGroup[group] = tab;
+        document.querySelectorAll('#group-bar .group-btn').forEach(function(b) {
+            b.classList.toggle('active', b.getAttribute('data-group') === group);
+        });
+        var bar = document.getElementById('sub-tab-bar');
+        var tabs = TAB_GROUPS[group].tabs;
+        // Single-tab groups don't need a redundant sub bar
+        bar.style.display = tabs.length > 1 ? 'flex' : 'none';
+        bar.innerHTML = tabs.map(function(t) {
+            return '<button class="tab-btn' + (t[0] === tab ? ' active' : '') + '" data-tab="' + t[0] + '" id="tab-' + t[0] + '">' + t[1] + '</button>';
+        }).join('');
+    }
+
     function switchTab(tab) {
         activeTab = tab;
+        renderNavBars(tab);
         ['stats', 'users', 'analytics', 'email-log', 'explorer', 'subscriptions', 'inbox', 'promo-codes', 'unconverted-leads', 'campaigns'].forEach(function(t) {
             var tabEl = document.getElementById('tab-' + t);
             if (tabEl) tabEl.classList.toggle('active', t === tab);
@@ -1977,21 +2031,18 @@
         } catch (err) { /* ignore malformed row */ }
     });
 
-    // ── TAB CLICK HANDLERS (addEventListener — CSP-safe) ───────────────────
-    document.querySelectorAll('.tab-bar .tab-btn[data-tab]').forEach(function(btn) {
-        btn.addEventListener('click', function() {
-            var tab = this.getAttribute('data-tab');
-            if (tab) switchTab(tab);
-        });
+    // ── NAV CLICK HANDLERS (delegation — sub-tabs are rendered dynamically) ─
+    document.getElementById('group-bar').addEventListener('click', function(e) {
+        var btn = e.target.closest('.group-btn');
+        if (!btn) return;
+        var g = btn.getAttribute('data-group');
+        if (!TAB_GROUPS[g]) return;
+        switchTab(lastTabInGroup[g] || TAB_GROUPS[g].tabs[0][0]);
     });
-
-    // Explorer: also handle tab-explorer if it exists
-    var explorerTabBtn = document.getElementById('tab-explorer');
-    if (explorerTabBtn) {
-        explorerTabBtn.addEventListener('click', function() {
-            switchTab('explorer');
-        });
-    }
+    document.getElementById('sub-tab-bar').addEventListener('click', function(e) {
+        var btn = e.target.closest('[data-tab]');
+        if (btn) switchTab(btn.getAttribute('data-tab'));
+    });
 
     // Refresh button
     var refreshBtn = document.getElementById('btn-refresh');
@@ -3271,8 +3322,8 @@
 
     // ── INITIAL LOAD ───────────────────────────────────────────────────────
 
-    // Initial load
-    loadStats();
+    // switchTab renders the grouped nav AND loads the panel
+    switchTab('stats');
 </script>
 </body>
 </html>
