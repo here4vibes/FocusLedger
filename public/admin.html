@@ -1962,32 +1962,34 @@
         if (s.visitorsToday === undefined) return '';
         const sparkHtml = buildSparkline(s.trend7d || []);
         const total7d = s.trend7d ? s.trend7d.reduce((sum, d) => sum + d.total_pageviews, 0) : 0;
+        const botsToday = Math.max(0, (s.visitorsTodayRaw || 0) - (s.visitorsToday || 0));
+        const bots30d = Math.max(0, (s.visitors30dRaw || 0) - (s.visitors30d || 0));
         return `
             <p class="section-label">Traffic</p>
             <div class="stats-grid">
                 <div class="stat-card traffic-card">
                     <span class="stat-icon">👁️</span>
                     <div class="stat-value large">${fmt(s.visitorsToday)}</div>
-                    <div class="stat-label">Unique Visitors Today</div>
-                    <div class="stat-sub">Deduplicated by device</div>
+                    <div class="stat-label">Engaged Visitors Today</div>
+                    <div class="stat-sub">2+ views or real activity · +${fmt(botsToday)} one-shot hits filtered (bots/scanners)</div>
                 </div>
 
                 <div class="stat-card">
                     <span class="stat-icon">7d</span>
                     <div class="stat-value">${fmt(s.visitors7dTotal)}</div>
-                    <div class="stat-label">Unique Visitors — Last 7 Days</div>
+                    <div class="stat-label">Engaged Visitors — Last 7 Days</div>
                     <div class="stat-sub">${fmt(total7d)} total pageviews</div>
                 </div>
 
                 <div class="stat-card">
                     <span class="stat-icon">30d</span>
                     <div class="stat-value">${fmt(s.visitors30d)}</div>
-                    <div class="stat-label">Unique Visitors — Last 30 Days</div>
-                    <div class="stat-sub">Rolling window</div>
+                    <div class="stat-label">Engaged Visit-Days — Last 30 Days</div>
+                    <div class="stat-sub">Daily-salted IDs: one person visiting N days counts N · +${fmt(bots30d)} filtered</div>
                 </div>
 
                 <div class="sparkline-card">
-                    <h4>7-Day Unique Visitor Trend</h4>
+                    <h4>7-Day Engaged Visitor Trend</h4>
                     ${sparkHtml}
                 </div>
             </div>
