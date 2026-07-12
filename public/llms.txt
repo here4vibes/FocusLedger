@@ -17,20 +17,28 @@ The app was built by a CPA with ADHD who needed something that worked with how A
 
 ## Key Features
 
-- **Task management** — quick-capture tasks with AI-powered breakdown ("break it down" into steps)
+- **Buddy, an AI coaching companion** — daily morning/evening check-ins in natural conversation; picks your top 3 tasks, detects behavioral patterns, and coaches without shame
+- **Daily Reveal** — every morning, one new sourced discovery about you (from your own task/spending patterns) or your interests, unwrapped like a gift; built on curiosity-gap and variable-reward research
+- **Task management** — quick-capture tasks with AI-powered breakdown ("break it down" into steps), plus an "I'm stuck" micro-step flow
+- **Forgiving streaks** — a missed day is auto-forgiven (streak-freeze) instead of resetting to zero, based on habit-formation research
 - **Expense tracking** — log spending by category, detect impulse purchases
-- **Bank sync** — connect bank accounts via Plaid (Pro feature)
+- **Bank sync** — connect bank accounts via Plaid (Autopilot feature); daily impulse-vs-planned swipe check-in
 - **Impulse spending detection** — flags purchases that match ADHD impulsivity patterns
+- **Energy-timed notifications** — nudges arrive at your peak-energy window, not a fixed hour
 - **Ideas inbox** — frictionless idea capture so nothing gets lost
 - **Daily journal** — mood tracking and reflection
 - **Values alignment** — daily check-ins tied to personal values
-- **Focus calendar** — time blocks for deep work
+- **Focus mode** — deep-work sessions with body-double ambience and movement-break reminders
 - **News tab** — local and global news without switching apps
 
 ## Pricing
 
-- **Free** — task management, expense tracking, ideas, journal, values alignment, news
-- **Pro ($9/month)** — adds bank sync via Plaid, impulse spending detection, and advanced analytics
+- **Free** — task management, Buddy check-ins, expense tracking, ideas, journal, values alignment, news
+- **Autopilot ($9.99/month)** — adds bank sync via Plaid, impulse spending detection, AI-powered features, and advanced analytics
+
+## Science
+
+Every major design decision maps to published research (variable reward, implementation intentions, the Zeigarnik effect, habit formation, time blindness), documented with citations at https://focusledger.net/science. In-app discoveries cite their sources (DOI links).
 
 ## ADHD Tax Calculator
 
