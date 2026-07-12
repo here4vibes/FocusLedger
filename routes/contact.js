@@ -20,6 +20,36 @@ function getResend() {
 module.exports = function(pool) {
   const router = express.Router();
 
+  // ── Auto-acknowledgement ────────────────────────────────────────────────
+  // Every submission gets an immediate, human receipt: gratitude + urgency.
+  // For a beta, response speed IS credibility. Fire-and-forget — the ack
+  // must never block or fail the submission itself. Transactional
+  // (templateType outside the marketing set), so it reaches even users who
+  // unsubscribed from campaigns.
+  function sendAckEmail({ email, name, category }) {
+    const { sendEmail } = require('../lib/emailService');
+    const first = (name || '').split(' ')[0] || 'there';
+    const isBug = category === 'bug';
+    const subject = isBug ? 'Got your bug report — on it' : 'Got your message — thank you';
+    const bugLine = isBug
+      ? `<p style="font-size:15px;margin:0 0 12px;"><strong>Bug reports are gold.</strong> Yours just jumped to the top of my fix list — during beta, most reported bugs are fixed within a day or two, and you'll hear from me the moment this one is.</p>`
+      : `<p style="font-size:15px;margin:0 0 12px;">If anything you flagged turns out to be broken, it jumps straight to the top of my fix list — you'll hear back fast.</p>`;
+    const html = `
+    <div style="max-width:560px;margin:0 auto;font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#141416;line-height:1.6;padding:24px;">
+      <div style="font-size:13px;letter-spacing:0.08em;text-transform:uppercase;color:#f0b429;font-weight:700;margin-bottom:16px;">FocusLedger</div>
+      <p style="font-size:15px;margin:0 0 12px;">Hey ${first},</p>
+      <p style="font-size:15px;margin:0 0 12px;">Your message just landed in my inbox — I read every single one, usually the same day. Genuinely: thank you for taking the time. FocusLedger gets better because people like you speak up.</p>
+      ${bugLine}
+      <p style="font-size:15px;margin:0 0 4px;">— Sean</p>
+      <p style="font-size:13px;color:#888;margin:0;">Building FocusLedger — an ADHD-native command center</p>
+    </div>`;
+    const text = `Hey ${first},\n\nYour message just landed in my inbox — I read every single one, usually the same day. Genuinely: thank you for taking the time. FocusLedger gets better because people like you speak up.\n\n${isBug
+      ? 'Bug reports are gold. Yours just jumped to the top of my fix list — during beta, most reported bugs are fixed within a day or two, and you\'ll hear from me the moment this one is.'
+      : 'If anything you flagged turns out to be broken, it jumps straight to the top of my fix list — you\'ll hear back fast.'}\n\n— Sean`;
+    sendEmail(pool, { to: email, subject, html, text, templateType: 'contact_ack' })
+      .catch(e => console.error('[contact] ack email failed:', e.message, '| to:', email));
+  }
+
   // ── Helpers (inside factory so pool is in scope via closure) ───────────
 
   function isAdminUser(user) {
@@ -95,6 +125,7 @@ module.exports = function(pool) {
       );
 
       sendSupportNotification({ email, name: name || null, message, category: validCategory }).catch(() => {});
+      sendAckEmail({ email: email.trim().toLowerCase(), name, category: validCategory });
 
       res.json({ success: true, id: result.rows[0].id });
     } catch (err) {
@@ -135,6 +166,9 @@ module.exports = function(pool) {
         page_url,
         browser_info,
       }).catch(() => {});
+      if (req.user.email) {
+        sendAckEmail({ email: req.user.email, name: req.user.name, category: 'bug' });
+      }
 
       res.json({ success: true, id: result.rows[0].id });
     } catch (err) {

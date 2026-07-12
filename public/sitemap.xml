@@ -52,6 +52,11 @@
   </url>
   <!-- Legal -->
   <url>
+    <loc>https://focusledger.net/security</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
     <loc>https://focusledger.net/privacy</loc>
     <changefreq>yearly</changefreq>
     <priority>0.4</priority>

@@ -40,6 +40,7 @@ router.get('/landing-old', (_, res) => res.sendFile(pub('landing-old.html')));
 router.get('/pricing',   (_, res) => res.sendFile(pub('pricing.html')));
 router.get('/terms',     (_, res) => res.sendFile(pub('terms.html')));
 router.get('/privacy',   (_, res) => res.sendFile(pub('privacy.html')));
+router.get('/security',  (_, res) => res.sendFile(pub('security.html')));
 router.get('/adhd-tax',  (_, res) => res.sendFile(pub('adhd-tax.html')));
 router.get('/contact',   (_, res) => res.sendFile(pub('contact.html')));
 router.get('/story',     (_, res) => res.sendFile(pub('story.html')));
