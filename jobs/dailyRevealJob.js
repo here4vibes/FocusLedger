@@ -52,10 +52,93 @@ HEADLINE rules (the curiosity gap — this is shown BEFORE they tap):
 BODY rules (the payoff — shown after the tap):
 - ONE discovery, 1-3 short sentences, Buddy's voice: direct, warm, real. No manufactured enthusiasm.
 - Use real numbers from the data. Cross two life domains when the data supports it.
+- If INTERESTS are listed, weaving one in makes the insight feel personal — do it when natural, never force it.
 - End with one tiny concrete thing to try today.
 - Never shame. A rough week gets a curious, kind observation — not a pep talk.
 
 science_tag: exactly one of ${JSON.stringify(SCIENCE_TAGS)} — the concept this discovery demonstrates.`;
+
+const INTEREST_PROMPT = `You are Buddy, an ADHD co-pilot inside FocusLedger. Tonight's Daily Reveal is an INTEREST reveal: a delightful, surprising discovery connected to something this user demonstrably loves (evidence from their own tasks and spending is provided).
+
+Return ONLY a JSON object, no other text:
+{"headline": "...", "body": "...", "science_tag": "..."}
+
+The reveal can be:
+- a genuinely surprising, TRUE fact about their interest domain, or
+- a connection between their interest and how brains/habits/money work, or
+- a connection between their interest and their own week.
+
+HEADLINE: curiosity gap, max 60 chars, no emoji, must not give the payoff away. Reference the interest obliquely ("The climbing thing goes deeper") not generically ("Your interest reveal").
+BODY: 1-3 short sentences, Buddy's voice — like a friend who shares your obsession. Accurate; never invent statistics. May end with a tiny nudge to enjoy the interest today.
+science_tag: one of ${JSON.stringify(SCIENCE_TAGS)} if one genuinely fits, otherwise "none".`;
+
+// ── Interest detection ────────────────────────────────────────────────────────
+// Interests are gleaned ONLY from this wholesome whitelist — detection can
+// never tag anything sensitive (health, finances, relationships) because no
+// such keywords exist in the map.
+const INTEREST_KEYWORDS = {
+  fitness:  ['gym', 'workout', 'yoga', 'pilates', 'lifting', 'crossfit', 'running', ' run ', '5k', '10k', 'climbing', 'boulder', 'cycling', 'peloton', 'swim'],
+  cooking:  ['cook', 'recipe', 'bake', 'baking', 'meal prep', 'sourdough', 'grill', 'kitchenaid'],
+  gaming:   ['gaming', 'video game', 'steam', 'playstation', 'nintendo', 'xbox', 'twitch', 'd&d', 'dungeons'],
+  music:    ['guitar', 'piano', 'drums', 'violin', 'band practice', 'concert', 'vinyl', 'record store', 'ukulele'],
+  outdoors: ['hike', 'hiking', 'trail', 'camping', 'campsite', 'fishing', 'kayak', 'garden', 'gardening', 'birdwatch'],
+  reading:  ['book', 'reading', 'library', 'kindle', 'audible', 'bookstore', 'book club'],
+  pets:     ['dog', 'cat ', 'vet ', 'petco', 'petsmart', 'chewy', 'groomer', 'dog park', 'kitten', 'puppy'],
+  travel:   ['flight', 'airline', 'hotel', 'airbnb', 'passport', 'road trip', 'itinerary'],
+  coffee:   ['coffee', 'espresso', 'cafe', 'roaster', 'latte'],
+  making:   ['knit', 'crochet', 'sewing', 'woodwork', '3d print', 'lego', 'paint', 'pottery', 'model kit'],
+};
+
+/**
+ * Derive stable interests from task titles + expense descriptions/categories.
+ * @param {Array<{text: string}>} corpus — lowercase-able text items
+ * @returns {Array<{tag: string, count: number, evidence: string[]}>} top 3, count >= 3
+ */
+function deriveInterests(corpus) {
+  const hits = {};
+  for (const item of corpus || []) {
+    const text = ` ${String(item.text || '').toLowerCase()} `;
+    if (!text.trim()) continue;
+    for (const [tag, keywords] of Object.entries(INTEREST_KEYWORDS)) {
+      if (keywords.some(k => text.includes(k))) {
+        if (!hits[tag]) hits[tag] = { tag, count: 0, evidence: [] };
+        hits[tag].count++;
+        const snippet = String(item.text).trim().slice(0, 40);
+        if (hits[tag].evidence.length < 3 && !hits[tag].evidence.includes(snippet)) {
+          hits[tag].evidence.push(snippet);
+        }
+      }
+    }
+  }
+  return Object.values(hits)
+    .filter(h => h.count >= 3) // one-offs aren't interests
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 3);
+}
+
+async function fetchInterestCorpus(pool, userId) {
+  // Interests need a wider window than the weekly reveal data — 90 days gives
+  // stable signal instead of whatever last week happened to contain.
+  const since = new Date();
+  since.setDate(since.getDate() - 90);
+  const sinceStr = since.toISOString().slice(0, 10);
+  const [tasks, expenses] = await Promise.all([
+    pool.query(
+      `SELECT title AS text FROM tasks
+       WHERE user_id = $1 AND created_at >= $2 AND title IS NOT NULL
+       ORDER BY created_at DESC LIMIT 200`,
+      [userId, sinceStr]
+    ),
+    pool.query(
+      `SELECT COALESCE(e.description, '') || ' ' || COALESCE(c.name, '') AS text
+       FROM expenses e LEFT JOIN categories c ON c.id = e.category_id
+       WHERE e.user_id = $1 AND e.expense_date >= $2
+       ORDER BY e.expense_date DESC LIMIT 200`,
+      [userId, sinceStr]
+    ),
+  ]);
+  return [...tasks.rows, ...expenses.rows];
+}
 
 // ── Data gathering ────────────────────────────────────────────────────────────
 
@@ -159,9 +242,17 @@ function summariseForPrompt({ tasks, expenses, checkins, focus, streaks }) {
   return lines.join('\n');
 }
 
+function interestsLine(interests) {
+  if (!interests || !interests.length) return '';
+  return 'INTERESTS (gleaned from their tasks & spending): ' + interests
+    .map(i => `${i.tag} (${i.count} signals, e.g. ${i.evidence.map(e => `"${e}"`).join(', ')})`)
+    .join('; ');
+}
+
 // ── AI reveal ─────────────────────────────────────────────────────────────────
 
-function parseRevealJson(text) {
+function parseRevealJson(text, opts) {
+  const { defaultScienceTag = 'cross_domain', revealType = 'insight' } = opts || {};
   // Haiku may wrap JSON in prose or fences — extract the first {...} block.
   const match = text.match(/\{[\s\S]*\}/);
   if (!match) return null;
@@ -178,8 +269,8 @@ function parseRevealJson(text) {
   const headline = String(obj.headline).trim().slice(0, 80);
   const body = String(obj.body).trim();
   if (headline.length < 5 || body.length < 20) return null;
-  const scienceTag = SCIENCE_TAGS.includes(obj.science_tag) ? obj.science_tag : 'cross_domain';
-  return { headline, body, scienceTag, revealType: 'insight' };
+  const scienceTag = SCIENCE_TAGS.includes(obj.science_tag) ? obj.science_tag : defaultScienceTag;
+  return { headline, body, scienceTag, revealType };
 }
 
 async function generateAiReveal(userContext) {
@@ -196,6 +287,33 @@ async function generateAiReveal(userContext) {
     maxTokens: 300,
   });
   return parseRevealJson(text);
+}
+
+async function generateInterestReveal(interest, userContext) {
+  const { complete } = require('../lib/claude-client');
+  const text = await complete({
+    system: INTEREST_PROMPT,
+    messages: [{
+      role: 'user',
+      content: `Interest: ${interest.tag}\nEvidence from their own tasks/spending: ${interest.evidence.map(e => `"${e}"`).join(', ')} (${interest.count} signals over 90 days)\n\nTheir week, for optional context:\n${userContext}\n\nStage tonight's interest reveal as JSON.`,
+    }],
+    model: 'claude-haiku-4-5-20251001',
+    maxTokens: 300,
+  });
+  // science_tag "none" (or invalid) → no footer; interest reveals don't have
+  // to teach science every time.
+  return parseRevealJson(text, { defaultScienceTag: null, revealType: 'interest' });
+}
+
+// Deterministic interest fallback — real evidence, no invented facts.
+function buildInterestFallback(interest) {
+  if (!interest) return null;
+  return {
+    headline: `The ${interest.tag} thing left a trail`,
+    body: `${interest.count} of your recent tasks and purchases orbit ${interest.tag} — ${interest.evidence.map(e => `"${e}"`).join(', ')}. Brains work better inside things they love: today, park your hardest task right next to it.`,
+    scienceTag: 'habit_formation',
+    revealType: 'interest',
+  };
 }
 
 // ── Deterministic fallback ────────────────────────────────────────────────────
@@ -360,10 +478,19 @@ function hashSeed(str) {
   return Math.abs(h);
 }
 
-// ~1 in 4 days is a deliberate fun-fact day even when personal data exists —
-// the type variance is what keeps the reveal from becoming predictable.
+// Rotation: 50% personal insight, 25% interest reveal, 25% fun fact.
+// Varying the reveal TYPE is what keeps the unwrap unpredictable; slots that
+// can't be filled (no interests, no data) cascade to the next flavor.
+function revealSlotFor(userId, localDate) {
+  const h = hashSeed(`${userId}:${localDate}`) % 8;
+  if (h < 2) return 'fun_fact';
+  if (h < 4) return 'interest';
+  return 'personal';
+}
+
+// Back-compat helper (slot semantics changed from a boolean to three flavors)
 function isFunFactDay(userId, localDate) {
-  return hashSeed(`${userId}:${localDate}`) % 4 === 0;
+  return revealSlotFor(userId, localDate) === 'fun_fact';
 }
 
 /**
@@ -412,30 +539,50 @@ async function run() {
 
     console.log(`[daily-reveal] candidates=${users.length}`);
 
-    let ai = 0, fallback = 0, funFacts = 0, skipped = 0;
+    let ai = 0, fallback = 0, interestReveals = 0, funFacts = 0, skipped = 0;
     for (const user of users) {
       try {
         const localDate = getUserLocalDate(user.timezone);
         if (await revealExists(pool, user.id, localDate)) { skipped++; continue; }
 
+        const slot = revealSlotFor(user.id, localDate);
         let reveal = null;
 
-        // ~1 in 4 days is a deliberate fun-fact day — type variance keeps the
-        // unwrap unpredictable. Other days try personal insight first.
-        if (!isFunFactDay(user.id, localDate)) {
+        if (slot !== 'fun_fact') {
           const data = await fetchUserWeek(pool, user.id, sinceDate);
+          const interests = deriveInterests(await fetchInterestCorpus(pool, user.id));
+          // Personal-insight prompts also see interests — even stat reveals
+          // land harder when they reference something the user loves.
+          const userContext = summariseForPrompt(data) +
+            (interests.length ? '\n' + interestsLine(interests) : '');
 
-          if (process.env.ANTHROPIC_API_KEY) {
-            try {
-              reveal = await generateAiReveal(summariseForPrompt(data));
-            } catch (aiErr) {
-              console.warn(`[daily-reveal] AI failed user=${user.id}:`, aiErr.message, '— using fallback');
+          // Interest slot: rotate among their top interests day to day
+          if (slot === 'interest' && interests.length) {
+            const pick = interests[hashSeed(`int:${user.id}:${localDate}`) % interests.length];
+            if (process.env.ANTHROPIC_API_KEY) {
+              try {
+                reveal = await generateInterestReveal(pick, userContext);
+              } catch (aiErr) {
+                console.warn(`[daily-reveal] interest AI failed user=${user.id}:`, aiErr.message, '— using fallback');
+              }
             }
+            if (!reveal) reveal = buildInterestFallback(pick);
+            if (reveal) interestReveals++;
           }
 
-          if (reveal) { ai++; } else {
-            reveal = buildFallbackReveal(data);
-            if (reveal) fallback++;
+          // Personal slot (or interest slot with no detectable interests)
+          if (!reveal) {
+            if (process.env.ANTHROPIC_API_KEY) {
+              try {
+                reveal = await generateAiReveal(userContext);
+              } catch (aiErr) {
+                console.warn(`[daily-reveal] AI failed user=${user.id}:`, aiErr.message, '— using fallback');
+              }
+            }
+            if (reveal) { ai++; } else {
+              reveal = buildFallbackReveal(data);
+              if (reveal) fallback++;
+            }
           }
         }
 
@@ -459,7 +606,7 @@ async function run() {
       }
     }
 
-    console.log(`[daily-reveal] Done. ai=${ai} fallback=${fallback} fun_facts=${funFacts} skipped=${skipped} total=${users.length}`);
+    console.log(`[daily-reveal] Done. ai=${ai} fallback=${fallback} interest=${interestReveals} fun_facts=${funFacts} skipped=${skipped} total=${users.length}`);
   } catch (err) {
     console.error('[daily-reveal] Fatal:', err.message);
     process.exitCode = 1;
@@ -472,5 +619,6 @@ async function run() {
 module.exports = {
   buildFallbackReveal, parseRevealJson, summariseForPrompt,
   pickFunFact, isFunFactDay, FUN_FACTS, SCIENCE_TAGS,
+  deriveInterests, revealSlotFor, buildInterestFallback, interestsLine, INTEREST_KEYWORDS,
 };
 if (require.main === module) run();
