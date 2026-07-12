@@ -1081,6 +1081,11 @@
                             </div>
                         </div>
                     </div>
+
+                    <!-- Test push — verifies the whole pipe without waiting for a cron -->
+                    <button id="testPushBtn" type="button" style="margin-top:0.75rem;width:100%;padding:0.6rem;background:transparent;border:1.5px solid var(--border);border-radius:10px;font-size:0.85rem;color:var(--navy);cursor:pointer;font-family:inherit;min-height:44px;">
+                        Send test notification
+                    </button>
                 </div>
 
                 <div class="notif-status-msg" id="notifStatusMsg"></div>
@@ -2321,6 +2326,24 @@
                     // ── Time pickers ──
                     morningPicker.addEventListener('change', function() { savePrefsSoon(); });
                     eveningPicker.addEventListener('change', function() { savePrefsSoon(); });
+
+                    // ── Test push — end-to-end pipe check ──
+                    var testBtn = document.getElementById('testPushBtn');
+                    if (testBtn) testBtn.addEventListener('click', async function() {
+                        testBtn.disabled = true;
+                        testBtn.textContent = 'Sending…';
+                        try {
+                            var tr = await fetch('/api/notifications/test', { method: 'POST', headers: authHeaders() });
+                            var td = await tr.json();
+                            testBtn.textContent = td.success ? 'Sent — check your notifications ✓' : 'Failed — try again';
+                        } catch (e3) {
+                            testBtn.textContent = 'Failed — try again';
+                        }
+                        setTimeout(function() {
+                            testBtn.textContent = 'Send test notification';
+                            testBtn.disabled = false;
+                        }, 3500);
+                    });
 
                     // Update timezone on load (so newly subscribed devices are always in sync)
                     if (isSubscribed) {

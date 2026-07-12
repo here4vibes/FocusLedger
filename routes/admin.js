@@ -35,6 +35,17 @@ module.exports = function(pool) {
   // Shorthand: resilient query with retry + timeout for Neon wake cycles
   const q = (sql, params) => queryWithRetry(pool, sql, params);
 
+  // Shared admin gate for new routes (older routes inline the same check)
+  async function requireAdmin(req, res) {
+    const row = await q('SELECT is_admin, email FROM users WHERE id = $1', [req.user.id]);
+    const user = row.rows[0] || {};
+    if (!isAdminUser({ ...user, id: req.user.id })) {
+      res.status(403).json({ success: false, message: 'Admin access required' });
+      return null;
+    }
+    return { id: req.user.id, email: user.email };
+  }
+
   // GET /api/admin/stats — aggregate user + subscription metrics
   router.get('/stats', authenticateToken, async (req, res) => {
     try {
@@ -574,6 +585,176 @@ module.exports = function(pool) {
     } catch (err) {
       console.error('[Admin] Error initiating v2 launch send:', err);
       res.status(500).json({ success: false, message: 'Failed to initiate v2 launch email campaign' });
+    }
+  });
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // Email Campaigns — self-service draft/test/send (admin.html Campaigns tab)
+  // Dedup: email_log.template_type = 'campaign_<id>' — a re-send can never
+  // double-deliver to the same user.
+  // ══════════════════════════════════════════════════════════════════════════
+
+  // GET /api/admin/campaigns — list, newest first
+  router.get('/campaigns', authenticateToken, async (req, res) => {
+    try {
+      if (!(await requireAdmin(req, res))) return;
+      const { rows } = await q(
+        `SELECT id, subject, body, audience, status, recipient_count,
+                sent_count, failed_count, created_at, sent_at
+         FROM email_campaigns ORDER BY id DESC LIMIT 50`
+      );
+      res.json({ success: true, campaigns: rows });
+    } catch (err) {
+      console.error('[Admin] campaigns list error:', err.message);
+      res.status(500).json({ success: false, message: 'Failed to list campaigns' });
+    }
+  });
+
+  // POST /api/admin/campaigns — create or update a draft
+  router.post('/campaigns', authenticateToken, async (req, res) => {
+    try {
+      const admin = await requireAdmin(req, res);
+      if (!admin) return;
+      const { id, subject, body, audience } = req.body || {};
+      if (!subject || !body) {
+        return res.status(400).json({ success: false, message: 'subject and body are required' });
+      }
+      const { AUDIENCES } = require('../lib/campaignEmail');
+      const aud = AUDIENCES[audience] !== undefined ? audience : 'all';
+
+      let row;
+      if (id) {
+        const { rows } = await q(
+          `UPDATE email_campaigns
+           SET subject = $1, body = $2, audience = $3, updated_at = NOW()
+           WHERE id = $4 AND status = 'draft' RETURNING *`,
+          [subject, body, aud, parseInt(id, 10)]
+        );
+        if (!rows.length) return res.status(409).json({ success: false, message: 'Campaign not found or already sent' });
+        row = rows[0];
+      } else {
+        const { rows } = await q(
+          `INSERT INTO email_campaigns (subject, body, audience, created_by)
+           VALUES ($1, $2, $3, $4) RETURNING *`,
+          [subject, body, aud, admin.id]
+        );
+        row = rows[0];
+      }
+      res.json({ success: true, campaign: row });
+    } catch (err) {
+      console.error('[Admin] campaign save error:', err.message);
+      res.status(500).json({ success: false, message: 'Failed to save campaign' });
+    }
+  });
+
+  // POST /api/admin/campaigns/:id/test — send the draft to the ADMIN only
+  router.post('/campaigns/:id/test', authenticateToken, async (req, res) => {
+    try {
+      const admin = await requireAdmin(req, res);
+      if (!admin) return;
+      const { rows } = await q('SELECT * FROM email_campaigns WHERE id = $1', [parseInt(req.params.id, 10)]);
+      if (!rows.length) return res.status(404).json({ success: false, message: 'Campaign not found' });
+      const c = rows[0];
+
+      const { renderCampaign } = require('../lib/campaignEmail');
+      const nameRow = await q('SELECT name FROM users WHERE id = $1', [admin.id]);
+      const { subject, html, text } = renderCampaign({
+        firstName: nameRow.rows[0]?.name, subject: `[TEST] ${c.subject}`, body: c.body,
+      });
+      const result = await sendEmail(pool, {
+        to: admin.email, subject, html, text,
+        templateType: `campaign_${c.id}_test`, userId: admin.id,
+      });
+      if (!result.success) return res.status(502).json({ success: false, message: `Send failed: ${result.error}` });
+      res.json({ success: true, message: `Test sent to ${admin.email}` });
+    } catch (err) {
+      console.error('[Admin] campaign test error:', err.message);
+      res.status(500).json({ success: false, message: 'Failed to send test' });
+    }
+  });
+
+  // GET /api/admin/campaigns/:id/recipients — count who WOULD receive it
+  router.get('/campaigns/:id/recipients', authenticateToken, async (req, res) => {
+    try {
+      if (!(await requireAdmin(req, res))) return;
+      const cid = parseInt(req.params.id, 10);
+      const { rows } = await q('SELECT audience FROM email_campaigns WHERE id = $1', [cid]);
+      if (!rows.length) return res.status(404).json({ success: false, message: 'Campaign not found' });
+      const { AUDIENCES } = require('../lib/campaignEmail');
+      const audienceSql = AUDIENCES[rows[0].audience] || '';
+      const { rows: cnt } = await q(
+        `SELECT COUNT(*)::int AS n FROM users u
+         WHERE COALESCE(u.is_qa_user, false) = false
+           AND u.email IS NOT NULL AND u.email <> ''
+           ${audienceSql}
+           AND NOT EXISTS (
+             SELECT 1 FROM email_log el
+             WHERE el.user_id = u.id AND el.template_type = $1 AND el.success = true
+           )`,
+        [`campaign_${cid}`]
+      );
+      res.json({ success: true, count: cnt[0].n });
+    } catch (err) {
+      console.error('[Admin] campaign recipients error:', err.message);
+      res.status(500).json({ success: false, message: 'Failed to count recipients' });
+    }
+  });
+
+  // POST /api/admin/campaigns/:id/send — fire the campaign (background, throttled)
+  router.post('/campaigns/:id/send', authenticateToken, async (req, res) => {
+    try {
+      if (!(await requireAdmin(req, res))) return;
+      const cid = parseInt(req.params.id, 10);
+      const { rows } = await q('SELECT * FROM email_campaigns WHERE id = $1', [cid]);
+      if (!rows.length) return res.status(404).json({ success: false, message: 'Campaign not found' });
+      const c = rows[0];
+      if (c.status === 'sending') return res.status(409).json({ success: false, message: 'Already sending' });
+
+      const { renderCampaign, AUDIENCES } = require('../lib/campaignEmail');
+      const audienceSql = AUDIENCES[c.audience] || '';
+      const { rows: recipients } = await q(
+        `SELECT u.id, u.email, u.name FROM users u
+         WHERE COALESCE(u.is_qa_user, false) = false
+           AND u.email IS NOT NULL AND u.email <> ''
+           ${audienceSql}
+           AND NOT EXISTS (
+             SELECT 1 FROM email_log el
+             WHERE el.user_id = u.id AND el.template_type = $1 AND el.success = true
+           )
+         ORDER BY u.id`,
+        [`campaign_${cid}`]
+      );
+
+      await q(
+        `UPDATE email_campaigns SET status = 'sending', recipient_count = $1, updated_at = NOW() WHERE id = $2`,
+        [recipients.length, cid]
+      );
+      res.json({ success: true, queued: recipients.length, message: `Sending to ${recipients.length} user(s)` });
+
+      // Background send — same pattern as send-v2-launch, Resend-friendly throttle
+      (async () => {
+        let sent = 0, failed = 0;
+        for (const user of recipients) {
+          const { subject, html, text } = renderCampaign({ firstName: user.name, subject: c.subject, body: c.body });
+          const result = await sendEmail(pool, {
+            to: user.email, subject, html, text,
+            templateType: `campaign_${cid}`, userId: user.id,
+          });
+          if (result.success) sent++; else failed++;
+          await new Promise(r => setTimeout(r, 600));
+        }
+        await q(
+          `UPDATE email_campaigns
+           SET status = 'sent', sent_count = sent_count + $1, failed_count = failed_count + $2,
+               sent_at = NOW(), updated_at = NOW()
+           WHERE id = $3`,
+          [sent, failed, cid]
+        ).catch(e => console.error('[Admin] campaign finalize failed:', e.message));
+        console.log(`[Admin] campaign ${cid} complete: ${sent} sent, ${failed} failed`);
+      })().catch(err => console.error(`[Admin] campaign ${cid} error:`, err.message));
+    } catch (err) {
+      console.error('[Admin] campaign send error:', err.message);
+      res.status(500).json({ success: false, message: 'Failed to send campaign' });
     }
   });
 

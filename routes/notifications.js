@@ -139,6 +139,24 @@ function createNotificationsRouter(pool) {
     }
   });
 
+  // POST /api/notifications/test
+  // Send a test push to the caller's own devices — end-to-end verification
+  // (VAPID signing + subscription + service worker) without waiting for a cron.
+  router.post('/test', authenticateToken, async (req, res) => {
+    try {
+      const { sendPushToUser } = require('../lib/sendPushToUser');
+      await sendPushToUser(pool, req.user.id, {
+        title: 'Buddy here 👋',
+        body: 'Test received. The pipes are connected — see you in the morning.',
+        url: '/app',
+      });
+      res.json({ success: true, message: 'Test push sent — check your notifications.' });
+    } catch (err) {
+      console.error('[Notifications] test push failed:', err.message, '| userId:', req.user?.id);
+      res.status(500).json({ success: false, message: 'Test push failed' });
+    }
+  });
+
   // GET /api/notifications/status
   // Check if the current user has push subscriptions + return their prefs
   router.get('/status', authenticateToken, async (req, res) => {
