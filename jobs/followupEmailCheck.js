@@ -219,6 +219,8 @@ async function run() {
 }
 
 run().catch(err => {
-  console.error('[followupEmailCheck] Fatal error:', err.message);
+  // Full stack, not just message — "Server failure detected" alerts are useless
+  // without knowing WHICH query/step died.
+  console.error('[followupEmailCheck] Fatal error:', err.message, '\n', err.stack);
   process.exit(1);
 });
