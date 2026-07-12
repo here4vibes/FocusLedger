@@ -87,8 +87,21 @@ async function sendMorningNudges(pool) {
         );
         if (alreadySent.rows.length > 0) continue;
 
-        // Skip if user was already active today
-        if (user.last_active_at) {
+        // Curiosity-gap upgrade: if an UNVIEWED Daily Reveal is staged, the
+        // nudge teases its headline. Checked BEFORE the activity suppression
+        // because a sealed reveal overrides it: the tease is the pull-back-in
+        // mechanic, valuable even for someone who opened the app earlier
+        // today. Guarded separately: daily_reveals may not exist on a fresh
+        // deploy, and the default copy must survive that.
+        let reveal = null;
+        try {
+          reveal = await getUnviewedRevealForDate(pool, user.id, localDate);
+        } catch (revealErr) {
+          console.warn('[MorningNudge] reveal lookup failed (using default copy):', revealErr.message);
+        }
+
+        // Skip already-active users ONLY when there's no sealed reveal waiting
+        if (!reveal && user.last_active_at) {
           const { date: lastActiveDate } = getLocalDateParts(tz, new Date(user.last_active_at));
           if (lastActiveDate === localDate) continue;
         }
@@ -99,20 +112,10 @@ async function sendMorningNudges(pool) {
         let notifBody  = "What\u2019s on tap for today?";
         let notifUrl   = '/home';
 
-        // Curiosity-gap upgrade: if a Daily Reveal is staged for today, tease
-        // its headline instead \u2014 "Buddy noticed something" out-pulls a generic
-        // prompt. Guarded separately: daily_reveals may not exist yet on a
-        // fresh deploy (cron images can start before the web service migrates),
-        // and the default copy must survive that.
-        try {
-          const reveal = await getUnviewedRevealForDate(pool, user.id, localDate);
-          if (reveal && reveal.headline) {
+        if (reveal && reveal.headline) {
             notifTitle = 'Buddy found something \uD83D\uDC40';
             notifBody  = reveal.headline;
             notifUrl   = '/app';
-          }
-        } catch (revealErr) {
-          console.warn('[MorningNudge] reveal lookup failed (using default copy):', revealErr.message);
         }
 
         let sentCount = 0;

@@ -122,6 +122,25 @@ function classifyCategory(tx) {
 async function syncOneItem(item) {
   const accessToken = decryptToken(item.access_token);
   let cursor = item.cursor || null;
+
+  // Refresh cached balances nightly (accountsGet works for OAuth banks like
+  // Amex where balance/get 400s) — the Money card is then at most hours old
+  // when the user wakes, instead of a day. Best-effort: a failure here must
+  // never block the transaction sync.
+  try {
+    const acctResp = await plaid.accountsGet({ access_token: accessToken });
+    for (const a of acctResp.data.accounts) {
+      if (a.balances && (a.balances.current != null || a.balances.available != null)) {
+        await pool.query(
+          `UPDATE plaid_accounts SET current_balance=$1, available_balance=$2, balance_updated_at=NOW()
+           WHERE account_id=$3`,
+          [a.balances.current ?? null, a.balances.available ?? null, a.account_id]
+        );
+      }
+    }
+  } catch (balErr) {
+    console.warn(`[plaid-sync] balance refresh failed item ${item.id}:`, balErr.response?.data?.error_code || balErr.message);
+  }
   let hasMore = true;
   let added = 0;
 
@@ -255,7 +274,7 @@ async function main() {
   console.log('[plaid-sync] Starting daily Plaid sync...');
 
   const result = await pool.query(
-    'SELECT id, user_id, access_token, cursor, last_synced_at FROM plaid_items'
+    'SELECT id, user_id, access_token, cursor, last_synced_at FROM plaid_items WHERE is_active IS DISTINCT FROM false'
   );
   const items = result.rows;
   console.log(`[plaid-sync] Found ${items.length} items to check`);
