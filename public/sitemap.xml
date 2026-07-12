@@ -17,6 +17,17 @@
     <changefreq>monthly</changefreq>
     <priority>0.85</priority>
   </url>
+  <!-- Content pages — topical authority (science) + freshness signal (changelog) -->
+  <url>
+    <loc>https://focusledger.net/science</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.85</priority>
+  </url>
+  <url>
+    <loc>https://focusledger.net/changelog</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
   <!-- Auth pages -->
   <url>
     <loc>https://focusledger.net/signup</loc>

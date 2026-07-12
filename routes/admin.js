@@ -120,30 +120,72 @@ module.exports = function(pool) {
             AND cancelled_at >= date_trunc('month', NOW())
         `),
 
-        // Unique visitors today
-        q(`
-          SELECT COUNT(DISTINCT visitor_hash)::int AS count
-          FROM visitor_sessions
-          WHERE DATE(visited_at) = CURRENT_DATE
-        `),
-
-        // Last 7 days: daily unique visitors + pageviews (for sparkline)
+        // Visitors today — ENGAGED vs raw.
+        // Production data showed ~95% of raw "visitors" are one-shot crawlers
+        // with clean browser UAs (1 page, 1 view, no events, never return).
+        // Engaged = ≥2 pageviews that day OR produced any analytics event —
+        // a bar automated sweeps essentially never clear.
         q(`
           SELECT
-            DATE(visited_at)::text AS day,
-            COUNT(DISTINCT visitor_hash)::int AS unique_visitors,
-            COUNT(*)::int AS total_pageviews
-          FROM visitor_sessions
-          WHERE visited_at >= NOW() - INTERVAL '7 days'
-          GROUP BY DATE(visited_at)
+            COUNT(*) FILTER (WHERE engaged)::int  AS engaged,
+            COUNT(*)::int                          AS raw
+          FROM (
+            SELECT vs.visitor_hash,
+                   (COUNT(*) >= 2 OR EXISTS (
+                      SELECT 1 FROM analytics_events ae
+                      WHERE ae.visitor_hash = vs.visitor_hash
+                        AND DATE(ae.occurred_at) = CURRENT_DATE
+                   )) AS engaged
+            FROM visitor_sessions vs
+            WHERE DATE(vs.visited_at) = CURRENT_DATE
+            GROUP BY vs.visitor_hash
+          ) x
+        `),
+
+        // Last 7 days: daily engaged + raw visitors + pageviews (sparkline)
+        q(`
+          SELECT
+            day,
+            COUNT(*) FILTER (WHERE engaged)::int AS unique_visitors,
+            COUNT(*)::int                        AS raw_visitors,
+            SUM(views)::int                      AS total_pageviews
+          FROM (
+            SELECT DATE(vs.visited_at)::text AS day,
+                   vs.visitor_hash,
+                   COUNT(*) AS views,
+                   (COUNT(*) >= 2 OR EXISTS (
+                      SELECT 1 FROM analytics_events ae
+                      WHERE ae.visitor_hash = vs.visitor_hash
+                        AND DATE(ae.occurred_at) = DATE(vs.visited_at)
+                   )) AS engaged
+            FROM visitor_sessions vs
+            WHERE vs.visited_at >= NOW() - INTERVAL '7 days'
+            GROUP BY DATE(vs.visited_at), vs.visitor_hash
+          ) x
+          GROUP BY day
           ORDER BY day ASC
         `),
 
-        // Last 30 days total unique visitors
+        // Last 30 days: engaged visit-days + raw. NOTE: visitor hashes are
+        // daily-salted (privacy), so cross-day dedup is impossible — this is
+        // a sum of daily uniques ("visit-days"), not distinct people, and the
+        // UI labels it accordingly.
         q(`
-          SELECT COUNT(DISTINCT visitor_hash)::int AS count
-          FROM visitor_sessions
-          WHERE visited_at >= NOW() - INTERVAL '30 days'
+          SELECT
+            COUNT(*) FILTER (WHERE engaged)::int AS engaged,
+            COUNT(*)::int                        AS raw
+          FROM (
+            SELECT DATE(vs.visited_at) AS day,
+                   vs.visitor_hash,
+                   (COUNT(*) >= 2 OR EXISTS (
+                      SELECT 1 FROM analytics_events ae
+                      WHERE ae.visitor_hash = vs.visitor_hash
+                        AND DATE(ae.occurred_at) = DATE(vs.visited_at)
+                   )) AS engaged
+            FROM visitor_sessions vs
+            WHERE vs.visited_at >= NOW() - INTERVAL '30 days'
+            GROUP BY DATE(vs.visited_at), vs.visitor_hash
+          ) x
         `)
       ]);
 
@@ -162,10 +204,12 @@ module.exports = function(pool) {
       const ANNUAL_MONTHLY_PRICE = 8.33; // $100/yr / 12
       const mrr = (proMonthly * MONTHLY_PRICE) + (proAnnual * ANNUAL_MONTHLY_PRICE);
 
-      // Visitor stats
-      const visitorsToday   = visitorsTodayResult.rows[0]?.count ?? 0;
-      const visitors7dTotal = visitors7dResult.rows.reduce((sum, r) => sum + (r.unique_visitors || 0), 0);
-      const visitors30d     = visitors30dResult.rows[0]?.count ?? 0;
+      // Visitor stats — engaged is the headline; raw kept for the bot-share line
+      const visitorsToday    = visitorsTodayResult.rows[0]?.engaged ?? 0;
+      const visitorsTodayRaw = visitorsTodayResult.rows[0]?.raw ?? 0;
+      const visitors7dTotal  = visitors7dResult.rows.reduce((sum, r) => sum + (r.unique_visitors || 0), 0);
+      const visitors30d      = visitors30dResult.rows[0]?.engaged ?? 0;
+      const visitors30dRaw   = visitors30dResult.rows[0]?.raw ?? 0;
 
       // Build 7-day trend array (fill gaps with 0 for missing days)
       const trend7d = [];
@@ -177,6 +221,7 @@ module.exports = function(pool) {
         trend7d.push({
           day: dayStr,
           unique_visitors: found ? found.unique_visitors : 0,
+          raw_visitors: found ? found.raw_visitors : 0,
           total_pageviews: found ? found.total_pageviews : 0
         });
       }
@@ -195,8 +240,10 @@ module.exports = function(pool) {
           churnCount,
           mrr: parseFloat(mrr.toFixed(2)),
           visitorsToday,
+          visitorsTodayRaw,
           visitors7dTotal,
           visitors30d,
+          visitors30dRaw,
           trend7d
         },
         generatedAt: new Date().toISOString()

@@ -29,7 +29,13 @@ const BOT_PATTERNS = [
   /semrush/i, /ahrefs/i, /mj12bot/i, /rogerbot/i, /dotbot/i,
   /ia_archiver/i, /facebookexternalhit/i, /twitterbot/i, /linkedinbot/i,
   /whatsapp/i, /telegrambot/i, /applebot/i, /dataprovider/i,
-  /screaming.frog/i, /sistrix/i, /archive.org/i
+  /screaming.frog/i, /sistrix/i, /archive.org/i,
+  // HTTP clients + uptime monitors + AI crawlers (UA-declared)
+  /axios/i, /node-fetch/i, /okhttp/i, /scrapy/i, /java\//i, /httpclient/i,
+  /pingdom/i, /uptimerobot/i, /statuscake/i, /site24x7/i,
+  /lighthouse/i, /pagespeed/i, /gtmetrix/i,
+  /gptbot/i, /claudebot/i, /ccbot/i, /bytespider/i, /petalbot/i, /amazonbot/i,
+  /anthropic/i, /perplexity/i,
 ];
 
 function isBot(userAgent) {
