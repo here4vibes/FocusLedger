@@ -12,6 +12,12 @@ const {
   isFunFactDay,
   FUN_FACTS,
   SCIENCE_TAGS,
+  deriveInterests,
+  revealSlotFor,
+  buildInterestFallback,
+  interestsLine,
+  INTEREST_KEYWORDS,
+  INTEREST_FACTS,
 } = require('../jobs/dailyRevealJob');
 
 const empty = { tasks: [], expenses: [], checkins: [], focus: [], streaks: [] };
@@ -163,6 +169,130 @@ describe('fun-fact reveals', () => {
   });
 });
 
+describe('interest detection', () => {
+  const corpus = [
+    { text: 'Gym session with Marcus' },
+    { text: 'Buy climbing chalk' },
+    { text: 'REI Co-op Climbing Gear' },
+    { text: 'Book boulder gym day pass' },
+    { text: 'Pay electricity bill' },
+    { text: 'Blue Bottle Coffee' },
+    { text: 'Starbucks coffee' },
+    { text: 'Dentist appointment' },
+  ];
+
+  test('detects interests with >=3 signals, ignores one-offs', () => {
+    const interests = deriveInterests(corpus);
+    const tags = interests.map(i => i.tag);
+    expect(tags).toContain('fitness');   // gym, climbing x2, boulder = 4 signals
+    expect(tags).not.toContain('coffee'); // only 2 signals — not stable
+  });
+
+  test('collects evidence snippets (max 3, deduped)', () => {
+    const interests = deriveInterests(corpus);
+    const fitness = interests.find(i => i.tag === 'fitness');
+    expect(fitness.evidence.length).toBeLessThanOrEqual(3);
+    expect(fitness.evidence[0]).toBe('Gym session with Marcus');
+  });
+
+  test('never detects from sensitive text — no such keywords exist', () => {
+    const sensitive = [
+      { text: 'CVS Pharmacy' }, { text: 'Therapy session' }, { text: 'Therapy session 2' },
+      { text: 'urgent care copay' }, { text: 'Therapy session 3' },
+    ];
+    expect(deriveInterests(sensitive)).toEqual([]);
+  });
+
+  test('empty/garbage corpus returns empty', () => {
+    expect(deriveInterests([])).toEqual([]);
+    expect(deriveInterests([{ text: null }, { text: '' }])).toEqual([]);
+  });
+
+  test('caps at top 3 interests by count', () => {
+    const wide = [];
+    for (const t of ['gym', 'recipe', 'steam', 'guitar', 'hike']) {
+      for (let i = 0; i < 4; i++) wide.push({ text: `${t} thing ${i}` });
+    }
+    expect(deriveInterests(wide).length).toBe(3);
+  });
+
+  test('interestsLine formats for the AI prompt', () => {
+    const line = interestsLine(deriveInterests(corpus));
+    expect(line).toContain('INTERESTS');
+    expect(line).toContain('fitness');
+    expect(line).toContain('"Gym session with Marcus"');
+    expect(interestsLine([])).toBe('');
+  });
+});
+
+describe('revealSlotFor', () => {
+  test('deterministic per user+date', () => {
+    expect(revealSlotFor(5, '2026-07-13')).toBe(revealSlotFor(5, '2026-07-13'));
+  });
+
+  test('all three flavors occur across a month', () => {
+    const slots = new Set();
+    for (let d = 1; d <= 28; d++) {
+      slots.add(revealSlotFor(9, `2026-07-${String(d).padStart(2, '0')}`));
+    }
+    expect(slots).toEqual(new Set(['fun_fact', 'interest', 'personal']));
+  });
+
+  test('isFunFactDay stays consistent with the slot', () => {
+    for (let d = 1; d <= 10; d++) {
+      const date = `2026-07-0${d % 9 + 1}`;
+      expect(isFunFactDay(3, date)).toBe(revealSlotFor(3, date) === 'fun_fact');
+    }
+  });
+});
+
+describe('buildInterestFallback', () => {
+  test('builds from real evidence, marks type interest, carries the curated source', () => {
+    const r = buildInterestFallback({ tag: 'coffee', count: 5, evidence: ['Blue Bottle', 'Espresso beans'] });
+    expect(r.revealType).toBe('interest');
+    expect(r.headline).toContain('coffee');
+    expect(r.body).toContain('"Blue Bottle"');
+    expect(r.body).toContain('5');
+    expect(r.source.url).toMatch(/^https:\/\//);
+    expect(r.source.label.length).toBeGreaterThan(5);
+  });
+
+  test('null interest → null', () => {
+    expect(buildInterestFallback(null)).toBeNull();
+  });
+});
+
+describe('source credibility — every external claim is cited', () => {
+  test('every fun fact carries a real https source', () => {
+    for (const f of FUN_FACTS) {
+      expect(f.source).toBeDefined();
+      expect(f.source.url).toMatch(/^https:\/\//);
+      expect(f.source.label.length).toBeGreaterThan(5);
+    }
+  });
+
+  test('every interest tag has a sourced fact (no tag can produce an unsourced claim)', () => {
+    for (const tag of Object.keys(INTEREST_KEYWORDS)) {
+      const f = INTEREST_FACTS[tag];
+      expect(f).toBeDefined();
+      expect(f.fact.length).toBeGreaterThan(30);
+      expect(f.source.url).toMatch(/^https:\/\//);
+    }
+  });
+
+  test('pickFunFact passes the source through', () => {
+    const r = pickFunFact(42, '2026-07-13', {});
+    expect(r.source.url).toMatch(/^https:\/\//);
+  });
+
+  test('sources are stable resolver/edu URLs, not homepage guesses', () => {
+    const all = [...FUN_FACTS.map(f => f.source.url), ...Object.values(INTEREST_FACTS).map(f => f.source.url)];
+    for (const url of all) {
+      expect(url).toMatch(/^https:\/\/(doi\.org|www\.additudemag\.com)\//);
+    }
+  });
+});
+
 describe('parseRevealJson', () => {
   test('parses clean JSON', () => {
     const r = parseRevealJson('{"headline":"Something about your Tuesdays","body":"You finished 80% of tasks on Tuesdays this week. Try stacking tomorrow accordingly.","science_tag":"habit_formation"}');
@@ -194,5 +324,14 @@ describe('parseRevealJson', () => {
     const long = 'x'.repeat(300);
     const r = parseRevealJson(`{"headline":"${long}","body":"A real body sentence that is long enough to pass validation checks."}`);
     expect(r.headline.length).toBeLessThanOrEqual(80);
+  });
+
+  test('interest mode: science_tag "none" → null tag, type interest', () => {
+    const r = parseRevealJson(
+      '{"headline":"The climbing thing goes deeper","body":"Grip strength is one of the strongest longevity predictors researchers can measure — your hobby is quietly a health plan.","science_tag":"none"}',
+      { defaultScienceTag: null, revealType: 'interest' }
+    );
+    expect(r.scienceTag).toBeNull();
+    expect(r.revealType).toBe('interest');
   });
 });

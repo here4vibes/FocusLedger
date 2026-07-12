@@ -11,17 +11,19 @@
  * Stage (or replace) the reveal for a user + local date.
  * Safe to re-run — the nightly job may regenerate a better reveal.
  */
-async function upsertReveal(pool, { userId, revealDate, headline, body, scienceTag, revealType }) {
+async function upsertReveal(pool, { userId, revealDate, headline, body, scienceTag, revealType, sourceLabel, sourceUrl }) {
   const { rows } = await pool.query(
-    `INSERT INTO daily_reveals (user_id, reveal_date, headline, body, science_tag, reveal_type)
-     VALUES ($1, $2, $3, $4, $5, $6)
+    `INSERT INTO daily_reveals (user_id, reveal_date, headline, body, science_tag, reveal_type, source_label, source_url)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
      ON CONFLICT (user_id, reveal_date) DO UPDATE SET
-       headline    = EXCLUDED.headline,
-       body        = EXCLUDED.body,
-       science_tag = EXCLUDED.science_tag,
-       reveal_type = EXCLUDED.reveal_type
+       headline     = EXCLUDED.headline,
+       body         = EXCLUDED.body,
+       science_tag  = EXCLUDED.science_tag,
+       reveal_type  = EXCLUDED.reveal_type,
+       source_label = EXCLUDED.source_label,
+       source_url   = EXCLUDED.source_url
      RETURNING *`,
-    [userId, revealDate, headline, body, scienceTag || null, revealType || 'insight']
+    [userId, revealDate, headline, body, scienceTag || null, revealType || 'insight', sourceLabel || null, sourceUrl || null]
   );
   return rows[0];
 }
@@ -31,7 +33,8 @@ async function upsertReveal(pool, { userId, revealDate, headline, body, scienceT
  */
 async function getRevealForDate(pool, userId, localDate) {
   const { rows } = await pool.query(
-    `SELECT id, reveal_date, headline, body, science_tag, reveal_type, viewed_at
+    `SELECT id, reveal_date, headline, body, science_tag, reveal_type, viewed_at,
+            source_label, source_url
      FROM daily_reveals
      WHERE user_id = $1 AND reveal_date = $2
      LIMIT 1`,
