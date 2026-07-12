@@ -1225,12 +1225,6 @@
         </div>
     </div>
 <!-- SUBSCRIPTIONS PANEL -->
-    <div id="panel-subscriptions" style="display:none">
-        <div id="subscriptions-content">
-            <div class="loading-state"><div class="spinner"></div>Loading subscriptions...</div>
-        </div>
-    </div>
-
 <!-- INBOX PANEL -->
     <div id="panel-inbox" style="display:none">
         <div id="inbox-content">
@@ -1428,7 +1422,7 @@
     // Panels + loaders are unchanged; groups only organize which sub-tabs show.
     var TAB_GROUPS = {
         overview: { tabs: [['stats', 'Stats']] },
-        people:   { tabs: [['users', 'Users'], ['subscriptions', 'Subscriptions'], ['unconverted-leads', 'Leads']] },
+        people:   { tabs: [['users', 'Users'], ['unconverted-leads', 'Leads']] },
         email:    { tabs: [['inbox', 'Inbox'], ['campaigns', 'Campaigns'], ['email-log', 'Send Log']] },
         growth:   { tabs: [['analytics', 'Analytics'], ['promo-codes', 'Promo Codes']] },
         tools:    { tabs: [['explorer', 'Data Explorer']] },
@@ -1460,7 +1454,7 @@
     function switchTab(tab) {
         activeTab = tab;
         renderNavBars(tab);
-        ['stats', 'users', 'analytics', 'email-log', 'explorer', 'subscriptions', 'inbox', 'promo-codes', 'unconverted-leads', 'campaigns'].forEach(function(t) {
+        ['stats', 'users', 'analytics', 'email-log', 'explorer', 'inbox', 'promo-codes', 'unconverted-leads', 'campaigns'].forEach(function(t) {
             var tabEl = document.getElementById('tab-' + t);
             if (tabEl) tabEl.classList.toggle('active', t === tab);
         });
@@ -1469,7 +1463,6 @@
         document.getElementById('panel-analytics').style.display = tab === 'analytics' ? '' : 'none';
         document.getElementById('panel-email-log').style.display = tab === 'email-log' ? '' : 'none';
         document.getElementById('panel-explorer').style.display = tab === 'explorer' ? '' : 'none';
-        document.getElementById('panel-subscriptions').style.display = tab === 'subscriptions' ? '' : 'none';
         document.getElementById('panel-inbox').style.display = tab === 'inbox' ? '' : 'none';
         document.getElementById('panel-promo-codes').style.display = tab === 'promo-codes' ? '' : 'none';
         document.getElementById('panel-unconverted-leads').style.display = tab === 'unconverted-leads' ? '' : 'none';
@@ -1479,7 +1472,6 @@
         else if (tab === 'analytics') loadAnalytics();
         else if (tab === 'email-log') loadEmailLog(1);
         else if (tab === 'explorer') { /* data explorer is interactive, don't auto-run */ }
-        else if (tab === 'subscriptions') loadSubscriptions();
         else if (tab === 'inbox') loadInbox();
         else if (tab === 'promo-codes') loadPromoCodes();
         else if (tab === 'unconverted-leads') loadUnconvertedLeads();
@@ -1750,172 +1742,18 @@
 
     // ── SUBSCRIPTIONS TAB ───────────────────────────────────────────────────
 
-    async function loadSubscriptions() {
-        var token = getToken();
-        var content = document.getElementById('subscriptions-content');
-        if (!token) { window.location.href = '/login'; return; }
-        content.innerHTML = '<div class="loading-state"><div class="spinner"></div>Loading subscriptions...</div>';
-
-        try {
-            var res = await fetchWithTimeout('/api/admin/subscriptions', {
-                headers: { 'Authorization': 'Bearer ' + token }
-            });
-            if (res.status === 403) { content.innerHTML = '<div class="error-state">Admin access required.</div>'; return; }
-            if (res.status === 401) { window.location.href = '/login'; return; }
-            var data = await res.json();
-            if (!data.success) throw new Error(data.message || 'Unknown error');
-            content.innerHTML = buildSubscriptionsPanel(data.subscriptions);
-        } catch (err) {
-            content.innerHTML = '<div class="error-state">Failed to load subscriptions: ' + escHtml(err.message) + '</div>';
-        }
-    }
-
-    function buildSubscriptionsPanel(subs) {
-        // Summary counts
-        var counts = { free: 0, pro_active: 0, pro_trial: 0, trial_expired: 0, cancelled: 0, past_due: 0 };
-        subs.forEach(function(s) { if (counts[s.plan_label] !== undefined) counts[s.plan_label]++; });
-        var expiringSoon = subs.filter(function(s) { return s.trial_expiry_urgency === 'soon'; }).length;
-
-        var planLabels = {
-            free: { text: 'Free', bg: 'var(--cream-dark)', color: 'var(--text-muted)', border: 'var(--border)' },
-            pro_active: { text: 'Autopilot (Active)', bg: '#d4edec', color: '#1a6b60', border: '#b2e6e0' },
-            pro_trial: { text: 'Autopilot (Trial)', bg: '#e8eaf6', color: '#4a2fa0', border: '#c5caf0' },
-            trial_expired: { text: 'Trial Expired', bg: 'var(--red-light)', color: '#a04a2a', border: '#f0b8a0' },
-            cancelled: { text: 'Cancelled', bg: '#faeae5', color: '#c05030', border: '#f0b8a0' },
-            past_due: { text: 'Past Due', bg: '#fff7e0', color: '#9a6800', border: '#f0d870' }
-        };
-
-        function planBadge(label) {
-            var s = planLabels[label] || planLabels.free;
-            return '<span style="display:inline-block;font-size:0.72rem;font-weight:700;padding:2px 8px;border-radius:20px;background:' + s.bg + ';color:' + s.color + ';border:1px solid ' + s.border + ';white-space:nowrap;">' + escHtml(s.text) + '</span>';
-        }
-
-        function fmtDate(d) {
-            if (!d) return '—';
-            return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-        }
-
-        // Format date in user's local timezone with timezone label + UTC
-        function fmtDateLocal(d, tz) {
-            if (!d) return '—';
-            var userTz = tz || 'America/New_York';
-            try {
-                var local = new Date(d).toLocaleDateString('en-US', { timeZone: userTz, month: 'short', day: 'numeric', year: 'numeric' });
-                var utc = new Date(d).toLocaleDateString('en-US', { timeZone: 'UTC', month: 'short', day: 'numeric', year: 'numeric' });
-                var tzShort = tzToShortLabel(userTz);
-                return local + ' <span style="color:var(--orange);font-size:0.72em;font-weight:600;">' + escHtml(tzShort) + '</span> <span style="color:var(--text-muted);font-size:0.68em;">UTC ' + utc + '</span>';
-            } catch (_) {
-                return fmtDate(d) + ' <span style="color:var(--text-muted);font-size:0.75em;">(UTC)</span>';
-            }
-        }
-
-        function trialExpiryCell(sub) {
-            if (!sub.pro_granted_until) return '—';
-            var d = fmtDateLocal(sub.pro_granted_until, sub.timezone);
-            if (sub.trial_expiry_urgency === 'expired') {
-                return '<span style="color:var(--red);font-weight:600;">⚠ ' + d + '</span>';
-            } else if (sub.trial_expiry_urgency === 'soon') {
-                return '<span style="color:#b87800;font-weight:600;">⏰ ' + d + '</span>';
-            }
-            return d;
-        }
-
-        function sourceLabel(s) {
-            var map = { stripe: 'Self-serve', admin: 'Manual grant', referral: 'Referral' };
-            return s ? (map[s] || escHtml(s)) : '—';
-        }
-
-        // Signup attribution source — shows UTM source or referrer domain (e.g. "reddit", "google.com")
-        function signupSourceLabel(ss) {
-            if (!ss || ss === 'direct') return '<span style="color:var(--text-muted);font-size:0.78rem;">direct</span>';
-            return '<span style="font-size:0.78rem;font-weight:600;color:var(--navy);">' + escHtml(ss) + '</span>';
-        }
-
-        // Summary cards
-        var html = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:1rem;margin-bottom:2rem;">';
-        html += '<div class="stat-card"><span class="stat-icon">👤</span><div class="stat-value">' + counts.free + '</div><div class="stat-label">Free</div></div>';
-        html += '<div class="stat-card" style="background:var(--green-light);border-color:#b2e6e0;"><span class="stat-icon">✅</span><div class="stat-value" style="color:#1a6b60;">' + counts.pro_active + '</div><div class="stat-label">Autopilot Active</div></div>';
-        html += '<div class="stat-card" style="background:#e8eaf6;border-color:#c5caf0;"><span class="stat-icon">🎁</span><div class="stat-value" style="color:#4a2fa0;">' + counts.pro_trial + '</div><div class="stat-label">Autopilot Trial</div></div>';
-        if (expiringSoon > 0) {
-            html += '<div class="stat-card" style="background:#fff7e0;border-color:#f0d870;"><span class="stat-icon">⏰</span><div class="stat-value" style="color:#9a6800;">' + expiringSoon + '</div><div class="stat-label">Expiring Soon</div></div>';
-        }
-        if (counts.trial_expired > 0) {
-            html += '<div class="stat-card" style="background:var(--red-light);border-color:#f0b8a0;"><span class="stat-icon">🔴</span><div class="stat-value" style="color:#a04a2a;">' + counts.trial_expired + '</div><div class="stat-label">Trial Expired</div></div>';
-        }
-        if (counts.cancelled > 0) {
-            html += '<div class="stat-card" style="background:#faeae5;border-color:#f0b8a0;"><span class="stat-icon">✖</span><div class="stat-value" style="color:#c05030;">' + counts.cancelled + '</div><div class="stat-label">Cancelled</div></div>';
-        }
-        html += '</div>';
-
-        // Filter controls
-        html += '<div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1.25rem;align-items:center;">';
-        html += '<span style="font-size:0.8rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;">Filter:</span>';
-        ['all', 'pro_active', 'pro_trial', 'trial_expired', 'cancelled', 'free'].forEach(function(f) {
-            var label = f === 'all' ? 'All' : (planLabels[f] ? planLabels[f].text : f);
-            html += '<button class="tab-btn" id="sub-filter-' + f + '" style="padding:0.3rem 0.85rem;font-size:0.78rem;' + (f === 'all' ? 'color:var(--orange);border-bottom-color:var(--orange);' : '') + '" data-sub-filter="' + f + '">' + escHtml(label) + '</button>';
-        });
-        html += '</div>';
-
-        // Table
-        html += '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:0.85rem;" id="subs-table">';
-        html += '<thead><tr style="text-align:left;border-bottom:2px solid var(--cream-dark);">';
-        html += '<th style="padding:0.6rem 0.75rem;font-size:0.75rem;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);">User</th>';
-        html += '<th style="padding:0.6rem 0.75rem;font-size:0.75rem;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);">Status</th>';
-        html += '<th style="padding:0.6rem 0.75rem;font-size:0.75rem;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);">Acq. Source</th>';
-        html += '<th style="padding:0.6rem 0.75rem;font-size:0.75rem;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);">Sub Source</th>';
-        html += '<th style="padding:0.6rem 0.75rem;font-size:0.75rem;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);">Cycle</th>';
-        html += '<th style="padding:0.6rem 0.75rem;font-size:0.75rem;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);">Period End / Trial Expiry</th>';
-        html += '<th style="padding:0.6rem 0.75rem;font-size:0.75rem;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);">Stripe Sub ID</th>';
-        html += '</tr></thead><tbody id="subs-tbody">';
-
-        subs.forEach(function(sub) {
-            html += '<tr class="sub-row" data-plan="' + sub.plan_label + '" style="border-bottom:1px solid var(--cream-dark);">';
-            html += '<td style="padding:0.65rem 0.75rem;"><span style="font-weight:500;">' + escHtml(sub.email) + '</span></td>';
-            html += '<td style="padding:0.65rem 0.75rem;">' + planBadge(sub.plan_label) + '</td>';
-            html += '<td style="padding:0.65rem 0.75rem;">' + signupSourceLabel(sub.signup_source) + '</td>';
-            html += '<td style="padding:0.65rem 0.75rem;color:var(--text-muted);">' + sourceLabel(sub.source) + '</td>';
-            html += '<td style="padding:0.65rem 0.75rem;color:var(--text-muted);">' + (sub.billing_cycle ? escHtml(sub.billing_cycle) : '—') + '</td>';
-
-            // Period end: show trial expiry for trial/expired users, current_period_end for paid
-            var periodCell;
-            if (sub.plan_label === 'pro_trial' || sub.plan_label === 'trial_expired') {
-                periodCell = trialExpiryCell(sub);
-            } else if (sub.current_period_end) {
-                periodCell = fmtDateLocal(sub.current_period_end, sub.timezone);
-            } else {
-                periodCell = '—';
-            }
-            html += '<td style="padding:0.65rem 0.75rem;">' + periodCell + '</td>';
-
-            // Stripe sub ID — clickable to Stripe dashboard
-            var stripeCell = '—';
-            if (sub.stripe_subscription_id) {
-                var stripeUrl = 'https://dashboard.stripe.com/subscriptions/' + encodeURIComponent(sub.stripe_subscription_id);
-                stripeCell = '<a href="' + stripeUrl + '" target="_blank" rel="noopener" style="color:var(--orange);font-family:monospace;font-size:0.78rem;">' + escHtml(sub.stripe_subscription_id.slice(0, 20)) + '…</a>';
-            }
-            html += '<td style="padding:0.65rem 0.75rem;">' + stripeCell + '</td>';
-            html += '</tr>';
-        });
-
-        html += '</tbody></table></div>';
-
-        return html;
-    }
-
-    // Subscriptions filter (event delegation — CSP-safe, wired after render)
+    // Users plan-filter chips (event delegation — CSP-safe, survives re-render)
     document.addEventListener('click', function(e) {
-        var btn = e.target.closest('[data-sub-filter]');
+        var btn = e.target.closest('[data-plan-filter]');
         if (!btn) return;
-        var filter = btn.getAttribute('data-sub-filter');
-        // Update active state on filter buttons
-        document.querySelectorAll('[data-sub-filter]').forEach(function(b) {
-            var isActive = b.getAttribute('data-sub-filter') === filter;
-            b.style.color = isActive ? 'var(--orange)' : '';
-            b.style.borderBottomColor = isActive ? 'var(--orange)' : '';
+        var filter = btn.getAttribute('data-plan-filter');
+        document.querySelectorAll('[data-plan-filter]').forEach(function(b) {
+            var isActive = b.getAttribute('data-plan-filter') === filter;
+            b.style.borderColor = isActive ? 'var(--orange)' : 'var(--border)';
+            b.style.color = isActive ? 'var(--orange)' : 'var(--text-muted)';
         });
-        // Show/hide rows
-        document.querySelectorAll('#subs-tbody .sub-row').forEach(function(row) {
-            row.style.display = (filter === 'all' || row.getAttribute('data-plan') === filter) ? '' : 'none';
+        document.querySelectorAll('#users-tbody [data-plan-label]').forEach(function(row) {
+            row.style.display = (filter === 'all' || row.getAttribute('data-plan-label') === filter) ? '' : 'none';
         });
     });
 
@@ -2287,11 +2125,25 @@
                 return;
             }
 
+            // Plan summary chips + filter (absorbed from the retired Subscriptions tab)
+            const planCounts = { all: users.length, pro_active: 0, pro_trial: 0, trial_expired: 0, cancelled: 0, past_due: 0, free: 0 };
+            users.forEach(u => { if (planCounts[u.plan_label] !== undefined) planCounts[u.plan_label]++; });
+            const chipDefs = [
+                ['all', 'All'], ['pro_active', 'Autopilot'], ['pro_trial', 'Trial'],
+                ['trial_expired', 'Trial Expired'], ['cancelled', 'Cancelled'], ['free', 'Free'],
+            ];
+            const filterChips = chipDefs
+                .filter(([k]) => k === 'all' || planCounts[k] > 0)
+                .map(([k, label]) =>
+                    `<button data-plan-filter="${k}" style="background:none;border:1.5px solid var(--border);border-radius:999px;padding:0.3rem 0.8rem;font-size:0.78rem;font-weight:600;color:var(--text-muted);cursor:pointer;${k === 'all' ? 'border-color:var(--orange);color:var(--orange);' : ''}">${label} · ${planCounts[k]}</button>`
+                ).join(' ');
+
             let html = `
                 <div class="users-header">
-                    <h2>User Access</h2>
+                    <h2>Users</h2>
                     <span class="users-count">${users.length} total users</span>
                 </div>
+                <div style="display:flex;gap:0.4rem;flex-wrap:wrap;margin-bottom:0.9rem;">${filterChips}</div>
                 <div id="users-action-feedback"></div>
                 <div class="users-table-wrap">
                     <table class="users-table">
@@ -2300,9 +2152,10 @@
                                 <th>User</th>
                                 <th>TZ</th>
                                 <th>Signed Up</th>
+                                <th>Source</th>
                                 <th>Admin</th>
                                 <th>QA</th>
-                                <th>Autopilot Status</th>
+                                <th>Plan</th>
                                 <th>Logins</th>
                                 <th>Last Login</th>
                                 <th>Active Tasks</th>
@@ -2311,14 +2164,27 @@
                                 <th>Delete</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody id="users-tbody">
             `;
 
+            const planPalette = {
+                free:          { text: 'Free',              bg: 'var(--cream-dark)', color: 'var(--text-muted)' },
+                pro_active:    { text: 'Autopilot',         bg: '#d4edec', color: '#1a6b60' },
+                pro_trial:     { text: 'Autopilot (Trial)', bg: '#e8eaf6', color: '#4a2fa0' },
+                trial_expired: { text: 'Trial Expired',     bg: '#faeae5', color: '#a04a2a' },
+                cancelled:     { text: 'Cancelled',         bg: '#faeae5', color: '#c05030' },
+                past_due:      { text: 'Past Due',          bg: '#fff7e0', color: '#9a6800' },
+            };
+
             for (const user of users) {
-                const proBadgeClass = user.pro_source === 'admin' ? 'admin' : (user.is_pro ? 'stripe' : 'free');
-                const proBadgeLabel = user.is_pro
-                    ? (user.pro_source === 'admin' ? 'Autopilot (Admin)' : 'Autopilot (Stripe)')
-                    : 'Free';
+                const pal = planPalette[user.plan_label] || planPalette.free;
+                let planCell = `<span style="display:inline-block;font-size:0.72rem;font-weight:700;padding:2px 8px;border-radius:20px;background:${pal.bg};color:${pal.color};white-space:nowrap;">${pal.text}</span>`;
+                if (user.pro_granted_until && (user.plan_label === 'pro_trial' || user.plan_label === 'trial_expired')) {
+                    const expiryStr = new Date(user.pro_granted_until).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                    const urgencyIcon = user.trial_expiry_urgency === 'expired' ? '⚠ ' : (user.trial_expiry_urgency === 'soon' ? '⏰ ' : '');
+                    const urgencyColor = user.trial_expiry_urgency === 'expired' ? 'var(--red)' : (user.trial_expiry_urgency === 'soon' ? '#b87800' : 'var(--text-muted)');
+                    planCell += `<div style="font-size:0.7rem;color:${urgencyColor};margin-top:2px;">${urgencyIcon}until ${expiryStr}</div>`;
+                }
 
                 const isSelf = user.id === currentUserId;
 
@@ -2359,7 +2225,7 @@
                 }
 
                 html += `
-                    <tr id="user-row-${user.id}"${user.is_qa_user ? ' class="qa-row"' : ''}>
+                    <tr id="user-row-${user.id}" data-plan-label="${escHtml(user.plan_label || 'free')}"${user.is_qa_user ? ' class="qa-row"' : ''}>
                         <td>
                             <div class="user-email">${escHtml(user.email)}</div>
                         </td>
@@ -2369,11 +2235,12 @@
                         <td>
                             <div class="user-since">${fmtDateLocal(user.created_at, user.timezone)}</div>
                         </td>
+                        <td>
+                            <span style="font-size:0.78rem;color:var(--text-muted);">${escHtml(user.signup_source || 'direct')}</span>
+                        </td>
                         <td>${adminBadge}</td>
                         <td>${qaBadge}</td>
-                        <td>
-                            <span class="pro-badge ${proBadgeClass}">${proBadgeLabel}</span>
-                        </td>
+                        <td>${planCell}</td>
                         <td>
                             <span class="stat-mini">${fmt(user.login_count)}</span>
                         </td>
