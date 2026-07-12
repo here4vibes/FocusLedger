@@ -167,3 +167,15 @@ services:
     startCommand: node jobs/dailyRevealJob.js
     envVars:
       - fromGroup: focusledger
+
+  # ONE-TIME beta re-engagement blast. Schedule is Feb 29 (fires at most once
+  # every 4 years) — trigger manually via the dashboard's "Trigger Run".
+  # Idempotent: one_off_email_log makes re-runs no-ops per user.
+  - type: cron
+    name: beta-reengagement-blast
+    runtime: node
+    schedule: "0 5 29 2 *"
+    buildCommand: npm install
+    startCommand: node jobs/betaReengagementBlast.js
+    envVars:
+      - fromGroup: focusledger
