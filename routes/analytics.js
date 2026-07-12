@@ -121,6 +121,9 @@ const ALLOWED_EVENTS = new Set([
   'feature_use_recurring',
   'feature_use_ai_suggestions',
 
+  // Landing-page demo funnel
+  'demo_breakdown_used',         // no-account Break It Down demo ran
+
   // Add to Home Screen prompt (post-signup PWA install flow)
   'add_to_homescreen_shown',     // modal shown after signup
   'add_to_homescreen_completed', // user tapped "Done / I added it"

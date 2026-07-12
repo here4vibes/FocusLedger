@@ -214,6 +214,7 @@ app.use('/api/buddy-demo',      require('./routes/buddy-demo')(pool));
 app.use('/api/daily-brief',     require('./routes/daily-brief')(pool));
 app.use('/api/reveals',         require('./routes/reveals')(pool));
 app.use('/api/today',           require('./routes/today')(pool));
+app.use('/api/public',          require('./routes/public-demo')());
 app.use('/api/weekly-recap',    require('./routes/weekly-recap')(pool));
 app.use('/api/evening',         require('./routes/evening-checkin')(pool));
 app.use('/api/partnerships',    require('./routes/partnerships')(pool));

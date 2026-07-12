@@ -2150,6 +2150,126 @@
 <!-- ════════════════════════════════════════
      SEQUENTIAL DEMO — 5-step alternating flow
      ════════════════════════════════════════ -->
+<!-- ════════════════════════════════════════
+     BREAK IT DOWN — live demo, no account (the Goblin funnel)
+     ════════════════════════════════════════ -->
+<section class="bd-section" id="break-it-down">
+    <style>
+        .bd-section { background: #011e5c; padding: 4rem 1.5rem; }
+        .bd-inner { max-width: 640px; margin: 0 auto; text-align: center; }
+        .bd-eyebrow { display:inline-block; font-size:0.72rem; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:#f0b429; margin-bottom:0.75rem; }
+        .bd-inner h2 { font-family: Georgia, serif; font-size: clamp(1.6rem, 4vw, 2.3rem); color: #fff; line-height: 1.2; margin-bottom: 0.6rem; }
+        .bd-inner .bd-sub { color: rgba(255,255,255,0.65); font-size: 1rem; margin-bottom: 1.75rem; }
+        .bd-row { display: flex; gap: 0.6rem; max-width: 540px; margin: 0 auto; }
+        .bd-input {
+            flex: 1; padding: 0.85rem 1rem; border-radius: 12px; border: 1.5px solid rgba(255,255,255,0.25);
+            background: rgba(255,255,255,0.08); color: #fff; font-size: 1rem; font-family: inherit; min-width: 0;
+        }
+        .bd-input::placeholder { color: rgba(255,255,255,0.45); }
+        .bd-input:focus { outline: none; border-color: #f0b429; }
+        .bd-btn {
+            padding: 0.85rem 1.4rem; border-radius: 12px; border: none; background: #f0b429; color: #011e5c;
+            font-weight: 700; font-size: 0.95rem; cursor: pointer; white-space: nowrap; font-family: inherit;
+        }
+        .bd-btn:disabled { opacity: 0.6; cursor: wait; }
+        .bd-steps { max-width: 540px; margin: 1.5rem auto 0; text-align: left; display: none; }
+        .bd-step {
+            display: flex; align-items: flex-start; gap: 0.7rem; background: rgba(255,255,255,0.07);
+            border: 1px solid rgba(255,255,255,0.14); border-radius: 12px; padding: 0.75rem 1rem;
+            margin-bottom: 0.5rem; color: #fff; font-size: 0.95rem;
+            opacity: 0; transform: translateY(6px); transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+        .bd-step.in { opacity: 1; transform: none; }
+        .bd-step .n {
+            flex-shrink: 0; width: 22px; height: 22px; border-radius: 50%; background: #f0b429; color: #011e5c;
+            font-size: 0.72rem; font-weight: 700; display: flex; align-items: center; justify-content: center; margin-top: 1px;
+        }
+        .bd-cta { display: none; margin-top: 1.25rem; }
+        .bd-cta a {
+            display: inline-block; background: #fff; color: #011e5c; text-decoration: none; font-weight: 700;
+            padding: 0.8rem 1.6rem; border-radius: 12px; font-size: 0.95rem;
+        }
+        .bd-cta .bd-cta-sub { color: rgba(255,255,255,0.55); font-size: 0.8rem; margin-top: 0.5rem; }
+        .bd-error { display: none; color: #ffb4a8; font-size: 0.88rem; margin-top: 0.9rem; }
+        @media (max-width: 480px) { .bd-row { flex-direction: column; } .bd-btn { width: 100%; } }
+    </style>
+    <div class="bd-inner">
+        <span class="bd-eyebrow">Try it — no account</span>
+        <h2>Paste something overwhelming.<br>Watch it shrink.</h2>
+        <p class="bd-sub">The ADHD wall isn’t laziness — it’s a first step that’s too big. Buddy finds the small one.</p>
+        <div class="bd-row">
+            <input class="bd-input" id="bdInput" maxlength="200" placeholder='e.g. "clean the garage" or "do my taxes"'
+                   autocomplete="off">
+            <button class="bd-btn" id="bdBtn" type="button">Break it down</button>
+        </div>
+        <div class="bd-error" id="bdError"></div>
+        <div class="bd-steps" id="bdSteps"></div>
+        <div class="bd-cta" id="bdCta">
+            <a href="/signup">Save these steps free →</a>
+            <div class="bd-cta-sub">Sign up and Buddy does this for every task — plus your money, routines, and mornings.</div>
+        </div>
+    </div>
+    <script>
+    (function () {
+        var btn = document.getElementById('bdBtn');
+        var input = document.getElementById('bdInput');
+        var stepsEl = document.getElementById('bdSteps');
+        var ctaEl = document.getElementById('bdCta');
+        var errEl = document.getElementById('bdError');
+
+        function run() {
+            var task = input.value.trim();
+            errEl.style.display = 'none';
+            if (task.length < 5) {
+                errEl.textContent = 'Give me a few words \u2014 "clean the garage" works.';
+                errEl.style.display = 'block';
+                return;
+            }
+            btn.disabled = true;
+            btn.textContent = 'Breaking\u2026';
+            stepsEl.style.display = 'none';
+            ctaEl.style.display = 'none';
+            fetch('/api/public/breakdown', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ task: task })
+            })
+            .then(function (r) { return r.json(); })
+            .then(function (d) {
+                btn.disabled = false;
+                btn.textContent = 'Break it down';
+                if (!d.success) {
+                    errEl.textContent = d.message || 'Try again in a moment.';
+                    errEl.style.display = 'block';
+                    return;
+                }
+                stepsEl.innerHTML = '';
+                stepsEl.style.display = 'block';
+                d.steps.forEach(function (s, i) {
+                    var el = document.createElement('div');
+                    el.className = 'bd-step';
+                    var n = document.createElement('span'); n.className = 'n'; n.textContent = i + 1;
+                    var t = document.createElement('span'); t.textContent = s;
+                    el.appendChild(n); el.appendChild(t);
+                    stepsEl.appendChild(el);
+                    setTimeout(function () { el.classList.add('in'); }, 120 * i);
+                });
+                setTimeout(function () { ctaEl.style.display = 'block'; }, 120 * d.steps.length + 200);
+                if (window.FLA) { try { FLA.trackEvent('demo_breakdown_used', {}); } catch (e) {} }
+            })
+            .catch(function () {
+                btn.disabled = false;
+                btn.textContent = 'Break it down';
+                errEl.textContent = 'Network hiccup \u2014 try again.';
+                errEl.style.display = 'block';
+            });
+        }
+        btn.addEventListener('click', run);
+        input.addEventListener('keydown', function (e) { if (e.key === 'Enter') run(); });
+    })();
+    </script>
+</section>
+
 <section class="seq-demo-section" id="try-buddy">
     <div class="seq-demo-inner">
         <div class="seq-demo-intro reveal">
