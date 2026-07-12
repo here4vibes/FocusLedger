@@ -158,12 +158,40 @@ module.exports = function(pool) {
         return res.redirect('/app/settings?upgraded=true');
       }
 
-      // Verify payment with Polsia — never trust the session ID alone
-      const verifyResponse = await fetch(
-        `${process.env.POLSIA_API_URL}/api/company-payments/verify?session_id=${encodeURIComponent(sessionId)}`,
-        { headers: { Authorization: `Bearer ${process.env.POLSIA_API_KEY}` } }
-      );
-      const { verified, payment } = await verifyResponse.json();
+      // Verify payment — never trust the session ID alone.
+      // Primary: directly with Stripe (the source of truth). The old Polsia
+      // verification service is a legacy fallback used ONLY when no Stripe key
+      // exists — verifying payments against a retired platform is how a
+      // customer gets charged without receiving their upgrade.
+      let verified = false;
+      let payment = null;
+      const stripe = getStripe();
+      if (stripe) {
+        const session = await stripe.checkout.sessions.retrieve(sessionId, { expand: ['subscription'] });
+        verified = !!session && (session.payment_status === 'paid' || session.payment_status === 'no_payment_required');
+        if (verified) {
+          const interval = session.subscription?.items?.data?.[0]?.price?.recurring?.interval || null;
+          payment = {
+            customer_email: session.customer_details?.email || session.customer_email || null,
+            subscription_id: typeof session.subscription === 'object' && session.subscription
+              ? session.subscription.id
+              : session.subscription,
+            metadata_user_id: session.metadata?.user_id || null,
+            interval,
+            product_name: session.metadata?.billing || '',
+          };
+        }
+      } else if (process.env.POLSIA_API_URL && process.env.POLSIA_API_KEY) {
+        const verifyResponse = await fetch(
+          `${process.env.POLSIA_API_URL}/api/company-payments/verify?session_id=${encodeURIComponent(sessionId)}`,
+          { headers: { Authorization: `Bearer ${process.env.POLSIA_API_KEY}` } }
+        );
+        const data = await verifyResponse.json();
+        verified = data.verified;
+        payment = data.payment;
+      } else {
+        console.error('[subscription/activate] NO verification path configured — set STRIPE_SECRET_KEY');
+      }
 
       if (!verified) {
         return res.redirect('/app/settings?error=payment_not_verified');
@@ -183,6 +211,11 @@ module.exports = function(pool) {
         }
       }
 
+      // Checkout Sessions created by POST /checkout carry the user id in metadata
+      if (!userId && payment?.metadata_user_id) {
+        userId = parseInt(payment.metadata_user_id, 10) || null;
+      }
+
       if (!userId && payment?.customer_email) {
         const userResult = await pool.query(
           'SELECT id FROM users WHERE LOWER(email) = LOWER($1)',
@@ -192,10 +225,15 @@ module.exports = function(pool) {
       }
 
       if (!userId) {
+        console.error('[subscription/activate] paid session with no matching user | email:', payment?.customer_email, '| session:', sessionId);
         return res.redirect('/app/settings?error=user_not_found');
       }
 
-      const billingCycle = (payment?.product_name || '').toLowerCase().includes('annual') ? 'annual' : 'monthly';
+      const billingCycle = payment?.interval === 'year'
+        ? 'annual'
+        : (payment?.interval === 'month'
+          ? 'monthly'
+          : ((payment?.product_name || '').toLowerCase().includes('annual') ? 'annual' : 'monthly'));
 
       // WHY subscription_id fallback: subscription-mode checkout sessions return the real
       // Stripe subscription ID via the verify response. One-time sessions don't have one.
@@ -256,8 +294,127 @@ module.exports = function(pool) {
     }
   });
 
-  // POST webhook — for Polsia to sync subscription status (no auth - called by Polsia)
+  // POST /stripe-webhook — REAL Stripe events, signature-verified.
+  // Configure in Stripe dashboard → Developers → Webhooks:
+  //   URL:    https://focusledger.net/api/subscription/stripe-webhook
+  //   Events: checkout.session.completed, customer.subscription.updated,
+  //           customer.subscription.deleted, invoice.payment_failed
+  // Copy the signing secret into Render env as STRIPE_WEBHOOK_SECRET.
+  router.post('/stripe-webhook', async (req, res) => {
+    const stripe = getStripe();
+    const secret = process.env.STRIPE_WEBHOOK_SECRET;
+    if (!stripe || !secret) {
+      console.error('[stripe-webhook] not configured (STRIPE_SECRET_KEY / STRIPE_WEBHOOK_SECRET missing)');
+      return res.status(503).json({ success: false, message: 'Webhook not configured' });
+    }
+
+    let event;
+    try {
+      // req.rawBody is captured by the global express.json verify hook
+      event = stripe.webhooks.constructEvent(req.rawBody, req.headers['stripe-signature'], secret);
+    } catch (err) {
+      console.error('[stripe-webhook] signature verification failed:', err.message);
+      return res.status(400).json({ success: false, message: 'Invalid signature' });
+    }
+
+    res.json({ received: true }); // ack fast — Stripe retries on non-2xx
+
+    try {
+      if (event.type === 'checkout.session.completed') {
+        const session = event.data.object;
+        if (session.payment_status !== 'paid' && session.payment_status !== 'no_payment_required') return;
+
+        // Idempotent with GET /activate via unique checkout_session_id
+        const existing = await pool.query(
+          'SELECT id FROM app_subscription WHERE checkout_session_id = $1', [session.id]
+        );
+        if (existing.rows.length) return;
+
+        let userId = parseInt(session.metadata?.user_id || '', 10) || null;
+        const email = session.customer_details?.email || session.customer_email || null;
+        if (!userId && email) {
+          const u = await pool.query('SELECT id FROM users WHERE LOWER(email) = LOWER($1)', [email]);
+          userId = u.rows[0]?.id || null;
+        }
+        if (!userId) {
+          console.error('[stripe-webhook] PAID session with no matching user | email:', email, '| session:', session.id);
+          return;
+        }
+
+        const subId = typeof session.subscription === 'string'
+          ? session.subscription
+          : (session.subscription?.id || session.id);
+        const billing = session.metadata?.billing === 'annual' ? 'annual' : 'monthly';
+
+        const upd = await pool.query(`
+          UPDATE app_subscription
+          SET plan = 'pro', status = 'active', billing_cycle = $1,
+              stripe_subscription_id = $2, checkout_session_id = $3,
+              activated_at = COALESCE(activated_at, NOW()), cancelled_at = NULL, updated_at = NOW()
+          WHERE user_id = $4 AND id = (SELECT id FROM app_subscription WHERE user_id = $4 ORDER BY id DESC LIMIT 1)
+        `, [billing, subId, session.id, userId]);
+        if (upd.rowCount === 0) {
+          await pool.query(`
+            INSERT INTO app_subscription (plan, status, billing_cycle, stripe_subscription_id, checkout_session_id, user_id, activated_at)
+            VALUES ('pro', 'active', $1, $2, $3, $4, NOW())
+          `, [billing, subId, session.id, userId]);
+        }
+        await pool.query(`UPDATE users SET pro_granted_by = 'stripe' WHERE id = $1`, [userId]);
+        console.log('[stripe-webhook] activated user', userId, 'via session', session.id);
+
+      } else if (event.type === 'customer.subscription.deleted') {
+        const sub = event.data.object;
+        await pool.query(
+          `UPDATE app_subscription SET status = 'cancelled', cancelled_at = NOW(), updated_at = NOW()
+           WHERE stripe_subscription_id = $1`, [sub.id]
+        );
+        console.log('[stripe-webhook] cancelled subscription', sub.id);
+
+      } else if (event.type === 'customer.subscription.updated') {
+        const sub = event.data.object;
+        const status = sub.status === 'past_due' ? 'past_due' : (sub.status === 'active' ? 'active' : sub.status);
+        const periodEnd = sub.current_period_end ? new Date(sub.current_period_end * 1000).toISOString() : null;
+        const interval = sub.items?.data?.[0]?.price?.recurring?.interval || null;
+        await pool.query(`
+          UPDATE app_subscription
+          SET status = $1,
+              current_period_end = COALESCE($2, current_period_end),
+              billing_cycle = COALESCE($3, billing_cycle),
+              updated_at = NOW()
+          WHERE stripe_subscription_id = $4
+        `, [status, periodEnd, interval === 'year' ? 'annual' : (interval === 'month' ? 'monthly' : null), sub.id]);
+        console.log('[stripe-webhook] synced subscription', sub.id, '→', status);
+
+      } else if (event.type === 'invoice.payment_failed') {
+        const inv = event.data.object;
+        const subId = typeof inv.subscription === 'string' ? inv.subscription : inv.subscription?.id;
+        if (subId) {
+          await pool.query(
+            `UPDATE app_subscription SET status = 'past_due', updated_at = NOW() WHERE stripe_subscription_id = $1`,
+            [subId]
+          );
+          console.log('[stripe-webhook] payment failed for', subId);
+        }
+      }
+    } catch (err) {
+      console.error('[stripe-webhook] processing error:', err.message, '| event:', event.type);
+    }
+  });
+
+  // POST webhook — LEGACY Polsia sync. Previously unauthenticated and
+  // body-trusting: anyone could POST {user_email, plan:'pro'} and grant
+  // themselves a subscription. Now requires the shared Polsia key; returns
+  // 410 when the integration isn't configured at all.
   router.post('/webhook', async (req, res) => {
+    const expected = process.env.POLSIA_API_KEY;
+    if (!expected) {
+      return res.status(410).json({ success: false, message: 'Legacy webhook disabled' });
+    }
+    const provided = (req.headers['authorization'] || '').split(' ')[1];
+    if (provided !== expected) {
+      console.warn('[subscription/webhook] rejected unauthenticated legacy webhook call');
+      return res.status(401).json({ success: false, message: 'Unauthorized' });
+    }
     try {
       const { plan, status, stripe_subscription_id, billing_cycle, current_period_end, user_email } = req.body;
 
