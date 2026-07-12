@@ -226,6 +226,10 @@ module.exports = function(pool) {
           u.created_at,
           u.is_admin,
           u.admin_pro_override,
+          u.pro_granted_by,
+          u.pro_granted_until,
+          u.utm_source,
+          u.signup_referrer,
           COALESCE(u.is_qa_user, false) AS is_qa_user,
           COALESCE(u.login_count, 0)::int AS login_count,
           u.last_login_at,
@@ -235,10 +239,11 @@ module.exports = function(pool) {
           s.billing_cycle,
           s.current_period_end,
           s.activated_at,
+          s.cancelled_at,
           COALESCE(t.active_task_count, 0)::int AS active_task_count
         FROM users u
         LEFT JOIN LATERAL (
-          SELECT plan, status, billing_cycle, current_period_end, activated_at
+          SELECT plan, status, billing_cycle, current_period_end, activated_at, cancelled_at
           FROM app_subscription
           WHERE user_id = u.id
           ORDER BY id DESC
@@ -253,26 +258,63 @@ module.exports = function(pool) {
         ORDER BY u.created_at DESC
       `);
 
-      const users = result.rows.map(row => ({
-        id: row.id,
-        email: row.email,
-        created_at: row.created_at,
-        is_admin: !!row.is_admin,
-        admin_pro_override: !!row.admin_pro_override,
-        is_qa_user: !!row.is_qa_user,
-        login_count: row.login_count,
-        last_login_at: row.last_login_at || null,
-        active_task_count: row.active_task_count,
-        timezone: row.timezone,
-        has_stripe_sub: row.plan === 'pro' && row.status === 'active',
-        stripe_plan: row.plan || 'free',
-        stripe_status: row.status || 'none',
-        stripe_billing_cycle: row.billing_cycle || null,
-        stripe_period_end: row.current_period_end || null,
-        stripe_activated_at: row.activated_at || null,
-        is_pro: (row.plan === 'pro' && row.status === 'active') || !!row.admin_pro_override,
-        pro_source: row.admin_pro_override ? 'admin' : (row.plan === 'pro' && row.status === 'active' ? 'stripe' : 'none')
-      }));
+      // Plan taxonomy (ported from the retired Subscriptions tab so the merged
+      // Users table carries the full revenue picture)
+      const now = new Date();
+      const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+      const users = result.rows.map(row => {
+        const adminActive = row.admin_pro_override &&
+          (!row.pro_granted_until || new Date(row.pro_granted_until) > now);
+        const stripePro = row.plan === 'pro' && row.status === 'active';
+
+        let planLabel;
+        if (stripePro) planLabel = 'pro_active';
+        else if (adminActive) planLabel = 'pro_trial';
+        else if (row.admin_pro_override && row.pro_granted_until && new Date(row.pro_granted_until) <= now) planLabel = 'trial_expired';
+        else if (row.status === 'cancelled' || row.status === 'canceled') planLabel = 'cancelled';
+        else if (row.status === 'past_due') planLabel = 'past_due';
+        else planLabel = 'free';
+
+        let trialExpiryUrgency = null;
+        if (planLabel === 'pro_trial' && row.pro_granted_until) {
+          if (new Date(row.pro_granted_until) <= sevenDaysFromNow) trialExpiryUrgency = 'soon';
+        } else if (planLabel === 'trial_expired') {
+          trialExpiryUrgency = 'expired';
+        }
+
+        let signupSource = 'direct';
+        if (row.utm_source) signupSource = row.utm_source;
+        else if (row.signup_referrer) {
+          try { signupSource = new URL(row.signup_referrer).hostname.replace(/^www\./, '') || 'direct'; }
+          catch { signupSource = 'direct'; }
+        }
+
+        return {
+          id: row.id,
+          email: row.email,
+          created_at: row.created_at,
+          is_admin: !!row.is_admin,
+          admin_pro_override: !!row.admin_pro_override,
+          is_qa_user: !!row.is_qa_user,
+          login_count: row.login_count,
+          last_login_at: row.last_login_at || null,
+          active_task_count: row.active_task_count,
+          timezone: row.timezone,
+          has_stripe_sub: stripePro,
+          stripe_plan: row.plan || 'free',
+          stripe_status: row.status || 'none',
+          stripe_billing_cycle: row.billing_cycle || null,
+          stripe_period_end: row.current_period_end || null,
+          stripe_activated_at: row.activated_at || null,
+          is_pro: stripePro || !!row.admin_pro_override,
+          pro_source: row.admin_pro_override ? 'admin' : (stripePro ? 'stripe' : 'none'),
+          plan_label: planLabel,
+          trial_expiry_urgency: trialExpiryUrgency,
+          pro_granted_until: row.pro_granted_until || null,
+          signup_source: signupSource,
+        };
+      });
 
       res.json({ success: true, users, currentUserId: userId });
     } catch (err) {
