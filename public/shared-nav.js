@@ -68,6 +68,7 @@
 
   // Secondary links — shown in hamburger slide-out (mobile) and sidebar bottom section (desktop)
   const MENU_ITEMS = [
+    { label: 'Today',             href: '/app/today',         icon: '🕐' },
     { label: 'Journal',           href: '/journal',           icon: '📓' },
     { label: 'Routines',          href: '/routines',          icon: '🔄' },
     { label: 'Ideas',             href: '/ideas',             icon: '💡' },

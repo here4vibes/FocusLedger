@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="color-scheme" content="light">
+    <title>Today — FocusLedger</title>
+    <link rel="icon" type="image/svg+xml" href="/icons/fl-icon.svg">
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/fl-icon.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared-nav.css">
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --navy: #011e5c;
+            --gold: #f0b429;
+            --teal: #5BA4A4;
+            --cream: #faf9f7;
+            --surface: #ffffff;
+            --text-dark: #1a1a1a;
+            --text-muted: #888888;
+            --border: #e5e0d8;
+            --now: #E05252;
+            --radius: 14px;
+        }
+        html, body { background: var(--cream); font-family: 'DM Sans', system-ui, sans-serif; color: var(--text-dark); }
+        .page-content-wrapper { max-width: 720px; margin: 0 auto; padding: 1.25rem 1rem calc(90px + env(safe-area-inset-bottom)); }
+
+        .today-header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 0.35rem; }
+        .today-header h1 { font-family: 'Space Grotesk', sans-serif; font-size: 1.5rem; color: var(--navy); }
+        .today-date { font-size: 0.85rem; color: var(--text-muted); }
+
+        .calib-chip {
+            display: none; font-size: 0.75rem; color: var(--navy);
+            background: rgba(240,180,41,0.15); border: 1px solid rgba(240,180,41,0.45);
+            border-radius: 999px; padding: 0.25rem 0.7rem; margin-bottom: 0.9rem; width: fit-content;
+        }
+
+        /* Anytime tray — tasks without a due time */
+        .anytime { margin-bottom: 1rem; }
+        .anytime-label { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 0.4rem; }
+        .anytime-row { display: flex; gap: 0.45rem; flex-wrap: wrap; }
+        .anytime-chip {
+            background: var(--surface); border: 1px solid var(--border); border-radius: 999px;
+            padding: 0.4rem 0.85rem; font-size: 0.82rem; color: var(--text-dark);
+            text-decoration: none; display: inline-flex; align-items: center; gap: 0.4rem;
+            max-width: 100%;
+        }
+        .anytime-chip .mins { font-size: 0.72rem; color: var(--text-muted); white-space: nowrap; }
+        .anytime-chip span.t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 200px; }
+
+        /* Timeline */
+        .timeline-wrap {
+            position: relative; background: var(--surface); border: 1px solid var(--border);
+            border-radius: var(--radius); overflow: hidden;
+        }
+        .timeline { position: relative; margin-left: 52px; border-left: 1px solid var(--border); }
+        .hour-row { position: relative; height: 64px; border-bottom: 1px dashed rgba(0,0,0,0.05); }
+        .hour-label {
+            position: absolute; left: -52px; top: -0.55em; width: 44px; text-align: right;
+            font-size: 0.68rem; color: var(--text-muted); font-variant-numeric: tabular-nums;
+        }
+
+        .tl-item {
+            position: absolute; left: 6px; right: 8px; border-radius: 10px;
+            padding: 0.3rem 0.6rem; font-size: 0.8rem; overflow: hidden;
+            border: 1px solid; text-decoration: none; display: block; color: inherit;
+            min-height: 26px;
+        }
+        .tl-item .tl-title { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .tl-item .tl-meta { font-size: 0.68rem; opacity: 0.75; white-space: nowrap; }
+        .tl-block { background: rgba(91,164,164,0.14); border-color: rgba(91,164,164,0.5); color: #1a5555; }
+        .tl-gcal  { background: rgba(1,30,92,0.07); border-color: rgba(1,30,92,0.28); color: var(--navy); }
+        .tl-task  { background: rgba(240,180,41,0.16); border-color: rgba(240,180,41,0.55); color: #6b4e00; }
+        .tl-focus { background: rgba(224,82,82,0.10); border-color: var(--now); color: #8a2f2f; animation: pulse 2.4s ease-in-out infinite; }
+        @keyframes pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(224,82,82,0.25); } 50% { box-shadow: 0 0 0 5px rgba(224,82,82,0.06); } }
+        .tl-item.lane2 { left: 50%; }
+        .tl-item.lane1.split { right: 51%; }
+
+        /* Now line */
+        .now-line {
+            position: absolute; left: 0; right: 0; height: 2px; background: var(--now); z-index: 5; pointer-events: none;
+        }
+        .now-line::before {
+            content: ''; position: absolute; left: -5px; top: -4px; width: 10px; height: 10px;
+            border-radius: 50%; background: var(--now);
+        }
+        .now-label {
+            position: absolute; right: 6px; top: -1.35em; font-size: 0.65rem; font-weight: 700;
+            color: var(--now); background: var(--cream); padding: 0 4px; border-radius: 4px;
+        }
+
+        .empty-state { text-align: center; padding: 3rem 1rem; color: var(--text-muted); font-size: 0.95rem; }
+        .empty-state .big { font-size: 2rem; margin-bottom: 0.5rem; }
+
+        @media (prefers-reduced-motion: reduce) { .tl-focus { animation: none; } }
+    </style>
+</head>
+<body>
+<script src="/shared-nav.js"></script>
+<div class="page-content-wrapper">
+    <div class="today-header">
+        <h1>Today</h1>
+        <span class="today-date" id="todayDate"></span>
+    </div>
+    <div class="calib-chip" id="calibChip"></div>
+
+    <div class="anytime" id="anytimeWrap" style="display:none">
+        <div class="anytime-label">Anytime today</div>
+        <div class="anytime-row" id="anytimeRow"></div>
+    </div>
+
+    <div class="timeline-wrap">
+        <div class="timeline" id="timeline"></div>
+    </div>
+    <div class="empty-state" id="emptyState" style="display:none">
+        <div class="big">🌤</div>
+        Nothing scheduled yet. Add a due time to a task, or block some focus time — the day fills in here.
+    </div>
+</div>
+
+<script>
+(function () {
+    'use strict';
+    var token = localStorage.getItem('fl_token');
+    if (!token) { window.location.href = '/login'; return; }
+
+    var START_HOUR = 6, END_HOUR = 23, PX_PER_HOUR = 64;
+
+    document.getElementById('todayDate').textContent =
+        new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+
+    function minsFromMidnight(hhmm) {
+        var p = String(hhmm).split(':');
+        return parseInt(p[0], 10) * 60 + parseInt(p[1] || '0', 10);
+    }
+    function yFor(mins) { return ((mins - START_HOUR * 60) / 60) * PX_PER_HOUR; }
+    function esc(s) {
+        return String(s || '').replace(/[<>&"]/g, function (c) {
+            return { '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[c];
+        });
+    }
+    function fmtHour(h) {
+        var ampm = h < 12 ? 'am' : 'pm';
+        var display = h % 12 === 0 ? 12 : h % 12;
+        return display + ampm;
+    }
+
+    // Build the hour grid
+    var tl = document.getElementById('timeline');
+    var gridHtml = '';
+    for (var h = START_HOUR; h <= END_HOUR; h++) {
+        gridHtml += '<div class="hour-row"><span class="hour-label">' + fmtHour(h) + '</span></div>';
+    }
+    tl.innerHTML = gridHtml;
+    tl.style.height = ((END_HOUR - START_HOUR + 1) * PX_PER_HOUR) + 'px';
+
+    // Now line — repositioned every 30s
+    var nowLine = document.createElement('div');
+    nowLine.className = 'now-line';
+    nowLine.innerHTML = '<span class="now-label" id="nowLabel"></span>';
+    tl.appendChild(nowLine);
+    function positionNow() {
+        var n = new Date();
+        var mins = n.getHours() * 60 + n.getMinutes();
+        if (mins < START_HOUR * 60 || mins > (END_HOUR + 1) * 60) { nowLine.style.display = 'none'; return; }
+        nowLine.style.display = '';
+        nowLine.style.top = yFor(mins) + 'px';
+        document.getElementById('nowLabel').textContent =
+            n.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+    }
+    positionNow();
+    setInterval(positionNow, 30000);
+
+    // Simple lane assignment: overlapping items split into two columns
+    function assignLanes(items) {
+        items.sort(function (a, b) { return a.startMin - b.startMin; });
+        for (var i = 0; i < items.length; i++) {
+            items[i].lane = 1;
+            for (var j = 0; j < i; j++) {
+                var overlap = items[j].startMin + items[j].durMin > items[i].startMin && items[j].lane === 1;
+                if (overlap) { items[i].lane = 2; items[j].split = true; }
+            }
+        }
+        return items;
+    }
+
+    fetch('/api/today/timeline', { headers: { 'Authorization': 'Bearer ' + token } })
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+            if (!d.success) return;
+
+            // Calibration chip — the time-blindness prosthetic, made visible
+            if (d.calibration && d.calibration.avg_ratio && Math.abs(d.calibration.avg_ratio - 1) >= 0.15) {
+                var chip = document.getElementById('calibChip');
+                var r = d.calibration.avg_ratio;
+                chip.textContent = r > 1
+                    ? '⏱ Tasks usually take you ' + r + '× your estimate — blocks below are sized honestly'
+                    : '⏱ You finish faster than you think (' + r + '× estimates) — blocks sized to match';
+                chip.style.display = 'block';
+            }
+
+            // Anytime tray: tasks with no due_time
+            var anytime = (d.tasks || []).filter(function (t) { return !t.due_time; });
+            if (anytime.length) {
+                document.getElementById('anytimeWrap').style.display = '';
+                document.getElementById('anytimeRow').innerHTML = anytime.map(function (t) {
+                    return '<a class="anytime-chip" href="/app/task/' + t.id + '">' +
+                        '<span class="t">' + esc(t.title) + '</span>' +
+                        '<span class="mins">~' + t.calibrated_minutes + 'm</span></a>';
+                }).join('');
+            }
+
+            // Collect timeline items
+            var items = [];
+            (d.blocks || []).forEach(function (b) {
+                var s = minsFromMidnight(b.start_time), e = minsFromMidnight(b.end_time);
+                items.push({
+                    startMin: s, durMin: Math.max(20, e - s),
+                    cls: b.source === 'gcal' ? 'tl-gcal' : 'tl-block',
+                    title: b.title || (b.source === 'gcal' ? 'Calendar event' : 'Focus block'),
+                    meta: b.start_time + '–' + b.end_time,
+                    href: null,
+                });
+            });
+            (d.tasks || []).forEach(function (t) {
+                if (!t.due_time) return;
+                items.push({
+                    startMin: minsFromMidnight(t.due_time),
+                    durMin: Math.max(20, t.calibrated_minutes),
+                    cls: 'tl-task',
+                    title: t.title,
+                    meta: t.due_time + ' · ~' + t.calibrated_minutes + 'm' +
+                          (t.base_source === 'history' ? ' (from your history)' : ''),
+                    href: '/app/task/' + t.id,
+                });
+            });
+            if (d.active_focus) {
+                var started = new Date(d.active_focus.started_at);
+                var sMin = started.getHours() * 60 + started.getMinutes();
+                items.push({
+                    startMin: sMin,
+                    durMin: Math.max(20, Math.round((d.active_focus.planned_duration_seconds || 1500) / 60)),
+                    cls: 'tl-focus',
+                    title: '● Focusing: ' + (d.active_focus.task_title || 'Deep work'),
+                    meta: 'in session now',
+                    href: d.active_focus.task_id ? '/app/focus/' + d.active_focus.task_id : '/app/focus',
+                });
+            }
+
+            if (!items.length && !anytime.length) {
+                document.getElementById('emptyState').style.display = '';
+            }
+
+            assignLanes(items).forEach(function (it) {
+                var el = document.createElement(it.href ? 'a' : 'div');
+                el.className = 'tl-item ' + it.cls + (it.lane === 2 ? ' lane2' : ' lane1') + (it.split ? ' split' : '');
+                if (it.href) el.href = it.href;
+                el.style.top = yFor(it.startMin) + 'px';
+                el.style.height = Math.max(26, (it.durMin / 60) * PX_PER_HOUR - 3) + 'px';
+                el.innerHTML = '<div class="tl-title">' + esc(it.title) + '</div>' +
+                               '<div class="tl-meta">' + esc(it.meta) + '</div>';
+                tl.appendChild(el);
+            });
+
+            // Scroll the now-line into view (centered-ish)
+            var n = new Date();
+            var nowMins = n.getHours() * 60 + n.getMinutes();
+            if (nowMins >= START_HOUR * 60 && nowMins <= END_HOUR * 60) {
+                var y = yFor(nowMins);
+                window.scrollTo({ top: Math.max(0, y - window.innerHeight / 3), behavior: 'instant' });
+            }
+        })
+        .catch(function () {
+            document.getElementById('emptyState').style.display = '';
+        });
+})();
+</script>
+</body>
+</html>
