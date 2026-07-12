@@ -109,6 +109,9 @@ async function run() {
            SELECT 1 FROM one_off_email_log l
            WHERE l.user_id = u.id AND l.campaign = $1
          )
+         AND NOT EXISTS (
+           SELECT 1 FROM email_suppression es WHERE LOWER(es.email) = LOWER(u.email)
+         )
        ORDER BY u.id`,
       [CAMPAIGN]
     );

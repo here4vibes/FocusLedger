@@ -68,7 +68,10 @@ async function getProUsersWithPrefs(pool) {
        OR EXISTS (
          SELECT 1 FROM app_subscription s
          WHERE s.user_id = u.id AND s.status = 'active' AND s.plan IN ('pro','autopilot')
-       )`
+       )
+     AND NOT EXISTS (
+       SELECT 1 FROM email_suppression es WHERE LOWER(es.email) = LOWER(u.email)
+     )`
   );
   return rows;
 }

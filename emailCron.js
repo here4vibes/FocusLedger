@@ -38,6 +38,9 @@ async function sendWeeklyNudges(pool) {
       JOIN app_subscription s ON s.user_id = u.id
       WHERE s.plan = 'pro' AND s.status = 'active'
         AND COALESCE(u.is_qa_user, false) = false
+        AND NOT EXISTS (
+          SELECT 1 FROM email_suppression es WHERE LOWER(es.email) = LOWER(u.email)
+        )
     `);
 
     for (const user of usersResult.rows) {
@@ -66,13 +69,13 @@ async function sendWeeklyNudges(pool) {
       const [dueResult, completedResult] = await Promise.all([
         pool.query(
           `SELECT COUNT(*) FROM tasks
-           WHERE user_id = $1 AND completed = false
+           WHERE user_id = $1 AND is_completed = false
              AND due_date >= CURRENT_DATE AND due_date < CURRENT_DATE + INTERVAL '7 days'`,
           [user.id]
         ),
         pool.query(
           `SELECT COUNT(*) FROM tasks
-           WHERE user_id = $1 AND completed = true
+           WHERE user_id = $1 AND is_completed = true
              AND updated_at >= NOW() - INTERVAL '7 days'`,
           [user.id]
         )
@@ -130,6 +133,9 @@ async function sendReEngagementEmails(pool) {
         AND NOT EXISTS (
           SELECT 1 FROM user_email_preferences uep
           WHERE uep.user_id = u.id AND uep.re_engagement = false
+        )
+        AND NOT EXISTS (
+          SELECT 1 FROM email_suppression es WHERE LOWER(es.email) = LOWER(u.email)
         )
       LIMIT 200
     `);

@@ -779,6 +779,9 @@ module.exports = function(pool) {
            AND NOT EXISTS (
              SELECT 1 FROM email_log el
              WHERE el.user_id = u.id AND el.template_type = $1 AND el.success = true
+           )
+           AND NOT EXISTS (
+             SELECT 1 FROM email_suppression es WHERE LOWER(es.email) = LOWER(u.email)
            )`,
         [`campaign_${cid}`]
       );
@@ -809,6 +812,9 @@ module.exports = function(pool) {
            AND NOT EXISTS (
              SELECT 1 FROM email_log el
              WHERE el.user_id = u.id AND el.template_type = $1 AND el.success = true
+           )
+           AND NOT EXISTS (
+             SELECT 1 FROM email_suppression es WHERE LOWER(es.email) = LOWER(u.email)
            )
          ORDER BY u.id`,
         [`campaign_${cid}`]
