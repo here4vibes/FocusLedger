@@ -1126,6 +1126,7 @@
         <button class="tab-btn" data-tab="inbox" id="tab-inbox">Inbox <span id="inbox-unread-badge" style="display:none;background:var(--orange);color:#fff;font-size:0.65rem;font-weight:700;padding:1px 6px;border-radius:20px;margin-left:4px;vertical-align:middle;"></span></button>
         <button class="tab-btn" data-tab="promo-codes" id="tab-promo-codes">Promo Codes</button>
         <button class="tab-btn" data-tab="unconverted-leads" id="tab-unconverted-leads">Unconverted Leads</button>
+        <button class="tab-btn" data-tab="campaigns" id="tab-campaigns">Campaigns</button>
     </div>
 
     <!-- STATS PANEL -->
@@ -1228,6 +1229,37 @@
     <div id="panel-unconverted-leads" style="display:none">
         <div id="unconverted-leads-content">
             <div class="loading-state"><div class="spinner"></div>Loading unconverted leads...</div>
+        </div>
+    </div>
+
+    <div id="panel-campaigns" style="display:none">
+        <div class="section-label">Draft a campaign</div>
+        <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:1.1rem;margin-bottom:1.25rem;">
+            <input type="hidden" id="camp-id" value="">
+            <input id="camp-subject" placeholder="Subject line" maxlength="150"
+                   style="width:100%;padding:0.6rem 0.7rem;border:1px solid var(--border);border-radius:8px;font-size:0.95rem;font-family:inherit;margin-bottom:0.6rem;">
+            <textarea id="camp-body" rows="10" placeholder="Write like a human. Blank line = new paragraph.&#10;&#10;**bold**, [link text](https://url), and {name} for the recipient's first name."
+                   style="width:100%;padding:0.6rem 0.7rem;border:1px solid var(--border);border-radius:8px;font-size:0.92rem;font-family:inherit;line-height:1.5;resize:vertical;margin-bottom:0.6rem;"></textarea>
+            <div style="display:flex;gap:0.6rem;align-items:center;flex-wrap:wrap;margin-bottom:0.75rem;">
+                <label style="font-size:0.82rem;color:var(--text-muted);">Audience</label>
+                <select id="camp-audience" style="padding:0.4rem 0.6rem;border:1px solid var(--border);border-radius:8px;font-size:0.85rem;font-family:inherit;">
+                    <option value="all">All users</option>
+                    <option value="active_30">Active in last 30 days</option>
+                    <option value="inactive_30">Inactive 30+ days</option>
+                </select>
+                <span style="font-size:0.75rem;color:var(--text-muted);">QA user always excluded &middot; branded header/footer + opt-out line added automatically</span>
+            </div>
+            <div style="display:flex;gap:0.6rem;flex-wrap:wrap;">
+                <button id="camp-save" class="tab-btn" style="border:1px solid var(--border);border-radius:8px;">Save draft</button>
+                <button id="camp-test" class="tab-btn" style="border:1px solid var(--border);border-radius:8px;">Send test to me</button>
+                <button id="camp-send" class="tab-btn" style="border:1px solid var(--orange);border-radius:8px;color:var(--orange);font-weight:700;">Send campaign…</button>
+                <button id="camp-new" class="tab-btn" style="border:1px dashed var(--border);border-radius:8px;">New draft</button>
+            </div>
+            <div id="camp-status" style="margin-top:0.6rem;font-size:0.85rem;color:var(--text-muted);"></div>
+        </div>
+        <div class="section-label">Past campaigns</div>
+        <div id="campaigns-list">
+            <div class="loading-state"><div class="spinner"></div>Loading campaigns...</div>
         </div>
     </div>
 
@@ -1374,7 +1406,7 @@
 
     function switchTab(tab) {
         activeTab = tab;
-        ['stats', 'users', 'analytics', 'email-log', 'explorer', 'subscriptions', 'inbox', 'promo-codes', 'unconverted-leads'].forEach(function(t) {
+        ['stats', 'users', 'analytics', 'email-log', 'explorer', 'subscriptions', 'inbox', 'promo-codes', 'unconverted-leads', 'campaigns'].forEach(function(t) {
             var tabEl = document.getElementById('tab-' + t);
             if (tabEl) tabEl.classList.toggle('active', t === tab);
         });
@@ -1387,6 +1419,7 @@
         document.getElementById('panel-inbox').style.display = tab === 'inbox' ? '' : 'none';
         document.getElementById('panel-promo-codes').style.display = tab === 'promo-codes' ? '' : 'none';
         document.getElementById('panel-unconverted-leads').style.display = tab === 'unconverted-leads' ? '' : 'none';
+        document.getElementById('panel-campaigns').style.display = tab === 'campaigns' ? '' : 'none';
         document.getElementById('panel-user-detail').style.display = 'none';
         if (tab === 'users') loadUsers();
         else if (tab === 'analytics') loadAnalytics();
@@ -1396,6 +1429,7 @@
         else if (tab === 'inbox') loadInbox();
         else if (tab === 'promo-codes') loadPromoCodes();
         else if (tab === 'unconverted-leads') loadUnconvertedLeads();
+        else if (tab === 'campaigns') loadCampaigns();
         else loadStats();
     }
 
@@ -1829,6 +1863,118 @@
         document.querySelectorAll('#subs-tbody .sub-row').forEach(function(row) {
             row.style.display = (filter === 'all' || row.getAttribute('data-plan') === filter) ? '' : 'none';
         });
+    });
+
+    // ── EMAIL CAMPAIGNS ─────────────────────────────────────────────────────
+    function campStatus(msg, isError) {
+        var el = document.getElementById('camp-status');
+        el.textContent = msg || '';
+        el.style.color = isError ? '#E05252' : 'var(--text-muted)';
+    }
+
+    function campHeaders() {
+        return { 'Authorization': 'Bearer ' + getToken(), 'Content-Type': 'application/json' };
+    }
+
+    async function loadCampaigns() {
+        var list = document.getElementById('campaigns-list');
+        try {
+            var r = await fetch('/api/admin/campaigns', { headers: campHeaders() });
+            var d = await r.json();
+            if (!d.success) { list.innerHTML = '<div class="loading-state">Could not load campaigns.</div>'; return; }
+            if (!d.campaigns.length) { list.innerHTML = '<div class="loading-state">No campaigns yet — draft your first one above.</div>'; return; }
+            list.innerHTML = d.campaigns.map(function(c) {
+                var badge = c.status === 'sent'
+                    ? '<span style="background:#eaf5ea;color:#3a8a3a;padding:2px 8px;border-radius:10px;font-size:0.7rem;font-weight:700;">SENT ' + (c.sent_count || 0) + '/' + (c.recipient_count || 0) + '</span>'
+                    : c.status === 'sending'
+                    ? '<span style="background:#fdf3e0;color:#b8860b;padding:2px 8px;border-radius:10px;font-size:0.7rem;font-weight:700;">SENDING…</span>'
+                    : '<span style="background:#eef;color:#446;padding:2px 8px;border-radius:10px;font-size:0.7rem;font-weight:700;">DRAFT</span>';
+                var when = c.sent_at ? new Date(c.sent_at).toLocaleDateString() : new Date(c.created_at).toLocaleDateString();
+                var failNote = c.failed_count > 0 ? ' <span style="color:#E05252;font-size:0.72rem;">(' + c.failed_count + ' failed)</span>' : '';
+                return '<div class="camp-row" data-camp=\'' + JSON.stringify({ id: c.id, subject: c.subject, body: c.body, audience: c.audience, status: c.status }).replace(/'/g, '&#39;') + '\'' +
+                    ' style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:0.7rem 0.9rem;margin-bottom:0.5rem;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:0.6rem;">' +
+                    '<div style="min-width:0;"><div style="font-weight:600;font-size:0.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + c.subject.replace(/</g, '&lt;') + '</div>' +
+                    '<div style="font-size:0.75rem;color:var(--text-muted);">' + c.audience + ' · ' + when + failNote + '</div></div>' + badge + '</div>';
+            }).join('');
+        } catch (e) {
+            list.innerHTML = '<div class="loading-state">Could not load campaigns.</div>';
+        }
+    }
+
+    async function saveCampaignDraft() {
+        var subject = document.getElementById('camp-subject').value.trim();
+        var body = document.getElementById('camp-body').value.trim();
+        if (!subject || !body) { campStatus('Subject and body are both required.', true); return null; }
+        var payload = {
+            id: document.getElementById('camp-id').value || undefined,
+            subject: subject, body: body,
+            audience: document.getElementById('camp-audience').value,
+        };
+        var r = await fetch('/api/admin/campaigns', { method: 'POST', headers: campHeaders(), body: JSON.stringify(payload) });
+        var d = await r.json();
+        if (!d.success) { campStatus(d.message || 'Save failed.', true); return null; }
+        document.getElementById('camp-id').value = d.campaign.id;
+        return d.campaign;
+    }
+
+    document.getElementById('camp-save').addEventListener('click', async function() {
+        var c = await saveCampaignDraft();
+        if (c) { campStatus('Draft #' + c.id + ' saved.'); loadCampaigns(); }
+    });
+
+    document.getElementById('camp-new').addEventListener('click', function() {
+        document.getElementById('camp-id').value = '';
+        document.getElementById('camp-subject').value = '';
+        document.getElementById('camp-body').value = '';
+        document.getElementById('camp-audience').value = 'all';
+        campStatus('New draft.');
+    });
+
+    document.getElementById('camp-test').addEventListener('click', async function() {
+        var c = await saveCampaignDraft();
+        if (!c) return;
+        campStatus('Sending test…');
+        var r = await fetch('/api/admin/campaigns/' + c.id + '/test', { method: 'POST', headers: campHeaders() });
+        var d = await r.json();
+        campStatus(d.message || (d.success ? 'Test sent.' : 'Test failed.'), !d.success);
+    });
+
+    document.getElementById('camp-send').addEventListener('click', async function() {
+        var c = await saveCampaignDraft();
+        if (!c) return;
+        campStatus('Counting recipients…');
+        var rc = await fetch('/api/admin/campaigns/' + c.id + '/recipients', { headers: campHeaders() });
+        var dc = await rc.json();
+        if (!dc.success) { campStatus(dc.message || 'Could not count recipients.', true); return; }
+        if (dc.count === 0) { campStatus('Nobody left to send to — everyone in this audience already received it.'); return; }
+        if (!window.confirm('Send "' + c.subject + '" to ' + dc.count + ' user(s)? This cannot be undone.')) {
+            campStatus('Cancelled.');
+            return;
+        }
+        var r = await fetch('/api/admin/campaigns/' + c.id + '/send', { method: 'POST', headers: campHeaders() });
+        var d = await r.json();
+        campStatus(d.message || (d.success ? 'Sending.' : 'Send failed.'), !d.success);
+        loadCampaigns();
+    });
+
+    // Click a past campaign → load into the editor (drafts editable; sent = view/duplicate)
+    document.getElementById('campaigns-list').addEventListener('click', function(e) {
+        var row = e.target.closest('.camp-row');
+        if (!row) return;
+        try {
+            var c = JSON.parse(row.getAttribute('data-camp'));
+            document.getElementById('camp-subject').value = c.subject;
+            document.getElementById('camp-body').value = c.body;
+            document.getElementById('camp-audience').value = c.audience || 'all';
+            if (c.status === 'draft') {
+                document.getElementById('camp-id').value = c.id;
+                campStatus('Editing draft #' + c.id + '.');
+            } else {
+                document.getElementById('camp-id').value = '';
+                campStatus('Loaded sent campaign #' + c.id + ' as a NEW draft (saving creates a copy).');
+            }
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        } catch (err) { /* ignore malformed row */ }
     });
 
     // ── TAB CLICK HANDLERS (addEventListener — CSP-safe) ───────────────────

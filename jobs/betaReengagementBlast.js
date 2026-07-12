@@ -121,19 +121,23 @@ async function run() {
 
     let sent = 0, failed = 0;
     for (const user of recipients) {
-      try {
-        const { subject, html, text } = buildEmail(user.name);
-        await sendEmail({ to: user.email, subject, html, text });
+      const { subject, html, text } = buildEmail(user.name);
+      // sendEmail never throws — it returns { success, error? } and logs to email_log
+      const result = await sendEmail(pool, {
+        to: user.email, subject, html, text,
+        templateType: CAMPAIGN, userId: user.id,
+      });
+      if (result.success) {
         await pool.query(
           `INSERT INTO one_off_email_log (user_id, campaign, email)
            VALUES ($1, $2, $3) ON CONFLICT (user_id, campaign) DO NOTHING`,
           [user.id, CAMPAIGN, user.email]
-        );
+        ).catch(e => console.error('[beta-blast] log insert failed:', e.message));
         sent++;
         console.log(`[beta-blast] sent → user=${user.id} ${user.email}`);
-      } catch (err) {
+      } else {
         failed++;
-        console.error(`[beta-blast] FAILED user=${user.id} ${user.email}:`, err.message);
+        console.error(`[beta-blast] FAILED user=${user.id} ${user.email}:`, result.error);
       }
       await sleep(600); // Resend rate-limit headroom
     }
