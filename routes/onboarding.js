@@ -1,7 +1,7 @@
 'use strict';
 const express = require('express');
 const { authenticateToken } = require('../middleware/auth');
-const { chatMessages } = require('../lib/polsia-ai');
+const { chatMessages } = require('../lib/ai-chat');
 const { updateAdhdProfile } = require('../lib/adhd-profile');
 
 const ONBOARDING_SYSTEM_PROMPT = `You are Buddy — an ADHD coaching companion built into FocusLedger.

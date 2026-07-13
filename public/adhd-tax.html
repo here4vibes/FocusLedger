@@ -989,13 +989,9 @@
   function track(event, props) {
     try {
       var slug = 'focusledger';
-      var vid = localStorage.getItem('polsia_vid') || '';
-      fetch('https://polsia.com/api/beacon/event', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ s: slug, v: vid, e: event, p: props || {}, page: 'adhd_tax' }),
-        keepalive: true
-      }).catch(function(){});
+      var vid = localStorage.getItem('fl_vid') || '';
+      /* first-party analytics only — external beacon removed */
+      void slug; void vid; void event; void props;
     } catch(e) {}
   }
 
@@ -1240,17 +1236,16 @@
   // LOAD FROM SHARE HASH (on page load)
   // ──────────────────────────────────────────────
   (function init() {
-    // Polsia analytics visitor ID
+    // anonymous visitor ID
     var slug = 'focusledger';
-    var vid = localStorage.getItem('polsia_vid');
+    var vid = localStorage.getItem('fl_vid');
     if (!vid) {
       vid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
         var r = Math.random() * 16 | 0;
         return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
       });
-      localStorage.setItem('polsia_vid', vid);
+      localStorage.setItem('fl_vid', vid);
     }
-    new Image().src = 'https://polsia.com/api/beacon/pixel?s=' + encodeURIComponent(slug) + '&v=' + encodeURIComponent(vid);
     track('page_view');
 
     // Check for ?r=<hash> in URL (shared results)

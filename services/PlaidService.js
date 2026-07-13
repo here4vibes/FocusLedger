@@ -5,7 +5,7 @@
  * Owns: Plaid API calls, access token lifecycle, transaction normalization.
  * Does NOT own: DB queries (delegates to db/transactions.js),
  *               token encryption helpers (inline here, shared with routes/plaid.js),
- *               scheduling (see polsia.toml [[crons]]).
+ *               scheduling (see render.yaml cron services).
  */
 
 const crypto = require('crypto');

@@ -32,7 +32,7 @@ const TRUSTED_REDIRECT_HOSTS = new Set([
   'focusledger.net',
   'www.focusledger.net',
   'focusledger-mwn3.onrender.com',
-  'focusledger.polsia.app',
+  'focusledger.net',
   'localhost:3000',
 ]);
 if (process.env.ALLOWED_ORIGIN) {

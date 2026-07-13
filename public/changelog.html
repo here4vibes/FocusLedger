@@ -755,7 +755,7 @@
                 </div>
                 <div class="entry-body">
                     <div class="entry-title">ADHD Tax Calculator — lead magnet landing page</div>
-                    <div class="entry-desc">Launched /adhd-tax as a standalone lead magnet page. Funnel: landing page CTA → ADHD tax calculator → email capture. Email capture goes to adhd_tax_leads table, triggers welcome email via Polsia email proxy. Separate traffic path from main product funnel.</div>
+                    <div class="entry-desc">Launched /adhd-tax as a standalone lead magnet page. Funnel: landing page CTA → ADHD tax calculator → email capture. Email capture goes to adhd_tax_leads table, triggers welcome email. Separate traffic path from main product funnel.</div>
                     <div class="entry-badge new">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                         New Feature
@@ -881,15 +881,12 @@
 <!-- Analytics: PostHog PageView -->
 <script>
 (function() {
-    var slug = '__POLSIA_SLUG__' || '';
+    var slug = '' || '';
     if (slug && window.posthog) {
         posthog.capture('$pageview', { page: '/changelog', source: 'organic' });
     }
 })();
 </script>
-
-<!-- Polsia Analytics Beacon -->
-<script src="https://analytics.polsia.com/beacon?slug=__POLSIA_SLUG__&path=/changelog" async defer></script>
 
 </body>
 </html>

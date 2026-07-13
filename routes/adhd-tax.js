@@ -135,13 +135,7 @@ function calculateAdhdTax(answers) {
 // Email results helper (fire-and-forget, graceful fail)
 // ─────────────────────────────────────────────────
 async function sendResultsEmail(email, results, shareHash) {
-  const proxyUrl = process.env.POLSIA_EMAIL_PROXY_URL || `${process.env.POLSIA_R2_BASE_URL || 'https://polsia.com'}/api/email/transactional`;
-  const apiKey   = process.env.POLSIA_API_KEY || process.env.POLSIA_API_TOKEN;
-
-  if (!apiKey) {
-    console.warn('[adhd-tax] No POLSIA_API_KEY — skipping results email');
-    return false;
-  }
+  const { sendEmail } = require('../lib/emailService');
 
   const fmt = (n) => '$' + Math.round(n).toLocaleString('en-US');
   const shareUrl = `https://focusledger.net/adhd-tax?r=${shareHash}`;
@@ -220,35 +214,16 @@ You got this result from the FocusLedger ADHD Tax Calculator.
 </div>
 `;
 
-  try {
-    const resp = await fetch(proxyUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
-      },
-      body: JSON.stringify({
-        to: email,
-        from: 'FocusLedger <support@focusledger.net>',
-        subject,
-        html: htmlBody,
-        text: textBody,
-        tag: 'adhd_tax_results'
-      }),
-      signal: AbortSignal.timeout(8000)
-    });
-
-    if (!resp.ok) {
-      const body = await resp.text().catch(() => '');
-      console.error(`[adhd-tax] Email proxy responded ${resp.status}: ${body.slice(0, 200)}`);
-      return false;
-    }
-
-    return true;
-  } catch (err) {
-    console.error('[adhd-tax] Email send failed (non-fatal):', err.message);
-    return false;
-  }
+  const result = await sendEmail({
+    to: email,
+    from: 'FocusLedger <hello@focusledger.net>',
+    subject,
+    html: htmlBody,
+    text: textBody,
+    templateType: 'adhd_tax_results',
+  });
+  if (!result.success) console.error('[adhd-tax] results email failed (non-fatal):', result.error);
+  return result.success;
 }
 
 // ─────────────────────────────────────────────────

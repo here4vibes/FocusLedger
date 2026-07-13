@@ -23,6 +23,13 @@ const FREE_DOC_LIMIT = 20;
 const AI_EXTRACTION_MONTHLY_LIMIT = 25;
 
 // Multer: in-memory, 10MB cap
+// Document storage backend (S3/R2-compatible upload proxy). Set both env vars
+// to enable the Vault. Previously hardcoded a third-party proxy domain; now
+// first-party-configurable. When unset, uploads fail with a clear message
+// instead of calling an external service.
+const DOC_STORAGE_URL = process.env.DOCUMENT_STORAGE_URL || null;   // e.g. https://storage.focusledger.net/api/r2
+const DOC_STORAGE_KEY = process.env.DOCUMENT_STORAGE_KEY || null;
+
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 10 * 1024 * 1024 },
@@ -126,17 +133,21 @@ module.exports = function(pool) {
         }
       }
 
-      // Upload file to R2 via Polsia proxy
+      // Upload file to R2 storage proxy
       const formData = new FormData();
       formData.append('file', req.file.buffer, {
         filename: req.file.originalname,
         contentType: req.file.mimetype,
       });
 
-      const r2Res = await fetch('https://polsia.com/api/proxy/r2/upload', {
+      if (!DOC_STORAGE_URL || !DOC_STORAGE_KEY) {
+        console.error('[documents] storage not configured (DOCUMENT_STORAGE_URL/KEY)');
+        return res.status(503).json({ success: false, message: 'Document storage isn\'t set up yet.' });
+      }
+      const r2Res = await fetch(`${DOC_STORAGE_URL}/upload`, {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${process.env.POLSIA_API_KEY}`,
+          Authorization: `Bearer ${DOC_STORAGE_KEY}`,
           ...formData.getHeaders(),
         },
         body: formData,
@@ -331,11 +342,11 @@ module.exports = function(pool) {
 
       // Best-effort: delete from R2. Non-fatal if it fails.
       const fileKey = extractR2Key(result.rows[0].s3_url);
-      if (fileKey) {
-        fetch(`https://polsia.com/api/proxy/r2/files/${encodeURIComponent(fileKey)}`, {
+      if (fileKey && DOC_STORAGE_URL && DOC_STORAGE_KEY) {
+        fetch(`${DOC_STORAGE_URL}/files/${encodeURIComponent(fileKey)}`, {
           method: 'DELETE',
-          headers: { Authorization: `Bearer ${process.env.POLSIA_API_KEY}` },
-        }).catch(err => console.error('[documents] R2 delete failed:', err.message));
+          headers: { Authorization: `Bearer ${DOC_STORAGE_KEY}` },
+        }).catch(err => console.error('[documents] storage delete failed:', err.message));
       }
 
       res.json({ success: true });

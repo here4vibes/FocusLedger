@@ -1,5 +1,5 @@
 /**
- * jobs/movementBreakCheck.js — Scheduled job (every 15 min via polsia.toml).
+ * jobs/movementBreakCheck.js — Scheduled job (every 15 min via render.yaml).
  * Finds active focus sessions that have run longer than the user's
  * break_interval_minutes and sends a movement break nudge.
  *

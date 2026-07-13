@@ -9,7 +9,7 @@
 const express = require('express');
 const crypto = require('crypto');
 const rateLimit = require('express-rate-limit');
-const { chatMessages } = require('../lib/polsia-ai');
+const { chatMessages } = require('../lib/ai-chat');
 const {
   MAX_MESSAGES_PER_SESSION,
   getOrCreateSession,

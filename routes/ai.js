@@ -1,6 +1,6 @@
 // Owns: shared AI HTTP endpoints — summarize, extract-fields.
 // Does NOT own: Buddy conversation, document upload, or auth.
-// Extraction delegates to lib/documentExtraction.js; summarization uses polsia-ai.
+// Extraction delegates to lib/documentExtraction.js; summarization uses ai-chat.
 
 const express = require('express');
 const { authenticateToken } = require('../middleware/auth');

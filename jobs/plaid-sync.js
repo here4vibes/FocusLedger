@@ -2,19 +2,19 @@
 /**
  * jobs/plaid-sync.js — Daily Plaid transaction sync.
  *
- * Runs daily at 6am via polsia.toml.
+ * Runs daily at 6am via render.yaml.
  * For each user with a plaid_token (plaid_items row):
  *   1. Calls Plaid transactionsSync (cursor-based) to pull new transactions.
  *   2. Inserts new transactions into plaid_transactions table.
  *   3. Emits transactions.synced event to events table.
  *
- * Guards: skipped entirely when POLSIA_IN_PROCESS_CRONS_ENABLED !== 'true'
- * (Blaxel shadow migration sets this to false; primary Render handles crons via polsia.toml).
+ * Guards: skipped entirely when IN_PROCESS_CRONS_ENABLED !== 'true'
+ * (Blaxel shadow migration sets this to false; primary Render handles crons via render.yaml).
  *
  * Batches users in chunks of 50 to avoid Plaid API rate limits.
  * Uses the same encryption/decryption pattern as routes/plaid.js and plaidDailySync.js.
  *
- * polsia.toml entry:
+ * render.yaml entry:
  *   [[crons]]
  *   name = "plaid-daily-sync"
  *   schedule = "0 6 * * *"
