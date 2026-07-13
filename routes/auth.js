@@ -147,19 +147,37 @@ module.exports = function(pool, loginLimiter, signupLimiter) {
       const passwordHash = hashPassword(password);
 
       const validTz = timezone ? validateTimezone(timezone) : null;
+      const emailLc = email.trim().toLowerCase();
+      const nameVal = name ? name.trim() : null;
       let result;
-      if (validTz) {
-        result = await pool.query(
-          `INSERT INTO users (email, name, password_hash, timezone)
-           VALUES ($1, $2, $3, $4) RETURNING id, email, name, created_at`,
-          [email.trim().toLowerCase(), name ? name.trim() : null, passwordHash, validTz]
-        );
-      } else {
-        result = await pool.query(
-          `INSERT INTO users (email, name, password_hash)
-           VALUES ($1, $2, $3) RETURNING id, email, name, created_at`,
-          [email.trim().toLowerCase(), name ? name.trim() : null, passwordHash]
-        );
+      try {
+        if (validTz) {
+          result = await pool.query(
+            `INSERT INTO users (email, name, password_hash, timezone)
+             VALUES ($1, $2, $3, $4) RETURNING id, email, name, created_at`,
+            [emailLc, nameVal, passwordHash, validTz]
+          );
+        } else {
+          result = await pool.query(
+            `INSERT INTO users (email, name, password_hash)
+             VALUES ($1, $2, $3) RETURNING id, email, name, created_at`,
+            [emailLc, nameVal, passwordHash]
+          );
+        }
+      } catch (insErr) {
+        // 42703 = undefined_column. Prod schema drift (e.g. a migration that
+        // was supposed to add `timezone` never applied) must not block signup —
+        // retry with the guaranteed-present core columns only.
+        if (insErr.code === '42703') {
+          console.error('[auth/signup] users INSERT hit missing column, retrying minimal:', insErr.message);
+          result = await pool.query(
+            `INSERT INTO users (email, name, password_hash)
+             VALUES ($1, $2, $3) RETURNING id, email, name, created_at`,
+            [emailLc, nameVal, passwordHash]
+          );
+        } else {
+          throw insErr;
+        }
       }
 
       const user = result.rows[0];
@@ -174,8 +192,14 @@ module.exports = function(pool, loginLimiter, signupLimiter) {
 
       const token = generateToken(user);
 
-      // Phase 2: Establish HttpOnly session cookie alongside JWT
-      establishSession(req, user);
+      // Phase 2: Establish HttpOnly session cookie alongside JWT.
+      // Wrapped: a session-store hiccup must never fail an otherwise-complete
+      // signup (the user row + token already exist).
+      try {
+        establishSession(req, user);
+      } catch (sessErr) {
+        console.error('[auth/signup] establishSession failed (non-fatal):', sessErr.message);
+      }
 
       // Save UTM attribution (fire-and-forget — never block the response)
       if (attribution) {
@@ -203,7 +227,15 @@ module.exports = function(pool, loginLimiter, signupLimiter) {
       seedDefaultValues(pool, user.id);
       seedStarterRoutine(pool, user.id).catch(() => {});
     } catch (err) {
-      console.error('Signup error:', err);
+      // Granular diagnostics — pinpoint which query/constraint failed from
+      // Render logs alone (per engineering rules: no silent/opaque failures).
+      console.error('[auth/signup] FAILED:',
+        '| message:', err.message,
+        '| code:', err.code,
+        '| detail:', err.detail,
+        '| table:', err.table,
+        '| column:', err.column,
+        '| constraint:', err.constraint);
       if (err.code === '23505') {
         return res.status(409).json({ success: false, message: 'An account with this email already exists.' });
       }
