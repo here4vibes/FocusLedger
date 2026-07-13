@@ -14,7 +14,19 @@ const express = require('express');
 const { authenticateToken } = require('../middleware/auth');
 const { checkProStatus } = require('../middleware/proUtils');
 const { connect, disconnect, getAccounts } = require('../services/PlaidService');
-const { list, getToday, getAggregate, get_transaction_with_classification, update_classification } = require('../services/TransactionService');
+// Transaction reads/writes go straight to db/transactions. These were formerly
+// destructured from services/TransactionService, which exports only a nested
+// { TransactionService } object — so `list`, `getToday`, `getAggregate`,
+// `get_transaction_with_classification` and `update_classification` were all
+// `undefined`, and every one of these endpoints 500'd with "list is not a
+// function" the moment transactions.html called it. Thin adapters below bridge
+// the route call-shape to the db function signatures.
+const txDb = require('../db/transactions');
+const list = (pool, userId, opts) => txDb.listTransactions(pool, { userId, ...opts });
+const getToday = (pool, userId) => txDb.getTodayTransactions(pool, userId);
+const getAggregate = (pool, userId, { from, to } = {}) => txDb.getAggregate(pool, userId, from, to);
+const get_transaction_with_classification = (pool, id, userId) => txDb.getTransactionWithClassification(pool, id, userId);
+const update_classification = (pool, id, userId, classification) => txDb.updateClassification(pool, id, userId, classification);
 
 module.exports = function(pool) {
   const router = express.Router();
