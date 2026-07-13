@@ -147,19 +147,37 @@ module.exports = function(pool, loginLimiter, signupLimiter) {
       const passwordHash = hashPassword(password);
 
       const validTz = timezone ? validateTimezone(timezone) : null;
+      const emailLc = email.trim().toLowerCase();
+      const nameVal = name ? name.trim() : null;
       let result;
-      if (validTz) {
-        result = await pool.query(
-          `INSERT INTO users (email, name, password_hash, timezone)
-           VALUES ($1, $2, $3, $4) RETURNING id, email, name, created_at`,
-          [email.trim().toLowerCase(), name ? name.trim() : null, passwordHash, validTz]
-        );
-      } else {
-        result = await pool.query(
-          `INSERT INTO users (email, name, password_hash)
-           VALUES ($1, $2, $3) RETURNING id, email, name, created_at`,
-          [email.trim().toLowerCase(), name ? name.trim() : null, passwordHash]
-        );
+      try {
+        if (validTz) {
+          result = await pool.query(
+            `INSERT INTO users (email, name, password_hash, timezone)
+             VALUES ($1, $2, $3, $4) RETURNING id, email, name, created_at`,
+            [emailLc, nameVal, passwordHash, validTz]
+          );
+        } else {
+          result = await pool.query(
+            `INSERT INTO users (email, name, password_hash)
+             VALUES ($1, $2, $3) RETURNING id, email, name, created_at`,
+            [emailLc, nameVal, passwordHash]
+          );
+        }
+      } catch (insErr) {
+        // 42703 = undefined_column. Prod schema drift (e.g. a migration that
+        // was supposed to add `timezone` never applied) must not block signup —
+        // retry with the guaranteed-present core columns only.
+        if (insErr.code === '42703') {
+          console.error('[auth/signup] users INSERT hit missing column, retrying minimal:', insErr.message);
+          result = await pool.query(
+            `INSERT INTO users (email, name, password_hash)
+             VALUES ($1, $2, $3) RETURNING id, email, name, created_at`,
+            [emailLc, nameVal, passwordHash]
+          );
+        } else {
+          throw insErr;
+        }
       }
 
       const user = result.rows[0];
