@@ -26,8 +26,6 @@ const helmetMiddleware = helmet({
         "https://cdn.jsdelivr.net",
         "https://js.stripe.com",
         "https://checkout.stripe.com",
-        "https://polsia.com",
-        "https://*.polsia.com",
         "https://accounts.google.com"
       ],
       styleSrc: [

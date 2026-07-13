@@ -164,15 +164,13 @@ module.exports = function(pool, loginLimiter, signupLimiter) {
 
       const user = result.rows[0];
 
-      await pool.query(
-        'INSERT INTO budgets (weekly_amount, is_active, user_id) VALUES (500.00, true, $1)',
-        [user.id]
-      );
-
-      await pool.query(
-        `INSERT INTO app_subscription (plan, status, user_id) VALUES ('free', 'active', $1)`,
-        [user.id]
-      );
+      // Non-essential setup rows — must NEVER fail the signup after the users
+      // row exists (that leaves a ghost account that then reports "already
+      // exists" on retry). Matches the Google OAuth path's resilience.
+      await Promise.all([
+        pool.query('INSERT INTO budgets (weekly_amount, is_active, user_id) VALUES (500.00, true, $1)', [user.id]),
+        pool.query(`INSERT INTO app_subscription (plan, status, user_id) VALUES ('free', 'active', $1)`, [user.id]),
+      ]).catch(err => console.error('[auth/signup] setup rows failed (account still created):', err.message));
 
       const token = generateToken(user);
 
