@@ -82,6 +82,30 @@ async function purgeExpiredStash(pool) {
   return rowCount;
 }
 
+/**
+ * Best-effort dedup for re-delivered inbound webhooks. Returns true if this
+ * message_id has already been stashed (the one table that durably records
+ * message_id, with a UNIQUE constraint). Guards processEmailToTask against
+ * Resend re-delivering the same inbound email.
+ *
+ * LIMITATION: known-sender emails become tasks directly and are NOT stashed,
+ * so a re-delivery for a verified sender isn't caught here. Fully closing that
+ * gap needs a durable processed-message_id record (schema change) — tracked
+ * separately. This function was imported by routes/email-to-tasks.js but never
+ * defined, so the dedup guard threw "isMessageDuplicate is not a function".
+ * @param {object} pool
+ * @param {string} messageId
+ * @returns {Promise<boolean>}
+ */
+async function isMessageDuplicate(pool, messageId) {
+  if (!messageId) return false;
+  const { rows } = await pool.query(
+    'SELECT 1 FROM email_tasks_stash WHERE message_id = $1 LIMIT 1',
+    [messageId]
+  );
+  return rows.length > 0;
+}
+
 async function insertEmailTask(pool, { userId, title, notes }) {
   const { rows } = await pool.query(
     `INSERT INTO tasks (user_id, title, notes, source)
@@ -95,4 +119,5 @@ async function insertEmailTask(pool, { userId, title, notes }) {
 module.exports = {
   findUserByEmail, addLinkedEmail, listLinkedEmails, removeLinkedEmail,
   stashEmail, findStashByToken, claimStash, purgeExpiredStash, insertEmailTask,
+  isMessageDuplicate,
 };

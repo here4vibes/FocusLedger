@@ -325,6 +325,21 @@
                     <span class="entry-month">Jul</span>
                 </div>
                 <div class="entry-body">
+                    <div class="entry-title">Password reset &amp; account emails fixed</div>
+                    <div class="entry-desc">Password-reset, account-deletion, welcome, and Pro-welcome emails had silently stopped sending — the templates behind them had gone missing, so those flows errored out before an email ever left. All are restored with a cleaner, on-brand design, and a new automated guard now catches this whole class of "imported-but-undefined" bug before it can ship again.</div>
+                    <div class="entry-badge fix">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"></path></svg>
+                        Fix
+                    </div>
+                </div>
+            </div>
+
+            <div class="entry">
+                <div class="entry-date">
+                    <span class="entry-day">13</span>
+                    <span class="entry-month">Jul</span>
+                </div>
+                <div class="entry-body">
                     <div class="entry-title">Frosted-glass bottom navigation</div>
                     <div class="entry-desc">The floating bottom nav pill now uses a translucent frosted-glass effect — content softly blurs behind it as you scroll, the same modern treatment you'll recognize from Instagram and Reddit. A solid fallback keeps the labels crisp on the rare browser without blur support.</div>
                     <div class="entry-badge design">

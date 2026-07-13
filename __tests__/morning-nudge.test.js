@@ -16,6 +16,12 @@ jest.mock('web-push', () => ({
   setVapidDetails: jest.fn(),
   sendNotification: jest.fn().mockResolvedValue({}),
 }), { virtual: true });
+// Daily Reveal lookup runs its own pool.query; without this mock it counted as
+// an extra query and broke the "queries called N times" skip-logic assertions.
+// Default to no staged reveal so the skip paths behave as the tests intend.
+jest.mock('../db/reveals', () => ({
+  getUnviewedRevealForDate: jest.fn(() => Promise.resolve(null)),
+}));
 
 const { getLocalDateParts } = require('../lib/timezone');
 const { isApnsConfigured } = require('../lib/apns-sender');
