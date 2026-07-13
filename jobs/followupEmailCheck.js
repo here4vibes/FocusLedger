@@ -2,7 +2,7 @@
 'use strict';
 /**
  * jobs/followupEmailCheck.js — Follow-up email automation job.
- * Runs via polsia.toml [[crons]] every 15 minutes.
+ * Runs via render.yaml crons every 15 minutes.
  *
  * Sends 4 types of follow-up emails for Pro users:
  *   task_reminder    — tasks due today or tomorrow

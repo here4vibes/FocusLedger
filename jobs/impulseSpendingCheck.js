@@ -1,5 +1,5 @@
 /**
- * jobs/impulseSpendingCheck.js — Scheduled job (every 15 min via polsia.toml).
+ * jobs/impulseSpendingCheck.js — Scheduled job (every 15 min via render.yaml).
  * Evaluates spending patterns for all active users and creates proactive alerts
  * when impulse spending trends are detected.
  *

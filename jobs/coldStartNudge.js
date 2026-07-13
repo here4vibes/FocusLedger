@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * jobs/coldStartNudge.js — Daily job (9 AM UTC via polsia.toml).
+ * jobs/coldStartNudge.js — Daily job (9 AM UTC via render.yaml).
  *
  * Finds tasks that are 2+ days overdue with no focus session in the last 48 hours
  * and sends one proactive push nudge: "Want one tiny first step to get [Task] moving?"

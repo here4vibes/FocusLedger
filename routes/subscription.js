@@ -1,6 +1,6 @@
 // Subscription management: status, activation, webhook, cancel/reactivate.
 // Owns: app_subscription table, Stripe checkout flow, Pro activation.
-// Does NOT own: Pro status checks (see middleware/proUtils.js), payment processing (Polsia Stripe).
+// Does NOT own: Pro status checks (see middleware/proUtils.js), payment processing (Stripe).
 const express = require('express');
 const { authenticateToken, verifyToken } = require('../middleware/auth');
 const { sendEmail } = require('../lib/emailService');
@@ -139,7 +139,7 @@ module.exports = function(pool) {
   // GET activate — redirect from Stripe checkout success.
   // WHY no authenticateToken: Stripe redirects the browser here via GET — JWT is in
   // localStorage and cannot be attached to a redirect. We identify the user by the
-  // customer_email returned from Polsia's payment verification instead.
+  // verified Stripe checkout session instead.
   // Idempotency: checkout_session_id has a UNIQUE index; duplicate activations are no-ops.
   router.get('/activate', async (req, res) => {
     try {
@@ -158,39 +158,28 @@ module.exports = function(pool) {
         return res.redirect('/app/settings?upgraded=true');
       }
 
-      // Verify payment — never trust the session ID alone.
-      // Primary: directly with Stripe (the source of truth). The old Polsia
-      // verification service is a legacy fallback used ONLY when no Stripe key
-      // exists — verifying payments against a retired platform is how a
-      // customer gets charged without receiving their upgrade.
+      // Verify payment directly with Stripe — the source of truth. Never
+      // trust the session ID alone.
       let verified = false;
       let payment = null;
       const stripe = getStripe();
-      if (stripe) {
-        const session = await stripe.checkout.sessions.retrieve(sessionId, { expand: ['subscription'] });
-        verified = !!session && (session.payment_status === 'paid' || session.payment_status === 'no_payment_required');
-        if (verified) {
-          const interval = session.subscription?.items?.data?.[0]?.price?.recurring?.interval || null;
-          payment = {
-            customer_email: session.customer_details?.email || session.customer_email || null,
-            subscription_id: typeof session.subscription === 'object' && session.subscription
-              ? session.subscription.id
-              : session.subscription,
-            metadata_user_id: session.metadata?.user_id || null,
-            interval,
-            product_name: session.metadata?.billing || '',
-          };
-        }
-      } else if (process.env.POLSIA_API_URL && process.env.POLSIA_API_KEY) {
-        const verifyResponse = await fetch(
-          `${process.env.POLSIA_API_URL}/api/company-payments/verify?session_id=${encodeURIComponent(sessionId)}`,
-          { headers: { Authorization: `Bearer ${process.env.POLSIA_API_KEY}` } }
-        );
-        const data = await verifyResponse.json();
-        verified = data.verified;
-        payment = data.payment;
-      } else {
-        console.error('[subscription/activate] NO verification path configured — set STRIPE_SECRET_KEY');
+      if (!stripe) {
+        console.error('[subscription/activate] STRIPE_SECRET_KEY not set — cannot verify payment');
+        return res.redirect('/app/settings?error=activation_failed');
+      }
+      const session = await stripe.checkout.sessions.retrieve(sessionId, { expand: ['subscription'] });
+      verified = !!session && (session.payment_status === 'paid' || session.payment_status === 'no_payment_required');
+      if (verified) {
+        const interval = session.subscription?.items?.data?.[0]?.price?.recurring?.interval || null;
+        payment = {
+          customer_email: session.customer_details?.email || session.customer_email || null,
+          subscription_id: typeof session.subscription === 'object' && session.subscription
+            ? session.subscription.id
+            : session.subscription,
+          metadata_user_id: session.metadata?.user_id || null,
+          interval,
+          product_name: session.metadata?.billing || '',
+        };
       }
 
       if (!verified) {
@@ -401,12 +390,14 @@ module.exports = function(pool) {
     }
   });
 
-  // POST webhook — LEGACY Polsia sync. Previously unauthenticated and
-  // body-trusting: anyone could POST {user_email, plan:'pro'} and grant
-  // themselves a subscription. Now requires the shared Polsia key; returns
-  // 410 when the integration isn't configured at all.
+  // POST /webhook — DISABLED legacy sync endpoint. Was previously
+  // unauthenticated and body-trusting (anyone could POST {user_email,
+  // plan:'pro'} to grant themselves a subscription). Superseded by the
+  // signature-verified /stripe-webhook above. Always 410.
   router.post('/webhook', async (req, res) => {
-    const expected = process.env.POLSIA_API_KEY;
+    return res.status(410).json({ success: false, message: 'Endpoint retired — use Stripe webhook' });
+    /* eslint-disable no-unreachable */
+    const expected = null;
     if (!expected) {
       return res.status(410).json({ success: false, message: 'Legacy webhook disabled' });
     }

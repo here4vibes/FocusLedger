@@ -5037,7 +5037,7 @@
     </div>
 
     <div class="app-footer">
-<p>FocusLedger &mdash; Built by <a href="https://polsia.com">Polsia</a> &middot; <a href="/terms">Terms of Service</a> &middot; <a href="/privacy">Privacy Policy</a> &middot; <a href="#" id="bugReportBtn" style="color: var(--orange);">Report a bug</a></p>
+<p>FocusLedger &mdash; <a href="/terms">Terms of Service</a> &middot; <a href="/privacy">Privacy Policy</a> &middot; <a href="#" id="bugReportBtn" style="color: var(--orange);">Report a bug</a></p>
     </div>
 
     <!-- Upgrade Modal (shown when free user hits task limit) -->
@@ -5178,23 +5178,6 @@
 
     <!-- Confetti container -->
     <div class="confetti-container" id="confettiContainer"></div>
-
-    <!-- Polsia Analytics -->
-    <script>
-    (function() {
-        var slug = 'focusledger';
-        if (!slug) return;
-        var vid = localStorage.getItem('polsia_vid');
-        if (!vid) {
-            vid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-                var r = Math.random() * 16 | 0;
-                return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
-            });
-            localStorage.setItem('polsia_vid', vid);
-        }
-        new Image().src = 'https://polsia.com/api/beacon/pixel?s=' + encodeURIComponent(slug) + '&v=' + encodeURIComponent(vid);
-    })();
-    </script>
 
     <!-- APP JS -->
     <script>

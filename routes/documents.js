@@ -13,7 +13,8 @@
 
 const express = require('express');
 const multer = require('multer');
-const fetch = require('node-fetch');
+const crypto = require('crypto');
+const sha256hex = (buf) => crypto.createHash('sha256').update(buf).digest('hex');
 const FormData = require('form-data');
 const { authenticateToken } = require('../middleware/auth');
 const { checkProStatus } = require('../middleware/proUtils');
@@ -126,29 +127,23 @@ module.exports = function(pool) {
         }
       }
 
-      // Upload file to R2 via Polsia proxy
-      const formData = new FormData();
-      formData.append('file', req.file.buffer, {
-        filename: req.file.originalname,
-        contentType: req.file.mimetype,
-      });
-
-      const r2Res = await fetch('https://polsia.com/api/proxy/r2/upload', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${process.env.POLSIA_API_KEY}`,
-          ...formData.getHeaders(),
-        },
-        body: formData,
-      });
-
-      const r2Data = await r2Res.json();
-      if (!r2Data.success) {
-        console.error('[documents] R2 upload failed:', r2Data);
+      // Upload to first-party S3-compatible storage (R2/S3/B2 — zero-dep SigV4)
+      const storage = require('../lib/s3-storage');
+      if (!storage.isConfigured()) {
+        console.error('[documents] storage not configured — set S3_ENDPOINT/BUCKET/ACCESS_KEY_ID/SECRET_ACCESS_KEY');
+        return res.status(503).json({ success: false, message: 'Document storage isn\'t set up yet.' });
+      }
+      // Key: per-user namespace + timestamped filename, sanitized
+      const safeName = (req.file.originalname || 'file').replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 100);
+      const stamp = sha256hex(req.file.buffer).slice(0, 12);
+      const objectKey = `documents/${userId}/${stamp}_${safeName}`;
+      let s3Url;
+      try {
+        ({ url: s3Url } = await storage.putObject(objectKey, req.file.buffer, req.file.mimetype));
+      } catch (upErr) {
+        console.error('[documents] storage upload failed:', upErr.message);
         return res.status(502).json({ success: false, message: 'File storage failed. Try again.' });
       }
-
-      const s3Url = r2Data.file.url;
 
       // Check if AI extraction quota is available
       const month = getCurrentMonth();
@@ -200,12 +195,34 @@ module.exports = function(pool) {
           [doc.id]
         ).catch(() => {});
 
-        runExtractionAsync(pool, doc.id, s3Url, req.file.mimetype, doc.name, userId, month);
+        // extraction fetches the file — use a signed URL so the bucket can stay private
+        const extractUrl = storage.signedGetUrl(objectKey, 600);
+        runExtractionAsync(pool, doc.id, extractUrl, req.file.mimetype, doc.name, userId, month);
       }
 
     } catch (err) {
       console.error('[documents] upload error:', err.message);
       res.status(500).json({ success: false, message: 'Upload failed. Please try again.' });
+    }
+  });
+
+  // ─── GET /api/documents/:id/view-url ──────────────────────────────────────
+  // Short-lived signed URL to view/download the file (bucket stays private).
+  router.get('/:id/view-url', async (req, res) => {
+    try {
+      const storage = require('../lib/s3-storage');
+      if (!storage.isConfigured()) return res.status(503).json({ success: false, message: 'Storage not configured.' });
+      const { rows } = await pool.query(
+        'SELECT s3_url FROM documents WHERE id = $1 AND user_id = $2',
+        [parseInt(req.params.id, 10), req.user.id]
+      );
+      if (!rows.length) return res.status(404).json({ success: false, message: 'Not found.' });
+      const key = storage.keyFromUrl(rows[0].s3_url);
+      if (!key) return res.status(500).json({ success: false, message: 'Bad file reference.' });
+      res.json({ success: true, url: storage.signedGetUrl(key, 300) });
+    } catch (err) {
+      console.error('[documents] view-url error:', err.message);
+      res.status(500).json({ success: false, message: 'Failed to generate view link.' });
     }
   });
 
@@ -330,12 +347,10 @@ module.exports = function(pool) {
       }
 
       // Best-effort: delete from R2. Non-fatal if it fails.
-      const fileKey = extractR2Key(result.rows[0].s3_url);
-      if (fileKey) {
-        fetch(`https://polsia.com/api/proxy/r2/files/${encodeURIComponent(fileKey)}`, {
-          method: 'DELETE',
-          headers: { Authorization: `Bearer ${process.env.POLSIA_API_KEY}` },
-        }).catch(err => console.error('[documents] R2 delete failed:', err.message));
+      const storage = require('../lib/s3-storage');
+      const fileKey = storage.keyFromUrl(result.rows[0].s3_url);
+      if (fileKey && storage.isConfigured()) {
+        storage.deleteObject(fileKey).catch(err => console.error('[documents] storage delete failed:', err.message));
       }
 
       res.json({ success: true });

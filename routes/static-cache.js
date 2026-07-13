@@ -28,9 +28,8 @@ module.exports = function (app, rootDir) {
   // by finding public/index.html and serving it directly, bypassing this handler.
   const landingPath = path.join(rootDir, 'views', 'index.html');
   app.get('/', function (req, res) {
-    const slug = process.env.POLSIA_ANALYTICS_SLUG || '';
-    const html = fs.readFileSync(landingPath, 'utf8');
-    const injected = slug ? html.replace('__POLSIA_SLUG__', slug) : html;
+      const html = fs.readFileSync(landingPath, 'utf8');
+    const injected = html;
     res.setHeader('Cache-Control', 'no-cache, must-revalidate');
     res.type('html').send(injected);
   });

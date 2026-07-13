@@ -1,6 +1,6 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
-// FocusLedger iOS shell — loads the live web app from focusledger.polsia.app.
+// FocusLedger iOS shell — loads the live web app from focusledger.net.
 // This is NOT a static offline build. The native shell exists to distribute
 // through the App Store; all business logic remains on the server.
 const config: CapacitorConfig = {
@@ -12,7 +12,7 @@ const config: CapacitorConfig = {
   server: {
     // Live server load — the app hits the real backend on every open.
     // Remove this block only if shipping a fully offline build (not planned).
-    // NOTE: was focusledger.polsia.app (pre-domain-move) — building against
+    // NOTE: was focusledger.net (pre-domain-move) — building against
     // that would have shipped an app aimed at the wrong server.
     url: 'https://focusledger.net',
     cleartext: false,

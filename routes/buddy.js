@@ -33,7 +33,7 @@
 
 const express = require('express');
 const { authenticateToken } = require('../middleware/auth');
-const { chatMessages } = require('../lib/polsia-ai');
+const { chatMessages } = require('../lib/ai-chat');
 const { extractTasks, detectCompletions, extractPassiveCapture, isBrainDump, extractBrainDump } = require('../lib/taskParsingService');
 const {
   runPatternDetection,

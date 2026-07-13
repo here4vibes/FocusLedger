@@ -481,15 +481,12 @@
 <!-- Analytics: PostHog PageView -->
 <script>
 (function() {
-    var slug = '__POLSIA_SLUG__' || '';
+    var slug = '' || '';
     if (slug && window.posthog) {
         posthog.capture('$pageview', { page: '/story', source: 'organic' });
     }
 })();
 </script>
-
-<!-- Polsia Analytics Beacon -->
-<script src="https://analytics.polsia.com/beacon?slug=__POLSIA_SLUG__&path=/story" async defer></script>
 
 </body>
 </html>

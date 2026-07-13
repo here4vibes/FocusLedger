@@ -318,7 +318,7 @@ module.exports = function (pool) {
 
   // ── POST /api/partnerships/tandem-activate ────────────────────────────────
   // Called after a successful Tandem Stripe checkout to activate the subscription.
-  // Verifies the payment via Polsia, then grants tandem_plan + tandem_expires_at.
+  // Verifies the payment directly with Stripe, then grants tandem_plan + expiry.
   // Also starts the 14-day trial for the partner on the shared partnership row.
   // Body: { session_id: string } — the Stripe checkout session ID from the success redirect
   router.post('/tandem-activate', authenticateToken, async (req, res) => {
@@ -328,23 +328,22 @@ module.exports = function (pool) {
         return res.status(400).json({ success: false, message: 'session_id required' });
       }
 
-      // Verify via Polsia payment proxy
-      const verifyRes = await fetch(
-        `${process.env.POLSIA_API_URL}/api/company-payments/verify?session_id=${session_id}`,
-        { headers: { Authorization: `Bearer ${process.env.POLSIA_API_KEY}` } }
-      );
-
-      if (!verifyRes.ok) {
-        return res.status(402).json({ success: false, message: 'Payment verification failed' });
+      // Verify directly with Stripe — the source of truth
+      if (!process.env.STRIPE_SECRET_KEY) {
+        console.error('[partnerships/tandem-activate] STRIPE_SECRET_KEY not set');
+        return res.status(503).json({ success: false, message: 'Payments not configured' });
       }
-
-      const { verified, payment } = await verifyRes.json();
+      const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+      const session = await stripe.checkout.sessions.retrieve(session_id, { expand: ['subscription'] });
+      const verified = !!session && (session.payment_status === 'paid' || session.payment_status === 'no_payment_required');
       if (!verified) {
         return res.status(402).json({ success: false, message: 'Payment not verified' });
       }
+      const interval = session.subscription?.items?.data?.[0]?.price?.recurring?.interval || null;
+      const payment = { product_name: session.metadata?.billing || (interval === 'year' ? 'annual' : 'monthly') };
 
       // Set subscription to expire 1 month or 1 year from now based on product name
-      const isAnnual = (payment.product_name || '').toLowerCase().includes('annual');
+      const isAnnual = interval === 'year' || (payment.product_name || '').toLowerCase().includes('annual');
       const expiresAt = new Date();
       if (isAnnual) {
         expiresAt.setFullYear(expiresAt.getFullYear() + 1);

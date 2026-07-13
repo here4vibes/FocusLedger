@@ -2,20 +2,20 @@
 /**
  * jobs/evening-checkin.js — Evening check-in notification sender.
  *
- * Runs daily at 8pm (or user-preferred time) via polsia.toml.
+ * Runs daily at 8pm (or user-preferred time) via render.yaml.
  * Sends push notifications to users who:
  *   1. Have a Plaid token connected
  *   2. Have transactions today
  *   3. Have evening check-in enabled
  *   4. Have not already completed today's spending session
  *
- * Guards: skipped entirely when POLSIA_IN_PROCESS_CRONS_ENABLED !== 'true'
- * (Blaxel shadow migration sets this to false; primary Render handles crons via polsia.toml).
+ * Guards: skipped entirely when IN_PROCESS_CRONS_ENABLED !== 'true'
+ * (Blaxel shadow migration sets this to false; primary Render handles crons via render.yaml).
  *
  * Batches users in chunks of 50 to avoid overwhelming the notification infrastructure.
  * Logs all outcomes (sent, skipped, retry_scheduled) to console.
  *
- * polsia.toml entry:
+ * render.yaml entry:
  *   [[crons]]
  *   name = "evening-checkin-sender"
  *   schedule = "0 20 * * *"

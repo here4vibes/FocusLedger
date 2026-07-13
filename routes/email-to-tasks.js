@@ -26,43 +26,22 @@ const {
   isMessageDuplicate,
 } = require('../db/email-to-tasks');
 
-// Polsia email proxy used for sending replies
-// WHY: app already uses Resend directly for outbound; however the email proxy
-//      skill says to use it for sends. We use the proxy for email-to-tasks replies
-//      since this is new code and the proxy is the approved pattern.
-const PROXY_BASE = 'https://polsia.com/api/proxy/email';
-const APP_BASE_URL = process.env.APP_URL || 'https://focusledger.polsia.app';
+const APP_BASE_URL = process.env.APP_URL || 'https://focusledger.net';
 
 /**
- * Send an email via the Polsia email proxy.
- * reply_to_email_id bypasses rate limits for replies to inbound emails.
+ * Send an email reply via Resend (lib/emailService) — the app's first-party
+ * email path. (Previously routed through a third-party proxy; removed.)
  */
-async function sendProxyEmail({ to, subject, body, html, reply_to_email_id }) {
-  const apiKey = process.env.POLSIA_API_KEY;
-  if (!apiKey) {
-    console.error('[email-to-tasks] POLSIA_API_KEY not set — cannot send reply');
-    return;
-  }
-  const payload = { to, subject, body };
-  if (html)              payload.html = html;
-  if (reply_to_email_id) payload.reply_to_email_id = reply_to_email_id;
-
-  try {
-    const res = await fetch(`${PROXY_BASE}/send`, {
-      method:  'POST',
-      headers: {
-        'Content-Type':  'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify(payload),
-    });
-    if (!res.ok) {
-      const err = await res.text().catch(() => '');
-      console.error(`[email-to-tasks] Proxy send failed ${res.status}: ${err}`);
-    }
-  } catch (err) {
-    console.error('[email-to-tasks] Proxy send error:', err.message);
-  }
+async function sendProxyEmail({ to, subject, body, html }) {
+  const { sendEmail } = require('../lib/emailService');
+  const result = await sendEmail({
+    to,
+    subject,
+    html: html || `<pre style="font-family:inherit;white-space:pre-wrap;">${String(body || '')}</pre>`,
+    text: body,
+    templateType: 'email_to_task_reply',
+  });
+  if (!result.success) console.error('[email-to-tasks] reply send failed:', result.error);
 }
 
 /**

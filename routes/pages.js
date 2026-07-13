@@ -9,13 +9,11 @@ const router = express.Router();
 const pub = (file) => path.join(__dirname, '..', 'public', file);
 
 // Landing page — served from views/ (not public/) so it cannot be shadowed
-// by a Render persistent disk mounted at public/. Also injects Polsia slug.
+// by a Render persistent disk mounted at public/.
 const LANDING_PATH = path.join(__dirname, '..', 'views', 'index.html');
 router.get('/', (req, res) => {
-  const slug = process.env.POLSIA_ANALYTICS_SLUG || '';
   if (fs.existsSync(LANDING_PATH)) {
     let html = fs.readFileSync(LANDING_PATH, 'utf8');
-    if (slug) html = html.replace('__POLSIA_SLUG__', slug);
     res.setHeader('Cache-Control', 'no-cache, must-revalidate');
     res.type('html').send(html);
   } else {

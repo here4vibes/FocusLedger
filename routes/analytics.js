@@ -404,7 +404,7 @@ module.exports = function(pool) {
             COUNT(*)::int AS pageviews
           FROM visitor_sessions
           WHERE visited_at >= ${since}
-            AND (referrer IS NULL OR (referrer NOT LIKE '%focusledger.net%' AND referrer NOT LIKE '%focusledger.polsia.app%'))
+            AND (referrer IS NULL OR (referrer NOT LIKE '%focusledger.net%' AND referrer NOT LIKE '%focusledger.net%'))
           GROUP BY source
           ORDER BY visitors DESC
           LIMIT 15
