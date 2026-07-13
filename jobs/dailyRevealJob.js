@@ -185,8 +185,17 @@ async function fetchInterestCorpus(pool, userId) {
 // ── Data gathering ────────────────────────────────────────────────────────────
 
 async function fetchUserWeek(pool, userId, sinceDate) {
+  // Each sub-query degrades to empty rows on failure so one phantom column or
+  // schema drift can't nuke the whole reveal — an active user should still get
+  // a fallback reveal from whatever data succeeded, never wake to nothing.
+  // (A missing `mood` column on buddy_checkins did exactly that: the rejected
+  // query aborted Promise.all → no AI, no fallback, no card.)
+  const q = (sql, params) => pool.query(sql, params).catch((e) => {
+    console.warn('[daily-reveal] sub-query degraded (empty rows) | userId:', userId, '|', e.message);
+    return { rows: [] };
+  });
   const [tasks, expenses, checkins, focus, streaks] = await Promise.all([
-    pool.query(
+    q(
       `SELECT title, is_completed, completed_at::date AS completed_date,
               EXTRACT(DOW  FROM completed_at) AS completed_dow,
               EXTRACT(HOUR FROM completed_at) AS completed_hour
@@ -195,28 +204,28 @@ async function fetchUserWeek(pool, userId, sinceDate) {
        ORDER BY created_at DESC LIMIT 40`,
       [userId, sinceDate]
     ),
-    pool.query(
+    q(
       `SELECT e.amount, e.is_impulse, e.expense_date, c.name AS category_name
        FROM expenses e LEFT JOIN categories c ON c.id = e.category_id
        WHERE e.user_id = $1 AND e.expense_date >= $2
        ORDER BY e.expense_date DESC LIMIT 40`,
       [userId, sinceDate]
     ),
-    pool.query(
-      `SELECT checkin_type, mood, checkin_date
+    q(
+      `SELECT checkin_type, energy_level, checkin_date
        FROM buddy_checkins
        WHERE user_id = $1 AND checkin_date >= $2
        ORDER BY checkin_date DESC LIMIT 14`,
       [userId, sinceDate]
     ),
-    pool.query(
+    q(
       `SELECT actual_duration_seconds, completed, started_at::date AS session_date
        FROM focus_sessions
        WHERE user_id = $1 AND started_at >= $2
        ORDER BY started_at DESC LIMIT 20`,
       [userId, sinceDate]
     ),
-    pool.query(
+    q(
       `SELECT rs.current_streak, rs.best_streak, r.name AS routine_name
        FROM routine_streaks rs JOIN routines r ON r.id = rs.routine_id
        WHERE rs.user_id = $1 AND r.is_active = true
@@ -268,8 +277,8 @@ function summariseForPrompt({ tasks, expenses, checkins, focus, streaks }) {
   }
 
   if (checkins.length) {
-    const moods = checkins.filter(c => c.mood).map(c => `${c.checkin_date}:${c.mood}`);
-    lines.push(`CHECK-INS: ${checkins.length} this week${moods.length ? ` | moods: ${moods.join(', ')}` : ''}`);
+    const energies = checkins.filter(c => c.energy_level).map(c => `${c.checkin_date}:${c.energy_level}`);
+    lines.push(`CHECK-INS: ${checkins.length} this week${energies.length ? ` | energy: ${energies.join(', ')}` : ''}`);
   }
 
   if (focus.length) {
