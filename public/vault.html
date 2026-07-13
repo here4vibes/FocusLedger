@@ -629,6 +629,14 @@
   'use strict';
 
   var token = localStorage.getItem('fl_token');
+    // Open a document via a short-lived signed URL (bucket is private)
+    function openDoc(doc) {
+      if (!doc) return;
+      fetch('/api/documents/' + doc.id + '/view-url', { headers: { 'Authorization': 'Bearer ' + token } })
+        .then(function(r){ return r.json(); })
+        .then(function(d){ if (d.success && d.url) window.open(d.url, '_blank'); else alert('Could not open file.'); })
+        .catch(function(){ alert('Could not open file.'); });
+    }
   if (!token) { window.location.href = '/login'; return; }
 
   var currentCat = 'All';
@@ -932,7 +940,7 @@
       btn.addEventListener('click', function(e) {
         e.stopPropagation();
         var doc = allDocs.find(function(d) { return String(d.id) === btn.dataset.id; });
-        if (doc) window.open(doc.s3_url, '_blank');
+        openDoc(doc);
       });
     });
     grid.querySelectorAll('[data-action="delete"]').forEach(function(btn) {
@@ -1204,7 +1212,7 @@
   });
   document.getElementById('detailView').addEventListener('click', function() {
     var doc = allDocs.find(function(d) { return d.id === activeDocId; });
-    if (doc) window.open(doc.s3_url, '_blank');
+    openDoc(doc);
   });
   document.getElementById('detailDelete').addEventListener('click', function() {
     document.getElementById('detailOverlay').classList.remove('open');
