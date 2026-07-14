@@ -1567,6 +1567,38 @@
         </div>`;
         html += '</div>';
 
+        // ── Hero A/B test (landing headline) ──────────────────────────────
+        const ab = data.hero_ab;
+        if (ab && ab.variants) {
+            const vA = ab.variants.find(function(v){ return v.variant === 'A'; }) || { visitors:0, signups:0, conversion_pct:0 };
+            const vB = ab.variants.find(function(v){ return v.variant === 'B'; }) || { visitors:0, signups:0, conversion_pct:0 };
+            const abCard = function(letter, d, isWinner, label, frame) {
+                return '<div class="stat-card"' + (isWinner ? ' style="border-left:3px solid #4CAF50;background:rgba(76,175,80,0.07);"' : '') + '>'
+                    + '<div class="stat-value" style="font-size:1.6rem;">' + d.conversion_pct + '%' + (isWinner ? ' 🏆' : '') + '</div>'
+                    + '<div class="stat-label">Variant ' + letter + ' · ' + escHtml(frame) + '</div>'
+                    + '<div class="stat-sub">' + fmt(d.signups) + ' signups / ' + fmt(d.visitors) + ' visits</div>'
+                    + '<div class="stat-sub" style="opacity:0.7;margin-top:0.25rem;">“' + escHtml(label) + '”</div>'
+                    + '</div>';
+            };
+            let verdict, verdictColor;
+            if (!ab.enough_data) { verdict = 'Collecting data — need ≥100 visits per arm before trusting a winner'; verdictColor = '#888'; }
+            else if (ab.leader === 'tie') { verdict = 'Dead heat so far'; verdictColor = '#888'; }
+            else if (ab.significant) { verdict = 'Variant ' + ab.leader + ' winning · +' + ab.lift_pct + '% lift · 95% confidence ✓'; verdictColor = '#4CAF50'; }
+            else { verdict = 'Variant ' + ab.leader + ' ahead +' + (ab.lift_pct != null ? ab.lift_pct : 0) + '% · not yet significant, keep it running'; verdictColor = '#FF9800'; }
+            const winA = ab.enough_data && ab.significant && ab.leader === 'A';
+            const winB = ab.enough_data && ab.significant && ab.leader === 'B';
+
+            html += '<p class="section-label">Hero A/B — Landing Headline</p>';
+            html += '<div class="stats-grid" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr));">';
+            html += abCard('A', vA, winA, 'Stop letting yourself down.', 'Deficit (control)');
+            html += abCard('B', vB, winB, 'Become the person your to-do list keeps promising.', 'Aspiration');
+            html += '</div>';
+            html += '<div class="stat-card" style="border-left:3px solid ' + verdictColor + ';margin-top:0.5rem;">'
+                + '<div class="stat-value" style="font-size:1.05rem;color:' + verdictColor + ';">' + escHtml(verdict) + '</div>'
+                + '<div class="stat-sub">z = ' + (ab.z === null ? '—' : ab.z) + ' · measured landing_visit → signup_complete by sticky variant</div>'
+                + '</div>';
+        }
+
         // ── Session Duration + Signup intent ──────────────────────────────
         html += '<p class="section-label">Engagement</p>';
         html += '<div class="stats-grid" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr));">';
