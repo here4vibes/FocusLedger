@@ -103,6 +103,7 @@ router.get('/partner-dashboard',  (_, res) => res.sendFile(pub('partner-dashboar
 // Primary tab routes — each serves ONLY its own view (no cross-contamination)
 router.get('/app/tasks',    (_, res) => res.sendFile(pub('app/tasks.html')));
 router.get('/app/today',    (_, res) => res.sendFile(pub('app/today.html')));
+router.get('/app/done',     (_, res) => res.sendFile(pub('app/done.html')));
 router.get('/app/money',    (_, res) => res.sendFile(pub('money.html')));
 router.get('/app/vault',    (_, res) => res.sendFile(pub('vault.html')));
 router.get('/app/buddy',    (_, res) => res.sendFile(pub('buddy.html')));

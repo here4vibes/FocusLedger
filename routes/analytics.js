@@ -101,6 +101,7 @@ const ALLOWED_EVENTS = new Set([
   'feature_email_task',        // first email → task
   'feature_ai_suggestion',     // accepted an AI suggestion
   'feature_recurring_task',    // created first recurring task
+  'feature_day_closed',        // tapped "Done for today" — the world-closing end state
 
   // Upgrade interactions
   'upgrade_prompt_seen',       // upgrade modal shown
