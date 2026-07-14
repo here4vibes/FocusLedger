@@ -2004,9 +2004,40 @@
 <section class="hero">
     <div class="hero-inner">
         <div class="hero-text">
-            <h1>Stop letting yourself down.</h1>
+            <h1 id="heroHeadline">Stop letting yourself down.</h1>
 
-            <p class="hero-sub">Finally, an app built for the way your ADHD brain actually works — one tab for tasks, spending, and routines, with AI that kicks in where willpower runs out.</p>
+            <p class="hero-sub" id="heroSub">Finally, an app built for the way your ADHD brain actually works — one tab for tasks, spending, and routines, with AI that kicks in where willpower runs out.</p>
+            <script>
+            /* Hero A/B — aspiration (Callard) vs. the current deficit frame.
+               Control (A) is the HTML default above, so no-JS + crawlers get it.
+               Variant is sticky per visitor (localStorage) and attached to the
+               funnel_landing_visit / funnel_signup_complete events for analysis
+               (group by event_data->>'hero_variant'). Swap runs inline, right
+               after the elements, so B users don't see a flash of control. */
+            (function () {
+              var B = {
+                h: "Become the person your to-do list keeps promising.",
+                s: "The ADHD command center that closes the gap between who you are and who you're trying to be — tasks, money, and routines in one tab, with a coach for the moments willpower runs out."
+              };
+              var v;
+              try {
+                v = localStorage.getItem('fl_hero_ab');
+                if (v !== 'A' && v !== 'B') {
+                  v = Math.random() < 0.5 ? 'A' : 'B';
+                  localStorage.setItem('fl_hero_ab', v);
+                }
+              } catch (e) {
+                v = Math.random() < 0.5 ? 'A' : 'B'; // private mode — session-only
+              }
+              window.FL_HERO_VARIANT = v;
+              if (v === 'B') {
+                var h = document.getElementById('heroHeadline');
+                var s = document.getElementById('heroSub');
+                if (h) h.textContent = B.h;
+                if (s) s.textContent = B.s;
+              }
+            })();
+            </script>
 
             <div class="hero-cta-wrap">
                 <!-- Single primary CTA -->
@@ -3058,7 +3089,7 @@
 
     // ── Page view + landing funnel event ─────────────────────────────────
     FLA.trackPage('landing');
-    FLA.trackEvent('funnel_landing_visit');
+    FLA.trackEvent('funnel_landing_visit', { hero_variant: window.FL_HERO_VARIANT || 'A' });
 
     // ── Lead magnet click tracking ───────────────────────────────────────
     // Fire on click of any element with class .lead-magnet-link (Science Cheat
@@ -3177,7 +3208,7 @@ if ('serviceWorker' in navigator) {
                           if (data.isNewUser) {
                               localStorage.removeItem('fl_attribution');
                               localStorage.setItem('fl_just_signed_up', '1');
-                              if (typeof FLA !== 'undefined') FLA.trackEvent('funnel_signup_complete');
+                              if (typeof FLA !== 'undefined') FLA.trackEvent('funnel_signup_complete', { hero_variant: window.FL_HERO_VARIANT || 'A' });
                               if (typeof fbq === 'function') fbq('track', 'Lead');
                           }
                           // Route through check-in flow; it self-gates (skips if already done today)
@@ -3229,7 +3260,7 @@ if ('serviceWorker' in navigator) {
                   if (data.isNewUser) {
                       localStorage.removeItem('fl_attribution');
                       localStorage.setItem('fl_just_signed_up', '1');
-                      if (typeof FLA !== 'undefined') FLA.trackEvent('funnel_signup_complete');
+                      if (typeof FLA !== 'undefined') FLA.trackEvent('funnel_signup_complete', { hero_variant: window.FL_HERO_VARIANT || 'A' });
                       if (typeof fbq === 'function') fbq('track', 'Lead');
                   }
                   // Route through check-in flow; it self-gates (skips if already done today)
