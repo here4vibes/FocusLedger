@@ -26,8 +26,14 @@ async function sendMorningNudges(pool) {
   const webPushEnabled = !!(process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY);
   const apnsEnabled = isApnsConfigured();
 
-  // Skip entirely if neither channel is configured
-  if (!webPushEnabled && !apnsEnabled) return;
+  // Skip entirely if neither channel is configured. LOUDLY — a silent return
+  // here made every run "finish successfully" with zero output while no nudge
+  // ever sent, because the cron's env group lacks the push keys (VAPID for web,
+  // APNS_* for iOS). Never fail silently: say exactly why nothing happened.
+  if (!webPushEnabled && !apnsEnabled) {
+    console.warn('[MorningNudge] No push channel configured — set VAPID_PUBLIC_KEY/VAPID_PRIVATE_KEY (web push) or APNS_KEY_ID/APNS_TEAM_ID/APNS_KEY_P8/APNS_BUNDLE_ID (iOS) in the cron env group. Skipping (0 sent).');
+    return;
+  }
 
   let webpush = null;
   if (webPushEnabled) {
@@ -66,6 +72,7 @@ async function sendMorningNudges(pool) {
       )
     `);
 
+    let sentUsers = 0;
     for (const user of usersResult.rows) {
       try {
         // Skip if user has disabled morning notifications
@@ -171,12 +178,16 @@ async function sendMorningNudges(pool) {
             [user.id, localDate]
           );
           console.log(`[MorningNudge] Sent to user ${user.id} (tz: ${tz}, hour: ${targetHour})`);
+          sentUsers++;
         }
 
       } catch (userErr) {
         console.warn('[MorningNudge] Error processing user', user.id, ':', userErr.message);
       }
     }
+    // Always emit a summary so a quiet morning is diagnosable at a glance
+    // (candidates = users with a push device; sent = nudges actually delivered).
+    console.log(`[MorningNudge] Done. candidates=${usersResult.rows.length} sent=${sentUsers}`);
   } catch (err) {
     console.error('[MorningNudge] Fatal error:', err.message);
   }
