@@ -52,9 +52,10 @@ HEADLINE rules (the curiosity gap — this is shown BEFORE they tap):
 BODY rules (the payoff — shown after the tap):
 - ONE discovery, 1-3 short sentences, Buddy's voice: direct, warm, real. No manufactured enthusiasm.
 - Use real numbers from the data. Cross two life domains when the data supports it.
+- The reveal is a mirror of the person they're building, not a stat report — reflect what this pattern says about who they're becoming, not just what they did.
 - If INTERESTS are listed, weaving one in makes the insight feel personal — do it when natural, never force it.
-- End with one tiny concrete thing to try today.
-- Never shame. A rough week gets a curious, kind observation — not a pep talk.
+- End with ONE of: a tiny concrete thing to try today, framed as a step toward that person (a bridge, not a chore) — OR a single question that invites them to notice the pattern in themselves.
+- Never shame. A rough week is the middle of becoming, not a failure — give it a curious, kind observation, never a pep talk.
 
 science_tag: exactly one of ${JSON.stringify(SCIENCE_TAGS)} — the concept this discovery demonstrates.`;
 
@@ -398,7 +399,7 @@ function buildFallbackReveal({ tasks, expenses, checkins, focus, streaks }) {
     const share = Math.round((topDow[1] / completed.length) * 100);
     return {
       headline: `Something about your ${day}s`,
-      body: `${share}% of everything you finished this week happened on a ${day}. That's not luck — that's a rhythm. Try putting tomorrow's hardest task where your momentum already lives.`,
+      body: `${share}% of everything you finished this week happened on a ${day}. That's not luck — it's a version of you that already knows how to move. Give tomorrow's hardest thing to that person, and watch them show up.`,
       scienceTag: 'habit_formation',
       revealType: 'pattern',
     };
@@ -414,7 +415,7 @@ function buildFallbackReveal({ tasks, expenses, checkins, focus, streaks }) {
     if (share >= 60) {
       return {
         headline: 'The check-in thing is measurable now',
-        body: `${share}% of your completed tasks this week landed on days you checked in with me. Five minutes of morning contact seems to be your highest-leverage habit. Worth protecting.`,
+        body: `${share}% of your completed tasks this week landed on days you checked in with me. On the days you showed up here first, you showed up for yourself all day — that's not a habit to protect, it's who you're practicing being. Worth guarding.`,
         scienceTag: 'cross_domain',
         revealType: 'insight',
       };
@@ -429,7 +430,7 @@ function buildFallbackReveal({ tasks, expenses, checkins, focus, streaks }) {
     if (planned.length >= 4 && impulse.length <= 1) {
       return {
         headline: 'Your money did something quiet this week',
-        body: `${planned.length} planned purchases, ${impulse.length === 0 ? 'zero' : 'just one'} impulse. That's your prefrontal cortex winning the week — notice what was different, because it's repeatable.`,
+        body: `${planned.length} planned purchases, ${impulse.length === 0 ? 'zero' : 'just one'} impulse. That's not restraint you white-knuckled — it's the person you're becoming, showing up in the numbers. What was different this week? That's the thread to pull.`,
         scienceTag: 'impulse_spending',
         revealType: 'insight',
       };
@@ -441,7 +442,7 @@ function buildFallbackReveal({ tasks, expenses, checkins, focus, streaks }) {
   if (mins >= 60) {
     return {
       headline: 'You built more than you think this week',
-      body: `${mins} minutes of deep focus across ${focus.length} sessions. ADHD brains rarely get credit for invisible effort — here's yours, counted. One more session today keeps the thread.`,
+      body: `${mins} minutes of deep focus across ${focus.length} sessions. ADHD brains rarely get credit for invisible effort — here's yours, counted. That effort is still you becoming someone who does the work; one more session today keeps that person in motion.`,
       scienceTag: 'executive_function',
       revealType: 'stat',
     };
@@ -452,7 +453,7 @@ function buildFallbackReveal({ tasks, expenses, checkins, focus, streaks }) {
   if (topStreak && topStreak.current_streak >= 2) {
     return {
       headline: `"${topStreak.routine_name}" is quietly compounding`,
-      body: `${topStreak.current_streak} days in a row now${topStreak.current_streak >= topStreak.best_streak ? " — that's your best run yet" : ` (best: ${topStreak.best_streak})`}. Consistency you don't have to think about is the whole point. Keep it boring.`,
+      body: `${topStreak.current_streak} days in a row now${topStreak.current_streak >= topStreak.best_streak ? " — that's your best run yet" : ` (best: ${topStreak.best_streak})`}. Each quiet repeat is you turning a decision into a person who just does this. Keep it boring — boring is who you're becoming.`,
       scienceTag: 'habit_formation',
       revealType: 'stat',
     };
@@ -462,7 +463,7 @@ function buildFallbackReveal({ tasks, expenses, checkins, focus, streaks }) {
   if (completed.length >= 1) {
     return {
       headline: 'One number from your week',
-      body: `${completed.length} task${completed.length === 1 ? '' : 's'} finished this week. Not a judgment — a baseline. Tomorrow's reveal gets more interesting the more the app sees.`,
+      body: `${completed.length} task${completed.length === 1 ? '' : 's'} finished this week. Not a judgment — a baseline for the person you're building. Tomorrow's reveal gets sharper the more the app sees of you.`,
       scienceTag: 'salutogenesis',
       revealType: 'stat',
     };
