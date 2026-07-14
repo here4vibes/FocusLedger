@@ -7948,7 +7948,7 @@
                     ? 'Nothing completed yet — the list is ready when you are.'
                     : state.filter === 'active'
                     ? 'Clear list. Enjoy it.'
-                    : 'Nothing here yet. Add whatever\'s on your mind.';
+                    : 'Empty for now — that\'s allowed too. When something\'s rattling around, give it to me, one thing at a time.';
                 var icon = state.filter === 'completed' ? '\u2B50' : '\uD83E\uDDE0';
                 container.innerHTML =
                     '<div class="empty-state">' +
@@ -7977,7 +7977,7 @@
                 // All tasks done — show a celebratory empty-active message before the completed section
                 html += '<div class="empty-state" style="padding:1.5rem 1rem;">';
                 html += '<div class="empty-icon">\uD83C\uDF89</div>';
-                html += '<p>All caught up. Nice work.</p>';
+                html += '<p>All caught up. The rest of the day is yours — go close it.</p>';
                 html += '</div>';
             }
 

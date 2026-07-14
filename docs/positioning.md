@@ -63,6 +63,29 @@ So the two ideas are one product: **we draw the boundary inside which a becoming
 - **A lapse is the middle of becoming, never a broken streak.** No shame in any surface.
 - **Notifications must be world-*closing*.** A nudge returns the user to one small local task, then lets them leave.
 
+### Writing in this voice — a practical guide
+
+The test for any user-facing line — a nudge, an empty state, a button, a Buddy reply:
+
+> **True · particular · plain · from a point of view.** If a tired person has to read it twice, it's decoration — cut it. Plainness is the discipline that earns the depth.
+
+Four moves:
+
+1. **Name the becoming, not the metric.** Not "Nice work" — *"the rest of the day is yours."*
+2. **Give permission to stop, or to be empty.** An empty list isn't a failure to fill. *"Empty for now — that's allowed too."*
+3. **Ask, don't instruct**, where you can. The first thing a new user hears is a real question, not a feature tour.
+4. **No performative cheer, no shame.** Neutral-and-warm beats "You crushed it!" *and* beats "Don't fall behind."
+
+Before → after (all shipped):
+
+| Surface | Before | After |
+| --- | --- | --- |
+| Onboarding open | "What area of your life feels most **out of control**?" | "…what's the part of your life you most wish felt **different** right now?" |
+| All tasks done | "All caught up. Nice work." | "All caught up. The rest of the day is yours — go close it." |
+| Empty journal | "Write your first reflection above!" | "A blank page is allowed to stay blank… when there's something you want to look at honestly, this is where it goes." |
+
+Already right, left alone: *"Clear list. Enjoy it."* · *"Nothing tracked this week."* (neutral observation, never performative praise). **Don't gild copy that already works** — that's its own failure mode.
+
 ### Sources
 
 - Agnes Callard, *the uni-context* — Plain English with Derek Thompson, 14 Jul 2026.
