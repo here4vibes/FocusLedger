@@ -524,6 +524,12 @@
       </a>
     </div>
   </div>
+
+  <!-- The close: the last thing on the page — do your day, then end it.
+       A small, closed world for your attention; this is where it closes. -->
+  <div style="text-align:center;margin:1.9rem 0 0.25rem;">
+    <a href="/app/done" style="display:inline-flex;align-items:center;gap:0.45rem;font-size:0.9rem;color:#9fb0d8;text-decoration:none;padding:0.55rem 1rem;border:1px solid rgba(159,176,216,0.25);border-radius:11px;">🌙 Done for today</a>
+  </div>
 </div>
 
 <script src="/js/services/context-service.js"></script>
@@ -684,6 +690,44 @@
     }
   });
 
+})();
+</script>
+
+<script>
+/* Return state — if you closed the day, the app greets you closed, not busy.
+   A calm banner honoring the close; it never traps you (one tap reopens). */
+(function () {
+  'use strict';
+  function todayKey() {
+    var d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+  var closed;
+  try { closed = localStorage.getItem('fl_closed_' + todayKey()) === '1'; } catch (e) { closed = false; }
+  if (!closed) return;
+
+  var bar = document.createElement('div');
+  bar.style.cssText = 'display:flex;align-items:center;justify-content:center;gap:0.6rem;flex-wrap:wrap;' +
+    'margin:0 0 1.25rem;padding:0.7rem 1rem;border-radius:12px;font-size:0.9rem;' +
+    'background:rgba(47,109,240,0.12);border:1px solid rgba(47,109,240,0.3);color:#cfdcff;';
+  var msg = document.createElement('span');
+  msg.textContent = '🌙 You closed today. The rest of it is yours — see you tomorrow.';
+  var reopen = document.createElement('a');
+  reopen.href = '#';
+  reopen.textContent = 'reopen';
+  reopen.style.cssText = 'color:#9fb0d8;text-decoration:underline;cursor:pointer;';
+  reopen.addEventListener('click', function (e) {
+    e.preventDefault();
+    try { localStorage.removeItem('fl_closed_' + todayKey()); } catch (err) {}
+    bar.remove();
+  });
+  bar.appendChild(msg);
+  bar.appendChild(reopen);
+
+  var anchor = document.querySelector('.greeting-wrap');
+  if (anchor && anchor.parentNode) {
+    anchor.parentNode.insertBefore(bar, anchor);
+  }
 })();
 </script>
 </body>

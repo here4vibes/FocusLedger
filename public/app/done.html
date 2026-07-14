@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="dark">
+<title>Done for today — FocusLedger</title>
+<link rel="icon" type="image/svg+xml" href="/icons/fl-icon.svg">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --navy: #0c1b40;
+    --navy-deep: #081230;
+    --ink: #eaf0ff;
+    --muted: #9fb0d8;
+    --accent: #2f6df0;
+  }
+  html, body { height: 100%; }
+  body {
+    font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: radial-gradient(120% 90% at 50% 0%, #12285f 0%, var(--navy) 45%, var(--navy-deep) 100%);
+    color: var(--ink);
+    min-height: 100dvh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem 1.5rem;
+    overflow-x: hidden;
+  }
+  .wrap {
+    width: 100%;
+    max-width: 440px;
+    text-align: center;
+    animation: rise 700ms cubic-bezier(.2,.7,.2,1) both;
+  }
+  @keyframes rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+  .moon {
+    font-size: 2.4rem;
+    line-height: 1;
+    margin-bottom: 1.4rem;
+    filter: drop-shadow(0 4px 18px rgba(47,109,240,0.5));
+  }
+  h1 {
+    font-size: clamp(1.9rem, 6vw, 2.5rem);
+    letter-spacing: -0.02em;
+    line-height: 1.12;
+    margin-bottom: 1rem;
+  }
+  .lead {
+    font-size: 1.02rem;
+    line-height: 1.65;
+    color: var(--muted);
+    margin-bottom: 1.2rem;
+  }
+  .summary {
+    font-size: 0.95rem;
+    line-height: 1.6;
+    color: var(--ink);
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.09);
+    border-radius: 14px;
+    padding: 0.9rem 1.1rem;
+    margin: 0 auto 1.8rem;
+    max-width: 380px;
+    opacity: 0;
+    transition: opacity 300ms ease;
+  }
+  .summary.show { opacity: 1; }
+  .btn {
+    display: inline-block;
+    width: 100%;
+    max-width: 320px;
+    padding: 0.95rem 1.5rem;
+    font-size: 1.02rem;
+    font-weight: 600;
+    color: #fff;
+    background: var(--accent);
+    border: none;
+    border-radius: 13px;
+    cursor: pointer;
+    box-shadow: 0 8px 26px rgba(47,109,240,0.38);
+    transition: transform 120ms ease, box-shadow 120ms ease;
+  }
+  .btn:hover { transform: translateY(-1px); box-shadow: 0 10px 30px rgba(47,109,240,0.5); }
+  .btn:active { transform: translateY(0); }
+  .reopen {
+    display: inline-block;
+    margin-top: 1.2rem;
+    font-size: 0.86rem;
+    color: var(--muted);
+    text-decoration: none;
+    opacity: 0.75;
+  }
+  .reopen:hover { opacity: 1; text-decoration: underline; }
+
+  /* Final state — after they close. Deliberately near-empty: the app is over. */
+  .farewell { animation: rise 600ms ease both; }
+  .farewell .moon { margin-bottom: 1.6rem; }
+  .farewell h1 { font-size: clamp(1.6rem, 5vw, 2rem); color: var(--ink); }
+  .farewell .lead { margin-bottom: 0; }
+</style>
+</head>
+<body>
+  <div class="wrap" id="wrap">
+    <div class="moon">🌙</div>
+    <h1>You're done for today.</h1>
+    <p class="lead">You showed up — that's the whole job. The rest of today isn't for the app. It's for you.</p>
+    <div class="summary" id="summary"></div>
+    <button class="btn" id="closeBtn">See you tomorrow</button>
+    <a class="reopen" href="/app" id="reopen">Actually, I still need the app</a>
+  </div>
+
+<script src="/js/analytics.js"></script>
+<script>
+(function () {
+  'use strict';
+  var token = localStorage.getItem('fl_token');
+  if (!token) { window.location.replace('/login'); return; }
+
+  // Local date key so "closed today" resets at the user's own midnight.
+  function todayKey() {
+    var d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+
+  // ── Optional release-framed summary (best-effort; the close works without it) ──
+  // The Today timeline returns only OPEN tasks — we frame them as permission to
+  // leave things undone, never as a scorecard of what you failed to finish.
+  fetch('/api/today/timeline', { headers: { 'Authorization': 'Bearer ' + token } })
+    .then(function (r) { return r.ok ? r.json() : null; })
+    .then(function (data) {
+      if (!data) return;
+      var open = Array.isArray(data.tasks) ? data.tasks.length : null;
+      var el = document.getElementById('summary');
+      if (open === 0) {
+        el.textContent = 'Nothing left hanging. Beautifully done.';
+      } else if (open > 0) {
+        el.textContent = 'The ' + open + (open === 1 ? ' thing' : ' things') + ' still on your list will keep till tomorrow. You don’t have to carry them tonight.';
+      } else {
+        return;
+      }
+      el.classList.add('show');
+    })
+    .catch(function () { /* no summary — the close stands on its own */ });
+
+  // ── The close ──────────────────────────────────────────────────────────────
+  document.getElementById('closeBtn').addEventListener('click', function () {
+    try { localStorage.setItem('fl_closed_' + todayKey(), '1'); } catch (e) {}
+    try { if (window.FLA) FLA.trackEvent('feature_day_closed'); } catch (e) {}
+    // Replace everything with a near-empty farewell. No next action, by design —
+    // the app is meant to end here. The user closes the tab and goes to live.
+    document.getElementById('wrap').innerHTML =
+      '<div class="farewell">' +
+        '<div class="moon">✨</div>' +
+        '<h1>Good. Go live your life.</h1>' +
+        '<p class="lead">I’ll be right here tomorrow.</p>' +
+      '</div>';
+  });
+})();
+</script>
+</body>
+</html>
