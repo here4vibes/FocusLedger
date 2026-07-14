@@ -136,6 +136,48 @@ function sanitizeEventName(name) {
   return ALLOWED_EVENTS.has(slug) ? slug : null;
 }
 
+// ── Hero A/B: turn per-variant visit/signup counts into a verdict ────────────
+// Rows: [{ variant:'A'|'B', visitors:int, signups:int }]. Runs a two-proportion
+// z-test so the dashboard can say "B is winning, significant" instead of making
+// someone eyeball two percentages. Honest about small samples: enough_data
+// gates the "significant" claim so early noise isn't read as a result.
+function computeHeroAb(rows) {
+  const by = { A: { visitors: 0, signups: 0 }, B: { visitors: 0, signups: 0 } };
+  (rows || []).forEach(r => {
+    if (r.variant === 'A' || r.variant === 'B') {
+      by[r.variant] = { visitors: r.visitors || 0, signups: r.signups || 0 };
+    }
+  });
+  const mk = (v, d) => ({
+    variant: v,
+    visitors: d.visitors,
+    signups: d.signups,
+    conversion_pct: d.visitors > 0 ? parseFloat((d.signups / d.visitors * 100).toFixed(2)) : 0,
+  });
+  const A = mk('A', by.A), B = mk('B', by.B);
+
+  const n1 = A.visitors, s1 = A.signups, n2 = B.visitors, s2 = B.signups;
+  let z = null, significant = false, leader = null, lift_pct = null;
+  if (n1 > 0 && n2 > 0) {
+    const p1 = s1 / n1, p2 = s2 / n2;
+    const pooled = (s1 + s2) / (n1 + n2);
+    const se = Math.sqrt(pooled * (1 - pooled) * (1 / n1 + 1 / n2));
+    if (se > 0) {
+      z = parseFloat(((p2 - p1) / se).toFixed(2)); // positive → B beats A
+      significant = Math.abs(z) >= 1.96;            // ~95% confidence
+    }
+    if (p1 === p2) leader = 'tie';
+    else {
+      leader = p2 > p1 ? 'B' : 'A';
+      const lo = Math.min(p1, p2), hi = Math.max(p1, p2);
+      lift_pct = lo > 0 ? parseFloat(((hi - lo) / lo * 100).toFixed(1)) : null;
+    }
+  }
+  // Floor before we trust any verdict: each arm needs real traffic + conversions.
+  const enough_data = n1 >= 100 && n2 >= 100 && (s1 + s2) >= 30;
+  return { variants: [A, B], leader, lift_pct, z, significant: significant && enough_data, enough_data };
+}
+
 // ── Sanitize referrer (strip query params, limit length, no PII) ───────────
 function sanitizeReferrer(ref) {
   if (!ref || typeof ref !== 'string') return null;
@@ -568,10 +610,25 @@ module.exports = function(pool) {
         signupTrend.push({ day: dayStr, signups: signupMap[dayStr] || 0 });
       }
 
+      // ── Hero A/B breakdown (landing → signup, by event_data.hero_variant) ──
+      const heroAbResult = await pool.query(`
+        SELECT
+          event_data->>'hero_variant' AS variant,
+          COUNT(DISTINCT visitor_hash) FILTER (WHERE event_name = 'funnel_landing_visit')::int   AS visitors,
+          COUNT(DISTINCT visitor_hash) FILTER (WHERE event_name = 'funnel_signup_complete')::int AS signups
+        FROM analytics_events
+        WHERE event_name IN ('funnel_landing_visit', 'funnel_signup_complete')
+          AND event_data->>'hero_variant' IN ('A', 'B')
+          AND occurred_at >= ${since}
+        GROUP BY 1
+      `);
+      const heroAb = computeHeroAb(heroAbResult.rows);
+
       res.json({
         success: true,
         period_days: days,
         funnel: funnelSteps,
+        hero_ab: heroAb,
         top_sources: topSourcesResult.rows,
         device_split: deviceSplitResult.rows,
         dau_trend: dauTrend,
