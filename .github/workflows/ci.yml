@@ -28,3 +28,53 @@ jobs:
         env:
           NODE_ENV: test
           JWT_SECRET: ci-test-secret-not-real
+
+  boot-smoke:
+    name: Boot smoke (migrate from scratch + boot + auth flow)
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: focusledger_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/focusledger_test
+      JWT_SECRET: ci-test-secret-not-real
+      NODE_ENV: test
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run migrations against a fresh Postgres (genesis + all)
+        # Fail the job if any migration rolled back — migrate.js logs these as
+        # "[migrate] WARNING" and continues, so grep to surface them.
+        run: |
+          set -o pipefail
+          node migrate.js 2>&1 | tee migrate.log
+          if grep -q "\[migrate\] WARNING" migrate.log; then
+            echo "::error::One or more migrations failed to apply (see [migrate] WARNING lines above)"
+            exit 1
+          fi
+
+      - name: Boot the app and drive the auth flow
+        run: npm run test:boot
