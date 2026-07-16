@@ -193,26 +193,25 @@ module.exports = function(pool) {
         const startDt  = new Date(ev.start.dateTime);
         const endDt    = new Date(ev.end.dateTime);
         const dateStr  = startDt.toISOString().slice(0, 10);
-        const startMin = startDt.getHours() * 60 + startDt.getMinutes();
-        const endMin   = endDt.getHours() * 60 + endDt.getMinutes();
-        const slotKey  = `${Math.floor(startMin / 60)}:00`;
 
-        // Map to time_blocks: use gcal_event_id for dedup
-        await pool.query(
-          `INSERT INTO time_blocks
-             (user_id, title, date, start_time, end_time, slot, source, gcal_event_id, created_at)
-           VALUES ($1,$2,$3,$4,$5,$6,'gcal',$7,NOW())
-           ON CONFLICT (user_id, gcal_event_id) DO UPDATE SET
-             title      = EXCLUDED.title,
-             date       = EXCLUDED.date,
-             start_time = EXCLUDED.start_time,
-             end_time   = EXCLUDED.end_time,
-             slot       = EXCLUDED.slot`,
-          [req.userId, ev.summary || '(No title)', dateStr,
-           `${String(startDt.getHours()).padStart(2,'0')}:${String(startDt.getMinutes()).padStart(2,'0')}`,
-           `${String(endDt.getHours()).padStart(2,'0')}:${String(endDt.getMinutes()).padStart(2,'0')}`,
-           slotKey, ev.id]
+        // Map to time_blocks (prod columns: block_date, no `slot`; and no unique
+        // on (user_id, gcal_event_id) — so manual upsert instead of ON CONFLICT).
+        const tbTitle = ev.summary || '(No title)';
+        const tbStart = `${String(startDt.getHours()).padStart(2,'0')}:${String(startDt.getMinutes()).padStart(2,'0')}`;
+        const tbEnd   = `${String(endDt.getHours()).padStart(2,'0')}:${String(endDt.getMinutes()).padStart(2,'0')}`;
+        const tbParams = [req.userId, tbTitle, dateStr, tbStart, tbEnd, ev.id];
+        const upd = await pool.query(
+          `UPDATE time_blocks SET title = $2, block_date = $3, start_time = $4, end_time = $5
+           WHERE user_id = $1 AND gcal_event_id = $6`,
+          tbParams
         );
+        if (upd.rowCount === 0) {
+          await pool.query(
+            `INSERT INTO time_blocks (user_id, title, block_date, start_time, end_time, source, gcal_event_id, created_at)
+             VALUES ($1, $2, $3, $4, $5, 'gcal', $6, NOW())`,
+            tbParams
+          );
+        }
         upserted++;
       }
 

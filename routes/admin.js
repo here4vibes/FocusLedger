@@ -778,7 +778,7 @@ module.exports = function(pool) {
            ${audienceSql}
            AND NOT EXISTS (
              SELECT 1 FROM email_log el
-             WHERE el.user_id = u.id AND el.template_type = $1 AND el.success = true
+             WHERE el.user_id = u.id AND el.template_type = $1 AND el.status = 'sent'
            )
            AND NOT EXISTS (
              SELECT 1 FROM email_suppression es WHERE LOWER(es.email) = LOWER(u.email)
@@ -811,7 +811,7 @@ module.exports = function(pool) {
            ${audienceSql}
            AND NOT EXISTS (
              SELECT 1 FROM email_log el
-             WHERE el.user_id = u.id AND el.template_type = $1 AND el.success = true
+             WHERE el.user_id = u.id AND el.template_type = $1 AND el.status = 'sent'
            )
            AND NOT EXISTS (
              SELECT 1 FROM email_suppression es WHERE LOWER(es.email) = LOWER(u.email)
