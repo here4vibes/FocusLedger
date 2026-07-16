@@ -275,7 +275,7 @@
 
     function startOnboarding() {
         // Buddy opens the conversation — first message is hard-coded to avoid a round trip
-        var opening = "Hey! I'm Buddy — your ADHD co-pilot in FocusLedger. Before I show you around, I want to understand what brought you here. What's one area of your life that feels the most out of control right now?";
+        var opening = "Hey — I'm Buddy. Quick thing before the tour: I'm not here to make you do more. I'm here to help you become the person you keep meaning to be. Most apps hand you a blank list and walk off — we'll start somewhere realer. So, one question: what's the part of your life you most wish felt different right now?";
         appendBuddyMessage(opening);
         state.history.push({ role: 'buddy', content: opening });
         enableInput();
