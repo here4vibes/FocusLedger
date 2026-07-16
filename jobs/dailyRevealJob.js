@@ -165,14 +165,22 @@ async function fetchInterestCorpus(pool, userId) {
   const since = new Date();
   since.setDate(since.getDate() - 90);
   const sinceStr = since.toISOString().slice(0, 10);
+  // Degrade each sub-query to empty rows on failure. This runs on the personal
+  // AND interest slots (~75% of days), so an unguarded phantom column here
+  // silently killed the reveal on most days — interest signal is a nice-to-have,
+  // never a reason for an active user to wake up to nothing.
+  const q = (sql, params) => pool.query(sql, params).catch((e) => {
+    console.warn('[daily-reveal] interest sub-query degraded (empty rows) | userId:', userId, '|', e.message);
+    return { rows: [] };
+  });
   const [tasks, expenses] = await Promise.all([
-    pool.query(
+    q(
       `SELECT title AS text FROM tasks
        WHERE user_id = $1 AND created_at >= $2 AND title IS NOT NULL
        ORDER BY created_at DESC LIMIT 200`,
       [userId, sinceStr]
     ),
-    pool.query(
+    q(
       `SELECT COALESCE(e.description, '') || ' ' || COALESCE(c.name, '') AS text
        FROM expenses e LEFT JOIN categories c ON c.id = e.category_id
        WHERE e.user_id = $1 AND e.expense_date >= $2
@@ -622,7 +630,9 @@ async function run() {
 
         if (slot !== 'fun_fact') {
           const data = await fetchUserWeek(pool, user.id, sinceDate);
-          const interests = deriveInterests(await fetchInterestCorpus(pool, user.id));
+          // Belt-and-suspenders: even a total interest-corpus failure yields no
+          // interests rather than aborting the whole reveal for this user.
+          const interests = deriveInterests(await fetchInterestCorpus(pool, user.id).catch(() => []));
           // Personal-insight prompts also see interests — even stat reveals
           // land harder when they reference something the user loves.
           const userContext = summariseForPrompt(data) +
