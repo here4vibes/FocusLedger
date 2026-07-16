@@ -39,14 +39,20 @@ async function sendMorningNudges(pool) {
   if (webPushEnabled) {
     try {
       webpush = require('web-push');
+      // Trim: pasted env values routinely carry a trailing newline/space, which
+      // makes setVapidDetails throw "Vapid public key should be 65 bytes" — and
+      // used to disable web push SILENTLY even though the keys were "present".
       webpush.setVapidDetails(
         'mailto:' + (process.env.VAPID_EMAIL || 'support@focusledger.app'),
-        process.env.VAPID_PUBLIC_KEY,
-        process.env.VAPID_PRIVATE_KEY
+        (process.env.VAPID_PUBLIC_KEY || '').trim(),
+        (process.env.VAPID_PRIVATE_KEY || '').trim()
       );
+      console.log('[MorningNudge] Web push configured (VAPID ok).');
     } catch (e) {
-      // web-push not installed — skip web push silently
+      // Loudly, never silently: distinguishes a malformed key from a missing lib.
       webpush = null;
+      console.error('[MorningNudge] Web push DISABLED despite VAPID env being set —',
+        e.message, '| likely a malformed key (trailing whitespace/newline?) or web-push not installed.');
     }
   }
 
@@ -149,7 +155,11 @@ async function sendMorningNudges(pool) {
                   'DELETE FROM push_subscriptions WHERE endpoint = $1', [row.endpoint]
                 ).catch(() => {});
               } else {
-                console.warn('[MorningNudge] Web push error for user', user.id, sendErr.message);
+                // statusCode is the tell: 403 = VAPID key mismatch (the send keys
+                // differ from the ones the browser subscribed with); 400 = bad
+                // payload/keys. Surface it so "sent=0" is never a mystery.
+                console.warn('[MorningNudge] Web push error for user', user.id,
+                  '| status:', sendErr.statusCode, '| ', sendErr.message);
               }
             }
           }
