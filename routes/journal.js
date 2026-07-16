@@ -282,11 +282,13 @@ Analyze the journal and return the JSON response.`;
       if (expense_mentions && expense_mentions.length > 0) {
         for (const exp of expense_mentions) {
           if (exp.amount > 0) {
+            // expenses has category_id (FK), not a text `category` column — resolve
+            // the AI-extracted name to an id (NULL if unmatched; the expense still records).
             pool.query(
-              `INSERT INTO expenses (user_id, amount, category, description, source, created_at)
-               VALUES ($1, $2, $3, $4, 'journal', NOW())`,
+              `INSERT INTO expenses (user_id, amount, category_id, description, source, created_at)
+               VALUES ($1, $2, (SELECT id FROM categories WHERE LOWER(name) = LOWER($3) LIMIT 1), $4, 'journal', NOW())`,
               [userId, exp.amount, exp.category || 'Other', exp.description || '']
-            ).catch(() => {}); // fire-and-forget; don't block the response
+            ).catch(e => console.warn('[journal] expense insert failed | userId:', userId, '|', e.message));
           }
         }
       }

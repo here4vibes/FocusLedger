@@ -9,7 +9,7 @@ async function findUserByEmail(pool, fromEmail) {
      FROM linked_emails le
      JOIN users u ON u.id = le.user_id
      LEFT JOIN app_subscription s ON s.user_id = u.id AND s.status = 'active'
-     WHERE le.email = $1 AND le.verified = true
+     WHERE le.email = $1 AND le.verified_at IS NOT NULL
      LIMIT 1`,
     [fromEmail.toLowerCase().trim()]
   );
@@ -24,10 +24,13 @@ async function addLinkedEmail(pool, userId, fromEmail) {
   if (parseInt(existing[0].cnt, 10) >= MAX_LINKED_EMAILS) {
     return { added: false, reason: 'max_linked_emails' };
   }
+  // Prod linked_emails has verified_at (not a verified bool) and no unique on
+  // (user_id, email) — so conditional-insert instead of ON CONFLICT. A new link
+  // is unverified: verified_at stays NULL until confirmed.
   await pool.query(
-    `INSERT INTO linked_emails (user_id, email, verified)
-     VALUES ($1, $2, false)
-     ON CONFLICT (user_id, email) DO NOTHING`,
+    `INSERT INTO linked_emails (user_id, email)
+     SELECT $1, $2
+     WHERE NOT EXISTS (SELECT 1 FROM linked_emails WHERE user_id = $1 AND email = $2)`,
     [userId, fromEmail.toLowerCase().trim()]
   );
   return { added: true };
@@ -35,7 +38,7 @@ async function addLinkedEmail(pool, userId, fromEmail) {
 
 async function listLinkedEmails(pool, userId) {
   const { rows } = await pool.query(
-    'SELECT id, email, verified, created_at FROM linked_emails WHERE user_id = $1 ORDER BY created_at',
+    'SELECT id, email, (verified_at IS NOT NULL) AS verified, created_at FROM linked_emails WHERE user_id = $1 ORDER BY created_at',
     [userId]
   );
   return rows;
@@ -49,10 +52,12 @@ async function removeLinkedEmail(pool, id, userId) {
 }
 
 async function stashEmail(pool, { fromEmail, subject, bodyText, bodyHtml, messageId, token }) {
+  // Prod column is `token` (not claim_token) and there's no unique on message_id
+  // — conditional-insert to keep the re-delivery dedup without ON CONFLICT.
   await pool.query(
-    `INSERT INTO email_tasks_stash (from_email, subject, body_text, body_html, message_id, claim_token, expires_at)
-     VALUES ($1, $2, $3, $4, $5, $6, NOW() + INTERVAL '72 hours')
-     ON CONFLICT (message_id) DO NOTHING`,
+    `INSERT INTO email_tasks_stash (from_email, subject, body_text, body_html, message_id, token, expires_at)
+     SELECT $1, $2, $3, $4, $5, $6, NOW() + INTERVAL '72 hours'
+     WHERE NOT EXISTS (SELECT 1 FROM email_tasks_stash WHERE message_id = $5)`,
     [fromEmail, subject, bodyText, bodyHtml, messageId, token]
   );
 }
@@ -61,7 +66,7 @@ async function findStashByToken(pool, token) {
   const { rows } = await pool.query(
     `SELECT id, from_email, subject, body_text
      FROM email_tasks_stash
-     WHERE claim_token = $1 AND claimed_at IS NULL AND expires_at > NOW()
+     WHERE token = $1 AND claimed_at IS NULL AND expires_at > NOW()
      LIMIT 1`,
     [token]
   );
@@ -70,7 +75,7 @@ async function findStashByToken(pool, token) {
 
 async function claimStash(pool, token) {
   await pool.query(
-    'UPDATE email_tasks_stash SET claimed_at = NOW() WHERE claim_token = $1',
+    'UPDATE email_tasks_stash SET claimed_at = NOW() WHERE token = $1',
     [token]
   );
 }
