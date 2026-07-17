@@ -52,8 +52,9 @@ async function getTodayNotificationCount(pool, userId, localDate) {
 }
 
 /**
- * Record that a notification was sent. Uses ON CONFLICT to be idempotent —
- * if a race condition causes two workers to try, only one row is inserted.
+ * Record that a notification was sent. Dedup relies on the caller's
+ * wasNotificationSentToday() guard (crons run sequentially), not a DB unique —
+ * prod lacks that constraint, and an ON CONFLICT against it threw silently.
  *
  * @param {import('pg').Pool} pool
  * @param {number} userId
@@ -66,10 +67,13 @@ async function recordNotificationSent(pool, userId, notificationKey, notificatio
   const params = localDate
     ? [userId, notificationKey, notificationType || 'task_deadline', localDate]
     : [userId, notificationKey, notificationType || 'task_deadline'];
+  // Dedup is the wasNotificationSentToday guard callers run first; prod has no
+  // unique on (user_id, notification_key, send_date), so an ON CONFLICT here
+  // threw — the send was never logged, so the cap never counted and the guard
+  // never tripped (task-deadline / cold-start would re-send the same way).
   await pool.query(
     `INSERT INTO notification_send_log (user_id, notification_key, notification_type, send_date, sent_at)
-     VALUES ($1, $2, $3, ${dateVal}, NOW())
-     ON CONFLICT (user_id, notification_key, send_date) DO NOTHING`,
+     VALUES ($1, $2, $3, ${dateVal}, NOW())`,
     params
   );
 }

@@ -116,11 +116,12 @@ async function sendEveningNudges(pool) {
         }
 
         if (sentCount > 0) {
-          // Record the send — UNIQUE constraint prevents duplicates on race conditions
+          // Record the send. Dedup is the alreadySent check above; prod has no
+          // unique on (user_id, send_date), so an ON CONFLICT here threw and the
+          // record never landed (same duplicate-send bug as morning).
           await pool.query(
             `INSERT INTO evening_nudge_log (user_id, send_date, sent_at)
-             VALUES ($1, $2, NOW())
-             ON CONFLICT (user_id, send_date) DO NOTHING`,
+             VALUES ($1, $2, NOW())`,
             [user.id, localDate]
           );
           console.log(`[EveningNudge] Sent to user ${user.id} (tz: ${tz}, hour: ${targetHour})`);

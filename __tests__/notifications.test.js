@@ -83,11 +83,15 @@ describe('getTodayNotificationCount', () => {
 
 // ── recordNotificationSent ───────────────────────────────────────────────────
 describe('recordNotificationSent', () => {
-  test('uses ON CONFLICT DO NOTHING for idempotency', async () => {
+  test('records the send without ON CONFLICT (prod has no matching constraint)', async () => {
+    // Dedup is the caller's wasNotificationSentToday() guard, not a DB unique.
+    // An ON CONFLICT against the missing constraint used to THROW, so the send
+    // was never logged and nudges re-fired every run (the duplicate-notification bug).
     const pool = { query: jest.fn().mockResolvedValue({ rows: [] }) };
     await recordNotificationSent(pool, 1, 'key', 'task_deadline');
     const [sql] = pool.query.mock.calls[0];
-    expect(sql).toMatch(/ON CONFLICT.*DO NOTHING/s);
+    expect(sql).toMatch(/INSERT INTO notification_send_log/);
+    expect(sql).not.toMatch(/ON CONFLICT/);
   });
 
   test('stores the provided notification type', async () => {
