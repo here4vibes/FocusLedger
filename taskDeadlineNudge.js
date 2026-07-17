@@ -27,19 +27,27 @@ const { getPushTokens, deletePushToken } = require('./db/push-tokens');
 async function sendTaskDeadlineNudges(pool) {
   const webPushEnabled = !!(process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY);
   const apnsEnabled = isApnsConfigured();
-  if (!webPushEnabled && !apnsEnabled) return;
+  if (!webPushEnabled && !apnsEnabled) {
+    console.warn('[task-deadline-nudge] No push channel configured — set VAPID_PUBLIC_KEY/VAPID_PRIVATE_KEY (web push) or APNS_KEY_ID/APNS_TEAM_ID/APNS_KEY_P8/APNS_BUNDLE_ID (iOS) in the cron env group. Skipping (0 sent).');
+    return;
+  }
 
   let webpush = null;
   if (webPushEnabled) {
     try {
       webpush = require('web-push');
+      // Trim — pasted env keys routinely carry a trailing newline/space that
+      // makes setVapidDetails throw and (previously) silently disabled web push.
       webpush.setVapidDetails(
         'mailto:' + (process.env.VAPID_EMAIL || 'support@focusledger.app'),
-        process.env.VAPID_PUBLIC_KEY,
-        process.env.VAPID_PRIVATE_KEY
+        (process.env.VAPID_PUBLIC_KEY || '').trim(),
+        (process.env.VAPID_PRIVATE_KEY || '').trim()
       );
-    } catch {
+      console.log('[task-deadline-nudge] Web push configured (VAPID ok).');
+    } catch (e) {
       webpush = null;
+      console.error('[task-deadline-nudge] Web push DISABLED despite VAPID env being set —',
+        e.message, '| malformed key (trailing whitespace/newline?) or web-push not installed.');
     }
   }
 
@@ -57,6 +65,7 @@ async function sendTaskDeadlineNudges(pool) {
       )
     `);
 
+    let sentUsers = 0;
     for (const user of usersResult.rows) {
       try {
         const userId = user.id;
@@ -158,7 +167,8 @@ async function sendTaskDeadlineNudges(pool) {
               if (sendErr.statusCode === 410 || sendErr.statusCode === 404) {
                 await deleteSubscriptionByEndpoint(pool, row.endpoint).catch(() => {});
               } else {
-                console.warn('[TaskDeadlineNudge] Web push error for user', userId, sendErr.message);
+                console.warn('[TaskDeadlineNudge] Web push error for user', userId,
+                  '| status:', sendErr.statusCode, '|', sendErr.message);
               }
             }
           }
@@ -184,12 +194,15 @@ async function sendTaskDeadlineNudges(pool) {
             await recordNotificationSent(pool, userId, `task:${task.id}`, 'task_deadline', localToday);
           }
           console.log(`[TaskDeadlineNudge] Sent to user ${userId}: ${tasksToNotify.length} tasks`);
+          sentUsers++;
         }
 
       } catch (userErr) {
         console.warn('[TaskDeadlineNudge] Error processing user', user.id, ':', userErr.message);
       }
     }
+    // Always emit a summary so a quiet run is never a mystery.
+    console.log(`[task-deadline-nudge] Done. candidates=${usersResult.rows.length} sent=${sentUsers}`);
   } catch (err) {
     console.error('[TaskDeadlineNudge] Fatal error:', err.message);
   }
