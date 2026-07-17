@@ -19,27 +19,13 @@
  */
 
 const { getLocalDateParts } = require('./lib/timezone');
-const { sendApnsNotification, isApnsConfigured } = require('./lib/apns-sender');
+const { sendApnsNotification } = require('./lib/apns-sender');
 const { getPushTokens, deletePushToken } = require('./db/push-tokens');
+const { configureWebPush } = require('./lib/webpush');
 
 async function sendEveningNudges(pool) {
-  const webPushEnabled = !!(process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY);
-  const apnsEnabled = isApnsConfigured();
-  if (!webPushEnabled && !apnsEnabled) return;
-
-  let webpush = null;
-  if (webPushEnabled) {
-    try {
-      webpush = require('web-push');
-      webpush.setVapidDetails(
-        'mailto:' + (process.env.VAPID_EMAIL || 'support@focusledger.app'),
-        process.env.VAPID_PUBLIC_KEY,
-        process.env.VAPID_PRIVATE_KEY
-      );
-    } catch (e) {
-      webpush = null;
-    }
-  }
+  const { webpush, apnsEnabled, anyConfigured } = configureWebPush('evening-nudge');
+  if (!anyConfigured) return; // reason already logged by configureWebPush
 
   const now = new Date();
 

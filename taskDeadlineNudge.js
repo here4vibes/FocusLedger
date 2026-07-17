@@ -21,27 +21,13 @@ const {
   deleteSubscriptionByEndpoint,
 } = require('./db/notifications');
 const { getUserLocalDate } = require('./lib/timezone');
-const { sendApnsNotification, isApnsConfigured } = require('./lib/apns-sender');
+const { sendApnsNotification } = require('./lib/apns-sender');
 const { getPushTokens, deletePushToken } = require('./db/push-tokens');
+const { configureWebPush } = require('./lib/webpush');
 
 async function sendTaskDeadlineNudges(pool) {
-  const webPushEnabled = !!(process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY);
-  const apnsEnabled = isApnsConfigured();
-  if (!webPushEnabled && !apnsEnabled) return;
-
-  let webpush = null;
-  if (webPushEnabled) {
-    try {
-      webpush = require('web-push');
-      webpush.setVapidDetails(
-        'mailto:' + (process.env.VAPID_EMAIL || 'support@focusledger.app'),
-        process.env.VAPID_PUBLIC_KEY,
-        process.env.VAPID_PRIVATE_KEY
-      );
-    } catch {
-      webpush = null;
-    }
-  }
+  const { webpush, apnsEnabled, anyConfigured } = configureWebPush('task-deadline-nudge');
+  if (!anyConfigured) return; // reason already logged by configureWebPush
 
   const now = new Date();
 
@@ -57,6 +43,7 @@ async function sendTaskDeadlineNudges(pool) {
       )
     `);
 
+    let sentUsers = 0;
     for (const user of usersResult.rows) {
       try {
         const userId = user.id;
@@ -158,7 +145,8 @@ async function sendTaskDeadlineNudges(pool) {
               if (sendErr.statusCode === 410 || sendErr.statusCode === 404) {
                 await deleteSubscriptionByEndpoint(pool, row.endpoint).catch(() => {});
               } else {
-                console.warn('[TaskDeadlineNudge] Web push error for user', userId, sendErr.message);
+                console.warn('[TaskDeadlineNudge] Web push error for user', userId,
+                  '| status:', sendErr.statusCode, '|', sendErr.message);
               }
             }
           }
@@ -184,12 +172,15 @@ async function sendTaskDeadlineNudges(pool) {
             await recordNotificationSent(pool, userId, `task:${task.id}`, 'task_deadline', localToday);
           }
           console.log(`[TaskDeadlineNudge] Sent to user ${userId}: ${tasksToNotify.length} tasks`);
+          sentUsers++;
         }
 
       } catch (userErr) {
         console.warn('[TaskDeadlineNudge] Error processing user', user.id, ':', userErr.message);
       }
     }
+    // Always emit a summary so a quiet run is never a mystery.
+    console.log(`[task-deadline-nudge] Done. candidates=${usersResult.rows.length} sent=${sentUsers}`);
   } catch (err) {
     console.error('[TaskDeadlineNudge] Fatal error:', err.message);
   }
