@@ -124,10 +124,12 @@ async function sendBuddyRestartPush(pool, userId, localToday) {
   if (webPushEnabled) {
     try {
       const webpush = require('web-push');
+      // Trim — pasted env keys often carry a trailing newline/space that makes
+      // setVapidDetails throw (and used to disable push silently).
       webpush.setVapidDetails(
         'mailto:' + (process.env.VAPID_EMAIL || 'support@focusledger.app'),
-        process.env.VAPID_PUBLIC_KEY,
-        process.env.VAPID_PRIVATE_KEY
+        (process.env.VAPID_PUBLIC_KEY || '').trim(),
+        (process.env.VAPID_PRIVATE_KEY || '').trim()
       );
       const subs = await getActiveSubscriptions(pool, userId);
       const payload = JSON.stringify({ title, body, url, tag: 'fl-buddy-restart', renotify: false });

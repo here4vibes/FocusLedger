@@ -23,6 +23,7 @@ const {
   deleteSubscriptionByEndpoint,
 } = require('../db/notifications');
 const { isApnsConfigured, sendApnsNotification } = require('../lib/apns-sender');
+const { configureWebPush } = require('../lib/webpush');
 const { getPushTokens, deletePushToken } = require('../db/push-tokens');
 
 const pool = new Pool({
@@ -35,19 +36,8 @@ const pool = new Pool({
   statement_timeout: 30000,
 });
 
-async function sendWebPush(subscriptions, payload, pool) {
-  if (!process.env.VAPID_PUBLIC_KEY || !process.env.VAPID_PRIVATE_KEY) return 0;
-  let webpush;
-  try {
-    webpush = require('web-push');
-    webpush.setVapidDetails(
-      'mailto:' + (process.env.VAPID_EMAIL || 'support@focusledger.app'),
-      process.env.VAPID_PUBLIC_KEY,
-      process.env.VAPID_PRIVATE_KEY
-    );
-  } catch {
-    return 0;
-  }
+async function sendWebPush(webpush, subscriptions, payload, pool) {
+  if (!webpush) return 0;
   let sent = 0;
   for (const row of subscriptions) {
     try {
@@ -105,6 +95,9 @@ async function run() {
 
   console.log(`[cold-start-nudge] ${candidates.rows.length} candidate tasks found`);
 
+  // Configure push once per run (not per user) — logs the reason if unavailable.
+  const { webpush } = configureWebPush('cold-start-nudge');
+
   let sent = 0;
 
   for (const row of candidates.rows) {
@@ -138,7 +131,7 @@ async function run() {
 
       // Web push
       const subscriptions = await getActiveSubscriptions(pool, user_id);
-      let deliveries = await sendWebPush(subscriptions, payload, pool);
+      let deliveries = await sendWebPush(webpush, subscriptions, payload, pool);
 
       // APNs (iOS)
       deliveries += await sendApnsPush(user_id, payload);

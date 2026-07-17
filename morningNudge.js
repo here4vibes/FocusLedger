@@ -17,44 +17,15 @@
  */
 
 const { getLocalDateParts } = require('./lib/timezone');
-const { sendApnsNotification, isApnsConfigured } = require('./lib/apns-sender');
+const { sendApnsNotification } = require('./lib/apns-sender');
 const { getPushTokens, deletePushToken } = require('./db/push-tokens');
 const { resolveMorningHour } = require('./lib/energy-timing');
 const { getUnviewedRevealForDate } = require('./db/reveals');
+const { configureWebPush } = require('./lib/webpush');
 
 async function sendMorningNudges(pool) {
-  const webPushEnabled = !!(process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY);
-  const apnsEnabled = isApnsConfigured();
-
-  // Skip entirely if neither channel is configured. LOUDLY — a silent return
-  // here made every run "finish successfully" with zero output while no nudge
-  // ever sent, because the cron's env group lacks the push keys (VAPID for web,
-  // APNS_* for iOS). Never fail silently: say exactly why nothing happened.
-  if (!webPushEnabled && !apnsEnabled) {
-    console.warn('[MorningNudge] No push channel configured — set VAPID_PUBLIC_KEY/VAPID_PRIVATE_KEY (web push) or APNS_KEY_ID/APNS_TEAM_ID/APNS_KEY_P8/APNS_BUNDLE_ID (iOS) in the cron env group. Skipping (0 sent).');
-    return;
-  }
-
-  let webpush = null;
-  if (webPushEnabled) {
-    try {
-      webpush = require('web-push');
-      // Trim: pasted env values routinely carry a trailing newline/space, which
-      // makes setVapidDetails throw "Vapid public key should be 65 bytes" — and
-      // used to disable web push SILENTLY even though the keys were "present".
-      webpush.setVapidDetails(
-        'mailto:' + (process.env.VAPID_EMAIL || 'support@focusledger.app'),
-        (process.env.VAPID_PUBLIC_KEY || '').trim(),
-        (process.env.VAPID_PRIVATE_KEY || '').trim()
-      );
-      console.log('[MorningNudge] Web push configured (VAPID ok).');
-    } catch (e) {
-      // Loudly, never silently: distinguishes a malformed key from a missing lib.
-      webpush = null;
-      console.error('[MorningNudge] Web push DISABLED despite VAPID env being set —',
-        e.message, '| likely a malformed key (trailing whitespace/newline?) or web-push not installed.');
-    }
-  }
+  const { webpush, apnsEnabled, anyConfigured } = configureWebPush('morning-nudge');
+  if (!anyConfigured) return; // reason already logged by configureWebPush
 
   const now = new Date();
 

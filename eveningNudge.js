@@ -19,32 +19,13 @@
  */
 
 const { getLocalDateParts } = require('./lib/timezone');
-const { sendApnsNotification, isApnsConfigured } = require('./lib/apns-sender');
+const { sendApnsNotification } = require('./lib/apns-sender');
 const { getPushTokens, deletePushToken } = require('./db/push-tokens');
+const { configureWebPush } = require('./lib/webpush');
 
 async function sendEveningNudges(pool) {
-  const webPushEnabled = !!(process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY);
-  const apnsEnabled = isApnsConfigured();
-  if (!webPushEnabled && !apnsEnabled) {
-    console.warn('[evening-nudge] No push channel configured — set VAPID_PUBLIC_KEY/VAPID_PRIVATE_KEY (web push) or APNS_* (iOS) in the cron env group. Skipping (0 sent).');
-    return;
-  }
-
-  let webpush = null;
-  if (webPushEnabled) {
-    try {
-      webpush = require('web-push');
-      webpush.setVapidDetails(
-        'mailto:' + (process.env.VAPID_EMAIL || 'support@focusledger.app'),
-        (process.env.VAPID_PUBLIC_KEY || '').trim(),
-        (process.env.VAPID_PRIVATE_KEY || '').trim()
-      );
-      console.log('[evening-nudge] Web push configured (VAPID ok).');
-    } catch (e) {
-      webpush = null;
-      console.error('[evening-nudge] Web push DISABLED despite VAPID env being set —', e.message, '| malformed key?');
-    }
-  }
+  const { webpush, apnsEnabled, anyConfigured } = configureWebPush('evening-nudge');
+  if (!anyConfigured) return; // reason already logged by configureWebPush
 
   const now = new Date();
 
