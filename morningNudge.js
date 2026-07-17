@@ -151,11 +151,12 @@ async function sendMorningNudges(pool) {
         }
 
         if (sentCount > 0) {
-          // Record the send — UNIQUE constraint prevents duplicates on race conditions
+          // Record the send. Dedup is the alreadySent check above; prod has no
+          // unique on (user_id, send_date), so an ON CONFLICT here THREW — the
+          // record never landed and every 5-min run re-sent (the triplicate bug).
           await pool.query(
             `INSERT INTO morning_nudge_log (user_id, send_date, task_count, sent_at)
-             VALUES ($1, $2, 0, NOW())
-             ON CONFLICT (user_id, send_date) DO NOTHING`,
+             VALUES ($1, $2, 0, NOW())`,
             [user.id, localDate]
           );
           console.log(`[MorningNudge] Sent to user ${user.id} (tz: ${tz}, hour: ${targetHour})`);
