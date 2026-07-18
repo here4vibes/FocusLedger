@@ -67,6 +67,18 @@
   .tasklist .due{font-size:.72rem;color:var(--faint);margin-left:auto;flex:none;font-variant-numeric:tabular-nums;}
   .tasklist .due.over{color:var(--alert);}
 
+  .mh{display:flex;justify-content:space-between;align-items:baseline;gap:.6rem;margin:.15rem 0 .5rem;}
+  .mh .big{font-size:1.5rem;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums;}
+  .mh .split{font-size:.76rem;color:var(--muted);text-align:right;}
+  .mh .split .imp{color:var(--alert);font-weight:600;}
+  .catrow{display:flex;align-items:center;gap:.55rem;padding:.26rem 0;border-top:1px solid var(--line);}
+  .catrow:first-of-type{border-top:none;}
+  .catrow .ic{width:1.2rem;text-align:center;flex:none;}
+  .catrow .cn{font-size:.88rem;font-weight:600;flex:none;min-width:5.5rem;}
+  .catrow .track{flex:1;height:7px;background:var(--accent-soft);border-radius:4px;overflow:hidden;}
+  .catrow .fill{height:100%;background:var(--accent);border-radius:4px;}
+  .catrow .ca{font-size:.82rem;font-weight:700;font-variant-numeric:tabular-nums;flex:none;min-width:3.4rem;text-align:right;}
+
   .chips{display:flex;gap:.45rem;margin-top:.2rem;flex-wrap:wrap;opacity:0;animation:in .3s ease forwards;}
   .chip{font-size:.85rem;font-weight:600;padding:.48rem .8rem;border-radius:999px;cursor:pointer;border:none;
     font-family:inherit;transition:transform .1s ease;}
@@ -110,7 +122,7 @@
       <div class="dot"><span>🌙</span></div>
       <div class="name">Buddy<small>FocusLedger</small></div>
     </div>
-    <a class="classic" href="/app">Classic view</a>
+    <a class="classic" href="/app">See modules</a>
   </div>
 
   <div class="thread" id="thread">
@@ -255,10 +267,73 @@
     });
   }
 
+  // ── money: summon a real spending card ──────────────────────────────────────
+  // The conversation endpoint has no expense context, so it would (correctly)
+  // say it can't see transactions. Instead we answer money questions from the
+  // real ledger — deterministic data, not a guess.
+  function moneyIntent(t){
+    return /\b(spend|spent|spending|budget|money|transactions?|expenses?|impulse|afford|purchases?)\b/i.test(t);
+  }
+  function periodFrom(t){
+    if(/\bmonth\b/i.test(t)) return {p:'month', label:'this month'};
+    if(/\b(year|ytd)\b/i.test(t)) return {p:'year', label:'this year'};
+    if(/\btoday\b/i.test(t)) return {p:'day', label:'today'};
+    return {p:'week', label:'this week'};
+  }
+  function money(text){
+    user(text); input.value=''; setBusy(true); showTyping();
+    var per = periodFrom(text);
+    api('/api/expenses/summary?period='+per.p)
+      .then(function(res){
+        hideTyping();
+        var s = res && res.summary;
+        if(!res || !res.success || !s){
+          buddy("I couldn't reach your spending just now — try again in a moment?");
+          return;
+        }
+        if(!s.total){
+          buddy(fmt("Nothing logged "+per.label+" yet, so there's nothing to show. Want to start tracking? Just tell me a purchase like *“spent $6 on coffee”* and I'll keep the ledger."), true);
+          return;
+        }
+        var impPct = s.impulse_pct||0;
+        var line = "You're at **$"+s.total.toFixed(2)+"** "+per.label+".";
+        if(s.impulse_count>0)      line += " $"+s.impulse_total.toFixed(2)+" of it ("+impPct+"%) was impulse—"+(impPct>=40?"worth a glance":"not bad at all")+".";
+        else if(s.total>0)          line += " All of it planned—that's real control.";
+        buddy(fmt(line));
+
+        var cats = (s.by_category||[]).filter(function(c){ return Number(c.total)>0; }).slice(0,4);
+        var max = cats.reduce(function(m,c){ return Math.max(m, Number(c.total)); }, 0) || 1;
+        var splitHtml = s.impulse_count>0
+          ? '<span class="split"><span class="imp">$'+s.impulse_total.toFixed(0)+' impulse</span> · $'+s.planned_total.toFixed(0)+' planned</span>'
+          : '<span class="split">all planned</span>';
+        raw('<div class="card"><div class="k">Spending · '+esc(per.label)+'</div>'+
+          '<div class="mh"><span class="big">$'+s.total.toFixed(2)+'</span>'+splitHtml+'</div>'+
+          cats.map(function(c){
+            var amt=Number(c.total), pct=Math.round(amt/max*100);
+            return '<div class="catrow"><span class="ic">'+(c.category_icon||'💳')+'</span>'+
+              '<span class="cn">'+esc(c.category_name||'Other')+'</span>'+
+              '<span class="track"><span class="fill" style="width:'+pct+'%"></span></span>'+
+              '<span class="ca">$'+amt.toFixed(0)+'</span></div>';
+          }).join('')+'</div>');
+
+        if(s.untriaged_count>0){
+          note('💸 '+s.untriaged_count+' new charge'+(s.untriaged_count>1?'s':'')+' waiting to be sorted', true);
+        }
+      })
+      .catch(function(err){
+        hideTyping();
+        if(err && err.message==='unauthorized') return;
+        console.error('[weightless] money error:', err);
+        buddy("Something hiccuped pulling your spending. Try again in a sec?");
+      })
+      .then(function(){ setBusy(false); input.focus(); });
+  }
+
   // ── real conversation turn ──────────────────────────────────────────────────
   function send(text){
     text = (text||'').trim();
     if(busy || !text) return;
+    if(moneyIntent(text)){ money(text); return; }
     user(text);
     input.value='';
     setBusy(true);
@@ -307,6 +382,16 @@
   function submit(){ send(input.value); }
   go.onclick=submit;
   input.addEventListener('keydown', function(e){ if(e.key==='Enter'){ e.preventDefault(); submit(); } });
+
+  // Keep the whole app inside the *visible* viewport when the mobile keyboard
+  // opens — otherwise 100dvh pushes the header (and "See modules") off-screen
+  // and it can't be scrolled back while typing.
+  if(window.visualViewport){
+    var vv = window.visualViewport;
+    var fit = function(){ document.body.style.height = vv.height + 'px'; scroll(); };
+    vv.addEventListener('resize', fit);
+    vv.addEventListener('scroll', fit);
+  }
 
   // ── boot ────────────────────────────────────────────────────────────────────
   api('/api/buddy/status')
