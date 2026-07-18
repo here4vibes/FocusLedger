@@ -33,13 +33,20 @@ function buildSystemPrompt(today, tasks) {
     ? tasks.map(t => `- id=${t.id} · "${t.title}"${t.due_date ? ` (due ${String(t.due_date).slice(0, 10)})` : ' (no due date)'}`).join('\n')
     : '(no open tasks)';
   return [
-    "You are Buddy, the user's calm, warm ADHD companion inside FocusLedger.",
+    "You are Buddy, the user's warm, calm ADHD companion inside FocusLedger.",
     `Today is ${today}.`,
-    'You can TAKE ACTIONS on the user\'s tasks using the provided tools — but only when',
-    'they clearly ask you to (reschedule/move/postpone a task, or mark one done).',
-    'When you take an action, also reply with one short, warm sentence confirming it.',
-    'If they are just talking, thinking, or asking a question, DO NOT call a tool — just reply briefly.',
-    'Never invent a task_id; only use ids from this list. If you cannot find the task they mean, ask which one.',
+    '',
+    'You can take real actions for the user with your tools:',
+    '• reschedule a task  • mark a task done  • draft AND send an email on their behalf.',
+    'These are real capabilities you HAVE — never say you cannot send email or change tasks.',
+    'If you are missing something you need (a recipient email address, or which task they',
+    'mean), ask ONE short question to get it, then take the action on the next turn.',
+    '',
+    "Use a tool ONLY when the user is clearly asking you to do that thing. When they're just",
+    "talking, thinking, or venting, don't call a tool — reply briefly and warmly.",
+    'When you send an email, write a complete, natural draft — the user reviews it before it goes.',
+    'Never invent a task_id or an email address: use only ids from the list below, and only',
+    'real addresses the user has given you.',
     '',
     "The user's open tasks:",
     list,
@@ -70,11 +77,30 @@ module.exports = function (pool) {
       );
       const tasks = tasksResult.rows;
 
+      // Shared, stateful thread with the coaching Buddy (buddy_conversations),
+      // so multi-turn actions work — "email Miles" → ask for the address → send —
+      // and context carries between chatting and acting.
+      const histResult = await pool.query(
+        `SELECT role, message FROM buddy_conversations
+          WHERE user_id = $1 AND session_date = $2 ORDER BY turn ASC`,
+        [userId, today]
+      );
+      const nextTurn = histResult.rows.length + 1;
+      await pool.query(
+        `INSERT INTO buddy_conversations (user_id, session_date, turn, role, message)
+         VALUES ($1, $2, $3, 'user', $4)`,
+        [userId, today, nextTurn, message.trim()]
+      );
+      const contextHistory = histResult.rows.map(h => ({
+        role: h.role === 'buddy' ? 'assistant' : 'user', content: h.message,
+      }));
+      contextHistory.push({ role: 'user', content: message.trim() });
+
       let resp;
       try {
         resp = await completeWithTools({
           system: buildSystemPrompt(today, tasks),
-          messages: [{ role: 'user', content: message.trim() }],
+          messages: contextHistory,
           tools: TOOL_DEFS,
           model: 'claude-sonnet-4-6',
           maxTokens: 700,
@@ -131,6 +157,18 @@ module.exports = function (pool) {
           }).catch(() => {});
           receipts.push({ id: null, summary: "Something broke doing that — nothing changed", undoable: false, ok: false, scope: scopeOf(tu.name) });
         }
+      }
+
+      // Persist Buddy's turn so the shared thread stays continuous across
+      // chatting, acting, and confirmations.
+      const savedReply = reply
+        || (confirmation ? '(drafted an email for your review)' : (receipts.length ? '(done)' : ''));
+      if (savedReply) {
+        await pool.query(
+          `INSERT INTO buddy_conversations (user_id, session_date, turn, role, message)
+           VALUES ($1, $2, $3, 'buddy', $4)`,
+          [userId, today, nextTurn + 1, savedReply]
+        ).catch(e => console.warn('[Agent] save reply failed:', e.message, '| userId:', userId));
       }
 
       res.json({ success: true, reply, receipts, confirmation });

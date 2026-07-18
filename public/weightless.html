@@ -25,9 +25,9 @@
   .top{display:flex;align-items:center;justify-content:space-between;
     padding:calc(env(safe-area-inset-top) + .6rem) 1.1rem .5rem;flex:none;}
   .brand{display:flex;align-items:center;gap:.5rem;}
-  .brand .dot{width:26px;height:26px;border-radius:50%;background:linear-gradient(150deg,#2f6df0,#133a86);
-    display:grid;place-items:center;box-shadow:0 2px 8px rgba(47,109,240,.38);}
-  .brand .dot span{font-size:.74rem;}
+  .brand .dot{width:26px;height:26px;border-radius:50%;background:#eaf0ff;overflow:hidden;
+    display:grid;place-items:center;box-shadow:0 2px 8px rgba(12,27,64,.2),inset 0 0 0 1px rgba(47,109,240,.14);}
+  .dot img{width:100%;height:100%;object-fit:contain;display:block;}
   .brand .name{font-weight:700;font-size:.94rem;letter-spacing:-.01em;}
   .brand .name small{display:block;font-size:.66rem;color:var(--faint);font-weight:600;letter-spacing:.02em;}
   .top-actions{display:flex;align-items:center;gap:.45rem;}
@@ -43,9 +43,8 @@
   .b{display:flex;gap:.5rem;align-items:flex-start;opacity:0;transform:translateY(6px);animation:in .32s ease forwards;}
   @keyframes in{to{opacity:1;transform:none;}}
   @media (prefers-reduced-motion:reduce){.b,.u,.card,.chips{animation:none;opacity:1;transform:none;}}
-  .b .dot{flex:none;width:27px;height:27px;border-radius:50%;background:linear-gradient(150deg,#2f6df0,#133a86);
-    display:grid;place-items:center;box-shadow:0 2px 8px rgba(47,109,240,.38);}
-  .b .dot span{font-size:.74rem;}
+  .b .dot{flex:none;width:27px;height:27px;border-radius:50%;background:#eaf0ff;overflow:hidden;
+    display:grid;place-items:center;box-shadow:0 2px 8px rgba(12,27,64,.2),inset 0 0 0 1px rgba(47,109,240,.14);}
   .b .msg{font-size:.95rem;line-height:1.46;color:var(--ink);padding-top:2px;max-width:85%;}
   .b .msg.soul{font-family:var(--serif);font-size:1.05rem;line-height:1.34;}
   .b .msg strong{font-weight:700;}
@@ -145,7 +144,7 @@
 <body>
   <div class="top">
     <div class="brand">
-      <div class="dot"><span>🌙</span></div>
+      <div class="dot"><img src="/icons/fl-icon.svg" alt="Buddy"></div>
       <div class="name">Buddy<small>FocusLedger</small></div>
     </div>
     <div class="top-actions">
@@ -179,6 +178,9 @@
   var input  = document.getElementById('input');
   var go      = document.getElementById('go');
   var busy = false;
+  // While Buddy is gathering info for an action (e.g. asked "what's their email?"),
+  // keep the next message in the action flow instead of re-guessing intent.
+  var pendingAct = false;
 
   // ── helpers ────────────────────────────────────────────────────────────────
   function scroll(){ thread.scrollTop = thread.scrollHeight; }
@@ -195,7 +197,7 @@
 
   function user(text){ var n=node('<div class="u"></div>'); n.textContent=text; thread.appendChild(n); scroll(); }
   function buddy(html, soul){
-    var n=node('<div class="b"><div class="dot"><span>🌙</span></div><div class="msg'+(soul?' soul':'')+'"></div></div>');
+    var n=node('<div class="b"><div class="dot"><img src="/icons/fl-icon.svg" alt="Buddy"></div><div class="msg'+(soul?' soul':'')+'"></div></div>');
     n.querySelector('.msg').innerHTML = html;
     thread.appendChild(n); scroll();
   }
@@ -216,7 +218,7 @@
   var _typingEl=null;
   function showTyping(){
     if(_typingEl) return;
-    _typingEl=node('<div class="b"><div class="dot"><span>🌙</span></div><div class="typing"><i></i><i></i><i></i></div></div>');
+    _typingEl=node('<div class="b"><div class="dot"><img src="/icons/fl-icon.svg" alt="Buddy"></div><div class="typing"><i></i><i></i><i></i></div></div>');
     thread.appendChild(_typingEl); scroll();
   }
   function hideTyping(){ if(_typingEl){ _typingEl.remove(); _typingEl=null; } }
@@ -310,6 +312,7 @@
     return {p:'week', label:'this week'};
   }
   function money(text){
+    pendingAct = false; // switching lanes to a money question
     user(text); input.value=''; setBusy(true); showTyping();
     var per = periodFrom(text);
     api('/api/expenses/summary?period='+per.p)
@@ -402,10 +405,13 @@
     api('/api/agent/act', { method:'POST', body:{ message:text } })
       .then(function(data){
         hideTyping();
-        if(!data || !data.success){ buddy("I couldn't do that just now — mind trying again?"); return; }
+        if(!data || !data.success){ pendingAct = false; buddy("I couldn't do that just now — mind trying again?"); return; }
         if(data.reply) buddy(fmt(data.reply), (data.reply||'').length < 140);
         (data.receipts||[]).forEach(receipt);
         if(data.confirmation) renderConfirm(data.confirmation);
+        // Stay in the action flow only while Buddy is still asking for info.
+        var acted = (data.receipts && data.receipts.length) || data.confirmation;
+        pendingAct = !!(data.reply && !acted && /\?/.test(data.reply));
       })
       .catch(function(err){
         hideTyping();
@@ -491,7 +497,7 @@
     text = (text||'').trim();
     if(busy || !text) return;
     if(moneyIntent(text)){ money(text); return; }
-    if(actionIntent(text)){ act(text); return; }
+    if(actionIntent(text) || pendingAct){ act(text); return; }
     user(text);
     input.value='';
     setBusy(true);
