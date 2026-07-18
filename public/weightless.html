@@ -400,9 +400,22 @@
     thread.appendChild(wrap); scroll();
   }
 
+  // Build conversation context from the visible thread so /act is stateful
+  // without any server-side storage (user bubbles + Buddy messages, last 16).
+  function threadHistory(){
+    var out = [];
+    thread.querySelectorAll('.u, .b .msg').forEach(function(el){
+      var role = el.classList.contains('u') ? 'user' : 'assistant';
+      var txt = (el.textContent || '').trim();
+      if(txt) out.push({ role:role, content:txt });
+    });
+    return out.slice(-16);
+  }
+
   function act(text){
+    var history = threadHistory();
     user(text); input.value=''; setBusy(true); showTyping();
-    api('/api/agent/act', { method:'POST', body:{ message:text } })
+    api('/api/agent/act', { method:'POST', body:{ message:text, history:history } })
       .then(function(data){
         hideTyping();
         if(!data || !data.success){ pendingAct = false; buddy("I couldn't do that just now — mind trying again?"); return; }

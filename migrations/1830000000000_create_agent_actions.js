@@ -18,7 +18,7 @@ module.exports = {
     await client.query(`
       CREATE TABLE IF NOT EXISTS agent_actions (
         id           SERIAL PRIMARY KEY,
-        user_id      INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        user_id      INTEGER NOT NULL,
         action_type  TEXT    NOT NULL,
         status       TEXT    NOT NULL DEFAULT 'proposed'
                        CHECK (status IN ('proposed','confirmed','executed','failed','undone','cancelled')),
