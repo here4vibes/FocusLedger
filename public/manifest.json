@@ -2,7 +2,7 @@
   "name": "FocusLedger",
   "short_name": "FocusLedger",
   "description": "One app for your tasks and your money — ADHD-friendly focus tracker with bank sync.",
-  "start_url": "/app/tasks",
+  "start_url": "/weightless",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",

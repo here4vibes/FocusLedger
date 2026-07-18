@@ -172,7 +172,7 @@
 (function(){
   'use strict';
   var TOKEN = localStorage.getItem('fl_token');
-  if(!TOKEN){ window.location.href = '/login'; return; }
+  if(!TOKEN){ window.location.href = '/login?redirect=weightless'; return; }
 
   var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   var thread = document.getElementById('thread');
@@ -229,7 +229,7 @@
       opts.body=JSON.stringify(opts.body);
     }
     return fetch(path, opts).then(function(r){
-      if(r.status===401){ window.location.href='/login'; throw new Error('unauthorized'); }
+      if(r.status===401){ window.location.href='/login?redirect=weightless'; throw new Error('unauthorized'); }
       return r.json();
     });
   }

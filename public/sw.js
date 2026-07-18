@@ -13,12 +13,13 @@
  * when offline. The ~50ms latency cost is invisible on modern connections.
  */
 
-const CACHE_VERSION = 'fl-v53';
+const CACHE_VERSION = 'fl-v54';
 const OFFLINE_URL = '/offline.html';
 
 // Assets to precache on install (app shell)
 const PRECACHE_URLS = [
   '/',
+  '/weightless', // PWA start_url — conversation-first home
   '/app',
   '/home',       // Morning nudge notification tap target
   '/app/buddy',  // Accountabilibuddy check-in page
