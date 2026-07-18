@@ -335,7 +335,9 @@
         var hasPendingShare = !!localStorage.getItem('fl_pending_share');
         // WHY: Buddy is now the persistent post-login landing page.
         // It handles routing internally: check-in flow if due, status view if already done.
-        var postLoginDest = (redirectParam === 'share' || hasPendingShare) ? '/share' : '/app/buddy';
+        var postLoginDest = (redirectParam === 'share' || hasPendingShare) ? '/share'
+                          : (redirectParam === 'weightless') ? '/weightless'
+                          : '/app/buddy';
 
         // ── Handle Google OAuth callback ────────────────────────────────────────
         // After Google redirects back with google_token=..., store token and go to app
