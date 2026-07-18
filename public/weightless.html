@@ -179,6 +179,9 @@
   var input  = document.getElementById('input');
   var go      = document.getElementById('go');
   var busy = false;
+  // While Buddy is gathering info for an action (e.g. asked "what's their email?"),
+  // keep the next message in the action flow instead of re-guessing intent.
+  var pendingAct = false;
 
   // ── helpers ────────────────────────────────────────────────────────────────
   function scroll(){ thread.scrollTop = thread.scrollHeight; }
@@ -310,6 +313,7 @@
     return {p:'week', label:'this week'};
   }
   function money(text){
+    pendingAct = false; // switching lanes to a money question
     user(text); input.value=''; setBusy(true); showTyping();
     var per = periodFrom(text);
     api('/api/expenses/summary?period='+per.p)
@@ -402,10 +406,13 @@
     api('/api/agent/act', { method:'POST', body:{ message:text } })
       .then(function(data){
         hideTyping();
-        if(!data || !data.success){ buddy("I couldn't do that just now — mind trying again?"); return; }
+        if(!data || !data.success){ pendingAct = false; buddy("I couldn't do that just now — mind trying again?"); return; }
         if(data.reply) buddy(fmt(data.reply), (data.reply||'').length < 140);
         (data.receipts||[]).forEach(receipt);
         if(data.confirmation) renderConfirm(data.confirmation);
+        // Stay in the action flow only while Buddy is still asking for info.
+        var acted = (data.receipts && data.receipts.length) || data.confirmation;
+        pendingAct = !!(data.reply && !acted && /\?/.test(data.reply));
       })
       .catch(function(err){
         hideTyping();
@@ -491,7 +498,7 @@
     text = (text||'').trim();
     if(busy || !text) return;
     if(moneyIntent(text)){ money(text); return; }
-    if(actionIntent(text)){ act(text); return; }
+    if(actionIntent(text) || pendingAct){ act(text); return; }
     user(text);
     input.value='';
     setBusy(true);
