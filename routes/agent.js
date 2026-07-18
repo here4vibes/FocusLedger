@@ -77,23 +77,15 @@ module.exports = function (pool) {
       );
       const tasks = tasksResult.rows;
 
-      // Shared, stateful thread with the coaching Buddy (buddy_conversations),
-      // so multi-turn actions work — "email Miles" → ask for the address → send —
-      // and context carries between chatting and acting.
-      const histResult = await pool.query(
-        `SELECT role, message FROM buddy_conversations
-          WHERE user_id = $1 AND session_date = $2 ORDER BY turn ASC`,
-        [userId, today]
-      );
-      const nextTurn = histResult.rows.length + 1;
-      await pool.query(
-        `INSERT INTO buddy_conversations (user_id, session_date, turn, role, message)
-         VALUES ($1, $2, $3, 'user', $4)`,
-        [userId, today, nextTurn, message.trim()]
-      );
-      const contextHistory = histResult.rows.map(h => ({
-        role: h.role === 'buddy' ? 'assistant' : 'user', content: h.message,
-      }));
+      // Conversation context is supplied by the client (the visible thread) —
+      // no extra DB writes in the hot path, and no dependency on another table's
+      // prod schema. This is what makes multi-turn actions work ("email Miles" →
+      // ask for the address → send). Sanitised and capped.
+      const clientHistory = Array.isArray(req.body.history) ? req.body.history : [];
+      const contextHistory = clientHistory
+        .filter(h => h && (h.role === 'user' || h.role === 'assistant') && typeof h.content === 'string' && h.content.trim())
+        .slice(-16)
+        .map(h => ({ role: h.role, content: h.content.trim().slice(0, 2000) }));
       contextHistory.push({ role: 'user', content: message.trim() });
 
       let resp;
@@ -126,10 +118,16 @@ module.exports = function (pool) {
 
         if (tier === 'confirm') {
           // Never auto-run — log as proposed and return a confirmation card.
-          const row = await logAction(pool, {
-            userId, actionType: tu.name, status: 'proposed', riskTier: 'confirm', params: tu.input || {},
-          });
-          confirmation = buildConfirmation(row, tu.name, tu.input || {});
+          // Resilient: a logging failure must not crash the whole reply.
+          try {
+            const row = await logAction(pool, {
+              userId, actionType: tu.name, status: 'proposed', riskTier: 'confirm', params: tu.input || {},
+            });
+            confirmation = buildConfirmation(row, tu.name, tu.input || {});
+          } catch (logErr) {
+            console.error('[Agent] proposing action failed:', logErr.message, '| tool:', tu.name, '| userId:', userId);
+            receipts.push({ id: null, summary: "I put that together but couldn't set up the send just now — try once more?", undoable: false, ok: false, scope: scopeOf(tu.name) });
+          }
           break; // one confirmation at a time
         }
 
@@ -157,18 +155,6 @@ module.exports = function (pool) {
           }).catch(() => {});
           receipts.push({ id: null, summary: "Something broke doing that — nothing changed", undoable: false, ok: false, scope: scopeOf(tu.name) });
         }
-      }
-
-      // Persist Buddy's turn so the shared thread stays continuous across
-      // chatting, acting, and confirmations.
-      const savedReply = reply
-        || (confirmation ? '(drafted an email for your review)' : (receipts.length ? '(done)' : ''));
-      if (savedReply) {
-        await pool.query(
-          `INSERT INTO buddy_conversations (user_id, session_date, turn, role, message)
-           VALUES ($1, $2, $3, 'buddy', $4)`,
-          [userId, today, nextTurn + 1, savedReply]
-        ).catch(e => console.warn('[Agent] save reply failed:', e.message, '| userId:', userId));
       }
 
       res.json({ success: true, reply, receipts, confirmation });
