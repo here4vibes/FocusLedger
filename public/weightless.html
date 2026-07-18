@@ -30,9 +30,11 @@
   .brand .dot span{font-size:.74rem;}
   .brand .name{font-weight:700;font-size:.94rem;letter-spacing:-.01em;}
   .brand .name small{display:block;font-size:.66rem;color:var(--faint);font-weight:600;letter-spacing:.02em;}
-  .top .classic{font-size:.72rem;color:var(--muted);text-decoration:none;font-weight:600;
-    border:1px solid var(--line-2);border-radius:999px;padding:.3rem .65rem;background:var(--surface);}
-  .top .classic:active{background:var(--accent-soft);}
+  .top-actions{display:flex;align-items:center;gap:.45rem;}
+  .chiplink{font-size:.72rem;color:var(--muted);text-decoration:none;font-weight:600;
+    border:1px solid var(--line-2);border-radius:999px;padding:.3rem .65rem;background:var(--surface);white-space:nowrap;}
+  .chiplink:active{background:var(--accent-soft);}
+  .chiplink.today{color:var(--accent);border-color:transparent;background:var(--accent-soft);}
 
   .thread{flex:1;overflow-y:auto;padding:.5rem 1rem 1rem;display:flex;flex-direction:column;gap:.72rem;
     scroll-behavior:smooth;max-width:640px;width:100%;margin:0 auto;}
@@ -88,9 +90,20 @@
   .chip.good{background:var(--good-soft);color:var(--good);}
   .chip.warm{background:var(--warm-soft);color:var(--warm);}
 
-  .note{align-self:flex-start;font-size:.76rem;color:var(--good);background:var(--good-soft);
-    border-radius:999px;padding:.24rem .7rem;font-weight:600;opacity:0;animation:in .3s ease forwards;}
+  .note{align-self:flex-start;display:inline-flex;align-items:center;gap:.45rem;font-size:.76rem;
+    color:var(--good);background:var(--good-soft);border-radius:999px;padding:.22rem .6rem .22rem .3rem;
+    font-weight:600;opacity:0;animation:in .3s ease forwards;}
   .note.warm{color:var(--warm);background:var(--warm-soft);}
+  .note.world{color:var(--accent);background:var(--accent-soft);}
+  /* scope label — "App only" vs "Real world" so an in-app change is never
+     confused with a real-world side effect (a sent email). */
+  .note .scope{flex:none;font-size:.55rem;letter-spacing:.06em;text-transform:uppercase;font-weight:800;
+    border-radius:999px;padding:.16rem .45rem;background:rgba(46,158,107,.16);color:var(--good);}
+  .note.world .scope{background:var(--accent);color:#fff;}
+  .note.warm .scope{background:rgba(201,138,47,.2);color:var(--warm);}
+  .note .undo{background:none;border:none;color:var(--accent);font-weight:700;cursor:pointer;
+    font-size:.75rem;font-family:inherit;padding:0;text-decoration:underline;}
+  .note .undo:disabled{color:var(--faint);cursor:default;text-decoration:none;}
 
   .typing{display:flex;gap:4px;padding:6px 2px;}
   .typing i{width:6px;height:6px;border-radius:50%;background:var(--faint);animation:blink 1.1s infinite;}
@@ -122,7 +135,10 @@
       <div class="dot"><span>🌙</span></div>
       <div class="name">Buddy<small>FocusLedger</small></div>
     </div>
-    <a class="classic" href="/app">See modules</a>
+    <div class="top-actions">
+      <a class="chiplink today" href="/app/today">Today</a>
+      <a class="chiplink" href="/app">See modules</a>
+    </div>
   </div>
 
   <div class="thread" id="thread">
@@ -329,11 +345,66 @@
       .then(function(){ setBusy(false); input.focus(); });
   }
 
+  // ── actions: let Buddy actually do things (reschedule / mark done) ───────────
+  function actionIntent(t){
+    return /\b(reschedule|resched|postpone|snooze|bump)\b/i.test(t)
+        || /\b(move|push|shift)\b[\s\S]*\b(to|until|till|by|tomorrow|monday|tuesday|wednesday|thursday|friday|saturday|sunday|next)\b/i.test(t)
+        || /\b(cross|check)\s*(it|that|them)?\s*off\b/i.test(t)
+        || /\bmark(ed)?\b[\s\S]*\b(done|complete)/i.test(t)
+        || /\b(done with|finished with)\b/i.test(t);
+  }
+
+  function receipt(r){
+    var world = r.ok && r.scope === 'world';
+    var wrap = node('<div class="note'+(r.ok ? (world?' world':'') : ' warm')+'"></div>');
+    // Leading scope chip: "App only" (nothing left FocusLedger) vs "Real world"
+    // (a real side effect happened, e.g. an email was sent).
+    var chip = document.createElement('span'); chip.className = 'scope';
+    chip.textContent = r.ok ? (world ? 'Real world' : 'App only') : 'Not done';
+    wrap.appendChild(chip);
+    var span = document.createElement('span');
+    span.textContent = (r.ok ? (world ? '📤 ' : '✓ ') : '· ') + r.summary;
+    wrap.appendChild(span);
+    if(r.ok && r.undoable && r.id){
+      var u = document.createElement('button'); u.className='undo'; u.textContent='Undo';
+      u.onclick = function(){
+        u.disabled = true; u.textContent = '…';
+        api('/api/agent/undo', { method:'POST', body:{ action_id:r.id } })
+          .then(function(res){
+            if(res && res.success){ span.textContent = '↩ ' + (res.summary||'Undone'); u.remove(); }
+            else { u.disabled = false; u.textContent = 'Undo'; }
+          })
+          .catch(function(){ u.disabled = false; u.textContent = 'Undo'; });
+      };
+      wrap.appendChild(u);
+    }
+    thread.appendChild(wrap); scroll();
+  }
+
+  function act(text){
+    user(text); input.value=''; setBusy(true); showTyping();
+    api('/api/agent/act', { method:'POST', body:{ message:text } })
+      .then(function(data){
+        hideTyping();
+        if(!data || !data.success){ buddy("I couldn't do that just now — mind trying again?"); return; }
+        if(data.reply) buddy(fmt(data.reply), (data.reply||'').length < 140);
+        (data.receipts||[]).forEach(receipt);
+      })
+      .catch(function(err){
+        hideTyping();
+        if(err && err.message==='unauthorized') return;
+        console.error('[weightless] act error:', err);
+        buddy("Something hiccuped taking that action. Try again in a sec?");
+      })
+      .then(function(){ setBusy(false); input.focus(); });
+  }
+
   // ── real conversation turn ──────────────────────────────────────────────────
   function send(text){
     text = (text||'').trim();
     if(busy || !text) return;
     if(moneyIntent(text)){ money(text); return; }
+    if(actionIntent(text)){ act(text); return; }
     user(text);
     input.value='';
     setBusy(true);
