@@ -67,6 +67,28 @@ async function markExecuted(pool, id, userId, result = null) {
   return rows[0] || null;
 }
 
+/** Cancel a still-proposed action (user declined the confirmation). Idempotent. */
+async function markCancelled(pool, id, userId) {
+  const { rows } = await pool.query(
+    `UPDATE agent_actions SET status = 'cancelled'
+      WHERE id = $1 AND user_id = $2 AND status = 'proposed'
+      RETURNING *`,
+    [id, userId]
+  );
+  return rows[0] || null;
+}
+
+/** Mark a proposed/confirmed action failed with an error message. */
+async function markFailed(pool, id, userId, error) {
+  const { rows } = await pool.query(
+    `UPDATE agent_actions SET status = 'failed', error = $3
+      WHERE id = $1 AND user_id = $2 AND status IN ('proposed','confirmed')
+      RETURNING *`,
+    [id, userId, error ? String(error).slice(0, 500) : null]
+  );
+  return rows[0] || null;
+}
+
 /** Count actions of a type in the trailing window (for rate limits). */
 async function recentActionCount(pool, userId, actionType, sinceInterval = '1 day') {
   const { rows } = await pool.query(
@@ -80,4 +102,4 @@ async function recentActionCount(pool, userId, actionType, sinceInterval = '1 da
   return rows[0].n;
 }
 
-module.exports = { logAction, getAction, markUndone, markExecuted, recentActionCount };
+module.exports = { logAction, getAction, markUndone, markExecuted, markCancelled, markFailed, recentActionCount };

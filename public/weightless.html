@@ -90,6 +90,19 @@
   .chip.good{background:var(--good-soft);color:var(--good);}
   .chip.warm{background:var(--warm-soft);color:var(--warm);}
 
+  /* email confirmation card — reviewed + editable before anything sends */
+  .card.confirm{border-color:var(--accent-soft);}
+  .card .k.world{color:var(--accent);}
+  .efield{display:flex;flex-direction:column;gap:.25rem;margin-top:.55rem;}
+  .efield label{font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;font-weight:700;color:var(--faint);}
+  .efield .eto{font-size:.9rem;font-weight:600;color:var(--ink);}
+  .efield input,.efield textarea{border:1px solid var(--line-2);border-radius:10px;padding:.5rem .6rem;
+    font-family:inherit;font-size:.9rem;color:var(--ink);background:var(--canvas);width:100%;}
+  .efield textarea{min-height:130px;resize:vertical;line-height:1.5;}
+  .efield input:disabled,.efield textarea:disabled{opacity:.65;}
+  .eactions{display:flex;align-items:center;gap:.5rem;margin-top:.75rem;flex-wrap:wrap;}
+  .eactions .say{font-size:.84rem;color:var(--muted);}
+
   .note{align-self:flex-start;display:inline-flex;align-items:center;gap:.45rem;font-size:.76rem;
     color:var(--good);background:var(--good-soft);border-radius:999px;padding:.22rem .6rem .22rem .3rem;
     font-weight:600;opacity:0;animation:in .3s ease forwards;}
@@ -351,7 +364,10 @@
         || /\b(move|push|shift)\b[\s\S]*\b(to|until|till|by|tomorrow|monday|tuesday|wednesday|thursday|friday|saturday|sunday|next)\b/i.test(t)
         || /\b(cross|check)\s*(it|that|them)?\s*off\b/i.test(t)
         || /\bmark(ed)?\b[\s\S]*\b(done|complete)/i.test(t)
-        || /\b(done with|finished with)\b/i.test(t);
+        || /\b(done with|finished with)\b/i.test(t)
+        || /\be-?mail\b/i.test(t)
+        || /\b(send|write|draft)\b[\s\S]*\b(email|message|note|reply)\b/i.test(t)
+        || /\breply to\b/i.test(t);
   }
 
   function receipt(r){
@@ -389,6 +405,7 @@
         if(!data || !data.success){ buddy("I couldn't do that just now — mind trying again?"); return; }
         if(data.reply) buddy(fmt(data.reply), (data.reply||'').length < 140);
         (data.receipts||[]).forEach(receipt);
+        if(data.confirmation) renderConfirm(data.confirmation);
       })
       .catch(function(err){
         hideTyping();
@@ -397,6 +414,76 @@
         buddy("Something hiccuped taking that action. Try again in a sec?");
       })
       .then(function(){ setBusy(false); input.focus(); });
+  }
+
+  // ── real-world confirmation: draft an email, review/edit, then send ──────────
+  function upsell(){
+    buddy(fmt("I've got the whole email drafted for you — but **sending it on your behalf** is an Autopilot thing. Upgrade and I'll handle sends like this end to end."), true);
+    raw('<a class="chiplink today" style="align-self:flex-start;text-decoration:none" href="/pricing">See Autopilot →</a>');
+  }
+
+  function renderConfirm(c){
+    if(c.action_type !== 'draft_and_send_email') return; // only email in this stage
+    var p = c.preview || {};
+    var card = node('<div class="card confirm"></div>');
+    card.innerHTML =
+      '<div class="k world">Real world · your ok needed</div>'+
+      '<div class="t">'+esc(c.title||'Send this email?')+'</div>'+
+      '<div class="efield"><label>To</label><div class="eto"></div></div>'+
+      '<div class="efield"><label>Subject</label><input class="esubj" type="text"></div>'+
+      '<div class="efield"><label>Message</label><textarea class="ebody"></textarea></div>'+
+      '<div class="eactions"></div>';
+    card.querySelector('.eto').textContent = p.to || '';
+    var subjEl = card.querySelector('.esubj'); subjEl.value = p.subject || '';
+    var bodyEl = card.querySelector('.ebody'); bodyEl.value = p.body || '';
+    var actions = card.querySelector('.eactions');
+    var sent = false;
+
+    function arm(){
+      actions.innerHTML = '';
+      var send = document.createElement('button'); send.className='chip solid'; send.textContent = c.confirmLabel||'Send it';
+      var nope = document.createElement('button'); nope.className='chip ghost'; nope.textContent = c.cancelLabel||'Not yet';
+      actions.appendChild(send); actions.appendChild(nope);
+      nope.onclick = function(){
+        if(sent) return; sent = true;
+        api('/api/agent/confirm', { method:'POST', body:{ action_id:c.id, cancel:true } }).catch(function(){});
+        card.remove();
+        buddy("No rush — it's still just a draft. Say the word when you want it sent.");
+      };
+      send.onclick = function(){
+        if(sent) return;
+        subjEl.disabled = true; bodyEl.disabled = true;
+        var secs = 5;
+        actions.innerHTML = '';
+        var msg = document.createElement('span'); msg.className='say';
+        var stop = document.createElement('button'); stop.className='undo'; stop.textContent='Undo';
+        actions.appendChild(msg); actions.appendChild(stop);
+        var stopped = false;
+        msg.textContent = 'Sending in ' + secs + '… ';
+        var iv = setInterval(function(){
+          if(stopped){ clearInterval(iv); return; }
+          secs--;
+          if(secs <= 0){
+            clearInterval(iv); stop.remove(); msg.textContent = 'Sending… '; sent = true;
+            api('/api/agent/confirm', { method:'POST', body:{ action_id:c.id, subject:subjEl.value, body:bodyEl.value } })
+              .then(function(res){
+                if(res && res.success && res.receipt){ card.remove(); receipt(res.receipt); }
+                else if(res && res.upsell){ actions.innerHTML=''; upsell(); }
+                else { card.remove(); buddy(res && res.message ? res.message : "That didn't go through — nothing was sent."); }
+              })
+              .catch(function(err){ if(err && err.message==='unauthorized') return; card.remove(); buddy("Something hiccuped sending that — nothing went out."); });
+          } else { msg.textContent = 'Sending in ' + secs + '… '; }
+        }, 1000);
+        stop.onclick = function(){
+          stopped = true; clearInterval(iv);
+          api('/api/agent/confirm', { method:'POST', body:{ action_id:c.id, cancel:true } }).catch(function(){});
+          card.remove();
+          buddy("Held off — it's still just a draft. Ready when you are.");
+        };
+      };
+    }
+    arm();
+    thread.appendChild(card); scroll();
   }
 
   // ── real conversation turn ──────────────────────────────────────────────────
