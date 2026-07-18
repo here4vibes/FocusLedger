@@ -90,10 +90,17 @@
   .chip.good{background:var(--good-soft);color:var(--good);}
   .chip.warm{background:var(--warm-soft);color:var(--warm);}
 
-  .note{align-self:flex-start;display:inline-flex;align-items:center;gap:.5rem;font-size:.76rem;
-    color:var(--good);background:var(--good-soft);border-radius:999px;padding:.24rem .7rem;
+  .note{align-self:flex-start;display:inline-flex;align-items:center;gap:.45rem;font-size:.76rem;
+    color:var(--good);background:var(--good-soft);border-radius:999px;padding:.22rem .6rem .22rem .3rem;
     font-weight:600;opacity:0;animation:in .3s ease forwards;}
   .note.warm{color:var(--warm);background:var(--warm-soft);}
+  .note.world{color:var(--accent);background:var(--accent-soft);}
+  /* scope label — "App only" vs "Real world" so an in-app change is never
+     confused with a real-world side effect (a sent email). */
+  .note .scope{flex:none;font-size:.55rem;letter-spacing:.06em;text-transform:uppercase;font-weight:800;
+    border-radius:999px;padding:.16rem .45rem;background:rgba(46,158,107,.16);color:var(--good);}
+  .note.world .scope{background:var(--accent);color:#fff;}
+  .note.warm .scope{background:rgba(201,138,47,.2);color:var(--warm);}
   .note .undo{background:none;border:none;color:var(--accent);font-weight:700;cursor:pointer;
     font-size:.75rem;font-family:inherit;padding:0;text-decoration:underline;}
   .note .undo:disabled{color:var(--faint);cursor:default;text-decoration:none;}
@@ -348,9 +355,15 @@
   }
 
   function receipt(r){
-    var wrap = node('<div class="note'+(r.ok?'':' warm')+'"></div>');
+    var world = r.ok && r.scope === 'world';
+    var wrap = node('<div class="note'+(r.ok ? (world?' world':'') : ' warm')+'"></div>');
+    // Leading scope chip: "App only" (nothing left FocusLedger) vs "Real world"
+    // (a real side effect happened, e.g. an email was sent).
+    var chip = document.createElement('span'); chip.className = 'scope';
+    chip.textContent = r.ok ? (world ? 'Real world' : 'App only') : 'Not done';
+    wrap.appendChild(chip);
     var span = document.createElement('span');
-    span.textContent = (r.ok?'✓ ':'· ') + r.summary;
+    span.textContent = (r.ok ? (world ? '📤 ' : '✓ ') : '· ') + r.summary;
     wrap.appendChild(span);
     if(r.ok && r.undoable && r.id){
       var u = document.createElement('button'); u.className='undo'; u.textContent='Undo';

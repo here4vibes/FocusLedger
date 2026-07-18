@@ -93,10 +93,12 @@ Indexes: `(user_id, created_at DESC)`, `(status)`. Migration ships with a matchi
               "editable": ["subject","body"],
               "confirmLabel": "Send it", "cancelLabel": "Not yet" } }
 ```
-Receipt (after `auto` execute or `confirm`):
+Receipt (after `auto` execute or `confirm`). `scope` labels whether anything
+left FocusLedger — `app` renders "App only", `world` renders "Real world" — so
+an in-app change is never confused with a real-world side effect:
 ```json
 { "type": "receipt",
-  "action": { "id": 42, "summary": "Sent to your landlord ✓", "undoable": true } }
+  "action": { "id": 42, "summary": "Sent to your landlord ✓", "scope": "world", "undoable": false } }
 ```
 
 ## The email decision (§Email)

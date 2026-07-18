@@ -7,7 +7,7 @@ const express = require('express');
 const { authenticateToken } = require('../middleware/auth');
 const { fetchUserTimezone, getUserLocalDate } = require('../lib/timezone');
 const { completeWithTools } = require('../lib/claude-client');
-const { TOOL_DEFS, tierOf, isKnown, dispatch, reverse } = require('../lib/agent-tools');
+const { TOOL_DEFS, tierOf, scopeOf, isKnown, dispatch, reverse } = require('../lib/agent-tools');
 const { logAction, getAction, markUndone } = require('../db/agent-actions');
 
 function buildSystemPrompt(today, tasks) {
@@ -97,13 +97,13 @@ module.exports = function (pool) {
               userId, actionType: tu.name, status: 'executed', riskTier: 'auto',
               params: tu.input || {}, result: out.result || null, undoToken: out.undo || null,
             });
-            receipts.push({ id: row.id, summary: out.receipt, undoable: !!out.undo, ok: true });
+            receipts.push({ id: row.id, summary: out.receipt, undoable: !!out.undo, ok: true, scope: scopeOf(tu.name) });
           } else {
             await logAction(pool, {
               userId, actionType: tu.name, status: 'failed', riskTier: 'auto',
               params: tu.input || {}, error: out.error || 'unknown',
             });
-            receipts.push({ id: null, summary: out.error || "I couldn't do that one", undoable: false, ok: false });
+            receipts.push({ id: null, summary: out.error || "I couldn't do that one", undoable: false, ok: false, scope: scopeOf(tu.name) });
           }
         } catch (dispErr) {
           console.error('[Agent] dispatch failed:', dispErr.message, '| tool:', tu.name, '| userId:', userId);
@@ -111,7 +111,7 @@ module.exports = function (pool) {
             userId, actionType: tu.name, status: 'failed', riskTier: 'auto',
             params: tu.input || {}, error: dispErr.message,
           }).catch(() => {});
-          receipts.push({ id: null, summary: "Something broke doing that — nothing changed", undoable: false, ok: false });
+          receipts.push({ id: null, summary: "Something broke doing that — nothing changed", undoable: false, ok: false, scope: scopeOf(tu.name) });
         }
       }
 
