@@ -30,9 +30,11 @@
   .brand .dot span{font-size:.74rem;}
   .brand .name{font-weight:700;font-size:.94rem;letter-spacing:-.01em;}
   .brand .name small{display:block;font-size:.66rem;color:var(--faint);font-weight:600;letter-spacing:.02em;}
-  .top .classic{font-size:.72rem;color:var(--muted);text-decoration:none;font-weight:600;
-    border:1px solid var(--line-2);border-radius:999px;padding:.3rem .65rem;background:var(--surface);}
-  .top .classic:active{background:var(--accent-soft);}
+  .top-actions{display:flex;align-items:center;gap:.45rem;}
+  .chiplink{font-size:.72rem;color:var(--muted);text-decoration:none;font-weight:600;
+    border:1px solid var(--line-2);border-radius:999px;padding:.3rem .65rem;background:var(--surface);white-space:nowrap;}
+  .chiplink:active{background:var(--accent-soft);}
+  .chiplink.today{color:var(--accent);border-color:transparent;background:var(--accent-soft);}
 
   .thread{flex:1;overflow-y:auto;padding:.5rem 1rem 1rem;display:flex;flex-direction:column;gap:.72rem;
     scroll-behavior:smooth;max-width:640px;width:100%;margin:0 auto;}
@@ -126,7 +128,10 @@
       <div class="dot"><span>🌙</span></div>
       <div class="name">Buddy<small>FocusLedger</small></div>
     </div>
-    <a class="classic" href="/app">See modules</a>
+    <div class="top-actions">
+      <a class="chiplink today" href="/app/today">Today</a>
+      <a class="chiplink" href="/app">See modules</a>
+    </div>
   </div>
 
   <div class="thread" id="thread">
