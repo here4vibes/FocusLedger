@@ -143,4 +143,8 @@ router.get('/app/*',        (_, res) => res.sendFile(pub('app.html')));
 router.get('/portal', (_, res) => res.sendFile(pub('portal.html')));
 router.get('/home',   (_, res) => res.sendFile(pub('portal.html')));
 
+// Weightless — conversation-first surface (coexists with the classic app).
+// New users will default here; existing users opt in. See CLAUDE.md "Recent changes".
+router.get('/weightless', (_, res) => res.sendFile(pub('weightless.html')));
+
 module.exports = router;
