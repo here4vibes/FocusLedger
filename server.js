@@ -178,6 +178,7 @@ app.use('/api/comeback',        require('./routes/comeback')(pool));
 app.use('/api/tasks',           require('./routes/tasks-prisma')(pool));
 app.use('/api/expenses',        require('./routes/expenses')(pool));
 app.use('/api/subscription',    require('./routes/subscription')(pool));
+app.use('/api/revenuecat',      require('./routes/revenuecat-webhook')(pool));
 app.use('/api/plaid',           require('./routes/plaid')(pool));
 app.use('/api/money',           require('./routes/money-prisma')(pool));
 app.use('/api/ideas',           require('./routes/ideas')(pool));

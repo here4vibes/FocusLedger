@@ -19,12 +19,27 @@
     }
   };
 
+  // Inside the native iOS app, Apple requires in-app purchase — we must NOT
+  // show Stripe/web checkout there (App Store guideline 3.1.1).
+  function isNativeIOS() {
+    try {
+      return !!(global.Capacitor
+        && global.Capacitor.isNativePlatform && global.Capacitor.isNativePlatform()
+        && global.Capacitor.getPlatform && global.Capacitor.getPlatform() === 'ios');
+    } catch (e) { return false; }
+  }
+
   var PricingService = {
     // checkout(plan, billing, btn?)
     // plan:    'autopilot' | 'tandem'
     // billing: 'monthly'   | 'annual'
     // btn:     optional button element to disable during redirect
     checkout: async function(plan, billing, btn) {
+      // On iOS, hand off to native IAP (RevenueCat) — never Stripe.
+      if (isNativeIOS()) {
+        return PricingService.nativePurchase(plan, billing, btn);
+      }
+
       var originalText = btn ? btn.textContent : null;
       if (btn) { btn.disabled = true; btn.textContent = 'Redirecting…'; }
 
@@ -56,6 +71,22 @@
       } else if (btn) {
         btn.disabled = false;
         btn.textContent = originalText;
+      }
+    },
+
+    // nativePurchase — iOS in-app purchase via the native bridge. The native
+    // layer (RevenueCat Capacitor plugin) injects window.FLNative.purchase;
+    // RevenueCat's webhook then grants Autopilot server-side. Until that ships,
+    // we never fall back to Stripe inside the app (compliance).
+    nativePurchase: function(plan, billing, btn) {
+      if (global.FLNative && typeof global.FLNative.purchase === 'function') {
+        if (btn) { btn.disabled = true; btn.textContent = 'Opening…'; }
+        try { global.FLNative.purchase(plan, billing); } catch (e) { /* native handles UI */ }
+        return;
+      }
+      // Bridge not present yet — do NOT show web checkout in-app.
+      if (global.alert) {
+        global.alert('In-app upgrade is coming to the FocusLedger app very soon. For now you can manage Autopilot at focusledger.net.');
       }
     },
 

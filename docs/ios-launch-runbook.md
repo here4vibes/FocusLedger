@@ -40,8 +40,13 @@ no hire. Owner column: **You** (taps in a dashboard) · **Me** (code/config I ge
 - [ ] RevenueCat: add the product, define the `autopilot` **entitlement**, get the API keys.
 - [ ] **Me:** add `@revenuecat/purchases-capacitor`; bridge the web Upgrade CTA → native paywall
       on iOS only.
-- [ ] **Me:** RevenueCat **webhook → backend** that grants Autopilot (writes the entitlement
-      `checkProStatus` reads) so an iOS purchase = Pro on web too.
+- [x] **Me:** RevenueCat **webhook → backend** — `POST /api/revenuecat/webhook` grants/revokes
+      `users.autopilot_expires_at` (what `checkProStatus` reads), so an iOS purchase = Pro on web.
+      **Env to set in Render + RevenueCat dashboard:** `REVENUECAT_WEBHOOK_AUTH` (shared secret,
+      any long random string — paste the same value into RevenueCat's webhook Authorization
+      header) and optionally `REVENUECAT_ENTITLEMENT` (defaults to `autopilot`).
+- [x] **Me:** web Upgrade CTA detects iOS → routes to native purchase (never Stripe in-app).
+      Native bridge `window.FLNative.purchase` gets wired when the RevenueCat Capacitor plugin lands.
 - [ ] Free-access plumbing for the feedback cohort (TestFlight = free by default; RevenueCat
       promo entitlements / existing web `promo_codes` for ongoing grants).
 
