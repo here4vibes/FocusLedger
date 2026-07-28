@@ -12,11 +12,23 @@ services:
   # With Blueprint sync this attaches automatically; on manually-created services
   # (this account's current state) link the "focusledger" group once in the
   # dashboard: service → Environment → Link environment group.
+  #
+  # ── PRE-LAUNCH CRON DIET (2026-07-21) ─────────────────────────────────────────
+  # Neon bills compute-hours = time the DB is *awake*. The old schedules (two
+  # crons every 5 min, seven more every 10–20 min) pinged the DB every ~2 min
+  # around the clock, so its compute never auto-suspended → the free 100 CU-hour
+  # allowance was exhausted mid-month with ZERO user activity.
+  #
+  # Fix: the surviving crons all run hourly ON THE HOUR (`0 * * * *`), so they
+  # share ONE wake-window per hour and Neon sleeps the other ~55 minutes.
+  # Non-essential / dormant jobs are disabled until launch (commented out below).
+  # Re-enable any of them (and tighten schedules) once there are real users and
+  # you're on a paid Neon plan.
 
   - type: cron
     name: morning-nudge
     runtime: node
-    schedule: "*/5 * * * *"
+    schedule: "0 * * * *"       # was */5 — hourly is timezone-safe (job checks the user's local morning) and lets Neon sleep
     buildCommand: npm install
     startCommand: node jobs/morning-nudge.js
     envVars:
@@ -25,16 +37,16 @@ services:
   - type: cron
     name: evening-nudge
     runtime: node
-    schedule: "*/5 * * * *"
+    schedule: "0 * * * *"       # was */5
     buildCommand: npm install
     startCommand: node jobs/evening-nudge.js
     envVars:
       - fromGroup: focusledger
 
   - type: cron
-    name: task-deadline-nudge
+    name: task-deadline-nudge   # delivers the "remind me" nudges
     runtime: node
-    schedule: "*/15 * * * *"
+    schedule: "0 * * * *"       # was */15 — hourly reminders are ~≤1h coarse; bump back to */30 if they feel too early/loose
     buildCommand: npm install
     startCommand: node jobs/task-deadline-nudge.js
     envVars:
@@ -43,66 +55,81 @@ services:
   - type: cron
     name: routine-nudge-check
     runtime: node
-    schedule: "*/15 * * * *"
+    schedule: "0 * * * *"       # was */15
     buildCommand: npm install
     startCommand: node jobs/routineNudgeCheck.js
     envVars:
       - fromGroup: focusledger
 
   - type: cron
-    name: movement-break-check
-    runtime: node
-    schedule: "*/15 * * * *"
-    buildCommand: npm install
-    startCommand: node jobs/movementBreakCheck.js
-    envVars:
-      - fromGroup: focusledger
-
-  - type: cron
-    name: impulse-spending-check
-    runtime: node
-    schedule: "*/15 * * * *"
-    buildCommand: npm install
-    startCommand: node jobs/impulseSpendingCheck.js
-    envVars:
-      - fromGroup: focusledger
-
-  - type: cron
-    name: followup-email-check
-    runtime: node
-    schedule: "*/15 * * * *"
-    buildCommand: npm install
-    startCommand: node jobs/followupEmailCheck.js
-    envVars:
-      - fromGroup: focusledger
-
-  - type: cron
     name: email-crons
     runtime: node
-    schedule: "*/10 * * * *"
+    schedule: "0 * * * *"       # was */10
     buildCommand: npm install
     startCommand: node jobs/email-crons.js
     envVars:
       - fromGroup: focusledger
 
   - type: cron
-    name: rss-sync
-    runtime: node
-    schedule: "*/20 * * * *"
-    buildCommand: npm install
-    startCommand: node jobs/rss-sync.js
-    envVars:
-      - fromGroup: focusledger
-
-  - type: cron
     name: buddy-engagement
     runtime: node
-    schedule: "0 * * * *"
+    schedule: "0 * * * *"       # already hourly, aligned on the hour
     buildCommand: npm install
     startCommand: node jobs/buddy-engagement.js
     envVars:
       - fromGroup: focusledger
 
+  # ── DISABLED PRE-LAUNCH (uncomment to re-enable at launch) ────────────────────
+  # These are non-essential or dormant for a single pre-launch user and were
+  # extra DB wake-ups. Movement/impulse need frequent runs to be useful, so
+  # they cost the most — re-enable them only when there are users to serve.
+  #
+  # - type: cron
+  #   name: movement-break-check      # movement nudges after focus sessions (needs frequent runs)
+  #   runtime: node
+  #   schedule: "*/15 * * * *"
+  #   buildCommand: npm install
+  #   startCommand: node jobs/movementBreakCheck.js
+  #   envVars:
+  #     - fromGroup: focusledger
+  #
+  # - type: cron
+  #   name: impulse-spending-check    # impulse-spend alerts (needs Plaid activity)
+  #   runtime: node
+  #   schedule: "*/15 * * * *"
+  #   buildCommand: npm install
+  #   startCommand: node jobs/impulseSpendingCheck.js
+  #   envVars:
+  #     - fromGroup: focusledger
+  #
+  # - type: cron
+  #   name: followup-email-check      # follow-up emails to users (none pre-launch)
+  #   runtime: node
+  #   schedule: "*/15 * * * *"
+  #   buildCommand: npm install
+  #   startCommand: node jobs/followupEmailCheck.js
+  #   envVars:
+  #     - fromGroup: focusledger
+  #
+  # - type: cron
+  #   name: rss-sync                  # news feed sync (non-essential feature)
+  #   runtime: node
+  #   schedule: "*/20 * * * *"
+  #   buildCommand: npm install
+  #   startCommand: node jobs/rss-sync.js
+  #   envVars:
+  #     - fromGroup: focusledger
+  #
+  # - type: cron
+  #   name: pattern-detection         # dormant: buddy_patterns feature is not wired
+  #   runtime: node
+  #   schedule: "0 3 * * 0"
+  #   buildCommand: npm install
+  #   startCommand: node jobs/patternDetectionJob.js
+  #   envVars:
+  #     - fromGroup: focusledger
+
+  # ── Daily jobs (once/day, on the hour — negligible compute) ───────────────────
   - type: cron
     name: plaid-daily-sync
     runtime: node
@@ -140,15 +167,6 @@ services:
       - fromGroup: focusledger
 
   - type: cron
-    name: pattern-detection
-    runtime: node
-    schedule: "0 3 * * 0"
-    buildCommand: npm install
-    startCommand: node jobs/patternDetectionJob.js
-    envVars:
-      - fromGroup: focusledger
-
-  - type: cron
     name: cross-domain-insights
     runtime: node
     schedule: "0 2 * * *"
@@ -158,7 +176,7 @@ services:
       - fromGroup: focusledger
 
   # 09:00 UTC = pre-dawn across US timezones — the reveal is staged before the
-  # user wakes, and after cross-domain-insights (02:00) + pattern-detection.
+  # user wakes, and after cross-domain-insights (02:00).
   - type: cron
     name: daily-reveal
     runtime: node
