@@ -145,8 +145,26 @@ async function logSent(pool, { userId, emailType, triggerRef, triggerLabel, subj
   );
 }
 
+/**
+ * Atomically claim a send slot. Returns true only if THIS call inserted the row
+ * (i.e. no one has sent this (user, type, ref, day) yet) — so the caller sends
+ * only when it wins the claim. Relies on the unique index
+ * followup_email_log_dedup. `sentDate` is the dedup day (YYYY-MM-DD): the user's
+ * local date for daily emails, the week-start date for weekly summaries.
+ */
+async function claimSend(pool, { userId, emailType, triggerRef, triggerLabel, subject, sentDate }) {
+  const { rows } = await pool.query(
+    `INSERT INTO followup_email_log (user_id, email_type, trigger_ref, trigger_label, subject, sent_date)
+     VALUES ($1, $2, $3, $4, $5, $6::date)
+     ON CONFLICT (user_id, email_type, trigger_ref, sent_date) DO NOTHING
+     RETURNING id`,
+    [userId, emailType, String(triggerRef), triggerLabel, subject, sentDate]
+  );
+  return rows.length > 0;
+}
+
 module.exports = {
   getEmailTypes, getUserPrefs, upsertUserPrefs, getRecentLogs,
   getProUsersWithPrefs, getIncompleteTasksDue, getActiveStreakRoutines,
-  getWeeklyStats, getPastDueTasks, alreadySentToday, alreadySentThisWeek, logSent,
+  getWeeklyStats, getPastDueTasks, alreadySentToday, alreadySentThisWeek, logSent, claimSend,
 };
