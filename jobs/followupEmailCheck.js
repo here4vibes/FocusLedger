@@ -23,9 +23,7 @@ const {
   getActiveStreakRoutines,
   getWeeklyStats,
   getPastDueTasks,
-  alreadySentToday,
-  alreadySentThisWeek,
-  logSent,
+  claimSend,
 } = require('../db/followupEmails');
 const { sendEmail } = require('../lib/emailService');
 const {
@@ -51,9 +49,13 @@ function createPool() {
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
-function formatDate(dateStr) {
-  // e.g. "2026-05-21" → "May 21"
-  const d = new Date(dateStr + 'T00:00:00');
+function formatDate(dateVal) {
+  // Accepts a "YYYY-MM-DD" string OR a JS Date (node-postgres parses DATE
+  // columns into Date objects — concatenating one with 'T00:00:00' produced
+  // "Invalid Date"). Never returns "Invalid Date"; falls back to "soon".
+  if (!dateVal) return 'soon';
+  const d = dateVal instanceof Date ? dateVal : new Date(String(dateVal) + 'T00:00:00');
+  if (isNaN(d.getTime())) return 'soon';
   return d.toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
 }
 
@@ -92,19 +94,21 @@ async function evaluateUser(pool, user, now) {
     for (const dueStr of [tomorrow, today]) {
       const tasks = await getIncompleteTasksDue(pool, userId, dueStr);
       for (const task of tasks.slice(0, 3)) { // cap at 3 per run
-        if (await alreadySentToday(pool, userId, 'task_reminder', String(task.id))) continue;
-
         const when = dueStr === tomorrow ? 'tomorrow' : 'today';
-        const { subject, html } = taskReminderTemplate({
-          name,
-          taskTitle: task.title,
-          when,
+        const { subject, html } = taskReminderTemplate({ name, taskTitle: task.title, when });
+
+        // Claim BEFORE sending: only one email per (task, local day) can win.
+        const claimed = await claimSend(pool, {
+          userId, emailType: 'task_reminder', triggerRef: String(task.id),
+          triggerLabel: task.title, subject, sentDate: localDate,
         });
+        if (!claimed) continue;
 
-        sendEmail(pool, { to: email, subject, html, templateType: 'task_reminder', userId })
-          .catch(err => console.error(`[followupEmailCheck] task_reminder send failed:`, err.message));
-
-        await logSent(pool, { userId, emailType: 'task_reminder', triggerRef: String(task.id), triggerLabel: task.title, subject });
+        try {
+          await sendEmail(pool, { to: email, subject, html, templateType: 'task_reminder', userId });
+        } catch (err) {
+          console.error(`[followupEmailCheck] task_reminder send failed:`, err.message, '| userId:', userId, '| task:', task.id);
+        }
       }
     }
   }
@@ -113,48 +117,48 @@ async function evaluateUser(pool, user, now) {
   if (user.routine_streak && hour === user.routine_streak_hour) {
     const routines = await getActiveStreakRoutines(pool, userId, 3);
     for (const routine of routines.slice(0, 2)) { // cap at 2 per run
-      if (await alreadySentToday(pool, userId, 'routine_streak', String(routine.routine_id))) continue;
-
       const { subject, html } = routineStreakTemplate({
         name,
         routineName: routine.routine_name,
         streak: routine.current_streak,
       });
 
-      sendEmail(pool, { to: email, subject, html, templateType: 'routine_streak', userId })
-        .catch(err => console.error(`[followupEmailCheck] routine_streak send failed:`, err.message));
-
-      await logSent(pool, {
-        userId, emailType: 'routine_streak',
-        triggerRef: String(routine.routine_id),
-        triggerLabel: routine.routine_name,
-        subject,
+      const claimed = await claimSend(pool, {
+        userId, emailType: 'routine_streak', triggerRef: String(routine.routine_id),
+        triggerLabel: routine.routine_name, subject, sentDate: localDate,
       });
+      if (!claimed) continue;
+
+      try {
+        await sendEmail(pool, { to: email, subject, html, templateType: 'routine_streak', userId });
+      } catch (err) {
+        console.error(`[followupEmailCheck] routine_streak send failed:`, err.message, '| userId:', userId, '| routine:', routine.routine_id);
+      }
     }
   }
 
   // ── Weekly Summary: Monday only, once per week ───────────────────────────────
   if (user.weekly_summary && hour === user.weekly_summary_hour && weekday === 'Mon') {
     const weekMonday = getWeekMondayStr(now);
-    if (await alreadySentThisWeek(pool, userId, 'weekly_summary', weekMonday)) {
-      // already sent this week
-    } else {
-      const stats = await getWeeklyStats(pool, userId, weekMonday);
-      const { subject, html } = weeklySummaryTemplate({
-        name,
-        tasksDue: parseInt(stats.tasks_due, 10) || 0,
-        tasksCompleted: parseInt(stats.tasks_completed, 10) || 0,
-      });
+    const stats = await getWeeklyStats(pool, userId, weekMonday);
+    const { subject, html } = weeklySummaryTemplate({
+      name,
+      tasksDue: parseInt(stats.tasks_due, 10) || 0,
+      tasksCompleted: parseInt(stats.tasks_completed, 10) || 0,
+    });
 
-      sendEmail(pool, { to: email, subject, html, templateType: 'weekly_summary', userId })
-        .catch(err => console.error(`[followupEmailCheck] weekly_summary send failed:`, err.message));
-
-      await logSent(pool, {
-        userId, emailType: 'weekly_summary',
-        triggerRef: weekMonday,
-        triggerLabel: `Week of ${formatDate(weekMonday)}`,
-        subject,
-      });
+    // Weekly dedup: sent_date = the week-start date, so the claim is stable all
+    // week → one summary per week.
+    const claimed = await claimSend(pool, {
+      userId, emailType: 'weekly_summary', triggerRef: weekMonday,
+      triggerLabel: `Week of ${formatDate(weekMonday)}`, subject, sentDate: weekMonday,
+    });
+    if (claimed) {
+      try {
+        await sendEmail(pool, { to: email, subject, html, templateType: 'weekly_summary', userId });
+      } catch (err) {
+        console.error(`[followupEmailCheck] weekly_summary send failed:`, err.message, '| userId:', userId);
+      }
     }
   }
 
@@ -163,23 +167,23 @@ async function evaluateUser(pool, user, now) {
     const yesterday = getYesterdayStr();
     const pastDueTasks = await getPastDueTasks(pool, userId, yesterday);
     for (const task of pastDueTasks.slice(0, 3)) { // cap at 3 per run
-      if (await alreadySentToday(pool, userId, 'follow_through', String(task.id))) continue;
-
       const { subject, html } = followThroughTemplate({
         name,
         taskTitle: task.title,
         dueDate: formatDate(task.due_date),
       });
 
-      sendEmail(pool, { to: email, subject, html, templateType: 'follow_through', userId })
-        .catch(err => console.error(`[followupEmailCheck] follow_through send failed:`, err.message));
-
-      await logSent(pool, {
-        userId, emailType: 'follow_through',
-        triggerRef: String(task.id),
-        triggerLabel: task.title,
-        subject,
+      const claimed = await claimSend(pool, {
+        userId, emailType: 'follow_through', triggerRef: String(task.id),
+        triggerLabel: task.title, subject, sentDate: localDate,
       });
+      if (!claimed) continue;
+
+      try {
+        await sendEmail(pool, { to: email, subject, html, templateType: 'follow_through', userId });
+      } catch (err) {
+        console.error(`[followupEmailCheck] follow_through send failed:`, err.message, '| userId:', userId, '| task:', task.id);
+      }
     }
   }
 }
