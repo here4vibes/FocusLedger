@@ -231,7 +231,13 @@
       opts.body=JSON.stringify(opts.body);
     }
     return fetch(path, opts).then(function(r){
-      if(r.status===401){ window.location.href='/login?redirect=weightless'; throw new Error('unauthorized'); }
+      if(r.status===401){
+        // Token is dead — clear it so /login doesn't bounce us straight back
+        // (login redirects away whenever fl_token exists), and tell login why.
+        localStorage.removeItem('fl_token');
+        window.location.href='/login?redirect=weightless&reason=expired';
+        throw new Error('unauthorized');
+      }
       return r.json();
     });
   }

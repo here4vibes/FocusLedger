@@ -386,6 +386,32 @@
             errorEl.classList.add('visible');
         }
 
+        // ── Session-expired banner (redirected here after a 401) ────────────────
+        if (new URLSearchParams(window.location.search).get('reason') === 'expired') {
+            var expEl = document.getElementById('errorMsg');
+            expEl.textContent = 'Your session expired — sign in to pick up where you left off.';
+            expEl.style.background = '#FFF7E6';
+            expEl.style.color = '#8a6d1a';
+            expEl.classList.add('visible');
+        }
+
+        // ── Installed-app (standalone PWA) guidance ─────────────────────────────
+        // In a home-screen PWA, tapping "Log in with Google" sends the OAuth flow
+        // out to Safari, and the callback lands in Safari — not back in the app —
+        // so the PWA never receives the token. Steer these users to email/password,
+        // which completes inside the app.
+        var isStandalonePWA = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches)
+                           || window.navigator.standalone === true;
+        if (isStandalonePWA) {
+            var gBtn = document.getElementById('googleBtn');
+            if (gBtn && gBtn.parentNode) {
+                var pwaHint = document.createElement('p');
+                pwaHint.textContent = 'In the installed app, sign in with email below — Google sign-in may not bring you back here.';
+                pwaHint.style.cssText = 'margin:10px 0 0;font-size:13px;line-height:1.4;color:#8a6d1a;background:#FFF7E6;border-radius:8px;padding:8px 12px;';
+                gBtn.parentNode.insertBefore(pwaHint, gBtn.nextSibling);
+            }
+        }
+
         // If already logged in, redirect to destination
         if (localStorage.getItem('fl_token')) {
             window.location.href = postLoginDest;
