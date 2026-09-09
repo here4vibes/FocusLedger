@@ -55,6 +55,12 @@ no hire. Owner column: **You** (taps in a dashboard) · **Me** (code/config I ge
 - [ ] **Contacts** — resolve "email Miles" to an address (kills the friction we hit).
 - [ ] **Face ID / biometric unlock** (cheap, strong native signal for review).
 - [ ] **Native share** target.
+- [ ] ⚠️ **Verify Google OAuth works INSIDE the native shell.** The Capacitor app is a
+      standalone web context — same class of failure that just broke Google sign-in in the
+      home-screen PWA (OAuth redirect escapes to Safari and the token never returns). The
+      `capacitor.config.ts` allows `accounts.google.com` navigation, so it *may* work in-app,
+      but confirm on-device in TestFlight; if it doesn't return cleanly, lead with
+      email/password + magic-link in the native app.
 
 ## Phase 5 — Cloud build → TestFlight (Both)
 - [ ] **Me:** `codemagic.yaml` (build, auto-sign, publish to TestFlight).
