@@ -380,7 +380,8 @@
         || /\be-?mail\b/i.test(t)
         || /\b(send|write|draft)\b[\s\S]*\b(email|message|note|reply)\b/i.test(t)
         || /\breply to\b/i.test(t)
-        || /\b(remind|nudge)\b/i.test(t)
+        || /\b(remind|nudg)/i.test(t)
+        || /\bevery\s+(day|night|morning|evening|week|month|monday|tuesday|wednesday|thursday|friday|saturday|sunday|weekday)/i.test(t)
         || /\badd (a |an )?(task|reminder|to-?do)\b/i.test(t);
   }
 
