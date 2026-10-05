@@ -430,7 +430,9 @@
   function act(text){
     var history = threadHistory();
     user(text); input.value=''; setBusy(true); showTyping();
-    api('/api/agent/act', { method:'POST', body:{ message:text, history:history } })
+    // Unified Buddy (brain-unification U2): one brain that coaches AND acts and
+    // reports only what it actually did. Was /api/agent/act.
+    api('/api/agent/chat', { method:'POST', body:{ message:text, history:history } })
       .then(function(data){
         hideTyping();
         if(!data || !data.success){ pendingAct = false; buddy("I couldn't do that just now — mind trying again?"); return; }
@@ -521,40 +523,16 @@
   }
 
   // ── real conversation turn ──────────────────────────────────────────────────
+  // Brain-unification U2: ONE Buddy. Money questions stay a deterministic
+  // shortcut; everything else — coaching AND actions — goes through the unified
+  // tool-capable brain (act → /api/agent/chat), which coaches when nothing needs
+  // doing and reports only what it actually did when it acts. No more client-side
+  // intent routing deciding which of two brains gets the message.
   function send(text){
     text = (text||'').trim();
     if(busy || !text) return;
     if(moneyIntent(text)){ money(text); return; }
-    if(actionIntent(text) || pendingAct){ act(text); return; }
-    user(text);
-    input.value='';
-    setBusy(true);
-    showTyping();
-
-    api('/api/buddy/conversation', { method:'POST', body:{ message:text } })
-      .then(function(data){
-        hideTyping();
-        if(!data || !data.success){
-          buddy("I lost that one — mind saying it again?");
-          return;
-        }
-        buddy(fmt(data.reply||''), (data.reply||'').length < 140);
-
-        // Show the ledger actually moving — the proof this isn't just a chat.
-        (data.autoCompleted||[]).forEach(function(t){ note('✓ Marked done: '+t.title); });
-        (data.capturedTasks||[]).forEach(function(t){ note('＋ Added: '+(t.title||t)); });
-        (data.capturedExpenses||[]).forEach(function(e){
-          var amt = e.amount!=null ? '$'+Number(e.amount).toFixed(2) : '';
-          note('💸 Logged '+amt+(e.note?(' · '+e.note):'')+' — impulse or planned?', true);
-        });
-      })
-      .catch(function(err){
-        hideTyping();
-        if(err && err.message==='unauthorized') return;
-        console.error('[weightless] conversation error:', err);
-        buddy("Something hiccuped on my end. Try that again in a sec?");
-      })
-      .then(function(){ setBusy(false); input.focus(); });
+    act(text);
   }
 
   // ── suggested prompts (route through the real conversation engine) ──────────

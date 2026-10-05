@@ -323,7 +323,36 @@ module.exports = function (pool) {
       if (!message || !message.trim()) {
         return res.status(400).json({ success: false, message: 'message required' });
       }
+
+      // U1b — preserve the conversation record (feeds first-session insight + the
+      // day-2 hook), matching the old /conversation path. Best-effort: logging must
+      // never block or fail the reply.
+      const tz = await fetchUserTimezone(pool, userId);
+      const today = getUserLocalDate(tz);
+      let baseTurn = 0;
+      try {
+        const c = await pool.query(
+          `SELECT COUNT(*)::int AS n FROM buddy_conversations WHERE user_id = $1 AND session_date = $2`,
+          [userId, today]
+        );
+        baseTurn = (c.rows[0] && c.rows[0].n) || 0;
+        await pool.query(
+          `INSERT INTO buddy_conversations (user_id, session_date, turn, role, message) VALUES ($1, $2, $3, 'user', $4)`,
+          [userId, today, baseTurn + 1, message.trim()]
+        );
+      } catch (e) {
+        console.error('[Agent] /chat log user turn failed:', e.message, '| userId:', userId);
+      }
+
       const out = await runAgentTurn(pool, userId, message, req.body.history, buildUnifiedSystemPrompt);
+
+      if (out.reply) {
+        pool.query(
+          `INSERT INTO buddy_conversations (user_id, session_date, turn, role, message) VALUES ($1, $2, $3, 'buddy', $4)`,
+          [userId, today, baseTurn + 2, out.reply]
+        ).catch(e => console.error('[Agent] /chat log buddy turn failed:', e.message, '| userId:', userId));
+      }
+
       res.json({ success: true, ...out });
     } catch (err) {
       console.error('[Agent] POST /chat error:', err.message, '| userId:', req.user && req.user.id);
