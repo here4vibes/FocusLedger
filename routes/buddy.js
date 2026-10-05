@@ -649,28 +649,22 @@ module.exports = function(pool) {
         console.error('[buddy] generate-insights AI error:', aiErr.message);
       }
 
-      let tasksCreated = 0;
-      for (let i = 0; i < starterTaskTitles.length; i++) {
-        const title = starterTaskTitles[i];
-        if (!title || !title.trim()) continue;
-        try {
-          await pool.query(
-            `INSERT INTO tasks (user_id, title, is_completed, priority, created_at)
-             VALUES ($1, $2, false, 'medium', NOW())`,
-            [userId, title.trim().slice(0, 200)]
-          );
-          tasksCreated++;
-        } catch (taskErr) {
-          console.error('[buddy] starter task insert error:', taskErr.message);
-        }
-      }
+      // OFFER, don't insert. Never silently add AI-generated tasks to the user's
+      // list: they come out generic ("write down 1 thing each morning") and crowd
+      // out the user's real life on the radar, making the app feel like it's not
+      // about them. Return them as suggestions the user taps to add — nothing
+      // enters the task list without an explicit choice.
+      const suggestedTasks = starterTaskTitles
+        .map(t => (typeof t === 'string' ? t.trim().slice(0, 200) : ''))
+        .filter(Boolean)
+        .slice(0, 5);
 
       await pool.query(
         `UPDATE users SET first_session_insights_done = true WHERE id = $1`,
         [userId]
       );
 
-      res.json({ success: true, insight, tasksCreated });
+      res.json({ success: true, insight, suggestedTasks });
     } catch (err) {
       console.error('[buddy] POST /generate-insights error:', err.message);
       res.status(500).json({ success: false, message: 'Insights generation failed' });

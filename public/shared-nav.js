@@ -8,6 +8,16 @@
 (function () {
   'use strict';
 
+  // Keep web-push self-healing on every authenticated app open (see
+  // js/push-autoheal.js). Additive, non-blocking, loaded once.
+  if (!document.querySelector('script[data-fl-push-autoheal]')) {
+    var _ah = document.createElement('script');
+    _ah.src = '/js/push-autoheal.js';
+    _ah.defer = true;
+    _ah.setAttribute('data-fl-push-autoheal', '1');
+    (document.head || document.documentElement).appendChild(_ah);
+  }
+
   // ── Global utilities ─────────────────────────────────────────────────────
   // Set on window so every page can use them.
   // Guards (window.X || ...) mean page-local definitions always win — no
