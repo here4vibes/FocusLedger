@@ -1269,6 +1269,47 @@
                 el('insightBox').style.display = '';
             }
 
+            // Starter tasks are OFFERED, never auto-added — tap a chip to put one
+            // on your list. Nothing enters your radar without your choice.
+            if (insightData && Array.isArray(insightData.suggestedTasks) && insightData.suggestedTasks.length) {
+                var sWrap = document.createElement('div');
+                sWrap.style.cssText = 'margin:14px 0 4px;';
+                var sLbl = document.createElement('div');
+                sLbl.textContent = 'A couple of starting points — tap any to add:';
+                sLbl.style.cssText = 'font-size:.82rem;color:#6b6b6b;margin-bottom:8px;';
+                sWrap.appendChild(sLbl);
+                var sRow = document.createElement('div');
+                sRow.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;';
+                insightData.suggestedTasks.forEach(function (title) {
+                    var chip = document.createElement('button');
+                    chip.type = 'button';
+                    chip.textContent = '＋ ' + title;
+                    chip.style.cssText = 'border:1.5px solid #e8e5e0;background:#fff;color:#1a1a1a;border-radius:999px;padding:8px 14px;font-size:.85rem;cursor:pointer;min-height:40px;text-align:left;';
+                    chip.addEventListener('click', function () {
+                        if (chip.disabled) return;
+                        chip.disabled = true;
+                        var orig = chip.textContent;
+                        chip.textContent = 'Adding…';
+                        apiFetch('/api/tasks', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ title: title })
+                        }).then(function (r) { return r.json(); }).then(function (res) {
+                            if (res && (res.success || res.id || res.task)) {
+                                chip.textContent = '✓ ' + title;
+                                chip.style.background = '#eafaf0';
+                                chip.style.borderColor = '#5BA4A4';
+                                chip.style.color = '#2E7D32';
+                            } else { chip.textContent = orig; chip.disabled = false; }
+                        }).catch(function () { chip.textContent = orig; chip.disabled = false; });
+                    });
+                    sRow.appendChild(chip);
+                });
+                sWrap.appendChild(sRow);
+                var box = el('insightBox');
+                if (box && box.parentNode) box.parentNode.insertBefore(sWrap, box.nextSibling);
+            }
+
             apiFetch('/api/buddy/daily-plan/accept', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
