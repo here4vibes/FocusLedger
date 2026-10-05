@@ -62,6 +62,144 @@ function buildSystemPrompt(today, tasks) {
   ].join('\n');
 }
 
+// ── Unified Buddy prompt (brain-unification U1) ───────────────────────────────
+// One brain: the coaching "soul" from routes/buddy.js PLUS the action tools.
+// Because it performs actions itself (and sees the receipts), it can report the
+// truth — unlike the old tool-less coaching brain, which fabricated confirmations.
+function buildUnifiedSystemPrompt(today, tasks) {
+  const list = tasks.length
+    ? tasks.map(t => `- id=${t.id} · "${t.title}"${t.due_date ? ` (due ${String(t.due_date).slice(0, 10)})` : ' (no due date)'}`).join('\n')
+    : '(no open tasks)';
+  return [
+    'You are Buddy — a coaching companion built into FocusLedger for people with ADHD. You are ONE',
+    'Buddy: you both talk WITH the user and take real action FOR them, in the same breath.',
+    `Today is ${today}.`,
+    '',
+    "Hold one belief above everything: they're not trying to get more done — they're trying to become",
+    "someone who follows through, who isn't ambushed by their own money and attention. Help them cross",
+    'the gap between who they are and who they\'re reaching for, not optimize output.',
+    'You understand ADHD from the inside — paralysis, shame spirals, hyperfocus, the gap between',
+    "intention and action. Never treat it as a productivity problem; the gap isn't failure, it's what",
+    'mid-transformation feels like.',
+    'Voice: direct, warm, real. No "Great question!", no "I hear you", no manufactured enthusiasm —',
+    'respond to what was actually said. Coach by asking, not advising; a good question changes them.',
+    'Offer a concrete suggestion only when they\'re stuck or ask. One question at a time. 2–4 sentences',
+    'unless more is truly needed. Never shame, never force positivity, never give unasked advice.',
+    'Moves: slow a spin-out to one thing; name gently what isn\'t being said; let a vent finish; for',
+    '"stuck," find the smallest next action; treat a lapse as the normal middle of becoming.',
+    '',
+    'YOU CAN TAKE REAL ACTION with your tools — and since you do it yourself, you always know what',
+    'actually happened:',
+    '• create a task or reminder  • change an existing task (due date, time, recurrence)',
+    '• reschedule a task  • mark a task done  • draft AND send an email.',
+    'Capture as you go: when they clearly name a concrete to-do ("I need to call the dentist"), create',
+    'it with create_task. When they say they finished something on their list, mark_task_done. Do NOT',
+    'capture vague musings, feelings, or maybes — only real, concrete tasks, and keep titles short.',
+    'How nudges work: a push fires when a task has a due date AND time near due (plus morning/evening).',
+    'For a timed reminder set due_date (today for "tonight") + due_time; for a repeat set recurrence.',
+    'To change a task already on the list, use update_task with its id — never make a duplicate.',
+    'THE TRUTH RULE (most important): only ever claim what you ACTUALLY did via a tool. Never say you',
+    'scheduled a time, set a recurrence, or that someone is "covered" unless a tool receipt confirms',
+    "it. Claiming an action you didn't take is the worst thing you can do to someone relying on it.",
+    'Use a tool only when they clearly want that thing done. When they\'re just talking, thinking, or',
+    "venting, don't call a tool — just be present and coach.",
+    'Never invent a task_id or an email address — use only ids from the list below and addresses they gave you.',
+    '',
+    "The user's open tasks:",
+    list,
+  ].join('\n');
+}
+
+// Shared agent turn used by /act and the unified /chat: load context, run the
+// tool-capable model with the given system prompt, execute auto-tier tools
+// (confirm-tier → a confirmation card), and return reply + receipts.
+async function runAgentTurn(pool, userId, message, clientHistory, systemPromptBuilder) {
+  const tz = await fetchUserTimezone(pool, userId);
+  const today = getUserLocalDate(tz);
+  const tasksResult = await pool.query(
+    `SELECT id, title, due_date FROM tasks
+      WHERE user_id = $1 AND is_completed = false
+      ORDER BY due_date ASC NULLS LAST, created_at ASC LIMIT 50`,
+    [userId]
+  );
+  const tasks = tasksResult.rows;
+
+  const history = Array.isArray(clientHistory) ? clientHistory : [];
+  const contextHistory = history
+    .filter(h => h && (h.role === 'user' || h.role === 'assistant') && typeof h.content === 'string' && h.content.trim())
+    .slice(-16)
+    .map(h => ({ role: h.role, content: h.content.trim().slice(0, 2000) }));
+  contextHistory.push({ role: 'user', content: message.trim() });
+
+  let resp;
+  try {
+    resp = await completeWithTools({
+      system: systemPromptBuilder(today, tasks),
+      messages: contextHistory,
+      tools: TOOL_DEFS,
+      model: 'claude-sonnet-4-6',
+      maxTokens: 700,
+    });
+  } catch (aiErr) {
+    console.error('[Agent] turn AI error:', aiErr.message, '| userId:', userId);
+    return { reply: "I couldn't think that through just now — mind trying again?", receipts: [], confirmation: null };
+  }
+
+  const blocks = Array.isArray(resp.content) ? resp.content : [];
+  const reply = blocks.filter(b => b.type === 'text').map(b => b.text).join(' ').trim();
+  const toolUses = blocks.filter(b => b.type === 'tool_use');
+
+  const receipts = [];
+  let confirmation = null;
+
+  for (const tu of toolUses) {
+    if (!isKnown(tu.name)) {
+      console.warn('[Agent] model proposed unknown tool:', tu.name, '| userId:', userId);
+      continue;
+    }
+    const tier = tierOf(tu.name);
+
+    if (tier === 'confirm') {
+      try {
+        const row = await logAction(pool, {
+          userId, actionType: tu.name, status: 'proposed', riskTier: 'confirm', params: tu.input || {},
+        });
+        confirmation = buildConfirmation(row, tu.name, tu.input || {});
+      } catch (logErr) {
+        console.error('[Agent] proposing action failed:', logErr.message, '| tool:', tu.name, '| userId:', userId);
+        receipts.push({ id: null, summary: "I put that together but couldn't set up the send just now — try once more?", undoable: false, ok: false, scope: scopeOf(tu.name) });
+      }
+      break; // one confirmation at a time
+    }
+
+    try {
+      const out = await dispatch(pool, userId, tu.name, tu.input || {});
+      if (out.ok) {
+        const row = await logAction(pool, {
+          userId, actionType: tu.name, status: 'executed', riskTier: 'auto',
+          params: tu.input || {}, result: out.result || null, undoToken: out.undo || null,
+        });
+        receipts.push({ id: row.id, summary: out.receipt, undoable: !!out.undo, ok: true, scope: scopeOf(tu.name) });
+      } else {
+        await logAction(pool, {
+          userId, actionType: tu.name, status: 'failed', riskTier: 'auto',
+          params: tu.input || {}, error: out.error || 'unknown',
+        });
+        receipts.push({ id: null, summary: out.error || "I couldn't do that one", undoable: false, ok: false, scope: scopeOf(tu.name) });
+      }
+    } catch (dispErr) {
+      console.error('[Agent] dispatch failed:', dispErr.message, '| tool:', tu.name, '| userId:', userId);
+      await logAction(pool, {
+        userId, actionType: tu.name, status: 'failed', riskTier: 'auto',
+        params: tu.input || {}, error: dispErr.message,
+      }).catch(() => {});
+      receipts.push({ id: null, summary: "Something broke doing that — nothing changed", undoable: false, ok: false, scope: scopeOf(tu.name) });
+    }
+  }
+
+  return { reply, receipts, confirmation };
+}
+
 module.exports = function (pool) {
   const router = express.Router();
   router.use(authenticateToken);
@@ -169,6 +307,26 @@ module.exports = function (pool) {
       res.json({ success: true, reply, receipts, confirmation });
     } catch (err) {
       console.error('[Agent] POST /act error:', err.message, '| userId:', req.user && req.user.id);
+      res.status(500).json({ success: false, message: 'Agent failed' });
+    }
+  });
+
+  // ── POST /api/agent/chat ────────────────────────────────────────────────────
+  // UNIFIED Buddy (brain-unification U1): ONE brain that coaches AND acts via
+  // tools, and reports only what it actually did. Built but NOT yet wired to the
+  // client — the live flow still uses /act + /api/buddy/conversation until we
+  // deliberately flip (U2). Dormant and safe. See docs/buddy-unification-plan.md.
+  router.post('/chat', async (req, res) => {
+    try {
+      const userId = req.user.id;
+      const { message } = req.body;
+      if (!message || !message.trim()) {
+        return res.status(400).json({ success: false, message: 'message required' });
+      }
+      const out = await runAgentTurn(pool, userId, message, req.body.history, buildUnifiedSystemPrompt);
+      res.json({ success: true, ...out });
+    } catch (err) {
+      console.error('[Agent] POST /chat error:', err.message, '| userId:', req.user && req.user.id);
       res.status(500).json({ success: false, message: 'Agent failed' });
     }
   });
