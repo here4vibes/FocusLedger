@@ -382,6 +382,9 @@
         || /\breply to\b/i.test(t)
         || /\b(remind|nudg)/i.test(t)
         || /\bevery\s+(day|night|morning|evening|week|month|monday|tuesday|wednesday|thursday|friday|saturday|sunday|weekday)/i.test(t)
+        || /\b(nightly|weekly|monthly|biweekly)\b/i.test(t)
+        || /\b(recurring|repeat(s|ing)?)\b/i.test(t)
+        || /\b(make|change|set|should)\b[\s\S]*\b(recurring|repeat|nightly|daily|weekly|monthly|due date|due time)\b/i.test(t)
         || /\badd (a |an )?(task|reminder|to-?do)\b/i.test(t);
   }
 
