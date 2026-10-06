@@ -94,12 +94,12 @@ async function sendMorningNudges(pool) {
         // The nudge itself is the prompt to plan.
         let notifTitle = 'Good morning \u2600\uFE0F';
         let notifBody  = "What\u2019s on tap for today?";
-        let notifUrl   = '/home';
+        let notifUrl   = '/weightless';   // the calm home, not the dense command center
 
         if (reveal && reveal.headline) {
             notifTitle = 'Buddy found something \uD83D\uDC40';
             notifBody  = reveal.headline;
-            notifUrl   = '/app';
+            notifUrl   = '/app';           // the reveal tease needs the reveal view
         }
 
         let sentCount = 0;

@@ -69,7 +69,7 @@ async function sendEveningNudges(pool) {
         // No guilt. No stats. Just the gentle reflective prompt.
         const notifTitle = 'FocusLedger \uD83C\uDF19';
         const notifBody  = 'How did today go?';
-        const notifUrl   = '/home';
+        const notifUrl   = '/weightless';   // the calm home, not the dense command center
 
         let sentCount = 0;
 
