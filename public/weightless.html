@@ -266,9 +266,35 @@
     var hour = new Date().getHours();
     var partOfDay = hour<12?'Morning':hour<18?'Afternoon':'Evening';
 
+    var remindId = new URLSearchParams(location.search).get('remind');
+
     showTyping();
     wait(500).then(function(){
       hideTyping();
+
+      // Landed from a reminder notification → surface JUST that one task, calmly,
+      // with a clear next action. One thing, not the whole pile — the opposite of
+      // dumping the user on a dense list.
+      if(remindId){
+        var rt = tasks.filter(function(x){ return String(x.id)===String(remindId); })[0];
+        try{ history.replaceState(null,'','/weightless'); }catch(e){}
+        if(rt){
+          var rdue = fmtDue(rt.due_date, today);
+          buddy(partOfDay+', Sean. You asked me to remind you about this:', true);
+          raw('<div class="card"><div class="k">Reminder</div><div class="tasklist">'+
+            '<div class="row"><span class="box"></span><span class="lbl">'+esc(rt.title)+'</span>'+
+            (rdue?'<span class="due'+(rdue.over?' over':'')+'">'+rdue.label+'</span>':'')+
+            '</div></div></div>');
+          buddy('Want to knock it out now?');
+          chips([
+            { label:'✓ Mark it done', k:'ghost', send:'mark "'+rt.title+'" done' },
+            { label:'Snooze to tomorrow', k:'ghost', send:'move "'+rt.title+'" to tomorrow' },
+            { label:"I'll start now", k:'warm', send:"Let's start on: "+rt.title }
+          ]);
+          return; // focused landing — skip the full radar
+        }
+        // task not found (already done, or off the list) → fall through to the normal greeting
+      }
 
       // Resurface anything Buddy parked for later
       if(deferred.length){

@@ -113,16 +113,18 @@ async function sendTaskDeadlineNudges(pool) {
         }
 
         const notifTitle = 'FocusLedger';
-        // One-tap = one decision: a single-task nudge deep-links straight to that
-        // task (and offers "Start focus"), instead of dumping the user on /app to
-        // re-find it. Multiple tasks fall back to the task list.
+        // Land on the CALM home, not a dense list/detail: a tapped reminder opens
+        // the weightless home focused on just that one task (surfaced via ?remind),
+        // so you see one thing + a clear next action — not the whole pile, which
+        // re-creates the overwhelm the nudge was meant to cut through. "Start focus"
+        // stays a deliberate deep-work action into Focus Mode.
         const onlyTask = tasksToNotify.length === 1 ? tasksToNotify[0] : null;
-        const notifUrl = onlyTask ? `/app/task/${onlyTask.id}` : '/app/tasks';
+        const notifUrl = onlyTask ? `/weightless?remind=${onlyTask.id}` : '/weightless';
         const notifActions = onlyTask
-          ? [{ action: 'focus', title: 'Start focus ⏱' }, { action: 'view', title: 'View' }]
+          ? [{ action: 'focus', title: 'Start focus ⏱' }, { action: 'view', title: 'Open' }]
           : null;
         const notifActionUrls = onlyTask
-          ? { focus: `/app/focus/${onlyTask.id}`, view: `/app/task/${onlyTask.id}` }
+          ? { focus: `/app/focus/${onlyTask.id}`, view: `/weightless?remind=${onlyTask.id}` }
           : null;
         let sentCount = 0;
 
