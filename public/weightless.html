@@ -256,7 +256,7 @@
     return {label:new Date(d+'T12:00:00').toLocaleDateString(undefined,{month:'short',day:'numeric'}), over:false};
   }
 
-  function greet(data){
+  function greet(data, reveal){
     document.getElementById('loading').remove();
     var tasks = (data.tasks||[]);
     var done  = data.tasksCompletedToday||0;
@@ -294,6 +294,20 @@
           return; // focused landing — skip the full radar
         }
         // task not found (already done, or off the list) → fall through to the normal greeting
+      }
+
+      // Daily Reveal — the curiosity-gap pull-back-in. Surface it right in the
+      // greeting (lead with the interesting thing), then continue to the radar.
+      // Marked viewed on show, so it appears once.
+      if(reveal && !reveal.viewed && reveal.headline){
+        buddy('Before your day — I noticed something:', true);
+        raw('<div class="card" style="background:var(--accent);border:none;box-shadow:0 10px 26px -12px rgba(1,30,92,.5);">'+
+          '<div class="k" style="color:var(--warm);">✦ Daily reveal</div>'+
+          '<div style="font-weight:700;font-size:1.05rem;line-height:1.3;margin:.35rem 0 .45rem;color:#fff;">'+esc(reveal.headline)+'</div>'+
+          '<div style="font-size:.92rem;line-height:1.5;color:rgba(255,255,255,.88);">'+esc(reveal.body||'')+'</div>'+
+          (reveal.science_label?'<div style="margin-top:.65rem;font-size:.76rem;color:rgba(255,255,255,.55);">Why this works: <span style="color:var(--warm);font-weight:600;">'+esc(reveal.science_label)+'</span></div>':'')+
+        '</div>');
+        if(reveal.id) api('/api/reveals/'+reveal.id+'/viewed', { method:'POST' }).catch(function(){});
       }
 
       // Resurface anything Buddy parked for later
@@ -590,10 +604,18 @@
   }
 
   // ── boot ────────────────────────────────────────────────────────────────────
-  api('/api/buddy/status')
-    .then(function(data){
+  // Fetch the day's status + any staged Daily Reveal in parallel. The reveal is
+  // surfaced INSIDE the greeting (so the "Buddy found something" nudge lands on the
+  // calm home, not the dense dashboard). A reveal failure never blocks the greeting.
+  Promise.all([
+    api('/api/buddy/status'),
+    api('/api/reveals/today').catch(function(){ return null; })
+  ])
+    .then(function(results){
+      var data = results[0];
       if(!data || !data.success){ throw new Error(data && data.message || 'status failed'); }
-      greet(data);
+      var reveal = (results[1] && results[1].reveal) ? results[1].reveal : null;
+      greet(data, reveal);
     })
     .catch(function(err){
       if(err && err.message==='unauthorized') return;
