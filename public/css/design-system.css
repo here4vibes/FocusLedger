@@ -31,6 +31,17 @@
   --orange:         var(--brand-accent);
   --orange-light:   var(--brand-accent-lt);
 
+  /* ── Money / impulse identity ───────────────────── */
+  /*
+   * Coral is NOT the brand accent. It is the money/impulse/value-tag
+   * identity colour (color-coded area cards, spend chips, value pills).
+   * Historically some pages aliased `--orange` to this coral, which collided
+   * with the gold brand accent — they now use `--coral` for this role and
+   * `--orange` resolves to gold everywhere. See docs/adhd-ui-refactor.md Slice 2.
+   */
+  --coral:          #F26B3A;
+  --coral-light:    #F5895A;
+
   /* ── Semantic Colors ────────────────────────────── */
   --color-success:  #5BA4A4;   /* teal — completed, confirmed */
   --color-warning:  #E07A5F;   /* warm red — alerts, impulse */

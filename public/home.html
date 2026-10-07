@@ -20,9 +20,11 @@
 
     :root {
       --navy:    #011e5c;
-      --orange:  #F26B3A;
+      --orange:  #c9a84c;   /* brand gold — generic accent (was coral; see --coral) */
+      --coral:   #F26B3A;   /* money / impulse identity — NOT the brand accent */
+      --coral-light: #f5906a;
       --teal:    #5BA4A4;
-      --gold:    #f0b429;
+      --gold:    #c9a84c;   /* unified to brand gold (was #f0b429) */
       --cream:   #faf9f6;
       --cream2:  #f3f1ed;
       --text:    #141416;
@@ -284,7 +286,7 @@
     .ins-momentum-fill {
       height: 100%;
       border-radius: 4px;
-      background: linear-gradient(90deg, #5BA4A4, #F26B3A);
+      background: linear-gradient(90deg, var(--teal), var(--gold));
       width: 0;
       transition: width 0.6s ease;
     }
@@ -401,11 +403,11 @@
       <span class="chip-val" id="chipTasksVal">—</span> tasks open
     </div>
     <div class="stat-chip" id="chipSpend">
-      <span class="chip-dot" style="background:#F26B3A"></span>
+      <span class="chip-dot" style="background:var(--coral)"></span>
       <span class="chip-val" id="chipSpendVal">—</span> today
     </div>
     <div class="stat-chip" id="chipTriage">
-      <span class="chip-dot" style="background:#f0b429"></span>
+      <span class="chip-dot" style="background:var(--gold)"></span>
       <span class="chip-val" id="chipTriageVal">—</span> to review
     </div>
   </div>
@@ -434,7 +436,7 @@
       <span class="card-badge hidden" id="tasksBadge"></span>
     </a>
 
-    <a class="area-card" href="/app/money" style="--card-accent:#F26B3A">
+    <a class="area-card" href="/app/money" style="--card-accent:var(--coral)">
       <span class="card-icon" style="background:rgba(242,107,58,0.1)">
         <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#F26B3A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
       </span>
@@ -445,7 +447,7 @@
       <span class="card-badge hidden" id="moneyBadge"></span>
     </a>
 
-    <a class="area-card" href="/calendar" style="--card-accent:#f0b429">
+    <a class="area-card" href="/calendar" style="--card-accent:var(--gold)">
       <span class="card-icon" style="background:rgba(240,180,41,0.12)">
         <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#c49a15" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/><path d="M8 18h.01"/><path d="M12 18h.01"/></svg>
       </span>
