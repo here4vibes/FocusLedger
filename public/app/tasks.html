@@ -768,15 +768,17 @@
             if (data.success) {
                 const nullTasks = (data.tasks || []).filter(t => t.id == null);
                 if (nullTasks.length > 0) {
-                    showToast('[tasks] ' + nullTasks.length + ' null-ID task(s): "' + nullTasks.map(t => t.title).join('", "').slice(0, 60) + '"');
+                    console.warn('[tasks] ' + nullTasks.length + ' null-ID task(s):', nullTasks.map(t => t.title));
                 }
                 state.tasks = data.tasks;
                 renderTasks();
             } else {
-                showToast('[GET /api/tasks] ' + (data.message || 'unknown error'));
+                console.error('[tasks] GET /api/tasks failed:', data.message || 'unknown error');
+                showToast('Couldn’t load your tasks — pull down to refresh.');
             }
         } catch(e) {
-            showToast('[fetch tasks] ' + e.message);
+            console.error('[tasks] GET /api/tasks threw:', e.message);
+            showToast('Couldn’t reach the server — check your connection.');
         }
     }
 
@@ -957,7 +959,8 @@
     // ── Toggle task ────────────────────────────────────────────────────────────
     async function toggleTask(taskId) {
         if (!taskId || taskId === 'null' || taskId === 'undefined') {
-            showToast('[toggle] bad ID "' + taskId + '" — task may be missing from DB. Refresh the page.');
+            console.warn('[tasks] toggle with bad ID:', taskId);
+            showToast('Couldn’t update that task — try refreshing.');
             return;
         }
         try {
@@ -968,10 +971,12 @@
                 setTimeout(() => fetchTasks(), 420);
                 fetchSummary();
             } else {
-                showToast('[toggle #' + taskId + '] ' + (data.message || 'no error detail'));
+                console.error('[tasks] toggle #' + taskId + ' failed:', data.message || 'no detail');
+                showToast('Couldn’t update that task — try again.');
             }
         } catch(e) {
-            showToast('[toggle #' + taskId + '] network: ' + e.message);
+            console.error('[tasks] toggle #' + taskId + ' network error:', e.message);
+            showToast('Couldn’t reach the server — check your connection.');
         }
     }
 
@@ -1163,7 +1168,8 @@
     function openEditModal(taskId) {
         const task = state.tasks.find(t => t.id == taskId);
         if (!task) {
-            showToast('[modal #' + taskId + '] not in state (' + state.tasks.length + ' loaded)');
+            console.warn('[tasks] openEditModal: #' + taskId + ' not in state (' + state.tasks.length + ' loaded)');
+            showToast('Couldn’t open that task — try refreshing.');
             return;
         }
         state.editingId = taskId;

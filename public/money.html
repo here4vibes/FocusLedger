@@ -377,6 +377,8 @@
     .btn-proceed-soon{background:var(--impulse);color:white;border:none;padding:0.7rem 1.5rem;border-radius:12px;font-family:'Space Grotesk',sans-serif;font-size:0.95rem;font-weight:600;cursor:pointer;min-height:48px;transition:background 0.15s}
     .btn-proceed-soon:hover{background:#c06040}
     .btn-proceed-soon:disabled{opacity:0.4;cursor:not-allowed}
+    .btn-planned-skip{width:100%;margin-top:0.6rem;padding:0.6rem;background:transparent;border:1.5px solid var(--planned);color:var(--planned);border-radius:12px;cursor:pointer;font-family:'Space Grotesk',sans-serif;font-size:0.88rem;font-weight:600;min-height:44px;transition:background 0.15s}
+    .btn-planned-skip:hover{background:rgba(125,184,125,0.12)}
     .btn-cancel-delay{width:100%;margin-top:0.5rem;padding:0.5rem;background:transparent;border:none;color:var(--text-muted);cursor:pointer;font-family:'DM Sans',sans-serif;font-size:0.82rem}
 
     /* Loading skeleton */
@@ -590,6 +592,7 @@
     <div class="delay-progress-bar"><div class="delay-progress-fill" id="delayProgressFill" style="width:0%"></div></div>
     <div class="delay-subtext">This pause helps you show up how you want to.</div>
     <button class="btn-proceed-soon" id="btnProceed" disabled>Wait… (10:00)</button>
+    <button class="btn-planned-skip" id="btnPlannedSkip">This one's planned — log it now</button>
     <button class="btn-cancel-delay" id="btnCancelDelay">Cancel</button>
   </div>
 </div>
@@ -679,6 +682,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('modalHandle').addEventListener('click', closeTriageModal);
   document.getElementById('btnSkipAll').addEventListener('click', skipAllTriage);
   document.getElementById('btnProceed').addEventListener('click', proceedAfterDelay);
+  document.getElementById('btnPlannedSkip').addEventListener('click', proceedAsPlanned);
   document.getElementById('btnCancelDelay').addEventListener('click', cancelDelay);
   document.getElementById('ppbImportBtn').addEventListener('click', importAllPlaidTransactions);
 
@@ -1423,6 +1427,16 @@ function proceedAfterDelay() {
   doSubmitExpense();
 }
 
+// The 10-min pause exists to interrupt IMPULSE buys. A purchase you already
+// decided on shouldn't be punished with a wait — "This one's planned" clears it
+// immediately and pre-tags the expense as planned (is_impulse:false), so it also
+// skips the triage pile later.
+function proceedAsPlanned() {
+  if (pendingExpenseData) pendingExpenseData.is_impulse = false;
+  closeDelayModal();
+  doSubmitExpense();
+}
+
 function cancelDelay() {
   closeDelayModal();
 }
@@ -1491,8 +1505,9 @@ async function doSubmitExpense() {
         console.warn('[money] post-submit refresh failed (expense was saved):', refreshErr);
       }
     } else {
+      console.error('[money] POST /api/money/expenses failed:', res.message || 'no detail');
       const toast = document.getElementById('submitToast');
-      toast.textContent = '[POST /api/money/expenses] ' + (res.message || 'no error detail');
+      toast.textContent = 'Couldn’t save that expense — try again.';
       toast.style.color = '#E05252';
       toast.classList.add('visible');
       setTimeout(() => {
@@ -1502,9 +1517,9 @@ async function doSubmitExpense() {
       }, 4000);
     }
   } catch (e) {
-    console.error('Submit expense error:', e);
+    console.error('[money] submit expense threw:', e.message);
     const toast = document.getElementById('submitToast');
-    toast.textContent = '[expense catch] ' + e.message;
+    toast.textContent = 'Couldn’t save that expense — check your connection.';
     toast.style.color = '#E05252';
     toast.classList.add('visible');
     setTimeout(() => {
