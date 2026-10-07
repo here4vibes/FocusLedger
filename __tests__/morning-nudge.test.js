@@ -67,17 +67,32 @@ describe('sendMorningNudges — skipping logic', () => {
     expect(pool.query).toHaveBeenCalledTimes(1);
   });
 
-  test('skips user when current hour does not match target hour', async () => {
+  test('skips user when current hour is before or past the catch-up window', async () => {
     isApnsConfigured.mockReturnValue(true);
     const user = { id: 2, timezone: 'UTC', last_active_at: null, notif_morning_enabled: true, notif_morning_hour: 8 };
     const pool = makePool([user]);
-    // Current hour is 10, not 8
+    // Target 8; catch-up window is [8, 10]. Hour 12 is past it → skip at the hour gate.
+    getLocalDateParts.mockReturnValue({ date: '2026-05-30', hour: 12 });
+
+    await sendMorningNudges(pool);
+
+    // Only the initial users query runs; skipped before the per-user dedup check.
+    expect(pool.query).toHaveBeenCalledTimes(1);
+  });
+
+  test('sends within the 2-hour catch-up window when the on-the-hour run was missed', async () => {
+    isApnsConfigured.mockReturnValue(true);
+    const user = { id: 22, timezone: 'UTC', last_active_at: null, notif_morning_enabled: true, notif_morning_hour: 8 };
+    const pool = makePool([user]);
+    // Hour 10, target 8 → inside the [8,10] catch-up window (the old exact-hour
+    // match would have skipped here). It should proceed past the hour gate.
     getLocalDateParts.mockReturnValue({ date: '2026-05-30', hour: 10 });
 
     await sendMorningNudges(pool);
 
-    // Only the initial query runs; no per-user send queries
-    expect(pool.query).toHaveBeenCalledTimes(1);
+    // Reached the per-user dedup check (morning_nudge_log) — i.e. did NOT skip at
+    // the hour gate.
+    expect(pool.query.mock.calls.some(c => /morning_nudge_log/i.test(String(c[0])))).toBe(true);
   });
 
   test('skips user when nudge was already sent today', async () => {
