@@ -892,12 +892,13 @@
 
     function formatDue(date, time) {
         if (!date) return null;
-        // Prisma @db.Date returns ISO timestamp like "2026-05-27T00:00:00.000Z" — extract YYYY-MM-DD
+        // Prefer the shared time-blindness-friendly formatter (Today/Tomorrow/…).
+        if (window.formatRelativeDue) return window.formatRelativeDue(date, time);
+        // Fallback (date-parser.js not loaded): bare month-day.
         const dateStr = String(date).split('T')[0];
         const d = new Date(dateStr + (time ? 'T' + time : 'T00:00:00'));
         if (isNaN(d.getTime())) return null;
         const today = new Date(); today.setHours(0,0,0,0);
-        const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
         const taskDay = new Date(d); taskDay.setHours(0,0,0,0);
         const cls = taskDay < today ? 'overdue' : taskDay.getTime() === today.getTime() ? 'today' : '';
         let text = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });

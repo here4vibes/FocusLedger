@@ -266,3 +266,53 @@ function chipLabel(parsed) {
 
   return parts.join(' ');
 }
+
+/**
+ * Time-blindness-friendly due label — makes "when" concrete instead of an
+ * abstract calendar date. Returns { text, cls, icon } or null.
+ *   cls:  'overdue' | 'today' | ''
+ *   icon: ⚠ (overdue) / 🎯 (today) / 📅 (future)
+ * Vocabulary: Yesterday · N days ago · Today · Tomorrow · weekday (2–6 days) ·
+ * "Mon D" (further out). Appends the time (e.g. "3:00pm") when one is given.
+ * One source of truth so every surface says "when" the same way.
+ */
+function formatRelativeDue(date, time) {
+  if (!date) return null;
+  const dateStr = String(date).split('T')[0];
+  const base = new Date(dateStr + 'T00:00:00');
+  if (isNaN(base.getTime())) return null;
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const taskDay = new Date(base); taskDay.setHours(0, 0, 0, 0);
+  const diff = Math.round((taskDay - today) / 86400000);
+
+  let text;
+  if (diff < 0) {
+    if (diff === -1) text = 'Yesterday';
+    else if (diff >= -6) text = (-diff) + ' days ago';
+    else text = base.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  } else if (diff === 0) text = 'Today';
+  else if (diff === 1) text = 'Tomorrow';
+  else if (diff <= 6) text = base.toLocaleDateString('en-US', { weekday: 'short' });
+  else text = base.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+  const cls = diff < 0 ? 'overdue' : diff === 0 ? 'today' : '';
+  const icon = diff < 0 ? '⚠' : diff === 0 ? '🎯' : '📅';
+
+  if (time) {
+    const parts = String(time).split(':');
+    const h = parseInt(parts[0], 10);
+    const m = parseInt(parts[1], 10) || 0;
+    if (!isNaN(h)) {
+      const ampm = h >= 12 ? 'pm' : 'am';
+      const h12 = h % 12 || 12;
+      text += ' ' + h12 + ':' + String(m).padStart(2, '0') + ampm;
+    }
+  }
+  return { text, cls, icon };
+}
+
+// Classic (non-module) script: top-level functions are already global, but make
+// the shared formatter explicit so every page can rely on window.formatRelativeDue.
+if (typeof window !== 'undefined') {
+  window.formatRelativeDue = formatRelativeDue;
+}

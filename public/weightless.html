@@ -252,9 +252,21 @@
   function fmtDue(dueDate, today){
     if(!dueDate) return null;
     var d = String(dueDate).slice(0,10);
-    if(d < today) return {label:'overdue', over:true};
-    if(d === today) return {label:'today', over:false};
-    return {label:new Date(d+'T12:00:00').toLocaleDateString(undefined,{month:'short',day:'numeric'}), over:false};
+    // Make "when" concrete (time-blindness): Today / Tomorrow / weekday / date,
+    // matching the shared formatRelativeDue vocabulary used on the tasks page.
+    var base = new Date(d+'T00:00:00');
+    var t0 = new Date(today+'T00:00:00');
+    if(isNaN(base.getTime()) || isNaN(t0.getTime())){
+      if(d < today) return {label:'overdue', over:true};
+      if(d === today) return {label:'today', over:false};
+      return {label:base.toLocaleDateString(undefined,{month:'short',day:'numeric'}), over:false};
+    }
+    var diff = Math.round((base - t0)/86400000);
+    if(diff < 0) return {label:'overdue', over:true};
+    if(diff === 0) return {label:'today', over:false};
+    if(diff === 1) return {label:'tomorrow', over:false};
+    if(diff <= 6) return {label:base.toLocaleDateString(undefined,{weekday:'short'}), over:false};
+    return {label:base.toLocaleDateString(undefined,{month:'short',day:'numeric'}), over:false};
   }
 
   function greet(data, reveal){
