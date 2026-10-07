@@ -101,7 +101,7 @@ async function sendMorningNudges(pool) {
         if (reveal && reveal.headline) {
             notifTitle = 'Buddy found something \uD83D\uDC40';
             notifBody  = reveal.headline;
-            notifUrl   = '/app';           // the reveal tease needs the reveal view
+            notifUrl   = '/weightless';    // weightless surfaces the reveal in its greeting
         }
 
         let sentCount = 0;
