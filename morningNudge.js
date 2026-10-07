@@ -61,8 +61,10 @@ async function sendMorningNudges(pool) {
         const targetHour = resolveMorningHour(user.notif_morning_hour, user.peak_energy);
         const { date: localDate, hour: localHour } = getLocalDateParts(tz, now);
 
-        // Only send during the configured morning hour window
-        if (localHour !== targetHour) continue;
+        // Send at the target hour, or catch up within the next 2 hours if an earlier
+        // hourly run was missed — the dedup log keeps it to once/day. Resilient to the
+        // hourly cron cadence (an exact-hour match gave the nudge only one shot a day).
+        if (localHour < targetHour || localHour > targetHour + 2) continue;
 
         // Skip if already sent today (UNIQUE constraint also enforces this server-side)
         const alreadySent = await pool.query(
