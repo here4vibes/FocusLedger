@@ -1003,6 +1003,7 @@
     <!-- Toast -->
     <div id="toast"></div>
 
+<script src="/js/soft-release.js"></script>
 <script>
 (function() {
     'use strict';
@@ -1642,22 +1643,11 @@
         }
     });
 
-    // ── Delete task ───────────────────────────────────────────────────────────
-    document.getElementById('btn-delete').addEventListener('click', () => {
-        document.getElementById('confirm-task-title').textContent =
-            '"' + (task && task.title ? task.title : 'this task') + '" will be permanently deleted.';
-        document.getElementById('confirm-overlay').classList.add('visible');
-    });
-    document.getElementById('btn-cancel-delete').addEventListener('click', () => {
-        document.getElementById('confirm-overlay').classList.remove('visible');
-    });
-    document.getElementById('confirm-overlay').addEventListener('click', (e) => {
-        if (e.target === document.getElementById('confirm-overlay')) {
-            document.getElementById('confirm-overlay').classList.remove('visible');
-        }
-    });
-    document.getElementById('btn-confirm-delete').addEventListener('click', async () => {
-        document.getElementById('confirm-overlay').classList.remove('visible');
+    // ── Let it go (gentle soft release) ─────────────────────────────────────────
+    // Was a "will be permanently deleted" confirm sheet. Now: fade the task out
+    // with a 6s "Keep it" window, then delete and return to the list. The delete
+    // only fires after the grace window, so "Keep it" never touched the server.
+    async function commitRelease() {
         try {
             await fetch('/api/tasks/' + taskId, {
                 method: 'DELETE',
@@ -1666,8 +1656,23 @@
             clearTimerState();
             window.location.href = '/app';
         } catch (err) {
-            console.error('[task-detail] delete error:', err);
-            showToast('Could not delete task. Try again.');
+            console.error('[task-detail] release delete failed:', err.message, '| id:', taskId);
+            const app = document.getElementById('task-app');
+            if (app) app.style.opacity = '';
+            showToast('Could not let that go just now. Try again.');
+        }
+    }
+    document.getElementById('btn-delete').addEventListener('click', () => {
+        const app = document.getElementById('task-app');
+        if (app) { app.style.transition = 'opacity .3s ease'; app.style.opacity = '0.35'; }
+        if (window.flSoftRelease) {
+            window.flSoftRelease({
+                label: (task && task.title) ? task.title : 'this task',
+                onCommit: commitRelease,
+                onUndo: () => { if (app) app.style.opacity = ''; },
+            });
+        } else {
+            commitRelease();
         }
     });
 

@@ -700,7 +700,7 @@
             </div>
             <div class="modal-actions">
                 <button class="modal-save" id="modalSave">Save</button>
-                <button class="modal-delete" id="modalDelete">Delete</button>
+                <button class="modal-delete" id="modalDelete">Let it go</button>
                 <button class="modal-cancel" id="modalCancel">Cancel</button>
             </div>
         </div>
@@ -733,6 +733,7 @@
     <script src="/js/services/values-service.js"></script>
     <script src="/js/date-parser.js"></script>
     <script src="/js/reward.js"></script>
+    <script src="/js/soft-release.js"></script>
     <script>
     // ── Auth ──────────────────────────────────────────────────────────────────
     function getToken() { return localStorage.getItem('fl_token'); }
@@ -1224,14 +1225,34 @@
         }
     });
 
-    document.getElementById('modalDelete').addEventListener('click', async () => {
+    document.getElementById('modalDelete').addEventListener('click', () => {
         if (!state.editingId) return;
-        if (!confirm('Delete this task? This can\u2019t be undone.')) return;
-        const result = await api('DELETE', '/api/tasks/' + state.editingId);
-        if (result.success) {
-            closeModal();
-            fetchTasks();
-            fetchSummary();
+        const id = state.editingId;
+        const task = state.tasks.find(t => t.id == id);
+        const title = (task && task.title) ? task.title : 'that task';
+        // Gentle release instead of a scary "can't be undone" confirm: fade the
+        // card, give a 6s "Keep it" window, and only then actually delete.
+        const card = document.querySelector('.task-checkbox[data-id="' + id + '"]')?.closest('.task-card');
+        closeModal();
+        if (card) { card.style.transition = 'opacity .3s ease'; card.style.opacity = '0.35'; }
+        if (window.flSoftRelease) {
+            window.flSoftRelease({
+                label: title,
+                onCommit: async () => {
+                    try {
+                        const result = await api('DELETE', '/api/tasks/' + id);
+                        if (result && result.success) { fetchTasks(); fetchSummary(); }
+                        else if (card) card.style.opacity = '';
+                    } catch (e) {
+                        console.error('[tasks] release delete failed:', e.message, '| id:', id);
+                        if (card) card.style.opacity = '';
+                    }
+                },
+                onUndo: () => { if (card) card.style.opacity = ''; },
+            });
+        } else {
+            // Module missing \u2014 fall back to an immediate delete rather than stranding the card.
+            api('DELETE', '/api/tasks/' + id).then(r => { if (r && r.success) { fetchTasks(); fetchSummary(); } });
         }
     });
 
