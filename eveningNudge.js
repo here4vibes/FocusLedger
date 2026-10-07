@@ -2,17 +2,17 @@
 /**
  * Evening Nudge Scheduler
  *
- * Runs every 5 minutes. For each user with active push subscriptions:
+ * Runs hourly (render.yaml cron). For each user with active push subscriptions:
  *   1. Converts current UTC time to the user's local timezone.
- *   2. If local hour matches the user's configured evening hour (default 20 = 8pm),
- *      checks whether an evening nudge was already sent today.
+ *   2. If local hour is at/after the user's configured evening hour (default 20 = 8pm)
+ *      within a 2-hour catch-up window, checks whether a nudge was already sent today.
  *   3. Skips if notif_evening_enabled = false.
  *   4. Always fires — even if the user completed nothing.
  *      No guilt, no stats, just the gentle reflective prompt.
  *   5. Also sends via APNs for iOS (Capacitor) users if APNS_* env vars set.
  *
  * Message: "How did today go?"
- * Tap target: /home (command center with today's completion summary visible)
+ * Tap target: /weightless (the calm conversation-first home)
  *
  * Idempotent — evening_nudge_log enforces one-per-user-per-day via UNIQUE constraint.
  * Uses getLocalDateParts from lib/timezone.js (shared, single source of truth).
@@ -56,8 +56,11 @@ async function sendEveningNudges(pool) {
           : 20;
         const { date: localDate, hour: localHour } = getLocalDateParts(tz, now);
 
-        // Only send during the configured evening hour window
-        if (localHour !== targetHour) continue;
+        // Send at the target hour, or catch up within the next 2 hours if an earlier
+        // hourly run was missed/failed — the dedup log keeps it to once/day. The cron
+        // runs hourly, so an exact-hour match would give the nudge a SINGLE shot per
+        // day (a missed run = no nudge at all); the window makes it resilient.
+        if (localHour < targetHour || localHour > targetHour + 2) continue;
 
         // Skip if already sent today
         const alreadySent = await pool.query(
