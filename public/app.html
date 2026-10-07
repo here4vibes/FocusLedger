@@ -31,8 +31,10 @@
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
         :root {
-            --orange: #F26B3A;
-            --orange-light: #F5895A;
+            --orange: #c9a84c;        /* brand gold — generic accent (was coral; see --coral) */
+            --orange-light: #d4b56a;  /* brand gold light (was coral-light) */
+            --coral: #F26B3A;         /* money / impulse / value-tag identity — NOT the brand accent */
+            --coral-light: #F5895A;
             --navy: #011e5c;
             --navy-mid: #02287a;
             --navy-light: #033099;
@@ -3778,7 +3780,7 @@
         .spoke-momentum-fill {
             height: 100%;
             border-radius: 3px;
-            background: linear-gradient(90deg, #5BA4A4, #F26B3A);
+            background: linear-gradient(90deg, var(--green), var(--orange));
             width: 0;
             transition: width 0.6s ease;
         }
