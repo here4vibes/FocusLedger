@@ -28,9 +28,17 @@
         html, body { background: var(--cream); font-family: 'DM Sans', system-ui, sans-serif; color: var(--text-dark); }
         .page-content-wrapper { max-width: 720px; margin: 0 auto; padding: 1.25rem 1rem calc(90px + env(safe-area-inset-bottom)); }
 
-        .today-header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 0.35rem; }
+        /* Back to the radar home — this page is a drill-in, not a competing home */
+        .back-home {
+            display: inline-flex; align-items: center; gap: 0.25rem;
+            font-size: 0.8rem; font-weight: 600; color: var(--text-muted);
+            text-decoration: none; margin-bottom: 0.5rem; min-height: 32px;
+        }
+        .back-home:hover { color: var(--navy); }
+        .today-header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 0.15rem; }
         .today-header h1 { font-family: 'Space Grotesk', sans-serif; font-size: 1.5rem; color: var(--navy); }
         .today-date { font-size: 0.85rem; color: var(--text-muted); }
+        .today-sub { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.9rem; line-height: 1.4; }
 
         .calib-chip {
             display: none; font-size: 0.75rem; color: var(--navy);
@@ -101,10 +109,12 @@
 <body>
 <script src="/shared-nav.js"></script>
 <div class="page-content-wrapper">
+    <a class="back-home" href="/weightless">‹ Home</a>
     <div class="today-header">
-        <h1>Today</h1>
+        <h1>Your full day</h1>
         <span class="today-date" id="todayDate"></span>
     </div>
+    <div class="today-sub">The hour-by-hour, with how long things really take. Your top 3 live back on the home screen.</div>
     <div class="calib-chip" id="calibChip"></div>
 
     <div class="anytime" id="anytimeWrap" style="display:none">
