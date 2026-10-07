@@ -179,13 +179,13 @@ async function runAgentTurn(pool, userId, message, clientHistory, systemPromptBu
           userId, actionType: tu.name, status: 'executed', riskTier: 'auto',
           params: tu.input || {}, result: out.result || null, undoToken: out.undo || null,
         });
-        receipts.push({ id: row.id, summary: out.receipt, undoable: !!out.undo, ok: true, scope: scopeOf(tu.name) });
+        receipts.push({ id: row.id, action: tu.name, summary: out.receipt, undoable: !!out.undo, ok: true, scope: scopeOf(tu.name) });
       } else {
         await logAction(pool, {
           userId, actionType: tu.name, status: 'failed', riskTier: 'auto',
           params: tu.input || {}, error: out.error || 'unknown',
         });
-        receipts.push({ id: null, summary: out.error || "I couldn't do that one", undoable: false, ok: false, scope: scopeOf(tu.name) });
+        receipts.push({ id: null, action: tu.name, summary: out.error || "I couldn't do that one", undoable: false, ok: false, scope: scopeOf(tu.name) });
       }
     } catch (dispErr) {
       console.error('[Agent] dispatch failed:', dispErr.message, '| tool:', tu.name, '| userId:', userId);
@@ -286,7 +286,7 @@ module.exports = function (pool) {
               userId, actionType: tu.name, status: 'executed', riskTier: 'auto',
               params: tu.input || {}, result: out.result || null, undoToken: out.undo || null,
             });
-            receipts.push({ id: row.id, summary: out.receipt, undoable: !!out.undo, ok: true, scope: scopeOf(tu.name) });
+            receipts.push({ id: row.id, action: tu.name, summary: out.receipt, undoable: !!out.undo, ok: true, scope: scopeOf(tu.name) });
           } else {
             await logAction(pool, {
               userId, actionType: tu.name, status: 'failed', riskTier: 'auto',
