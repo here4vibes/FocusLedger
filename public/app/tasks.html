@@ -732,6 +732,7 @@
 
     <script src="/js/services/values-service.js"></script>
     <script src="/js/date-parser.js"></script>
+    <script src="/js/reward.js"></script>
     <script>
     // ── Auth ──────────────────────────────────────────────────────────────────
     function getToken() { return localStorage.getItem('fl_token'); }
@@ -836,7 +837,7 @@
             el.addEventListener('click', () => openEditModal(el.dataset.id));
         });
         container.querySelectorAll('.step-check[data-step-id]').forEach(el => {
-            el.addEventListener('click', () => toggleStep(el.dataset.taskId, el.dataset.stepId));
+            el.addEventListener('click', () => toggleStep(el.dataset.taskId, el.dataset.stepId, el));
         });
 
         // Completed section toggle
@@ -973,8 +974,13 @@
     }
 
     // ── Toggle step ─────────────────────────────────────────────────────────────
-    async function toggleStep(taskId, stepId) {
+    async function toggleStep(taskId, stepId, el) {
+        // Reward the moment of completion (not un-completion): if the step isn't
+        // yet marked done at click time, this click finishes it. Steps were a
+        // called-out gap — the completion dopamine only fired for whole tasks.
+        const completing = el && !el.classList.contains('done');
         await api('PATCH', '/api/tasks/' + taskId + '/steps/' + stepId + '/toggle');
+        if (completing && window.flReward) window.flReward.celebrateEl(el, { label: '✓ step' });
         fetchTasks();
         fetchSummary();
     }

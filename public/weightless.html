@@ -170,6 +170,7 @@
   </div>
 
 <script src="/js/push-autoheal.js" defer></script>
+<script src="/js/reward.js" defer></script>
 <script>
 (function(){
   'use strict';
@@ -439,6 +440,11 @@
     var span = document.createElement('span');
     span.textContent = (r.ok ? (world ? '📤 ' : '✓ ') : '· ') + r.summary;
     wrap.appendChild(span);
+    // Dopamine on completion — the front door gets the same reward the tasks
+    // page does, so finishing a task in conversation actually feels like one.
+    if(r.ok && r.action === 'mark_task_done' && window.flReward){
+      setTimeout(function(){ window.flReward.celebrateEl(span, { label:'✓ done' }); }, 60);
+    }
     if(r.ok && r.undoable && r.id){
       var u = document.createElement('button'); u.className='undo'; u.textContent='Undo';
       u.onclick = function(){

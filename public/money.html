@@ -1743,6 +1743,11 @@ function renderTriageCard() {
         ${failWarn || impulseFooter}
       </div>`;
     document.querySelector('.btn-skip-all').style.display = 'none';
+    // Reward clearing the pile — same dopamine as finishing a task, so sorting
+    // money actually feels like a win. Not when every save failed (nothing done).
+    if (!allFailed && window.flReward) {
+      setTimeout(function(){ window.flReward.celebrate({ label: '✓ all sorted' }); }, 120);
+    }
     localStorage.setItem('fl_evening_swipe_done', 'true');
     // Peak-end: let the summary line land before auto-dismissing — and leave
     // an error on screen much longer so it can be read (and screenshotted).
@@ -1909,6 +1914,7 @@ function attachSwipeToCard(card, expenseId, amount) {
 
 </script>
 <script src="/js/services/plaid-service.js?v=3"></script>
+<script src="/js/reward.js"></script>
 <script src="/shared-nav.js"></script>
     <script src="/buddy-widget.js"></script>
 <script src="/js/date-parser.js"></script>
