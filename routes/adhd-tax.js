@@ -157,7 +157,7 @@ Here's where it goes:
 
 You're ${comparedToAverage} the average ADHD adult (${fmt(averageAnnual)}/year).
 
-FocusLedger is built specifically for ADHD minds — tasks, spending, and reminders in one place. At $9.99/month ($100/year), it costs a fraction of what your ADHD tax costs you.
+FocusLedger is built specifically for ADHD minds — tasks, spending, and reminders in one place. At $9.95/month ($99.95/year), it costs a fraction of what your ADHD tax costs you.
 
 Try it free: https://focusledger.net/signup
 

@@ -12,10 +12,10 @@ function isAdminUser(user) {
 // Calculate 3-day credit based on billing cycle
 function calculateRewardCents(billingCycle) {
   if (billingCycle === 'annual') {
-    // 3/365 × $100 = ~$0.82
+    // 3/365 × $99.95 = ~$0.82
     return Math.round((3 / 365) * 10000);
   }
-  // Default: monthly — 3/30 × $9.99 = ~$1.00
+  // Default: monthly — 3/30 × $9.95 = ~$1.00
   return Math.round((3 / 30) * 999);
 }
 

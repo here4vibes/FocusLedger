@@ -5060,7 +5060,7 @@
                 <span style="font-size:0.7rem;font-weight:700;color:var(--green);background:rgba(91,164,164,0.12);border-radius:10px;padding:0.18rem 0.55rem;">Save ~$20/yr</span>
             </div>
             <div class="upgrade-actions">
-                <a href="https://buy.stripe.com/8x200i6m784y4bS0KZcs800" class="btn-upgrade" id="umAppCheckoutBtn">Switch to Autopilot — $9.99/mo</a>
+                <a href="https://buy.stripe.com/8x200i6m784y4bS0KZcs800" class="btn-upgrade" id="umAppCheckoutBtn">Switch to Autopilot — $9.95/mo</a>
                 <button class="btn-dismiss" id="dismissUpgradeBtn">Maybe later</button>
             </div>
         </div>
@@ -5153,7 +5153,7 @@
             <div class="step-suggest-teaser-cta">Smart steps are an Autopilot feature</div>
             <div class="step-suggest-teaser-sub">Upgrade to get AI-powered steps for every task — no more staring at a blank screen.</div>
             <div class="suggest-step-actions">
-                <a href="https://buy.stripe.com/8x200i6m784y4bS0KZcs800" class="btn-add-steps" style="text-decoration:none;display:block;">Switch to Autopilot — $9.99/mo</a>
+                <a href="https://buy.stripe.com/8x200i6m784y4bS0KZcs800" class="btn-add-steps" style="text-decoration:none;display:block;">Switch to Autopilot — $9.95/mo</a>
                 <button class="btn-skip-steps" id="btnSkipTeaserSteps">Not now</button>
             </div>
         </div>
@@ -6383,13 +6383,13 @@
                 if (knob) knob.style.transform = 'translateX(16px)';
                 if (ml) { ml.style.color = 'var(--text-muted)'; ml.style.fontWeight = '400'; }
                 if (al) { al.style.color = 'var(--navy)'; al.style.fontWeight = '600'; }
-                if (cta) { cta.href = _ANNUAL_LINK; cta.textContent = 'Switch to Autopilot — $100/year'; }
+                if (cta) { cta.href = _ANNUAL_LINK; cta.textContent = 'Switch to Autopilot — $99.95/year'; }
             } else {
                 sw.style.background = '#E8E5E0';
                 if (knob) knob.style.transform = 'translateX(0)';
                 if (ml) { ml.style.color = 'var(--navy)'; ml.style.fontWeight = '600'; }
                 if (al) { al.style.color = 'var(--text-muted)'; al.style.fontWeight = '400'; }
-                if (cta) { cta.href = _MONTHLY_LINK; cta.textContent = 'Switch to Autopilot — $9.99/mo'; }
+                if (cta) { cta.href = _MONTHLY_LINK; cta.textContent = 'Switch to Autopilot — $9.95/mo'; }
             }
         }
 
@@ -8980,7 +8980,7 @@
                 if (typeof fbq === 'function') {
                     var billingCycle = params.get('billing_cycle') || 'monthly';
                     var purchaseData = {
-                        value: billingCycle === 'annual' ? 100.00 : 9.99,
+                        value: billingCycle === 'annual' ? 99.95 : 9.95,
                         currency: 'usd',
                         content_name: billingCycle === 'annual' ? 'Autopilot Annual' : 'Autopilot Monthly'
                     };
@@ -9175,7 +9175,7 @@
                     '<h4>Let your bank do the logging</h4>' +
                     '<p>Connect your account and FocusLedger auto-imports and categorizes every transaction. Autopilot feature.</p>' +
                     '</div>' +
-                    '<a href="https://buy.stripe.com/8x200i6m784y4bS0KZcs800" class="bank-pro-btn">Unlock with Autopilot — $9.99/mo</a>' +
+                    '<a href="https://buy.stripe.com/8x200i6m784y4bS0KZcs800" class="bank-pro-btn">Unlock with Autopilot — $9.95/mo</a>' +
                     '</div>' +
                     '</div>';
                 return;

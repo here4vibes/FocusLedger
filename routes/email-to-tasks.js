@@ -143,10 +143,10 @@ async function processEmailToTask(pool, emailData) {
       await sendProxyEmail({
         to: fromEmail,
         subject: 'Email-to-Tasks is an Autopilot feature',
-        body: `Thanks for emailing! Creating tasks by email is available on the Autopilot plan ($9.99/mo). Upgrade at ${APP_BASE_URL}/app/settings to unlock this and more. Your email was not saved — forward it again after upgrading.`,
+        body: `Thanks for emailing! Creating tasks by email is available on the Autopilot plan ($9.95/mo). Upgrade at ${APP_BASE_URL}/app/settings to unlock this and more. Your email was not saved — forward it again after upgrading.`,
         html: replyHtml(
           'Email-to-Tasks is an Autopilot feature',
-          `Thanks for emailing! Creating tasks by email is available on the Autopilot plan ($9.99/mo).<br><br>Your email was <strong>not saved</strong> — forward it again after upgrading.`,
+          `Thanks for emailing! Creating tasks by email is available on the Autopilot plan ($9.95/mo).<br><br>Your email was <strong>not saved</strong> — forward it again after upgrading.`,
           'Upgrade to Autopilot',
           `${APP_BASE_URL}/app/settings`
         ),

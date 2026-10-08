@@ -17,7 +17,7 @@
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://focusledger.net/pricing">
     <meta property="og:title" content="FocusLedger Pricing — Free, Autopilot & Tandem">
-    <meta property="og:description" content="Free forever. Autopilot for $9.99/mo. Tandem for $14.99/mo — partner accountability built for ADHD brains.">
+    <meta property="og:description" content="Free forever. Autopilot for $9.95/mo. Tandem for $14.95/mo — partner accountability built for ADHD brains.">
     <meta property="og:image" content="https://focusledger.net/icons/og-home.png">
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
@@ -25,7 +25,7 @@
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="FocusLedger Pricing — Free, Autopilot & Tandem">
-    <meta name="twitter:description" content="Free forever. Autopilot for $9.99/mo. Tandem for $14.99/mo — partner accountability built for ADHD brains.">
+    <meta name="twitter:description" content="Free forever. Autopilot for $9.95/mo. Tandem for $14.95/mo — partner accountability built for ADHD brains.">
     <meta name="twitter:image" content="https://focusledger.net/icons/og-home.png">
     <!-- Canonical -->
     <link rel="canonical" href="https://focusledger.net/pricing">
@@ -540,11 +540,11 @@
         {
           "@type": "Offer",
           "name": "Autopilot",
-          "price": "9.99",
+          "price": "9.95",
           "priceCurrency": "USD",
           "priceSpecification": {
             "@type": "UnitPriceSpecification",
-            "price": "9.99",
+            "price": "9.95",
             "priceCurrency": "USD",
             "unitCode": "MON"
           },
@@ -553,11 +553,11 @@
         {
           "@type": "Offer",
           "name": "Tandem",
-          "price": "14.99",
+          "price": "14.95",
           "priceCurrency": "USD",
           "priceSpecification": {
             "@type": "UnitPriceSpecification",
-            "price": "14.99",
+            "price": "14.95",
             "priceCurrency": "USD",
             "unitCode": "MON"
           },
@@ -652,7 +652,7 @@
             <div class="plan-desc">The full cognitive environment — unlimited tasks, bank sync, AI-powered clarity, and everything we build next.</div>
             <div class="price" id="proPrice">
                 <span class="currency">$</span>
-                <span class="amount" id="proPriceAmount">9.99</span>
+                <span class="amount" id="proPriceAmount">9.95</span>
                 <span class="period" id="proPricePeriod">/month</span>
             </div>
             <div class="price-note" id="proPriceNote">Billed monthly. Cancel anytime.</div>
@@ -711,7 +711,7 @@
             <div class="plan-desc">Accountability that works with your brain, not against it. Partner dashboard, shared task visibility, and Buddy as your shared coach.</div>
             <div class="price" id="tandemPrice">
                 <span class="currency">$</span>
-                <span class="amount" id="tandemPriceAmount">14.99</span>
+                <span class="amount" id="tandemPriceAmount">14.95</span>
                 <span class="period" id="tandemPricePeriod">/month</span>
             </div>
             <div class="price-note" id="tandemPriceNote">Billed monthly. Cancel anytime.</div>
@@ -787,7 +787,7 @@
                 Is annual billing worth it?
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
             </div>
-            <div class="faq-a">Annual works out to ~$8.33/month instead of $9.99 — you save ~$20 per year. If FocusLedger has become part of how you move through your week, annual is the natural commitment. Less friction, less cost.</div>
+            <div class="faq-a">Annual works out to ~$8.33/month instead of $9.95 — you save ~$19 per year. If FocusLedger has become part of how you move through your week, annual is the natural commitment. Less friction, less cost.</div>
         </div>
 
         <div class="faq-item">
@@ -856,18 +856,18 @@
                 annualLabel.classList.add('active');
                 proPriceAmount.textContent = '8.33';
                 proPricePeriod.textContent = '/month';
-                proPriceNote.innerHTML = 'Billed as $100/year. <span class="strike">$119.88</span>';
-                tandemAmount.textContent = '12.42';
+                proPriceNote.innerHTML = 'Billed as $99.95/year. <span class="strike">$119.40</span>';
+                tandemAmount.textContent = '12.50'; // $149.95 / 12
                 tandemPeriod.textContent = '/month';
-                tandemNote.innerHTML = 'Billed as $149/year. <span class="strike">$179.88</span>';
+                tandemNote.innerHTML = 'Billed as $149.95/year. <span class="strike">$179.40</span>';
             } else {
                 billingSwitch.classList.remove('annual');
                 monthlyLabel.classList.add('active');
                 annualLabel.classList.remove('active');
-                proPriceAmount.textContent = '9.99';
+                proPriceAmount.textContent = '9.95';
                 proPricePeriod.textContent = '/month';
                 proPriceNote.textContent = 'Billed monthly. Cancel anytime.';
-                tandemAmount.textContent = '14.99';
+                tandemAmount.textContent = '14.95';
                 tandemPeriod.textContent = '/month';
                 tandemNote.textContent = 'Billed monthly. Cancel anytime.';
             }

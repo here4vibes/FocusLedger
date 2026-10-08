@@ -64,9 +64,9 @@
           '<span class="fl-pg-toggle-label" id="flPgAnnual">Annual</span>',
           '<span class="fl-pg-save">Save ~$20/yr</span>',
         '</div>',
-        '<div class="fl-pg-price"><sup>$</sup><span id="flPgPriceNum">9.99</span></div>',
+        '<div class="fl-pg-price"><sup>$</sup><span id="flPgPriceNum">9.95</span></div>',
         '<div class="fl-pg-period" id="flPgPeriod">per month, billed monthly</div>',
-        '<button class="fl-pg-cta" id="flPgCta">Switch to Autopilot — $9.99/mo</button>',
+        '<button class="fl-pg-cta" id="flPgCta">Switch to Autopilot — $9.95/mo</button>',
         '<button class="fl-pg-dismiss" id="flPgDismiss">Maybe later</button>',
       '</div>'
     ].join('');
@@ -90,14 +90,14 @@
         sw.classList.add('annual');
         ml.classList.remove('active'); al.classList.add('active');
         num.textContent = '8.33';
-        per.textContent = 'per month, billed as $100/year — save ~$20';
-        cta.textContent = 'Switch to Autopilot — $100/year';
+        per.textContent = 'per month, billed as $99.95/year — save ~$19';
+        cta.textContent = 'Switch to Autopilot — $99.95/year';
       } else {
         sw.classList.remove('annual');
         ml.classList.add('active'); al.classList.remove('active');
-        num.textContent = '9.99';
+        num.textContent = '9.95';
         per.textContent = 'per month, billed monthly — cancel anytime';
-        cta.textContent = 'Switch to Autopilot — $9.99/mo';
+        cta.textContent = 'Switch to Autopilot — $9.95/mo';
       }
     }
 
@@ -136,9 +136,9 @@
     var sw  = document.getElementById('flPgSwitch');  if (sw)  sw.classList.remove('annual');
     var ml  = document.getElementById('flPgMonthly'); if (ml)  { ml.classList.add('active'); }
     var al  = document.getElementById('flPgAnnual');  if (al)  { al.classList.remove('active'); }
-    var num = document.getElementById('flPgPriceNum'); if (num) num.textContent = '9.99';
+    var num = document.getElementById('flPgPriceNum'); if (num) num.textContent = '9.95';
     var per = document.getElementById('flPgPeriod');   if (per) per.textContent = 'per month, billed monthly — cancel anytime';
-    var cta = document.getElementById('flPgCta');      if (cta) cta.textContent = 'Switch to Autopilot — $9.99/mo';
+    var cta = document.getElementById('flPgCta');      if (cta) cta.textContent = 'Switch to Autopilot — $9.95/mo';
     _modalEl.classList.add('visible');
     document.body.style.overflow = 'hidden';
   }

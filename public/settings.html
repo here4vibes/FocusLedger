@@ -1439,7 +1439,7 @@
             </div>
 
             <div class="upgrade-price-display">
-                <div class="price-amount"><sup>$</sup><span id="um-priceNum">9.99</span></div>
+                <div class="price-amount"><sup>$</sup><span id="um-priceNum">9.95</span></div>
                 <div class="price-period" id="um-pricePeriod">per month, billed monthly</div>
             </div>
 
@@ -1463,7 +1463,7 @@
             </ul>
 
             <button class="btn-upgrade-modal" id="um-checkoutBtn">
-                Switch to Autopilot — $9.99/mo
+                Switch to Autopilot — $9.95/mo
             </button>
             <button class="upgrade-dismiss-link" id="upgradeModalDismiss">Maybe later</button>
         </div>
@@ -1823,15 +1823,15 @@
             if (!priceNum) return;
             if (umIsAnnual) {
                 priceNum.textContent    = '8.33';
-                pricePeriod.textContent = 'per month, billed as $100/year — save ~$20';
-                checkoutBtn.textContent = 'Switch to Autopilot — $100/year';
+                pricePeriod.textContent = 'per month, billed as $99.95/year — save ~$19';
+                checkoutBtn.textContent = 'Switch to Autopilot — $99.95/year';
                 monthlyLabel.classList.remove('active');
                 annualLabel.classList.add('active');
                 switchEl.classList.add('annual');
             } else {
-                priceNum.textContent    = '9.99';
+                priceNum.textContent    = '9.95';
                 pricePeriod.textContent = 'per month, billed monthly — cancel anytime';
-                checkoutBtn.textContent = 'Switch to Autopilot — $9.99/mo';
+                checkoutBtn.textContent = 'Switch to Autopilot — $9.95/mo';
                 monthlyLabel.classList.add('active');
                 annualLabel.classList.remove('active');
                 switchEl.classList.remove('annual');
@@ -3004,8 +3004,8 @@
                     + '🤝 Your 14-day free trial includes Buddy-mediated accountability + partner visibility. Subscribe to keep it after the trial.'
                     + '</p>'
                     + '<div style="display:flex;gap:8px;flex-wrap:wrap;">'
-                    + '<button onclick="PricingService.checkout(\'tandem\',\'monthly\',this)" style="padding:8px 14px;background:var(--navy);color:#fff;border:none;border-radius:8px;font-size:0.83rem;font-weight:600;cursor:pointer;">$14.99/mo</button>'
-                    + '<button onclick="PricingService.checkout(\'tandem\',\'annual\',this)"  style="padding:8px 14px;background:transparent;color:var(--navy);border:1.5px solid var(--navy);border-radius:8px;font-size:0.83rem;font-weight:600;cursor:pointer;">$149/yr — save 17%</button>'
+                    + '<button onclick="PricingService.checkout(\'tandem\',\'monthly\',this)" style="padding:8px 14px;background:var(--navy);color:#fff;border:none;border-radius:8px;font-size:0.83rem;font-weight:600;cursor:pointer;">$14.95/mo</button>'
+                    + '<button onclick="PricingService.checkout(\'tandem\',\'annual\',this)"  style="padding:8px 14px;background:transparent;color:var(--navy);border:1.5px solid var(--navy);border-radius:8px;font-size:0.83rem;font-weight:600;cursor:pointer;">$149.95/yr — save 16%</button>'
                     + '</div></div>';
             }
         } else {
@@ -3016,8 +3016,8 @@
                 + 'Buddy-mediated accountability, partner dashboard, shared task visibility, and the "Tell Buddy" concern feature.'
                 + '</p>'
                 + '<div style="display:flex;gap:8px;flex-wrap:wrap;">'
-                + '<button onclick="PricingService.checkout(\'tandem\',\'monthly\',this)" style="padding:8px 16px;background:var(--orange,#c9a84c);color:#011e5c;border:none;border-radius:8px;font-size:0.83rem;font-weight:700;cursor:pointer;">$14.99/mo</button>'
-                + '<button onclick="PricingService.checkout(\'tandem\',\'annual\',this)"  style="padding:8px 16px;background:rgba(255,255,255,0.12);color:#fff;border:1px solid rgba(255,255,255,0.25);border-radius:8px;font-size:0.83rem;font-weight:600;cursor:pointer;">$149/yr</button>'
+                + '<button onclick="PricingService.checkout(\'tandem\',\'monthly\',this)" style="padding:8px 16px;background:var(--orange,#c9a84c);color:#011e5c;border:none;border-radius:8px;font-size:0.83rem;font-weight:700;cursor:pointer;">$14.95/mo</button>'
+                + '<button onclick="PricingService.checkout(\'tandem\',\'annual\',this)"  style="padding:8px 16px;background:rgba(255,255,255,0.12);color:#fff;border:1px solid rgba(255,255,255,0.25);border-radius:8px;font-size:0.83rem;font-weight:600;cursor:pointer;">$149.95/yr</button>'
                 + '</div>'
                 + '<p style="margin-top:10px;font-size:0.75rem;color:rgba(255,255,255,0.5);">If one partner subscribes, both get access.</p>'
                 + '</div>';
