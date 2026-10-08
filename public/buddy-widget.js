@@ -15,7 +15,15 @@
   const EXCLUDED_PATHS = [
     '/buddy',
     '/checkin',
+    '/app/buddy',     // canonical paths since the /app/* move; the bare ones
+    '/app/checkin',   // above are now just 301 aliases
   ];
+
+  // Money moved to /app/money (/money is a 301 alias). Matching only '/money'
+  // meant the first-visit welcome never fired.
+  function isMoneyPage(path) {
+    return path === '/money' || path === '/app/money';
+  }
 
   const BUDDY_ICON = '🤝';
   const SESSION_KEY = 'bw_session';
@@ -188,7 +196,7 @@
    * Check if this is the user's first money page visit today.
    */
   function isFirstMoneyVisit() {
-    if (pageUrl !== '/money') return false;
+    if (!isMoneyPage(pageUrl)) return false;
     try {
       const stored = localStorage.getItem(FIRST_MONEY_KEY);
       if (!stored) return true;
@@ -1148,7 +1156,7 @@
   // ── First Money Visit Tracking ────────────────────────────────────
 
   function checkFirstMoneyVisit() {
-    if (pageUrl === '/money') {
+    if (isMoneyPage(pageUrl)) {
       markFirstMoneyVisit();
     }
   }
