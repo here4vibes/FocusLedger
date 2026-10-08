@@ -10,6 +10,8 @@ const express = require('express');
 const { authenticateToken } = require('../middleware/auth');
 const { sendEmail } = require('../lib/emailService');
 const { accountDeletionTemplate } = require('../lib/emailTemplates');
+const { getStripe } = require('../lib/stripe-client');
+const { cancelAllStripeSubscriptions } = require('../lib/billing');
 const {
   createDeletionToken,
   findValidToken,
@@ -156,7 +158,19 @@ module.exports = function(pool) {
       // Mark token used first — prevents two concurrent requests both passing findValidToken
       await markTokenUsed(pool, tokenRow.id);
 
-      // Cancel subscription before cascade (Stripe webhook correlation)
+      // Stop billing in STRIPE before deleting anything. If this fails we abort:
+      // deleting the account while the card keeps getting charged is the worst
+      // outcome. (This used to only mark our own DB row cancelled.)
+      try {
+        const n = await cancelAllStripeSubscriptions(pool, getStripe(), userId);
+        if (n) console.log(`[account-deletion] cancelled ${n} Stripe subscription(s) for user ${userId}`);
+      } catch (stripeErr) {
+        console.error('[account-deletion] Stripe cancellation failed — deletion aborted:', stripeErr.message, '| user:', userId);
+        return res.status(502).json({
+          success: false,
+          message: 'We couldn’t stop your billing, so your account was NOT deleted. Please email hello@focusledger.net and we’ll sort it out right away.'
+        });
+      }
       await cancelActiveSubscription(pool, userId);
 
       await deleteUserCascade(pool, userId);

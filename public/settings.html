@@ -1509,7 +1509,7 @@
                 })
                 .then(function(data) {
                     if (!data || !data.success) throw new Error((data && data.message) || 'Error');
-                    renderSubscription(data.subscription, data.limits, data.stripe_links);
+                    renderSubscription(data.subscription, data.limits, data.stripe_links, data.pricing);
                     renderUsage(data.subscription, data.limits);
                 })
                 .catch(function(err) {
@@ -1518,7 +1518,7 @@
                 });
         }
 
-        function renderSubscription(sub, limits, links) {
+        function renderSubscription(sub, limits, links, pricing) {
             var content = document.getElementById('subContent');
             var loading = document.getElementById('subLoading');
             loading.style.display = 'none';
@@ -1543,7 +1543,11 @@
                     }
                     html += '</div>';
                 } else {
-                    var cycleText = sub.billing_cycle === 'annual' ? '$100/year' : '$9.99/month';
+                    // Prices come from config/pricing.js via /status — one source of truth.
+                    var planPrices = (pricing && (sub.is_tandem ? pricing.tandem : pricing.autopilot)) || null;
+                    var cycleText = planPrices
+                        ? (sub.billing_cycle === 'annual' ? '$' + planPrices.annual + '/year' : '$' + planPrices.monthly + '/month')
+                        : (sub.billing_cycle === 'annual' ? 'Annual' : 'Monthly');
                     var periodEnd = sub.current_period_end ? new Date(sub.current_period_end).toLocaleDateString() : 'N/A';
                     var activatedDate = sub.activated_at ? new Date(sub.activated_at).toLocaleDateString() : 'N/A';
 
@@ -1552,16 +1556,22 @@
                     html += '<div class="detail-row"><span class="detail-label">Billing</span><span class="detail-value">' + cycleText + '</span></div>';
                     html += '<div class="detail-row"><span class="detail-label">Activated</span><span class="detail-value">' + activatedDate + '</span></div>';
                     if (sub.current_period_end) {
-                        html += '<div class="detail-row"><span class="detail-label">Next renewal</span><span class="detail-value">' + periodEnd + '</span></div>';
+                        var renewLabel = sub.cancel_scheduled ? 'Access until' : 'Next renewal';
+                        html += '<div class="detail-row"><span class="detail-label">' + renewLabel + '</span><span class="detail-value">' + periodEnd + '</span></div>';
                     }
                     html += '</div>';
 
-                    if (sub.status === 'cancelled') {
-                        html += '<div style="margin-top: 1rem; padding: 0.75rem 1rem; background: #FFF5F0; border-radius: 10px; font-size: 0.88rem; color: var(--orange);">Subscription cancelled. Autopilot features active until ' + periodEnd + '.</div>';
-                        html += '<button class="btn-upgrade" onclick="reactivate()" style="background: var(--green);">Reactivate Autopilot</button>';
-                    } else {
+                    var planName = sub.is_tandem ? 'Tandem' : 'Autopilot';
+                    // cancel_scheduled: cancelled in Stripe, still paid through the period end.
+                    // (The old status === 'cancelled' branch could never render — cancelling
+                    // used to remove Pro instantly, so this whole block was skipped.)
+                    if (sub.cancel_scheduled) {
+                        html += '<div style="margin-top: 1rem; padding: 0.75rem 1rem; background: #FFF5F0; border-radius: 10px; font-size: 0.88rem; color: var(--text-dark);">Cancelled — you won’t be charged again. ' + planName + ' stays on until ' + periodEnd + '.</div>';
+                        html += '<button class="btn-upgrade" onclick="reactivate()" style="background: var(--green);">Keep ' + planName + '</button>';
+                    } else if (sub.has_stripe_billing) {
                         html += '<button class="btn-cancel" onclick="showCancelModal()">Cancel subscription</button>';
                     }
+                    html += '<div id="billingMsg" role="status" style="margin-top:0.6rem;font-size:0.85rem;"></div>';
                 }
 
                 content.innerHTML = html;
@@ -1632,12 +1642,11 @@
             fetch('/api/subscription/cancel', { method: 'POST', headers: authHeaders() })
                 .then(function(r) { return r.json(); })
                 .then(function(data) {
-                    if (data.success) {
-                        loadSubscriptionData();
-                    }
+                    if (data.success) { loadSubscriptionData(); }
+                    else { showBillingMsg(data.message || 'Couldn’t cancel just now — nothing was changed.', true); }
                 })
                 .catch(function() {
-                    alert('Failed to cancel subscription. Please try again.');
+                    showBillingMsg('Couldn’t reach the server — nothing was changed. Please try again.', true);
                 });
         });
 
@@ -1646,14 +1655,21 @@
             fetch('/api/subscription/reactivate', { method: 'POST', headers: authHeaders() })
                 .then(function(r) { return r.json(); })
                 .then(function(data) {
-                    if (data.success) {
-                        loadSubscriptionData();
-                    }
+                    if (data.success) { loadSubscriptionData(); }
+                    else { showBillingMsg(data.message || 'Couldn’t reactivate just now — nothing was changed.', true); }
                 })
                 .catch(function() {
-                    alert('Failed to reactivate. Please try again.');
+                    showBillingMsg('Couldn’t reach the server — nothing was changed. Please try again.', true);
                 });
         };
+
+        // Inline billing result message (failures used to be silently swallowed).
+        function showBillingMsg(text, isError) {
+            var el = document.getElementById('billingMsg');
+            if (!el) { alert(text); return; }
+            el.textContent = text;
+            el.style.color = isError ? '#B42318' : 'var(--text-muted)';
+        }
 
         // Close modal on backdrop click
         document.getElementById('cancelModal').addEventListener('click', function(e) {
