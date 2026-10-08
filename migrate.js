@@ -287,7 +287,10 @@ async function runFolderMigrations(client) {
     try {
       await client.query('BEGIN');
       await migration.up(client);
-      await client.query('INSERT INTO _migrations (name) VALUES ($1)', [name]);
+      // Explicit NOW(): prod's _migrations predates this runner's CREATE TABLE and
+      // had no DEFAULT on applied_at, so every migration was recorded undated (56
+      // rows), which made /health look months stale (Oct 2026).
+      await client.query('INSERT INTO _migrations (name, applied_at) VALUES ($1, NOW())', [name]);
       await client.query('COMMIT');
       console.log(`Migration complete: ${name}`);
     } catch (err) {
