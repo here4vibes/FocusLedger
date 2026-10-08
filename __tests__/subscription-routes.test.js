@@ -14,6 +14,7 @@ const mockStripe = {
   subscriptions: { update: jest.fn(), retrieve: jest.fn(), cancel: jest.fn() },
   checkout: { sessions: { retrieve: jest.fn() } },
   webhooks: { constructEvent: jest.fn() },
+  billingPortal: { sessions: { create: jest.fn() } },
 };
 jest.mock('../lib/stripe-client', () => ({ getStripe: () => mockStripe }));
 
@@ -187,5 +188,49 @@ describe('GET /activate → Settings redirect carries the real purchase (Meta Pi
     expect(q.get('billing_cycle')).toBe('monthly');
     expect(q.get('value')).toBe('9.95');
     expect(q.get('ref')).toBe('cs_live_new');
+  });
+});
+
+describe('POST /portal', () => {
+  test('opens the portal for the stored customer and returns to Settings', async () => {
+    billingDb.getLatestSubscription.mockResolvedValue({ ...activeRow, stripe_customer_id: 'cus_9' });
+    mockStripe.billingPortal.sessions.create.mockResolvedValue({ url: 'https://billing.stripe.com/p/session/x' });
+
+    const res = await request(app()).post('/api/subscription/portal');
+
+    expect(res.status).toBe(200);
+    expect(res.body.url).toBe('https://billing.stripe.com/p/session/x');
+    const args = mockStripe.billingPortal.sessions.create.mock.calls[0][0];
+    expect(args.customer).toBe('cus_9');
+    expect(args.return_url).toMatch(/\/app\/settings\?billing=updated$/);
+    expect(mockStripe.subscriptions.retrieve).not.toHaveBeenCalled();
+  });
+
+  test('older rows without a customer id resolve it from the subscription', async () => {
+    billingDb.getLatestSubscription.mockResolvedValue({ ...activeRow, stripe_customer_id: null });
+    mockStripe.subscriptions.retrieve.mockResolvedValue(stripeSub({ customer: 'cus_from_sub' }));
+    mockStripe.billingPortal.sessions.create.mockResolvedValue({ url: 'https://billing.stripe.com/p/session/y' });
+
+    const res = await request(app()).post('/api/subscription/portal');
+
+    expect(res.status).toBe(200);
+    expect(mockStripe.subscriptions.retrieve).toHaveBeenCalledWith('sub_123');
+    expect(mockStripe.billingPortal.sessions.create.mock.calls[0][0].customer).toBe('cus_from_sub');
+  });
+
+  test('no Stripe billing on the account → 404, Stripe not called', async () => {
+    billingDb.getLatestSubscription.mockResolvedValue(null);
+    const res = await request(app()).post('/api/subscription/portal');
+    expect(res.status).toBe(404);
+    expect(mockStripe.billingPortal.sessions.create).not.toHaveBeenCalled();
+  });
+
+  test('Stripe failure → 500 with a readable message', async () => {
+    billingDb.getLatestSubscription.mockResolvedValue({ ...activeRow, stripe_customer_id: 'cus_9' });
+    mockStripe.billingPortal.sessions.create.mockRejectedValue(new Error('portal not configured'));
+    const res = await request(app()).post('/api/subscription/portal');
+    expect(res.status).toBe(500);
+    expect(res.body.success).toBe(false);
+    expect(res.body.message).toMatch(/billing/i);
   });
 });

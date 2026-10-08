@@ -260,6 +260,23 @@
         .btn-upgrade:hover {
             background: var(--orange-light);
         }
+        .btn-manage-billing {
+            display: block;
+            width: 100%;
+            padding: 0.75rem;
+            margin-top: 1.25rem;
+            background: transparent;
+            color: var(--navy);
+            border: 1.5px solid var(--border);
+            border-radius: 12px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            min-height: 44px;
+        }
+        .btn-manage-billing:hover { border-color: var(--navy); }
+        .btn-manage-billing:disabled { opacity: 0.6; cursor: wait; }
         .btn-cancel {
             display: inline-block;
             margin-top: 1rem;
@@ -1569,6 +1586,10 @@
                     html += '</div>';
 
                     var planName = sub.is_tandem ? 'Tandem' : 'Autopilot';
+                    // Stripe's hosted portal: card, invoices, receipts. Changes sync back via webhook.
+                    if (sub.has_stripe_billing) {
+                        html += '<button class="btn-manage-billing" id="manageBillingBtn" onclick="openBillingPortal()">Manage billing &amp; invoices</button>';
+                    }
                     // cancel_scheduled: cancelled in Stripe, still paid through the period end.
                     // (The old status === 'cancelled' branch could never render — cancelling
                     // used to remove Pro instantly, so this whole block was skipped.)
@@ -1667,6 +1688,24 @@
                 })
                 .catch(function() {
                     showBillingMsg('Couldn’t reach the server — nothing was changed. Please try again.', true);
+                });
+        };
+
+        // Stripe billing portal
+        window.openBillingPortal = function() {
+            var btn = document.getElementById('manageBillingBtn');
+            if (btn) { btn.disabled = true; btn.textContent = 'Opening billing…'; }
+            var reset = function() { if (btn) { btn.disabled = false; btn.innerHTML = 'Manage billing &amp; invoices'; } };
+            fetch('/api/subscription/portal', { method: 'POST', headers: authHeaders() })
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (data.success && data.url) { window.location.href = data.url; return; }
+                    reset();
+                    showBillingMsg(data.message || 'Couldn’t open billing just now. Please try again.', true);
+                })
+                .catch(function() {
+                    reset();
+                    showBillingMsg('Couldn’t reach the server. Please try again.', true);
                 });
         };
 
@@ -1897,6 +1936,16 @@
                     } catch (e) { console.error('[settings] Pixel Purchase failed:', e.message); }
                 }
                 // Clean URL (also stops a refresh from re-firing the Purchase)
+                try { history.replaceState({}, '', window.location.pathname); } catch(e) {}
+            }
+        })();
+
+        // ── ?billing=updated — back from the Stripe portal ───────────────────────
+        // Stripe's webhook can land a moment after the redirect, so refresh once more.
+        (function() {
+            var params = new URLSearchParams(window.location.search);
+            if (params.get('billing') === 'updated') {
+                setTimeout(loadSubscriptionData, 3000);
                 try { history.replaceState({}, '', window.location.pathname); } catch(e) {}
             }
         })();
