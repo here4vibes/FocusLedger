@@ -18,10 +18,11 @@ const {
   updateTaskSharingFlags,
   getPartnerCompletionFeed,
   checkTandemAccess,
-  activateTandemSubscription,
   activateTandemTrial,
   createPartnerConcern,
 } = require('../db/partnerships');
+const { getStripe } = require('../lib/stripe-client');
+const billing = require('../lib/billing');
 
 module.exports = function (pool) {
   const router = express.Router();
@@ -317,46 +318,62 @@ module.exports = function (pool) {
   });
 
   // ── POST /api/partnerships/tandem-activate ────────────────────────────────
-  // Called after a successful Tandem Stripe checkout to activate the subscription.
-  // Verifies the payment directly with Stripe, then grants tandem_plan + expiry.
-  // Also starts the 14-day trial for the partner on the shared partnership row.
-  // Body: { session_id: string } — the Stripe checkout session ID from the success redirect
+  // Client-side fallback after a Tandem checkout. Normally unnecessary: the
+  // Stripe webhook and /api/subscription/activate already grant Tandem. Goes
+  // through the same activation (lib/billing), so it can't grant anything the
+  // payment didn't buy.
+  // Previously this trusted any paid session id: it didn't check the session
+  // belonged to the caller, that it was a Tandem purchase, or that it hadn't
+  // been used — one purchase could unlock Tandem on unlimited accounts.
+  // Body: { session_id: string }
   router.post('/tandem-activate', authenticateToken, async (req, res) => {
+    const userId = req.user.id;
     try {
-      const { session_id } = req.body;
+      const { session_id } = req.body || {};
       if (!session_id) {
         return res.status(400).json({ success: false, message: 'session_id required' });
       }
-
-      // Verify directly with Stripe — the source of truth
-      if (!process.env.STRIPE_SECRET_KEY) {
-        console.error('[partnerships/tandem-activate] STRIPE_SECRET_KEY not set');
+      const stripe = getStripe();
+      if (!stripe) {
+        console.error('[partnerships/tandem-activate] STRIPE_SECRET_KEY not set | user:', userId);
         return res.status(503).json({ success: false, message: 'Payments not configured' });
       }
-      const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+
       const session = await stripe.checkout.sessions.retrieve(session_id, { expand: ['subscription'] });
-      const verified = !!session && (session.payment_status === 'paid' || session.payment_status === 'no_payment_required');
-      if (!verified) {
+      if (!billing.isPaid(session)) {
         return res.status(402).json({ success: false, message: 'Payment not verified' });
       }
-      const interval = session.subscription?.items?.data?.[0]?.price?.recurring?.interval || null;
-      const payment = { product_name: session.metadata?.billing || (interval === 'year' ? 'annual' : 'monthly') };
 
-      // Set subscription to expire 1 month or 1 year from now based on product name
-      const isAnnual = interval === 'year' || (payment.product_name || '').toLowerCase().includes('annual');
-      const expiresAt = new Date();
-      if (isAnnual) {
-        expiresAt.setFullYear(expiresAt.getFullYear() + 1);
-      } else {
-        expiresAt.setMonth(expiresAt.getMonth() + 1);
+      // The session must belong to the caller: its user metadata if set, else its checkout email.
+      const metaUserId = parseInt((session.metadata && session.metadata.user_id) || '', 10) || null;
+      const sessionEmail = (session.customer_details && session.customer_details.email) || session.customer_email || '';
+      const owns = metaUserId
+        ? metaUserId === userId
+        : !!(sessionEmail && req.user.email && sessionEmail.toLowerCase() === String(req.user.email).toLowerCase());
+      if (!owns) {
+        console.warn('[partnerships/tandem-activate] session not owned by caller | user:', userId, '| session:', session_id);
+        return res.status(403).json({ success: false, message: 'This purchase belongs to a different account.' });
       }
 
-      await activateTandemSubscription(pool, req.user.id, expiresAt);
+      let sub = session.subscription;
+      if (typeof sub === 'string') sub = await stripe.subscriptions.retrieve(sub);
+      if (billing.subscriptionDetails(sub).plan !== 'tandem') {
+        return res.status(400).json({ success: false, message: 'That purchase isn’t a Tandem plan.' });
+      }
 
-      const access = await checkTandemAccess(pool, req.user.id);
+      // Single-use: a session already recorded for someone else is rejected.
+      const result = await billing.activateCheckoutSession({
+        pool, stripe, session: Object.assign({}, session, { subscription: sub }), userId,
+      });
+      if (result.status === 'already_activated' && result.userId !== userId) {
+        console.warn('[partnerships/tandem-activate] session already used by another user | user:', userId, '| session:', session_id);
+        return res.status(403).json({ success: false, message: 'This purchase has already been used.' });
+      }
+
+      const access = await checkTandemAccess(pool, userId);
       res.json({ success: true, message: 'Tandem activated!', ...access });
     } catch (err) {
-      console.error('[partnerships/tandem-activate]', err.message);
+      console.error('[partnerships/tandem-activate] failed:', err.message, '| user:', userId);
       res.status(500).json({ success: false, message: 'Failed to activate Tandem' });
     }
   });
