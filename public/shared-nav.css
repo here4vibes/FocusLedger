@@ -544,7 +544,7 @@ body[data-nav-shell="desktop"] #shared-bottom-nav {
 /* On desktop the Sign Out sits at the bottom of the sidebar.
    It's a <button> styled to match the other sidebar nav items. */
 .shared-nav-signout {
-  color: rgba(255,255,255,0.45);
+  color: rgba(255,255,255,0.6); /* WCAG AA 6.3:1 on navy — was 0.45 @ 4.1:1 */
   font-family: inherit;
   cursor: pointer;
   background: none;
@@ -962,7 +962,7 @@ body.shared-nav-active {
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: rgba(255,255,255,0.35);
+  color: rgba(255,255,255,0.55); /* WCAG AA 5.5:1 on navy — was 0.35 @ 3.0:1 */
   flex-shrink: 0;
 }
 
