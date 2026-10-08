@@ -33,11 +33,22 @@ const pool = new Pool({
   connectionString: process.env.DATABASE_URL
 });
 
+// Session-level advisory lock so two instances booting at once (Render's
+// deploy overlap window, or a scaled-out service) can't run the folder
+// migrations concurrently and race on the _migrations UNIQUE(name). The loser
+// of a concurrent INSERT would otherwise ROLLBACK and leave a migration
+// unrecorded. The lock auto-releases if the process crashes (session-scoped).
+const MIGRATION_LOCK_KEY = 4915623; // arbitrary constant, FocusLedger migrations
+
 async function migrate() {
   console.log('Running migrations...');
 
   const client = await pool.connect();
+  let hadFailure = false;
   try {
+    // 0. Serialize concurrent migrate runs before touching any schema.
+    await client.query('SELECT pg_advisory_lock($1)', [MIGRATION_LOCK_KEY]);
+
     // 1. Create migration tracking table (always first)
     await client.query(`
       CREATE TABLE IF NOT EXISTS _migrations (
@@ -51,13 +62,25 @@ async function migrate() {
     await runCoreMigrations(client);
 
     // 3. Run migrations from migrations/ folder
-    await runFolderMigrations(client);
-
-    console.log('Migrations complete.');
+    hadFailure = await runFolderMigrations(client);
   } finally {
+    try { await client.query('SELECT pg_advisory_unlock($1)', [MIGRATION_LOCK_KEY]); }
+    catch (e) { console.warn('[migrate] advisory unlock skipped:', e.message); }
     client.release();
     await pool.end();
   }
+
+  // Fail LOUD: a failed folder migration must stop the deploy, not log a warning
+  // and let new code run against a half-migrated database. On Render a non-zero
+  // exit from the start command fails the deploy and keeps the PREVIOUS version
+  // serving — so this blocks a bad migration without taking the site down.
+  if (hadFailure) {
+    console.error('[migrate] ABORTING: a migration failed (see WARNING above). ' +
+      'New code was NOT started against a half-migrated database. Fix the migration and redeploy.');
+    process.exit(1);
+  }
+
+  console.log('Migrations complete.');
 }
 
 /**
@@ -261,7 +284,9 @@ async function runFolderMigrations(client) {
   const applied = await client.query('SELECT name FROM _migrations');
   const appliedNames = new Set(applied.rows.map(r => r.name));
 
-  // Run pending migrations
+  // Run pending migrations IN ORDER. Stop at the first failure: later migrations
+  // may depend on an earlier one, so running them against a half-migrated state
+  // risks cascading damage. Returns true if a migration failed (caller aborts).
   for (const file of files) {
     const migration = require(path.join(migrationsDir, file));
     const name = migration.name || file.replace('.js', '');
@@ -279,12 +304,14 @@ async function runFolderMigrations(client) {
       await client.query('COMMIT');
       console.log(`Migration complete: ${name}`);
     } catch (err) {
-      await client.query('ROLLBACK');
-      // Log but don't crash — a stuck migration shouldn't prevent the server
-      // from starting with new code. The migration will be retried next deploy.
+      try { await client.query('ROLLBACK'); } catch { /* connection may be aborted */ }
+      // Stop the run and signal failure so the deploy aborts. Do NOT press on to
+      // later migrations that may assume this one's schema. Fix it and redeploy.
       console.error(`[migrate] WARNING: migration "${name}" failed and was rolled back: ${err.message}`);
+      return true;
     }
   }
+  return false;
 }
 
 migrate().catch(err => {
