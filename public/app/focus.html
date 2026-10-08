@@ -814,6 +814,9 @@
         @media (prefers-reduced-motion: reduce) {
             *, *::before, *::after {
                 animation-duration: 0.001ms !important;
+                /* Without this the ambient cafe/library/rain loops kept cycling
+                   (just very fast) — the guard shortened them but never stopped them. */
+                animation-iteration-count: 1 !important;
                 transition-duration: 0.001ms !important;
             }
         }

@@ -627,6 +627,16 @@
             .compose-header h1 { font-size: 1.5rem; }
         }
 
+    
+        /* Reduced motion — this page had no guard and doesn't load design-system.css.
+           Same pattern as design-system.css (final frame, one iteration). */
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
     </style>
     <link rel="stylesheet" href="/shared-nav.css">
 </head>
