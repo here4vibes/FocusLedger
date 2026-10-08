@@ -357,25 +357,6 @@ async function getPlaidItemsWithAccounts(pool, userId) {
   );
   if (!items.length) return [];
 
-  // Runtime repair: if any row has id = NULL (sequence migration hasn't run yet),
-  // assign a real integer now so buttons work immediately without waiting for a deploy.
-  for (const item of items) {
-    if (item.id == null) {
-      try {
-        const { rows: fixed } = await pool.query(
-          `UPDATE plaid_items
-           SET id = (SELECT COALESCE(MAX(id), 0) + 1 FROM plaid_items WHERE id IS NOT NULL)
-           WHERE user_id = $1 AND item_id = $2 AND id IS NULL
-           RETURNING id`,
-          [userId, item.item_id]
-        );
-        if (fixed.length > 0) item.id = fixed[0].id;
-      } catch (e) {
-        console.error('[plaid] runtime id repair failed for item_id', item.item_id, e.message);
-      }
-    }
-  }
-
   const { rows: accounts } = await pool.query(
     'SELECT * FROM plaid_accounts WHERE plaid_item_id = ANY($1)',
     [items.map(i => i.id)]
@@ -401,16 +382,17 @@ async function getPlaidItemsWithAccounts(pool, userId) {
 
 // Upsert a plaid_item (called after token exchange)
 // Uses ON CONFLICT (item_id, user_id) to avoid duplicate rows when the user
-// reconnects the same bank. Falls back to INSERT-with-explicit-id if the
-// unique index doesn't exist yet (pre-migration environments).
+// reconnects the same bank. id comes from the column default (plaid_items_id_seq;
+// primary key since migration plaid_primary_keys) — an explicit MAX(id)+1 used
+// to race when two connections were created at once.
 async function upsertPlaidItem(pool, userId, encryptedAccessToken, itemId, institutionName, institutionId) {
   // Conflict on institution_id so that reconnecting the same bank updates the existing
   // row's access_token instead of creating an orphan. Each Amex/OAuth reconnect gives
   // Plaid a brand-new item_id, so (item_id, user_id) alone would always insert a new row.
   if (institutionId) {
     const { rows } = await pool.query(
-      `INSERT INTO plaid_items (id, user_id, access_token, item_id, institution_name, institution_id)
-       VALUES ((SELECT COALESCE(MAX(id), 0) + 1 FROM plaid_items), $1, $2, $3, $4, $5)
+      `INSERT INTO plaid_items (user_id, access_token, item_id, institution_name, institution_id)
+       VALUES ($1, $2, $3, $4, $5)
        ON CONFLICT (institution_id, user_id) WHERE institution_id IS NOT NULL DO UPDATE SET
          access_token     = EXCLUDED.access_token,
          item_id          = EXCLUDED.item_id,
@@ -424,8 +406,8 @@ async function upsertPlaidItem(pool, userId, encryptedAccessToken, itemId, insti
   }
   // Fallback for items without institution_id (edge case)
   const { rows } = await pool.query(
-    `INSERT INTO plaid_items (id, user_id, access_token, item_id, institution_name, institution_id)
-     VALUES ((SELECT COALESCE(MAX(id), 0) + 1 FROM plaid_items), $1, $2, $3, $4, $5)
+    `INSERT INTO plaid_items (user_id, access_token, item_id, institution_name, institution_id)
+     VALUES ($1, $2, $3, $4, $5)
      ON CONFLICT (item_id, user_id) WHERE item_id IS NOT NULL DO UPDATE SET
        access_token     = EXCLUDED.access_token,
        institution_name = COALESCE(EXCLUDED.institution_name, plaid_items.institution_name),
@@ -475,11 +457,8 @@ async function upsertPlaidAccount(pool, plaidItemId, userId, accountId, name, of
       // Migrate account to the current item — this fixes the case where the account
       // was stored under an old plaid_item_id (from a previous connect/reconnect)
       // while the current sync is running against a newer item.
-      // Also fixes id = null rows (Prisma schema omitted SERIAL default) inline so
-      // getAccountMap returns a truthy id on the next lookup.
       const { rows } = await pool.query(
         `UPDATE plaid_accounts SET
-           id                 = CASE WHEN id IS NULL THEN nextval('plaid_accounts_id_seq') ELSE id END,
            plaid_item_id      = $1,
            user_id            = COALESCE($2, user_id),
            name               = $3,
@@ -500,12 +479,11 @@ async function upsertPlaidAccount(pool, plaidItemId, userId, accountId, name, of
       );
       return rows[0];
     }
-    // WHY explicit id: plaid_accounts.id has no sequence/DEFAULT in Prisma-generated schema
-    // (same issue as plaid_items — see upsertPlaidItem). Without specifying id, PostgreSQL
-    // inserts NULL and every accountMap lookup returns null, silently dropping all transactions.
+    // id comes from plaid_accounts_id_seq (primary key since migration
+    // plaid_primary_keys); the old explicit MAX(id)+1 could collide under concurrency.
     const { rows } = await pool.query(
-      `INSERT INTO plaid_accounts (id, plaid_item_id, user_id, account_id, name, official_name, type, subtype, mask, current_balance, available_balance, balance_updated_at)
-       VALUES ((SELECT COALESCE(MAX(id), 0) + 1 FROM plaid_accounts), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())
+      `INSERT INTO plaid_accounts (plaid_item_id, user_id, account_id, name, official_name, type, subtype, mask, current_balance, available_balance, balance_updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())
        RETURNING *`,
       [plaidItemId, userId, accountId, name, officialName || null, type, subtype || null, mask || null,
        currentBalance != null ? currentBalance : null,
