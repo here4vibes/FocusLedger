@@ -48,6 +48,7 @@ HEADLINE rules (the curiosity gap — this is shown BEFORE they tap):
 - Max 60 characters. No emoji.
 - Good: "Something about your Tuesdays" / "Your 2pm pattern is real" / "The coffee thing isn't random"
 - Bad: "You completed 12 tasks!" (gives it away) / "Your weekly insight" (generic)
+- Weekday patterns are RECURRING: write "your Tuesdays" or "Tuesday mornings". Never "your Tuesday morning" or a bare "Tuesday" — that reads as one specific past day, and it's stale when they read it on a different day. You'll be told which day this is read; only speak of "this morning"/"today" if the pattern is about that day.
 
 BODY rules (the payoff — shown after the tap):
 - ONE discovery, 1-3 short sentences, Buddy's voice: direct, warm, real. No manufactured enthusiasm.
@@ -311,8 +312,33 @@ function interestsLine(interests) {
 
 // ── AI reveal ─────────────────────────────────────────────────────────────────
 
+const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+/** 'YYYY-MM-DD' (the user's local reveal date) → 'Thursday'. */
+function weekdayOf(localDate) {
+  const [y, m, d] = String(localDate).split('-').map(Number);
+  return WEEKDAYS[new Date(Date.UTC(y, m - 1, d)).getUTCDay()];
+}
+
+/**
+ * True if the headline names ONE specific weekday other than the read day —
+ * e.g. "Your Tuesday morning is telling you something" pushed on a Thursday,
+ * which reads as stale. Recurring forms are fine: "your Tuesdays",
+ * "Tuesday mornings". Naming the read day itself is fine too.
+ */
+function hasStaleWeekday(headline, readDay) {
+  const re = /\b(sunday|monday|tuesday|wednesday|thursday|friday|saturday)(s\b|\s+(mornings|afternoons|evenings|nights)\b)?/gi;
+  let m;
+  while ((m = re.exec(String(headline)))) {
+    const day = m[1][0].toUpperCase() + m[1].slice(1).toLowerCase();
+    const recurring = !!m[2];
+    if (!recurring && day !== readDay) return true;
+  }
+  return false;
+}
+
 function parseRevealJson(text, opts) {
-  const { defaultScienceTag = 'cross_domain', revealType = 'insight' } = opts || {};
+  const { defaultScienceTag = 'cross_domain', revealType = 'insight', readDay = null } = opts || {};
   // Haiku may wrap JSON in prose or fences — extract the first {...} block.
   const match = text.match(/\{[\s\S]*\}/);
   if (!match) return null;
@@ -329,11 +355,18 @@ function parseRevealJson(text, opts) {
   const headline = String(obj.headline).trim().slice(0, 80);
   const body = String(obj.body).trim();
   if (headline.length < 5 || body.length < 20) return null;
+  // The headline is pushed as the morning notification — a single past
+  // weekday there looks like a bug. Reject → deterministic fallback, whose
+  // weekday headline is the recurring "Something about your Tuesdays".
+  if (readDay && hasStaleWeekday(headline, readDay)) {
+    console.warn('[daily-reveal] headline names a stale weekday, using fallback | read day:', readDay, '| headline:', headline);
+    return null;
+  }
   const scienceTag = SCIENCE_TAGS.includes(obj.science_tag) ? obj.science_tag : defaultScienceTag;
   return { headline, body, scienceTag, revealType };
 }
 
-async function generateAiReveal(userContext) {
+async function generateAiReveal(userContext, readDay) {
   // Lazy require — keeps the module importable (tests, environments without
   // the SDK); the AI path is already gated on ANTHROPIC_API_KEY in run().
   const { complete } = require('../lib/claude-client');
@@ -341,15 +374,15 @@ async function generateAiReveal(userContext) {
     system: SYSTEM_PROMPT,
     messages: [{
       role: 'user',
-      content: `Here is this user's week:\n\n${userContext}\n\nStage tonight's Daily Reveal as JSON.`,
+      content: `This reveal is read on the morning of ${readDay}.\n\nHere is this user's week:\n\n${userContext}\n\nStage tonight's Daily Reveal as JSON.`,
     }],
     model: 'claude-haiku-4-5-20251001',
     maxTokens: 300,
   });
-  return parseRevealJson(text);
+  return parseRevealJson(text, { readDay });
 }
 
-async function generateInterestReveal(interest, userContext) {
+async function generateInterestReveal(interest, userContext, readDay) {
   const curated = INTEREST_FACTS[interest.tag];
   if (!curated) return null; // no sourced fact for this tag → caller falls back
   const { complete } = require('../lib/claude-client');
@@ -357,7 +390,7 @@ async function generateInterestReveal(interest, userContext) {
     system: INTEREST_PROMPT,
     messages: [{
       role: 'user',
-      content: `Interest: ${interest.tag}\nEvidence from their own tasks/spending: ${interest.evidence.map(e => `"${e}"`).join(', ')} (${interest.count} signals over 90 days)\n\nTHE FACT TO DELIVER (already sourced — do not add other claims):\n${curated.fact}\n\nTheir week, for optional personal connection:\n${userContext}\n\nStage tonight's interest reveal as JSON.`,
+      content: `This reveal is read on the morning of ${readDay}.\nInterest: ${interest.tag}\nEvidence from their own tasks/spending: ${interest.evidence.map(e => `"${e}"`).join(', ')} (${interest.count} signals over 90 days)\n\nTHE FACT TO DELIVER (already sourced — do not add other claims):\n${curated.fact}\n\nTheir week, for optional personal connection:\n${userContext}\n\nStage tonight's interest reveal as JSON.`,
     }],
     model: 'claude-haiku-4-5-20251001',
     maxTokens: 300,
@@ -365,7 +398,7 @@ async function generateInterestReveal(interest, userContext) {
   // science_tag "none" (or invalid) → no footer; interest reveals don't have
   // to teach science every time. Source is attached from the curated bank —
   // NEVER from the model, which cannot be trusted to produce real URLs.
-  const parsed = parseRevealJson(text, { defaultScienceTag: null, revealType: 'interest' });
+  const parsed = parseRevealJson(text, { defaultScienceTag: null, revealType: 'interest', readDay });
   if (!parsed) return null;
   return { ...parsed, source: curated.source };
 }
@@ -643,7 +676,7 @@ async function run() {
             const pick = interests[hashSeed(`int:${user.id}:${localDate}`) % interests.length];
             if (process.env.ANTHROPIC_API_KEY) {
               try {
-                reveal = await generateInterestReveal(pick, userContext);
+                reveal = await generateInterestReveal(pick, userContext, weekdayOf(localDate));
               } catch (aiErr) {
                 console.warn(`[daily-reveal] interest AI failed user=${user.id}:`, aiErr.message, '— using fallback');
               }
@@ -656,7 +689,7 @@ async function run() {
           if (!reveal) {
             if (process.env.ANTHROPIC_API_KEY) {
               try {
-                reveal = await generateAiReveal(userContext);
+                reveal = await generateAiReveal(userContext, weekdayOf(localDate));
               } catch (aiErr) {
                 console.warn(`[daily-reveal] AI failed user=${user.id}:`, aiErr.message, '— using fallback');
               }
@@ -701,7 +734,7 @@ async function run() {
 
 // Export pure functions for tests; only run when invoked as a script.
 module.exports = {
-  buildFallbackReveal, parseRevealJson, summariseForPrompt,
+  buildFallbackReveal, parseRevealJson, summariseForPrompt, weekdayOf, hasStaleWeekday,
   pickFunFact, isFunFactDay, FUN_FACTS, SCIENCE_TAGS,
   deriveInterests, revealSlotFor, buildInterestFallback, interestsLine,
   INTEREST_KEYWORDS, INTEREST_FACTS,

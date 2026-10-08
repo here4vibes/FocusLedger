@@ -18,6 +18,8 @@ const {
   interestsLine,
   INTEREST_KEYWORDS,
   INTEREST_FACTS,
+  weekdayOf,
+  hasStaleWeekday,
 } = require('../jobs/dailyRevealJob');
 
 const empty = { tasks: [], expenses: [], checkins: [], focus: [], streaks: [] };
@@ -333,5 +335,49 @@ describe('parseRevealJson', () => {
     );
     expect(r.scienceTag).toBeNull();
     expect(r.revealType).toBe('interest');
+  });
+});
+
+// ── Stale weekday headlines (Oct 2026: a Thursday push said "Your Tuesday
+//    morning is telling you something") ────────────────────────────────────
+describe('weekdayOf', () => {
+  test('maps a local YYYY-MM-DD to its weekday', () => {
+    expect(weekdayOf('2026-10-08')).toBe('Thursday');
+    expect(weekdayOf('2026-10-06')).toBe('Tuesday');
+  });
+});
+
+describe('hasStaleWeekday', () => {
+  test('flags a single past weekday on a different day (the reported headline)', () => {
+    expect(hasStaleWeekday('Your Tuesday morning is telling you something', 'Thursday')).toBe(true);
+    expect(hasStaleWeekday("Tuesday's tasks had a theme", 'Thursday')).toBe(true);
+    expect(hasStaleWeekday('What happened Tuesday', 'Thursday')).toBe(true);
+  });
+  test('allows recurring weekday patterns', () => {
+    expect(hasStaleWeekday('Something about your Tuesdays', 'Thursday')).toBe(false);
+    expect(hasStaleWeekday('Your Tuesday mornings are telling you something', 'Thursday')).toBe(false);
+    expect(hasStaleWeekday('tuesday evenings hit different', 'Thursday')).toBe(false);
+  });
+  test('allows naming the day it is read on', () => {
+    expect(hasStaleWeekday('Your Thursday morning has a pattern', 'Thursday')).toBe(false);
+  });
+  test('no weekday → never stale', () => {
+    expect(hasStaleWeekday('Your 2pm pattern is real', 'Thursday')).toBe(false);
+  });
+});
+
+describe('parseRevealJson read-day guard', () => {
+  const body = 'Four of your seven completions this week landed before 10am on Tuesday.';
+  const json = (headline) => JSON.stringify({ headline, body, science_tag: 'executive_function' });
+
+  test('rejects a stale-weekday headline so the deterministic fallback is used', () => {
+    expect(parseRevealJson(json('Your Tuesday morning is telling you something'), { readDay: 'Thursday' })).toBeNull();
+  });
+  test('accepts the recurring phrasing', () => {
+    const r = parseRevealJson(json('Your Tuesday mornings are telling you something'), { readDay: 'Thursday' });
+    expect(r && r.headline).toBe('Your Tuesday mornings are telling you something');
+  });
+  test('without a read day, behaves exactly as before', () => {
+    expect(parseRevealJson(json('Your Tuesday morning is telling you something'))).not.toBeNull();
   });
 });
