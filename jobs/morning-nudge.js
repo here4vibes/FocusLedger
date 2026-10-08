@@ -6,6 +6,9 @@
  * hour is checked so nudges fire at the right local time regardless of UTC.
  */
 
+const { initSentry, flushAndExit } = require('../lib/sentry');
+initSentry('morning-nudge'); // console.error → Sentry for this cron (see lib/sentry.js)
+
 const { Pool } = require('pg');
 const { sendMorningNudges } = require('../morningNudge');
 
@@ -28,5 +31,5 @@ async function run() {
 
 run().catch(err => {
   console.error('[morning-nudge] Fatal:', err.message);
-  process.exit(1);
+  flushAndExit(1);
 });

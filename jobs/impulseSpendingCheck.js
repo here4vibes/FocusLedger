@@ -11,6 +11,9 @@
 // dotenv is not an installed dependency — requiring it crashed the job with
 // MODULE_NOT_FOUND on every run. Render injects env vars directly, matching
 // every other job in this folder.
+const { initSentry } = require('../lib/sentry');
+initSentry('impulseSpendingCheck'); // console.error → Sentry for this cron (see lib/sentry.js)
+
 const { Pool } = require('pg');
 
 const pool = new Pool({

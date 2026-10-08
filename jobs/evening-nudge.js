@@ -7,6 +7,9 @@
  * sends the spending triage nudge for users with a Plaid connection.
  */
 
+const { initSentry, flushAndExit } = require('../lib/sentry');
+initSentry('evening-nudge'); // console.error → Sentry for this cron (see lib/sentry.js)
+
 const { Pool } = require('pg');
 const { sendEveningNudges } = require('../eveningNudge');
 
@@ -29,5 +32,5 @@ async function run() {
 
 run().catch(err => {
   console.error('[evening-nudge] Fatal:', err.message);
-  process.exit(1);
+  flushAndExit(1);
 });

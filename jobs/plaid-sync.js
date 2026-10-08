@@ -21,6 +21,9 @@
  *   command = "node jobs/plaid-sync.js"
  */
 
+const { initSentry, flushAndExit } = require('../lib/sentry');
+initSentry('plaid-sync'); // console.error → Sentry for this cron (see lib/sentry.js)
+
 const { Pool } = require('pg');
 const crypto = require('crypto');
 
@@ -314,5 +317,5 @@ async function main() {
 
 main().catch(err => {
   console.error('[plaid-sync] Fatal error:', err.message);
-  pool.end().then(() => process.exit(1)).catch(() => process.exit(1));
+  pool.end().then(() => flushAndExit(1)).catch(() => flushAndExit(1));
 });

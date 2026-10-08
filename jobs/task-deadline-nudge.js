@@ -5,6 +5,9 @@
  * Runs every 15 minutes via render.yaml cron. Respects the per-user daily push cap.
  */
 
+const { initSentry, flushAndExit } = require('../lib/sentry');
+initSentry('task-deadline-nudge'); // console.error → Sentry for this cron (see lib/sentry.js)
+
 const { Pool } = require('pg');
 const { sendTaskDeadlineNudges } = require('../taskDeadlineNudge');
 
@@ -27,5 +30,5 @@ async function run() {
 
 run().catch(err => {
   console.error('[task-deadline-nudge] Fatal:', err.message);
-  process.exit(1);
+  flushAndExit(1);
 });

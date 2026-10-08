@@ -14,6 +14,9 @@
  */
 'use strict';
 
+const { initSentry, flushAndExit } = require('../lib/sentry');
+initSentry('crossDomainInsightsJob'); // console.error → Sentry for this cron (see lib/sentry.js)
+
 const { Pool } = require('pg');
 const { complete } = require('../lib/claude-client');
 const { saveCrossDomainInsight } = require('../db/insights');
@@ -218,7 +221,7 @@ async function run() {
     console.log(`[cross-domain-insights] Done. generated=${ok} skipped=${skipped} total=${users.length}`);
   } catch (err) {
     console.error('[cross-domain-insights] Fatal:', err.message);
-    process.exit(1);
+    flushAndExit(1);
   } finally {
     await pool.end();
   }

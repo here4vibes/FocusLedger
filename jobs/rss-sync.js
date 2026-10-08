@@ -5,6 +5,9 @@
  * Runs every 20 minutes via render.yaml cron. Articles older than 48h are pruned.
  */
 
+const { initSentry, flushAndExit } = require('../lib/sentry');
+initSentry('rss-sync'); // console.error → Sentry for this cron (see lib/sentry.js)
+
 const { Pool } = require('pg');
 const { fetchAllFeeds } = require('../routes/news');
 
@@ -27,5 +30,5 @@ async function run() {
 
 run().catch(err => {
   console.error('[rss-sync] Fatal:', err.message);
-  process.exit(1);
+  flushAndExit(1);
 });

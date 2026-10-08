@@ -12,6 +12,9 @@
  */
 'use strict';
 
+const { initSentry, flushAndExit } = require('../lib/sentry');
+initSentry('patternDetectionJob'); // console.error → Sentry for this cron (see lib/sentry.js)
+
 const { Pool } = require('pg');
 const {
   upsertDetectedPattern,
@@ -296,7 +299,7 @@ async function run() {
     console.log(`[pattern-detection] Done. ${succeeded}/${userIds.length} users processed`);
   } catch (err) {
     console.error('[pattern-detection] Fatal error:', err.message);
-    process.exit(1);
+    flushAndExit(1);
   } finally {
     await pool.end();
   }
