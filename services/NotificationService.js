@@ -7,20 +7,18 @@
  *               (db/notifications.js), generic nudge preferences (nudge_preferences table).
  *
  * Condition chain (all must pass before send):
- *   1. User has a Plaid token connected  → plaid_tokens table
- *   2. User has transactions today        → transactions table (user's local date)
+ *   1. User has Plaid connected           → plaid_items (current) or plaid_tokens (v1)
+ *   2. User has spending today            → expenses or v1 transactions (user's local date)
  *   3. Evening check-in is enabled       → user_notification_prefs.evening_enabled
  *   4. Session not already complete today → spending_sessions.complete
  *
  * Push uses Web Push (VAPID) + APNs via existing lib/apns-sender.js.
- * Retry: on failure, schedules a retry via setTimeout(15 min) — persists across
- * cron invocations within the same process lifetime.
+ * Timing: jobs/evening-checkin.js runs hourly and calls this at the user's
+ * evening_time (local). No in-process retry — the job's pool ends after a run.
  *
  * Events emitted:
  *   - evening_checkin.sent           — on successful send
  *   - evening_checkin.skipped        — on condition failure (with reason)
- *   - evening_checkin.retry_scheduled — when initial send fails and retry is queued
- *   - evening_checkin.retry_failed    — when retry also fails
  */
 
 const { getPreferences, upsertPreferences }       = require('../db/userNotificationPrefs');
@@ -37,8 +35,13 @@ const { getUserLocalDate }                        = require('../lib/timezone');
  * Condition 1: user has a Plaid token connected.
  */
 async function hasPlaidToken(pool, userId) {
+  // plaid_items is the current integration; plaid_tokens is the v1 table and
+  // was the only one checked, so current Plaid users never qualified.
   const result = await pool.query(
-    `SELECT 1 FROM plaid_tokens WHERE user_id = $1 LIMIT 1`,
+    `SELECT 1 FROM plaid_items WHERE user_id = $1
+     UNION ALL
+     SELECT 1 FROM plaid_tokens WHERE user_id = $1
+     LIMIT 1`,
     [userId]
   );
   return result.rows.length > 0;
@@ -50,7 +53,10 @@ async function hasPlaidToken(pool, userId) {
 async function hasTransactionsToday(pool, userId, timezone) {
   const localDate = getUserLocalDate(timezone || 'America/New_York', new Date());
   const result = await pool.query(
-    `SELECT 1 FROM transactions WHERE user_id = $1 AND date = $2::date LIMIT 1`,
+    `SELECT 1 FROM expenses WHERE user_id = $1 AND expense_date = $2::date
+     UNION ALL
+     SELECT 1 FROM transactions WHERE user_id = $1 AND date = $2::date
+     LIMIT 1`,
     [userId, localDate]
   );
   return result.rows.length > 0;
@@ -133,8 +139,7 @@ async function sendPushToUser(pool, userId, title, body, url) {
  * Send evening check-in push to a user.
  * Returns { sent: boolean, reason?: string, retried?: boolean }
  *
- * Retry logic: if push fails, schedules a retry in 15 minutes via setTimeout.
- * The retry is best-effort — it won't block the caller.
+ * Returns { sent: false, reason } when a condition fails or no device is registered.
  */
 async function send_evening_checkin(pool, userId) {
   const notifKey = 'evening_checkin';
@@ -194,48 +199,12 @@ async function send_evening_checkin(pool, userId) {
     await insertEvent(pool, { userId, eventType: 'evening_checkin.sent', payload: { date: localToday, channels: sentCount > 1 ? 'web+apns' : 'web_or_apns' } });
     return { sent: true };
 
-  } else {
-    // No push tokens configured — record as skipped with reason
-    await insertEvent(pool, { userId, eventType: 'evening_checkin.skipped', payload: { reason: 'no_push_tokens', date: localToday } });
-
-    // Schedule retry in 15 minutes
-    setTimeout(() => {
-      retryEveningCheckin(pool, userId, timezone).catch(err =>
-        console.warn(`[NotificationService] Retry failed for user ${userId}:`, err.message)
-      );
-    }, 15 * 60 * 1000);
-
-    await insertEvent(pool, { userId, eventType: 'evening_checkin.retry_scheduled', payload: { date: localToday, retry_in_minutes: 15 } });
-    return { sent: false, reason: 'retry_scheduled' };
-  }
-}
-
-/**
- * Retry the evening check-in push after a prior failure.
- * Skips conditions (push tokens already checked) and goes straight to send.
- * On failure, records retry_failed — no further automatic retries.
- */
-async function retryEveningCheckin(pool, userId, timezone) {
-  const notifKey = 'evening_checkin';
-  const localToday = getUserLocalDate(timezone || 'America/New_York', new Date());
-  const alreadySent = await wasNotificationSentToday(pool, userId, notifKey, localToday);
-  if (alreadySent) return { sent: false, reason: 'already_sent_today' };
-
-  let sentCount = 0;
-  try {
-    sentCount = await sendPushToUser(pool, userId, 'FocusLedger', "Let's wrap up today's spending — tap to check in.", '/app/money');
-  } catch (err) {
-    console.warn(`[NotificationService] Retry push failed for user ${userId}:`, err.message);
   }
 
-  if (sentCount > 0) {
-    await recordNotificationSent(pool, userId, notifKey, 'evening_checkin_retry', localToday);
-    await insertEvent(pool, { userId, eventType: 'evening_checkin.sent', payload: { date: localToday, is_retry: true } });
-  } else {
-    await insertEvent(pool, { userId, eventType: 'evening_checkin.retry_failed', payload: { date: localToday } });
-  }
-
-  return { sent: sentCount > 0 };
+  // No device to deliver to. (A 15-minute setTimeout retry used to be scheduled
+  // here, but the cron job ends its pool right after, so it could only fail.)
+  await insertEvent(pool, { userId, eventType: 'evening_checkin.skipped', payload: { reason: 'no_push_tokens', date: localToday } });
+  return { sent: false, reason: 'no_push_tokens' };
 }
 
 /**

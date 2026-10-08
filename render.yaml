@@ -142,7 +142,7 @@ services:
   - type: cron
     name: evening-checkin-sender
     runtime: node
-    schedule: "0 20 * * *"
+    schedule: "0 * * * *"       # was 0 20 (20:00 UTC = 1-4pm in the US); the job now sends at each user's evening_time
     buildCommand: npm install
     startCommand: node jobs/evening-checkin.js
     envVars:
