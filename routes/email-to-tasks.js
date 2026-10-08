@@ -137,8 +137,18 @@ async function processEmailToTask(pool, emailData) {
   const userRow = await findUserByEmail(pool, fromEmail);
 
   if (userRow) {
-    // Known sender — check Autopilot status
-    if (!userIsPro(userRow)) {
+    // Known sender — check Autopilot status via the central gate, so promo-code
+    // grants and paid-Tandem partners count too. (The row check alone missed
+    // both.) If the central check errors, fall back to the row check rather
+    // than bouncing a paying user with an "upgrade" email.
+    let senderIsPro;
+    try {
+      senderIsPro = await checkProStatus(pool, userRow.id);
+    } catch (proErr) {
+      console.error('[email-to-tasks] central Pro check failed, using row check:', proErr.message, '| user:', userRow.id);
+      senderIsPro = userIsPro(userRow);
+    }
+    if (!senderIsPro) {
       // Free user — reject cleanly
       await sendProxyEmail({
         to: fromEmail,

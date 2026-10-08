@@ -1542,6 +1542,13 @@
                         html += '<div class="detail-row"><span class="detail-label">Autopilot until</span><span class="detail-value">' + expiryDate + '</span></div>';
                     }
                     html += '</div>';
+                } else if (sub.pro_via_partner) {
+                    // Linked partner pays for Tandem — Autopilot + Tandem included, nothing to bill or cancel here.
+                    html += '<div class="plan-details">';
+                    html += '<div class="detail-row"><span class="detail-label">Access</span><span class="detail-value">Included with your partner’s Tandem plan</span></div>';
+                    html += '<div class="detail-row"><span class="detail-label">Active tasks</span><span class="detail-value">' + limits.active_tasks + ' (unlimited)</span></div>';
+                    html += '</div>';
+                    html += '<div style="margin-top: 0.75rem; font-size: 0.85rem; color: var(--text-muted);">You get Autopilot and Tandem for as long as you’re linked and your partner’s plan is active. Billing is managed by your partner.</div>';
                 } else {
                     // Prices come from config/pricing.js via /status — one source of truth.
                     var planPrices = (pricing && (sub.is_tandem ? pricing.tandem : pricing.autopilot)) || null;

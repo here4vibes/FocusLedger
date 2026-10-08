@@ -17,6 +17,8 @@
  * - Task count limit (10 for free, unlimited for Pro)
  */
 
+const { hasPartnerPaidTandem } = require('../db/partnerships');
+
 async function queryRaw(db, text, params) {
   const result = await db.query(text, params);
   return result.rows;
@@ -27,7 +29,8 @@ async function queryRaw(db, text, params) {
  *
  * Returns true if:
  * - admin_pro_override = true, OR
- * - Stripe subscription plan = 'pro' AND status = 'active'
+ * - Stripe subscription plan = 'pro' AND status = 'active', OR
+ * - their active linked partner pays for Tandem (Tandem includes Autopilot for both)
  *
  * Returns false if:
  * - Free plan, OR
@@ -80,7 +83,11 @@ async function checkProStatus(pool, userId) {
     );
 
     const sub = subResult[0];
-    return !!(sub && sub.plan === 'pro' && sub.status === 'active');
+    if (sub && sub.plan === 'pro' && sub.status === 'active') return true;
+
+    // Tandem covers the pair: if this user's active linked partner pays for
+    // Tandem, this user gets Autopilot too (ends when that lapses or they unlink).
+    return await hasPartnerPaidTandem(pool, userId);
   } catch (err) {
     throw new Error(`Pro status check failed for user ${userId}: ${err.message}`);
   }
