@@ -151,7 +151,7 @@ services:
   - type: cron
     name: cold-start-nudge
     runtime: node
-    schedule: "0 9 * * *"
+    schedule: "0 * * * *"       # was 0 9 (09:00 UTC = 2-5am in the US); the job now sends at 10:00 user-local
     buildCommand: npm install
     startCommand: node jobs/coldStartNudge.js
     envVars:
