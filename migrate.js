@@ -21,8 +21,7 @@
  *   };
  */
 const { Pool } = require('pg');
-const fs = require('fs');
-const path = require('path');
+const { loadMigrations } = require('./lib/migration-manifest');
 
 if (!process.env.DATABASE_URL) {
   console.log('[migrate] DATABASE_URL not set — skipping (build phase)');
@@ -264,20 +263,11 @@ async function runCoreMigrations(client) {
  * Each migration runs once and is tracked in _migrations table.
  */
 async function runFolderMigrations(client) {
-  const migrationsDir = path.join(__dirname, 'migrations');
-
-  // Skip if no migrations folder
-  if (!fs.existsSync(migrationsDir)) {
-    return;
-  }
-
-  // Get all migration files, sorted by name (timestamp prefix ensures order)
-  const files = fs.readdirSync(migrationsDir)
-    .filter(f => f.endsWith('.js'))
-    .sort();
-
-  if (files.length === 0) {
-    return;
+  // Shared with /health (lib/migration-manifest.js) so the runner and the health
+  // report always agree on each migration's recorded name and run order.
+  const migrations = loadMigrations();
+  if (migrations.length === 0) {
+    return false;
   }
 
   // Get already-applied migrations
@@ -287,10 +277,7 @@ async function runFolderMigrations(client) {
   // Run pending migrations IN ORDER. Stop at the first failure: later migrations
   // may depend on an earlier one, so running them against a half-migrated state
   // risks cascading damage. Returns true if a migration failed (caller aborts).
-  for (const file of files) {
-    const migration = require(path.join(migrationsDir, file));
-    const name = migration.name || file.replace('.js', '');
-
+  for (const { name, migration } of migrations) {
     if (appliedNames.has(name)) {
       continue; // Already applied
     }
