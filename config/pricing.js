@@ -11,8 +11,8 @@
 const PLANS = {
   autopilot: {
     name: 'Autopilot',
-    price_monthly: 9.99,
-    price_annual: 100,
+    price_monthly: 9.95,
+    price_annual: 99.95,
     stripe: {
       price_monthly: process.env.STRIPE_PRICE_AUTOPILOT_MONTHLY || null,
       price_annual:  process.env.STRIPE_PRICE_AUTOPILOT_ANNUAL  || null,
@@ -22,8 +22,8 @@ const PLANS = {
   },
   tandem: {
     name: 'Tandem',
-    price_monthly: 14.99,
-    price_annual: 149,
+    price_monthly: 14.95,
+    price_annual: 149.95,
     stripe: {
       price_monthly: process.env.STRIPE_PRICE_TANDEM_MONTHLY || null,
       price_annual:  process.env.STRIPE_PRICE_TANDEM_ANNUAL  || null,

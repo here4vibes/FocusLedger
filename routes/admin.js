@@ -199,9 +199,9 @@ module.exports = function(pool) {
       const newThisMonth  = newThisMonthResult.rows[0]?.count ?? 0;
       const churnCount    = churnThisMonthResult.rows[0]?.count ?? 0;
 
-      // MRR: monthly subscribers x $9.99 + annual subscribers x $8.33/mo
-      const MONTHLY_PRICE = 9.99;
-      const ANNUAL_MONTHLY_PRICE = 8.33; // $100/yr / 12
+      // MRR: monthly subscribers x $9.95 + annual subscribers x $8.33/mo
+      const MONTHLY_PRICE = 9.95;
+      const ANNUAL_MONTHLY_PRICE = 8.33; // $99.95/yr / 12
       const mrr = (proMonthly * MONTHLY_PRICE) + (proAnnual * ANNUAL_MONTHLY_PRICE);
 
       // Visitor stats — engaged is the headline; raw kept for the bot-share line
