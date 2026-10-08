@@ -26,6 +26,23 @@ async function getUserContact(pool, userId) {
   return rows[0] || null;
 }
 
+/**
+ * What a recorded checkout bought, for the post-checkout redirect (analytics
+ * value + plan label) when the webhook already activated it.
+ * @returns {{ billing_cycle: string|null, tandem: boolean } | null}
+ */
+async function getActivationSummary(pool, sessionId) {
+  const { rows } = await pool.query(`
+    SELECT a.billing_cycle,
+           (u.tandem_plan = 'tandem' AND u.tandem_expires_at > NOW()) AS tandem
+    FROM app_subscription a
+    JOIN users u ON u.id = a.user_id
+    WHERE a.checkout_session_id = $1
+    LIMIT 1
+  `, [sessionId]);
+  return rows[0] || null;
+}
+
 async function getLatestSubscription(pool, userId) {
   const { rows } = await pool.query(
     'SELECT * FROM app_subscription WHERE user_id = $1 ORDER BY id DESC LIMIT 1',
@@ -183,6 +200,7 @@ module.exports = {
   findUserIdByEmail,
   getUserContact,
   getLatestSubscription,
+  getActivationSummary,
   recordActivation,
   syncByStripeSubscription,
   markPastDue,

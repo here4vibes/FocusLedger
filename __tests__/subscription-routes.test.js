@@ -156,3 +156,36 @@ describe('legacy POST /webhook', () => {
     expect(res.status).toBe(410);
   });
 });
+
+describe('GET /activate → Settings redirect carries the real purchase (Meta Pixel)', () => {
+  function qsOf(res) { return new URL('http://x' + res.headers.location).searchParams; }
+
+  test('fast path (webhook won): Tandem annual → value 149.95, deduped by session', async () => {
+    billingDb.findBySessionId.mockResolvedValue({ id: 1, user_id: 42 });
+    billingDb.getActivationSummary.mockResolvedValue({ billing_cycle: 'annual', tandem: true });
+    const res = await request(app()).get('/api/subscription/activate?session_id=cs_live_abc');
+    expect(res.status).toBe(302);
+    const q = qsOf(res);
+    expect(q.get('upgraded')).toBe('true');
+    expect(q.get('plan')).toBe('tandem');
+    expect(q.get('billing_cycle')).toBe('annual');
+    expect(q.get('value')).toBe('149.95');
+    expect(q.get('ref')).toBe('cs_live_abc');
+  });
+
+  test('fresh activation: Autopilot monthly → value 9.95', async () => {
+    billingDb.findBySessionId.mockResolvedValue(null);
+    billingDb.findUserIdByEmail.mockResolvedValue(42);
+    billingDb.recordActivation.mockResolvedValue({ duplicate: false, firstActivation: false });
+    mockStripe.checkout.sessions.retrieve.mockResolvedValue({
+      id: 'cs_live_new', payment_status: 'paid', customer_details: { email: 'buyer@example.com' }, metadata: {},
+      subscription: stripeSub(),
+    });
+    const res = await request(app()).get('/api/subscription/activate?session_id=cs_live_new');
+    const q = qsOf(res);
+    expect(q.get('plan')).toBe('autopilot');
+    expect(q.get('billing_cycle')).toBe('monthly');
+    expect(q.get('value')).toBe('9.95');
+    expect(q.get('ref')).toBe('cs_live_new');
+  });
+});

@@ -1880,7 +1880,23 @@
                     toast.classList.add('visible');
                     setTimeout(function() { toast.classList.remove('visible'); }, 6000);
                 }
-                // Clean URL
+                // Meta Pixel Purchase. Checkout returns here, but the event only
+                // ever fired on the legacy app.html, so ad conversions went
+                // unreported. Value is the real price, set server-side from
+                // config/pricing.js; eventID = checkout session, so Meta drops
+                // duplicates (e.g. a back-button revisit).
+                var value = parseFloat(params.get('value'));
+                if (typeof fbq === 'function' && value > 0) {
+                    var planName = params.get('plan') === 'tandem' ? 'Tandem' : 'Autopilot';
+                    var cycleName = params.get('billing_cycle') === 'annual' ? 'Annual' : 'Monthly';
+                    var ref = params.get('ref');
+                    try {
+                        fbq('track', 'Purchase',
+                            { value: value, currency: 'USD', content_name: planName + ' ' + cycleName },
+                            ref ? { eventID: 'purchase_' + ref } : undefined);
+                    } catch (e) { console.error('[settings] Pixel Purchase failed:', e.message); }
+                }
+                // Clean URL (also stops a refresh from re-firing the Purchase)
                 try { history.replaceState({}, '', window.location.pathname); } catch(e) {}
             }
         })();
