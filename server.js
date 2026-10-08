@@ -65,6 +65,7 @@ const repairTasksSchema  = require('./lib/startup-repair');
 const repairPlaidSchema  = require('./lib/plaid-startup-repair');
 const { verifyToken } = require('./middleware/auth');
 const { buildSessionMiddleware } = require('./lib/session');
+const { getMigrationStatus } = require('./db/migrations-status');
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -148,18 +149,14 @@ app.get('/health', async (req, res) => {
       pool.query('SELECT 1'),
       new Promise((_, reject) => setTimeout(() => reject(new Error('DB timeout')), 4000)),
     ]);
-    // Include last 5 applied migrations so deploys can be verified without Render log access
-    let migrations = [];
+    // Is every migration THIS code expects recorded as applied? (See db/migrations-status.js.)
+    let migrations;
     try {
-      const { rows } = await pool.query(
-        `SELECT name, MAX(applied_at) AS applied_at
-         FROM _migrations
-         GROUP BY name
-         ORDER BY MAX(applied_at) DESC NULLS LAST
-         LIMIT 5`
-      );
-      migrations = rows;
-    } catch (_) { /* _migrations table may not exist on fresh DB */ }
+      migrations = await getMigrationStatus(pool);
+    } catch (migErr) {
+      console.error('[health] migration status failed:', migErr.message);
+      migrations = { up_to_date: null, error: 'status unavailable' };
+    }
     res.json({ status: 'ok', db: 'ok', latency_ms: Date.now() - start, commit: process.env.RENDER_GIT_COMMIT || 'unknown', migrations });
   } catch (err) {
     res.status(503).json({ status: 'degraded', db: 'error', error: err.message, latency_ms: Date.now() - start });
