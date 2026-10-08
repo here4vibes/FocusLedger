@@ -87,7 +87,13 @@ const corsMiddleware = cors({
     if (process.env.NODE_ENV !== 'production' && /^http:\/\/localhost(:\d+)?$/.test(origin)) {
       return callback(null, true);
     }
-    callback(new Error('Not allowed by CORS'));
+    // Decline quietly: no CORS headers, so the browser blocks the call. This
+    // used to pass an Error, which turned every preflight from an unknown
+    // origin (mostly scanners hitting OPTIONS /) into a 500 and a Sentry
+    // error — 395 of them since May. A warning keeps the origin visible in
+    // Render logs without paging anyone.
+    console.warn('[cors] declined origin:', origin);
+    callback(null, false);
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
