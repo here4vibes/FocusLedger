@@ -180,7 +180,7 @@ async function send_evening_checkin(pool, userId) {
   // All conditions pass → send push
   const title = 'FocusLedger';
   const body  = "Let's wrap up today's spending — tap to check in.";
-  const url   = '/money';
+  const url   = '/app/money';
 
   let sentCount = 0;
   try {
@@ -223,7 +223,7 @@ async function retryEveningCheckin(pool, userId, timezone) {
 
   let sentCount = 0;
   try {
-    sentCount = await sendPushToUser(pool, userId, 'FocusLedger', "Let's wrap up today's spending — tap to check in.", '/money');
+    sentCount = await sendPushToUser(pool, userId, 'FocusLedger', "Let's wrap up today's spending — tap to check in.", '/app/money');
   } catch (err) {
     console.warn(`[NotificationService] Retry push failed for user ${userId}:`, err.message);
   }

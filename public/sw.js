@@ -13,7 +13,7 @@
  * when offline. The ~50ms latency cost is invisible on modern connections.
  */
 
-const CACHE_VERSION = 'fl-v54';
+const CACHE_VERSION = 'fl-v55';
 const OFFLINE_URL = '/offline.html';
 
 // Assets to precache on install (app shell)
@@ -23,8 +23,7 @@ const PRECACHE_URLS = [
   '/app',
   '/home',       // Morning nudge notification tap target
   '/app/buddy',  // Accountabilibuddy check-in page
-  '/money',      // Money page — was missing, caused stale cache on offline fallback
-  '/buddy',      // Buddy direct route
+  '/app/money',  // Money page (canonical; /money is a 301 alias)
   '/portal',
   '/login',
   '/signup',
