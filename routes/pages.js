@@ -62,6 +62,7 @@ router.get('/ideas',     (_, res) => res.sendFile(pub('ideas.html')));
 router.get('/values',    (_, res) => res.sendFile(pub('values.html')));
 router.get('/insights',  (_, res) => res.sendFile(pub('insights.html')));
 router.get('/calendar',  (_, res) => res.sendFile(pub('calendar.html')));
+router.get('/recap',     (_, res) => res.sendFile(pub('recap.html')));   // linked as /recap; was a 404
 router.get('/email',     (_, res) => res.sendFile(pub('email.html')));
 router.get('/journal',   (_, res) => res.sendFile(pub('journal.html')));
 router.get('/share',     (_, res) => res.sendFile(pub('share.html')));
@@ -137,6 +138,14 @@ router.get('/app/focus/:taskId', (_, res) => {
 router.get('/app/task/:taskId', (_, res) => {
     if (!res.headersSent) res.sendFile(pub('app/task.html'));
 });
+// Real pages that in-app links and the Google Calendar OAuth callback point at
+// under /app/*. Without these they fell through to the legacy app.html
+// catch-all below, which ignores the path and query — e.g. the ?gcal= result
+// of connecting Google Calendar was silently lost.
+router.get('/app/calendar',   (_, res) => res.sendFile(pub('calendar.html')));
+router.get('/app/routines',   (_, res) => res.sendFile(pub('routines.html')));
+router.get('/app/life/score', (_, res) => res.sendFile(pub('score.html')));
+
 router.get('/app/*',        (_, res) => res.sendFile(pub('app.html')));
 
 // Portal / command center

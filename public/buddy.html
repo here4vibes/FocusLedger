@@ -2339,7 +2339,9 @@
                 btn.addEventListener('click', function() {
                     var taskId = btn.dataset.taskId;
                     if (taskId) {
-                        window.location.href = '/app?focus=' + taskId;
+                        // Focus Mode on this task. Was /app?focus=<id>, which lands on
+                        // the home hub — it ignores ?focus=, so the tap did nothing useful.
+                        window.location.href = '/app/focus/' + encodeURIComponent(taskId);
                     } else {
                         btn.textContent = '✓';
                         btn.style.background = 'var(--green)';

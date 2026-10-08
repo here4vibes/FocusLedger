@@ -1330,7 +1330,9 @@ No events today — <a href=/calendar style=color:var(--orange)>set up calendar<
       // avoidance nudge (3+ skips on same task)
       if (t.skip_count >= 3) {
         avoidNudge.classList.add('show');
-        if (breakLink) breakLink.href = '/app#task-' + t.id;
+        // Task detail has the "I'm stuck" breakdown. Was /app#task-<id>, which
+        // lands on the home hub — it ignores the hash.
+        if (breakLink) breakLink.href = '/app/task/' + encodeURIComponent(t.id);
       } else {
         avoidNudge.classList.remove('show');
       }
