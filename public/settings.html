@@ -1953,7 +1953,9 @@
         // Init
         loadSubscriptionData();
         loadConnectedAccounts();
-        loadBankSync();
+        // Bank sync status loads via PlaidService on window load (above). A call to
+        // an undefined loadBankSync() used to sit here and threw on every visit,
+        // killing the rest of this script: Set Password, timezone picker, push settings.
 
         // Handle ?focus=bank — scroll to bank section
         (function() {
