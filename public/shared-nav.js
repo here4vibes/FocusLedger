@@ -227,7 +227,7 @@
 
     // Brand header — links to home
     var brand = document.createElement('a');
-    brand.href = '/app';
+    brand.href = '/weightless';
     brand.className = 'shared-sidebar-brand';
     brand.style.textDecoration = 'none';
     brand.innerHTML = '<img src="/icons/fl-icon.svg" style="height:28px;width:auto;display:block;flex-shrink:0" alt=""> <span style="font-weight:700;color:rgba(255,255,255,0.95)">Focus</span><span style="font-weight:400;color:#f0b429">Ledger</span>';
@@ -296,7 +296,7 @@
     bar.setAttribute('role', 'banner');
 
     var logoLink = document.createElement('a');
-    logoLink.href = '/app';
+    logoLink.href = '/weightless';
     logoLink.className = 'shared-top-logo';
     logoLink.setAttribute('aria-label', 'FocusLedger home');
 

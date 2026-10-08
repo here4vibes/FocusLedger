@@ -148,9 +148,14 @@ router.get('/app/life/score', (_, res) => res.sendFile(pub('score.html')));
 
 router.get('/app/*',        (_, res) => res.sendFile(pub('app.html')));
 
-// Portal / command center
-router.get('/portal', (_, res) => res.sendFile(pub('portal.html')));
-router.get('/home',   (_, res) => res.sendFile(pub('portal.html')));
+// One home: Weightless (conversation + Radar) is where login and the PWA open,
+// so /home and /portal (the old Command Center) send people there too. 302, not
+// 301, so browsers don't cache it forever if we change our minds. The Command
+// Center stays reachable at /portal/legacy while its last unique features
+// (Morning Launch, budget widget, time blocks) find a new home.
+router.get('/portal', (_, res) => res.redirect(302, '/weightless'));
+router.get('/home',   (_, res) => res.redirect(302, '/weightless'));
+router.get('/portal/legacy', (_, res) => res.sendFile(pub('portal.html')));
 
 // Weightless — conversation-first surface (coexists with the classic app).
 // New users will default here; existing users opt in. See CLAUDE.md "Recent changes".
