@@ -341,6 +341,28 @@ async function checkTandemAccess(pool, userId) {
 }
 
 /**
+ * Is this user's ACTIVE linked partner a paying Tandem subscriber right now?
+ * A paid Tandem plan includes Autopilot for both people in the pair, so this
+ * feeds middleware/proUtils.checkProStatus. Trials deliberately don't count —
+ * only a paid partner unlocks Autopilot. Access ends automatically when the
+ * partner's Tandem lapses (tandem_expires_at) or the partnership is dissolved.
+ * @returns {Promise<boolean>}
+ */
+async function hasPartnerPaidTandem(pool, userId) {
+  const { rows } = await q(pool, `
+    SELECT 1
+    FROM partnerships p
+    JOIN users pu ON pu.id = CASE WHEN p.inviter_id = $1 THEN p.invitee_id ELSE p.inviter_id END
+    WHERE (p.inviter_id = $1 OR p.invitee_id = $1)
+      AND p.status = 'active'
+      AND pu.tandem_plan = 'tandem'
+      AND pu.tandem_expires_at > NOW()
+    LIMIT 1
+  `, [userId]);
+  return rows.length > 0;
+}
+
+/**
  * Activate the Tandem subscription for a user after successful payment.
  * Also activates the 14-day trial for their partner (if not already started).
  * expiresAt: Date — end of subscription period from Stripe
@@ -436,6 +458,7 @@ module.exports = {
   getPartnerCompletionFeed,
   // Tandem subscription
   checkTandemAccess,
+  hasPartnerPaidTandem,
   activateTandemSubscription,
   activateTandemTrial,
   // Partner concerns

@@ -15,6 +15,7 @@ const FREE_TASK_LIMIT = 10;
 const { getStripe } = require('../lib/stripe-client');
 const billing = require('../lib/billing');
 const billingDb = require('../db/billing');
+const { hasPartnerPaidTandem } = require('../db/partnerships');
 
 // Legacy: kept for backward compat with any code that still imports STRIPE_LINKS directly.
 // New code should use PLANS from config/pricing.js.
@@ -94,9 +95,13 @@ module.exports = function(pool) {
       const promoActive = !!(user.autopilot_expires_at && new Date(user.autopilot_expires_at) > new Date());
       const activeTaskCount = parseInt(taskCountResult.rows[0].count);
 
-      const isPro = (sub.plan === 'pro' && sub.status === 'active') || adminProOverride || promoActive;
+      const ownPaidPro = sub.plan === 'pro' && sub.status === 'active';
+      // A paid Tandem partner includes Autopilot (and the Tandem features) for this user.
+      const partnerPaidTandem = await hasPartnerPaidTandem(pool, userId);
+      const isPro = ownPaidPro || adminProOverride || promoActive || partnerPaidTandem;
+      const proViaPartner = partnerPaidTandem && !ownPaidPro && !adminProOverride && !promoActive;
       // Tandem: user has an active tandem_plan on their profile (set by partnerships/tandem-activate)
-      const isTandem = !!(user.tandem_plan === 'tandem' && user.tandem_expires_at && new Date(user.tandem_expires_at) > new Date());
+      const isTandem = !!(user.tandem_plan === 'tandem' && user.tandem_expires_at && new Date(user.tandem_expires_at) > new Date()) || partnerPaidTandem;
       // plan_label: human-readable plan name for display in the nav badge
       const planLabel = isTandem ? 'Tandem' : (isPro ? 'Autopilot' : 'Free');
 
@@ -107,6 +112,7 @@ module.exports = function(pool) {
           status: sub.status,
           is_pro: isPro,
           is_tandem: isTandem,
+          pro_via_partner: proViaPartner,
           plan_label: planLabel,
           admin_pro_override: adminProOverride,
           pro_granted_by: user.pro_granted_by || null,
