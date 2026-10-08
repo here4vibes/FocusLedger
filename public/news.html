@@ -125,7 +125,17 @@ a{color:inherit;text-decoration:none}
 @media(min-width:641px){
   .bottom-tabs{display:none}
 }
-</style>
+
+        /* Reduced motion — this page had no guard and doesn't load design-system.css.
+           Same pattern as design-system.css (final frame, one iteration). */
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+    </style>
 </head>
 <body>
 

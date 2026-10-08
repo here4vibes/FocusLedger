@@ -645,3 +645,15 @@
 #bw-bubble.entering {
   animation: bw-slide-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 }
+/* ── Reduced motion ──────────────────────────────────────────────────────
+   The bubble pulses on load on every page that includes the widget, and this
+   stylesheet had no guard. Near-zero duration + one iteration (rather than
+   animation:none) so `forwards` entrances still land on their final frame
+   instead of being stuck at the start state. Same pattern as design-system.css. */
+@media (prefers-reduced-motion: reduce) {
+  [id^="bw-"], [id^="bw-"] *, [class^="bw-"], [class*=" bw-"] {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
