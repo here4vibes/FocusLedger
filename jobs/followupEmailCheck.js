@@ -15,6 +15,9 @@
  * Idempotent: followup_email_log prevents duplicate sends per day.
  */
 
+const { initSentry, flushAndExit } = require('../lib/sentry');
+initSentry('followupEmailCheck'); // console.error → Sentry for this cron (see lib/sentry.js)
+
 const { Pool } = require('pg');
 const { getLocalDateParts } = require('../lib/timezone');
 const { getProUsersWithPrefs } = require('../db/followupEmails');
@@ -226,5 +229,5 @@ run().catch(err => {
   // Full stack, not just message — "Server failure detected" alerts are useless
   // without knowing WHICH query/step died.
   console.error('[followupEmailCheck] Fatal error:', err.message, '\n', err.stack);
-  process.exit(1);
+  flushAndExit(1);
 });

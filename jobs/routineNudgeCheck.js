@@ -15,6 +15,9 @@
  */
 'use strict';
 
+const { initSentry, flushAndExit } = require('../lib/sentry');
+initSentry('routineNudgeCheck'); // console.error → Sentry for this cron (see lib/sentry.js)
+
 const { Pool } = require('pg');
 const { getUserLocalDate } = require('../lib/timezone');
 const { checkAndGenerateNudges } = require('../lib/routineNudgeEngine');
@@ -60,5 +63,5 @@ async function run() {
 
 run().catch(err => {
   console.error('[routineNudgeCheck] Fatal error:', err.message);
-  process.exit(1);
+  flushAndExit(1);
 });

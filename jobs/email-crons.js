@@ -6,6 +6,9 @@
  * (checks email_log to avoid re-sending within the same day/week window).
  */
 
+const { initSentry, flushAndExit } = require('../lib/sentry');
+initSentry('email-crons'); // console.error → Sentry for this cron (see lib/sentry.js)
+
 const { Pool } = require('pg');
 const { runEmailCrons } = require('../emailCron');
 
@@ -28,5 +31,5 @@ async function run() {
 
 run().catch(err => {
   console.error('[email-crons] Fatal:', err.message);
-  process.exit(1);
+  flushAndExit(1);
 });

@@ -23,20 +23,15 @@
 // =============================================================================
 
 // ── Sentry must initialize before any other requires ────────────────────────
-const Sentry = require('@sentry/node');
-if (process.env.SENTRY_DSN) {
-  Sentry.init({
-    dsn: process.env.SENTRY_DSN,
-    environment: process.env.NODE_ENV || 'development',
-    tracesSampleRate: 0.1,
-    release: process.env.RENDER_GIT_COMMIT || undefined,
-  });
-}
+// lib/sentry also captures every console.error as a Sentry issue (see file).
+const { Sentry, initSentry, flushAndExit } = require('./lib/sentry');
+initSentry('web');
 
 // ── Rule 19: Uncaught exception handlers (crash loudly, never silently) ─────
 process.on('uncaughtException', (err) => {
   console.error('[FATAL] uncaughtException — process will exit:', err.message, err.stack);
-  process.exit(1);
+  Sentry.captureException(err);
+  flushAndExit(1); // a bare exit() killed the process before Sentry could send this
 });
 
 process.on('unhandledRejection', (reason, promise) => {

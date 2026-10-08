@@ -6,6 +6,9 @@
  * email on day 5 and day 14 of consecutive lapse.
  */
 
+const { initSentry, flushAndExit } = require('../lib/sentry');
+initSentry('buddy-engagement'); // console.error → Sentry for this cron (see lib/sentry.js)
+
 const { Pool } = require('pg');
 const { runBuddyEngagementCheck } = require('../buddyEngagementCron');
 
@@ -28,5 +31,5 @@ async function run() {
 
 run().catch(err => {
   console.error('[buddy-engagement] Fatal:', err.message);
-  process.exit(1);
+  flushAndExit(1);
 });

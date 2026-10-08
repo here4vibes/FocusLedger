@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 'use strict';
+const { initSentry } = require('../lib/sentry');
+initSentry('betaReengagementBlast'); // console.error → Sentry for this cron (see lib/sentry.js)
 /**
  * jobs/betaReengagementBlast.js — ONE-TIME beta re-engagement email.
  *

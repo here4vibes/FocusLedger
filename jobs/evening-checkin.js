@@ -22,6 +22,9 @@
  *   command = "node jobs/evening-checkin.js"
  */
 
+const { initSentry, flushAndExit } = require('../lib/sentry');
+initSentry('evening-checkin'); // console.error → Sentry for this cron (see lib/sentry.js)
+
 const { Pool } = require('pg');
 
 if (!process.env.DATABASE_URL) {
@@ -113,5 +116,5 @@ async function main() {
 
 main().catch(err => {
   console.error('[evening-checkin] Fatal error:', err.message);
-  pool.end().then(() => process.exit(1)).catch(() => process.exit(1));
+  pool.end().then(() => flushAndExit(1)).catch(() => flushAndExit(1));
 });

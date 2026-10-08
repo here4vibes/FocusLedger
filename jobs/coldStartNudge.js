@@ -12,6 +12,9 @@
 
 // dotenv is not an installed dependency — requiring it crashes the job with
 // MODULE_NOT_FOUND. Render injects env vars directly.
+const { initSentry } = require('../lib/sentry');
+initSentry('coldStartNudge'); // console.error → Sentry for this cron (see lib/sentry.js)
+
 const { Pool } = require('pg');
 const { fetchUserTimezone, getUserLocalDate } = require('../lib/timezone');
 const {

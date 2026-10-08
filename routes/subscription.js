@@ -157,6 +157,17 @@ module.exports = function(pool) {
       .catch(err => console.error('[billing] welcome email failed:', err.message, '| user:', userId));
   }
 
+  // Success redirect after checkout. Carries what was bought so Settings can
+  // report the Meta Pixel Purchase with the REAL price (from config/pricing.js)
+  // and dedupe it on the checkout session id (ref).
+  function upgradedRedirect(res, sessionId, summary) {
+    const plan = summary && summary.tandem ? 'tandem' : 'autopilot';
+    const cycle = summary && summary.billing_cycle === 'annual' ? 'annual' : 'monthly';
+    const value = cycle === 'annual' ? PLANS[plan].price_annual : PLANS[plan].price_monthly;
+    const qs = new URLSearchParams({ upgraded: 'true', plan, billing_cycle: cycle, value: String(value), ref: sessionId });
+    return res.redirect('/app/settings?' + qs.toString());
+  }
+
   // GET /activate — where Stripe sends the browser after checkout.
   // No auth: a redirect can't carry the JWT. The user is identified from the
   // Stripe-verified session (metadata.user_id, else the checkout email).
@@ -171,7 +182,7 @@ module.exports = function(pool) {
 
       // Fast path: already recorded (usually the webhook got there first).
       if (await billingDb.findBySessionId(pool, sessionId)) {
-        return res.redirect('/app/settings?upgraded=true');
+        return upgradedRedirect(res, sessionId, await billingDb.getActivationSummary(pool, sessionId));
       }
 
       const stripe = getStripe();
@@ -187,8 +198,11 @@ module.exports = function(pool) {
       if (result.status === 'no_user') return res.redirect('/app/settings?error=user_not_found');
       if (result.status === 'activated' && result.firstActivation) sendWelcomeEmail(result);
 
-      const cycle = result.billingCycle ? '&billing_cycle=' + encodeURIComponent(result.billingCycle) : '';
-      res.redirect('/app/settings?upgraded=true' + cycle);
+      if (result.status === 'activated') {
+        return upgradedRedirect(res, sessionId, { billing_cycle: result.billingCycle, tandem: result.plan === 'tandem' });
+      }
+      // already_activated (lost the race to the webhook): describe what was recorded.
+      upgradedRedirect(res, sessionId, await billingDb.getActivationSummary(pool, sessionId));
     } catch (err) {
       console.error('[subscription/activate] failed:', err.message, '| session:', sessionId);
       res.redirect('/app/settings?error=activation_failed');

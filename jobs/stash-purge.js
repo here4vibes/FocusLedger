@@ -5,6 +5,9 @@
  * Stash entries expire after 72h (unclaimed magic links). Runs daily at 2am UTC.
  */
 
+const { initSentry, flushAndExit } = require('../lib/sentry');
+initSentry('stash-purge'); // console.error → Sentry for this cron (see lib/sentry.js)
+
 const { Pool } = require('pg');
 const { purgeExpiredStash } = require('../db/email-to-tasks');
 
@@ -29,5 +32,5 @@ async function run() {
 
 run().catch(err => {
   console.error('[stash-purge] Fatal:', err.message);
-  process.exit(1);
+  flushAndExit(1);
 });

@@ -21,6 +21,9 @@
  */
 'use strict';
 
+const { initSentry } = require('../lib/sentry');
+initSentry('dailyRevealJob'); // console.error → Sentry for this cron (see lib/sentry.js)
+
 const { upsertReveal, revealExists } = require('../db/reveals');
 const { getUserLocalDate } = require('../lib/timezone');
 
