@@ -2,7 +2,9 @@
 /**
  * Task Deadline Nudge Scheduler
  *
- * Runs every 15 minutes. For each user with active push subscriptions:
+ * Runs hourly (render.yaml). Only between 08:00–21:59 user-local time; overdue
+ * tasks are nudged for at most MAX_OVERDUE_DAYS days.
+ * For each user with active push subscriptions:
  *   1. Fetches the user's timezone and computes "today" in their local time.
  *   2. Finds tasks due within 1 hour or overdue (using user's local timezone).
  *   3. Checks notification_send_log — skips tasks already notified today (user's local date).
@@ -20,10 +22,41 @@ const {
   getActiveSubscriptions,
   deleteSubscriptionByEndpoint,
 } = require('./db/notifications');
-const { getUserLocalDate } = require('./lib/timezone');
+const { getLocalDateParts } = require('./lib/timezone');
 const { sendApnsNotification } = require('./lib/apns-sender');
 const { getPushTokens, deletePushToken } = require('./db/push-tokens');
 const { configureWebPush } = require('./lib/webpush');
+
+// Pushes only between 08:00 and 21:59 the user's time — an overdue task
+// became eligible again at local midnight, so "still waiting" arrived ~00:00.
+const QUIET_UNTIL_HOUR = 8;
+const QUIET_FROM_HOUR = 22;
+// Stop pushing about a task after this many days overdue; Buddy surfaces it
+// gently instead of a daily push forever.
+const MAX_OVERDUE_DAYS = 3;
+const TITLE_MAX = 60;
+
+function shortTitle(title) {
+  const t = String(title || '').trim() || 'A task';
+  return t.length > TITLE_MAX ? t.slice(0, TITLE_MAX - 1).trimEnd() + '…' : t;
+}
+
+/** Push body for the tasks being recorded as notified — it must cover all of them. */
+function buildDeadlineBody(tasks) {
+  const overdue = tasks.filter(t => t.type === 'overdue');
+  const soon = tasks.filter(t => t.type === '1h');
+  if (tasks.length === 1) {
+    return `"${shortTitle(tasks[0].title)}" — ${overdue.length ? 'still waiting' : 'almost time'}`;
+  }
+  if (!soon.length) return `${overdue.length} things are still waiting`;
+  if (!overdue.length) return `${soon.length} things coming up soon`;
+  const lead = overdue[0];
+  return `"${shortTitle(lead.title)}" and ${tasks.length - 1} more need you today`;
+}
+
+function daysBetween(a, b) {
+  return Math.round((Date.parse(b + 'T12:00:00Z') - Date.parse(a + 'T12:00:00Z')) / 86400000);
+}
 
 async function sendTaskDeadlineNudges(pool) {
   const { webpush, apnsEnabled, anyConfigured } = configureWebPush('task-deadline-nudge');
@@ -48,7 +81,8 @@ async function sendTaskDeadlineNudges(pool) {
       try {
         const userId = user.id;
         const userTz = user.timezone;
-        const localToday = getUserLocalDate(userTz, now);
+        const { date: localToday, hour: localHour } = getLocalDateParts(userTz, now);
+        if (localHour < QUIET_UNTIL_HOUR || localHour >= QUIET_FROM_HOUR) continue;
 
         // Check daily cap first — cheap query, avoids unnecessary work
         const todayCount = await getTodayNotificationCount(pool, userId, localToday);
@@ -58,7 +92,7 @@ async function sendTaskDeadlineNudges(pool) {
         // interpret it as midnight in the user's timezone to correctly determine
         // whether a task is overdue or due within 1 hour for that user.
         const tasksResult = await pool.query(`
-          SELECT id, title, due_date, due_time,
+          SELECT id, title, due_date::text AS due_day, due_time,
             CASE
               WHEN due_time IS NOT NULL
                 THEN (due_date::date + due_time::time) AT TIME ZONE $2
@@ -77,6 +111,12 @@ async function sendTaskDeadlineNudges(pool) {
           const dueAt = new Date(task.due_at);
           const msUntilDue = dueAt - now;
           const hoursUntilDue = msUntilDue / (1000 * 60 * 60);
+          const daysOverdue = daysBetween(String(task.due_day).slice(0, 10), localToday);
+
+          if (daysOverdue > MAX_OVERDUE_DAYS) continue;
+          // No due_time = "sometime that day": never an 'almost time' push at
+          // 23:00 — it only counts once the day has passed.
+          if (!task.due_time && daysOverdue < 1) continue;
 
           if (msUntilDue < 0 || hoursUntilDue <= 1) {
             const key = `task:${task.id}`;
@@ -97,20 +137,9 @@ async function sendTaskDeadlineNudges(pool) {
         const remaining = DAILY_PUSH_CAP - todayCount;
         const tasksToNotify = urgentTasks.slice(0, remaining);
 
-        // Build notification payload — consolidated, gentle, ADHD-friendly
-        const overdueCount = tasksToNotify.filter(t => t.type === 'overdue').length;
-        const urgentCount = tasksToNotify.filter(t => t.type === '1h').length;
-
-        let body;
-        if (overdueCount > 0 && overdueCount === 1) {
-          body = `"${tasksToNotify.find(t => t.type === 'overdue').title}" — still waiting`;
-        } else if (overdueCount > 1) {
-          body = `${overdueCount} things are still waiting`;
-        } else if (urgentCount === 1) {
-          body = `"${tasksToNotify.find(t => t.type === '1h').title}" — almost time`;
-        } else {
-          body = `${urgentCount} things coming up soon`;
-        }
+        // Consolidated, gentle, ADHD-friendly — and it names/counts every task
+        // recorded below (a mixed push used to silently use up the others).
+        const body = buildDeadlineBody(tasksToNotify);
 
         const notifTitle = 'FocusLedger';
         // Land on the CALM home, not a dense list/detail: a tapped reminder opens
@@ -145,7 +174,8 @@ async function sendTaskDeadlineNudges(pool) {
               sentCount++;
             } catch (sendErr) {
               if (sendErr.statusCode === 410 || sendErr.statusCode === 404) {
-                await deleteSubscriptionByEndpoint(pool, row.endpoint).catch(() => {});
+                await deleteSubscriptionByEndpoint(pool, row.endpoint).catch(e =>
+                  console.error('[TaskDeadlineNudge] stale subscription delete failed:', e.message, '| user:', userId));
               } else {
                 console.warn('[TaskDeadlineNudge] Web push error for user', userId,
                   '| status:', sendErr.statusCode, '|', sendErr.message);
@@ -212,4 +242,4 @@ function scheduleTaskDeadlineNudges(pool) {
   console.log('[TaskDeadlineNudge] Scheduler started — checking every 15 minutes');
 }
 
-module.exports = { scheduleTaskDeadlineNudges, sendTaskDeadlineNudges };
+module.exports = { scheduleTaskDeadlineNudges, sendTaskDeadlineNudges, _internal: { buildDeadlineBody, shortTitle } };
