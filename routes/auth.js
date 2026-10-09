@@ -8,6 +8,8 @@ const { seedDefaultValues } = require('../lib/seedDefaultValues');
 const seedStarterRoutine = require('../lib/seedStarterRoutine');
 const { getSessionData, markSessionMigrated, isSessionMigrated } = require('../db/buddy-demo');
 const { validateTimezone, fetchUserTimezone, getUserLocalDate } = require('../lib/timezone');
+const { isMonitorEmail } = require('../lib/monitor-accounts');
+const { markQaUser } = require('../db/users');
 
 // ============================================================
 // Google OAuth Configuration (Auth Scopes)
@@ -182,6 +184,12 @@ module.exports = function(pool, loginLimiter, signupLimiter) {
 
       const user = result.rows[0];
 
+      // Synthetic signup monitor (see lib/monitor-accounts.js): exclude from all
+      // metrics before anything else can see the account. Awaited and fatal on
+      // failure — an unflagged monitor account would count as a real user.
+      const isMonitor = isMonitorEmail(emailLc);
+      if (isMonitor) await markQaUser(pool, user.id);
+
       // Non-essential setup rows — must NEVER fail the signup after the users
       // row exists (that leaves a ghost account that then reports "already
       // exists" on retry). Matches the Google OAuth path's resilience.
@@ -211,6 +219,8 @@ module.exports = function(pool, loginLimiter, signupLimiter) {
         token: token,
         user: { id: user.id, email: user.email, name: user.name }
       });
+
+      if (isMonitor) return; // no welcome email, seeded values or routines for monitor accounts
 
       const { subject: welcomeSubject, html: welcomeHtml } = welcomeTemplate({ name: user.name });
       sendEmail(pool, {

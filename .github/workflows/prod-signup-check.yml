@@ -1,0 +1,40 @@
+name: Production signup check
+
+# Can a brand-new person sign up on production and use the app?
+# Signups were silently broken for four months (May–Oct 2026) before anyone
+# noticed. This goes red the day it happens again. See scripts/prod-signup-check.js.
+on:
+  schedule:
+    - cron: "17 13 * * *"   # daily, 9:17am Eastern
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "routes/auth.js"
+      - "migrations/**"
+      - "scripts/prod-signup-check.js"
+      - ".github/workflows/prod-signup-check.yml"
+
+concurrency:
+  group: prod-signup-check
+  cancel-in-progress: false
+
+jobs:
+  signup:
+    name: Sign up on production and create a task
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      # On pushes to main, give Render time to deploy the new code first.
+      - name: Wait for Render deploy
+        if: github.event_name == 'push'
+        run: sleep 240
+      - name: Run signup check
+        run: node scripts/prod-signup-check.js
+        env:
+          BASE_URL: https://focusledger.net
+          MONITOR_TAG: gh-${{ github.run_id }}-${{ github.run_attempt }}
