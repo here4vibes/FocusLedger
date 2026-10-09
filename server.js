@@ -61,6 +61,8 @@ const repairPlaidSchema  = require('./lib/plaid-startup-repair');
 const { verifyToken } = require('./middleware/auth');
 const { buildSessionMiddleware } = require('./lib/session');
 const { getMigrationStatus } = require('./db/migrations-status');
+const { requestContext } = require('./lib/request-context');
+const { quotaAwareResponses } = require('./lib/ai-budget');
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -135,6 +137,8 @@ app.use('/api', (req, res, next) => {
 
 // 4a. SESSION
 app.use(buildSessionMiddleware(pool));
+// 4a'. Request context (who's calling, for the per-user AI budget) + 429s for AI limits
+app.use(requestContext(pool), quotaAwareResponses);
 
 // 4b. HEALTH CHECK — must respond even when DB is slow (Neon cold-start)
 app.get('/health', async (req, res) => {

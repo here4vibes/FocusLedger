@@ -1147,6 +1147,11 @@
                     state.sending = false;
                     focusInput();
                 }
+            } else if (data.code === 'AI_DAILY_LIMIT') {
+                // Daily AI limit (lib/ai-budget.js): say so plainly instead of "try again".
+                appendBuddyMessage(data.message);
+                sendBtn.disabled = false;
+                state.sending = false;
             } else {
                 appendBuddyMessage('Sorry, something went sideways. Try sending that again.');
                 sendBtn.disabled = false;
