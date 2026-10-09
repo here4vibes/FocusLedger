@@ -356,7 +356,7 @@ module.exports = function(pool) {
   router.post('/increment-session', async (req, res) => {
     try {
       await pool.query(
-        `UPDATE users SET session_count = session_count + 1 WHERE id = $1`,
+        `UPDATE users SET session_count = COALESCE(session_count, 0) + 1 WHERE id = $1`,
         [req.user.id]
       );
       res.json({ success: true });

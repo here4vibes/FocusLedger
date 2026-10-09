@@ -129,6 +129,8 @@ const ALLOWED_EVENTS = new Set([
   'add_to_homescreen_shown',     // modal shown after signup
   'add_to_homescreen_completed', // user tapped "Done / I added it"
   'add_to_homescreen_skipped',   // user tapped "Maybe later"
+  'add_to_homescreen_tip_shown', // inline tip on the first check-in's completion screen
+  'first_checkin_starter',       // new user tapped a starter prompt on their first check-in
 ]);
 
 function sanitizeEventName(name) {
