@@ -36,6 +36,8 @@
   .chiplink{font-size:.72rem;color:var(--muted);text-decoration:none;font-weight:600;
     border:1px solid var(--line-2);border-radius:999px;padding:.3rem .65rem;background:var(--surface);white-space:nowrap;}
   .chiplink:active{background:var(--accent-soft);}
+  .places{display:flex;align-items:center;gap:.3rem;}
+  .chiplink.gear{display:grid;place-items:center;padding:.3rem .42rem;}
   .chiplink.today{color:var(--accent);border-color:transparent;background:var(--accent-soft);}
 
   .thread{flex:1;overflow-y:auto;padding:.5rem 1rem 1rem;display:flex;flex-direction:column;gap:.72rem;
@@ -217,8 +219,13 @@
       <div class="name">Buddy<small>FocusLedger</small></div>
     </div>
     <div class="top-actions">
-      <a class="chiplink today" href="/app/today">Full day</a>
-      <a class="chiplink" href="/app">See modules</a>
+      <!-- The same four places as every other page: Home (here) · Tasks · Money · Life. -->
+      <nav class="places" aria-label="FocusLedger">
+        <a class="chiplink" href="/app/tasks">Tasks</a>
+        <a class="chiplink" href="/app/money">Money</a>
+        <a class="chiplink" href="/app/life">Life</a>
+        <a class="chiplink gear" href="/settings" aria-label="Settings"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></a>
+      </nav>
     </div>
   </div>
 
