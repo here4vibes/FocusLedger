@@ -61,10 +61,20 @@
     }
   }
 
+  // ── Automated browsers send nothing ───────────────────────────────────────
+  // Playwright/Selenium/Puppeteer set navigator.webdriver. Our own CI smoke
+  // tests load the public pages with ordinary device user agents (so the
+  // server's UA bot filter can't see them) and were ~90% of recorded
+  // "visitors" in Oct 2026 — four profiles per CI run, every run.
+  var AUTOMATED = (function () {
+    try { return navigator.webdriver === true; } catch (e) { return false; }
+  })();
+
   // ── Fire-and-forget POST ───────────────────────────────────────────────────
   // sendBeacon with a raw string sends text/plain — Express only parses
   // application/json. Wrap in a Blob to set the correct Content-Type.
   function post(url, data) {
+    if (AUTOMATED) return;
     try {
       var payload = JSON.stringify(Object.assign({ visitor_id: getOrCreateVisitorId() }, data));
       if (navigator.sendBeacon) {

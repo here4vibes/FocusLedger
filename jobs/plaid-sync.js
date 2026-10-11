@@ -312,6 +312,23 @@ async function main() {
   }
 
   console.log(`[plaid-sync] Done — synced ${totalSynced} items, ${totalAdded} new transactions`);
+
+  // Pre-due bill reminders (lib/bill-guardian.js). Runs for everyone with a
+  // connected bank, not only those with new transactions: a reminder is due
+  // 3 days before the predicted date, whether or not anything posted today.
+  const { runBillGuardian } = require('../lib/bill-guardian');
+  const { usersWithActivePlaid } = require('../db/bills');
+  let reminders = 0;
+  let guardianFailed = 0;
+  for (const userId of await usersWithActivePlaid(pool)) {
+    try {
+      reminders += (await runBillGuardian(pool, userId)).reminders;
+    } catch (e) {
+      guardianFailed++;
+      console.error('[plaid-sync] bill guardian failed:', e.message, '| user:', userId);
+    }
+  }
+  console.log(`[plaid-sync] Bill guardian: ${reminders} reminder(s) created, ${guardianFailed} user(s) failed`);
   await pool.end();
 }
 

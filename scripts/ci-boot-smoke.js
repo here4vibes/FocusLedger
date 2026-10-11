@@ -80,8 +80,22 @@ async function main() {
       NODE_ENV: 'test',
       ALLOWED_ORIGIN: BASE,
     },
-    stdio: ['ignore', 'inherit', 'inherit'],
+    stdio: ['ignore', 'pipe', 'pipe'],
   });
+
+  // Many routes catch DB errors, log them and still answer 200, so status codes
+  // alone miss schema drift (e.g. users.session_count absent on a from-scratch
+  // database for months). Echo the server's output and fail on any
+  // missing-column / missing-table error it logs.
+  const schemaErrors = [];
+  const SCHEMA_ERR = /(column|relation) "[^"]+" (of relation "[^"]+" )?does not exist/;
+  for (const stream of [child.stdout, child.stderr]) {
+    stream.on('data', (buf) => {
+      const text = buf.toString();
+      process.stdout.write(text);
+      for (const line of text.split('\n')) if (SCHEMA_ERR.test(line)) schemaErrors.push(line.trim());
+    });
+  }
 
   let crashed = false;
   child.on('exit', (code) => {
@@ -120,6 +134,13 @@ async function main() {
     if (token) {
       const tasks = await req('GET', '/api/tasks', { token });
       record('GET /api/tasks (authed) → not 5xx', tasks.status < 500, `status=${tasks.status}`);
+      // A new user's first screen. Reads users.session_count and friends, which a
+      // from-scratch schema was missing for months (genesis users columns).
+      const session = await req('GET', '/api/buddy/session-status', { token });
+      record('GET /api/buddy/session-status (first check-in) → 200', session.status === 200 && session.json?.success === true,
+        `status=${session.status} success=${session.json?.success}`);
+      const bump = await req('POST', '/api/buddy/increment-session', { token, body: {} });
+      record('POST /api/buddy/increment-session → not 5xx', bump.status < 500, `status=${bump.status}`);
     } else {
       record('GET /api/tasks (authed) → not 5xx', false, 'no token from signup/login');
     }
@@ -131,6 +152,9 @@ async function main() {
     await sleep(500);
     if (child.exitCode === null) child.kill('SIGKILL');
   }
+
+  record('server logged no missing column/table errors', schemaErrors.length === 0,
+    schemaErrors.length ? schemaErrors.slice(0, 3).join(' || ') : '');
 
   const failed = results.filter(r => !r.ok);
   console.log(`\n[boot-smoke] ${results.length - failed.length}/${results.length} checks passed`);

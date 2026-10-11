@@ -445,6 +445,36 @@
             font-weight: 700;
             line-height: 1.2;
         }
+        /* First session: tappable starters so a new user never faces a blank box */
+        .starter-chips {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.5rem;
+            margin: 0.25rem 0 0 2.6rem;
+        }
+        .starter-chip {
+            padding: 0.6rem 0.95rem;
+            min-height: 44px;
+            background: rgba(255,255,255,0.06);
+            color: rgba(255,255,255,0.88);
+            border: 1.5px solid rgba(201,168,76,0.45);
+            border-radius: 999px;
+            font-size: 0.92rem;
+            font-family: 'DM Sans', sans-serif;
+            text-align: left;
+            cursor: pointer;
+            transition: background 0.15s, border-color 0.15s;
+        }
+        .starter-chip:hover, .starter-chip:focus-visible { background: rgba(201,168,76,0.14); border-color: rgba(201,168,76,0.8); }
+        #installTip {
+            font-size: 0.85rem;
+            color: rgba(255,255,255,0.6);
+            line-height: 1.5;
+            max-width: 320px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            padding-top: 0.75rem;
+        }
         .completion-sub {
             font-size: 0.95rem;
             color: rgba(255,255,255,0.6);
@@ -650,12 +680,14 @@
         <div class="completion-sub" id="completionSub">Based on what you shared, I'm picking your top 3 tasks for today.</div>
         <div id="insightBox" style="display:none;"></div>
         <div id="planTasksList"></div>
+        <div id="installTip" style="display:none;"></div>
         <button class="complete-btn" id="completionBtn" type="button" disabled>Building your plan…</button>
     </div>
 
 </div>
 
 <!-- Load shared utilities before inline script so el/apiFetch/escHtml are available -->
+<script src="/js/analytics.js"></script>
 <script src="/js/haptics.js"></script>
 <script src="/shared-nav.js"></script>
 
@@ -790,10 +822,52 @@
         var sessionCount = sessionData.sessionCount || 0;
         var prevSummary = sessionData.previousCheckinSummary || null;
         var greetingInsights = sessionData.greetingInsights || [];
-        var greeting = buildGreeting(sessionCount, prevSummary, greetingInsights);
-
-        appendBuddyMessage(greeting);
+        if (sessionCount === 0) {
+            // First session: say what happens here and offer a one-tap start.
+            // A bare "What's on your mind?" lost most new accounts before
+            // their first message (68% never sent one).
+            appendBuddyMessage(firstSessionGreeting());
+            renderStarterChips();
+        } else {
+            appendBuddyMessage(buildGreeting(sessionCount, prevSummary, greetingInsights));
+        }
         focusInput();
+    }
+
+    function firstSessionGreeting() {
+        var name = '';
+        try { name = ((JSON.parse(localStorage.getItem('fl_user') || '{}').name) || '').trim().split(/\s+/)[0]; } catch (e) { name = ''; }
+        var canTalk = !!(window.SpeechRecognition || window.webkitSpeechRecognition); // mic button shows only then
+        return 'Hi' + (name ? ' ' + name : '') + ", I'm Buddy. Tell me what's on your plate, messy is fine. "
+            + "I'll turn it into a short list for today." + (canTalk ? ' Type it or tap the mic.' : '');
+    }
+
+    var STARTERS = [
+        'Everything feels urgent. Help me sort it out.',
+        "I don't know where to start today.",
+        'I keep forgetting bills and money stuff.'
+    ];
+
+    function renderStarterChips() {
+        var chat = el('chatArea');
+        var wrap = document.createElement('div');
+        wrap.className = 'starter-chips';
+        wrap.id = 'starterChips';
+        STARTERS.forEach(function (text) {
+            var b = document.createElement('button');
+            b.type = 'button';
+            b.className = 'starter-chip';
+            b.textContent = text;
+            b.addEventListener('click', function () {
+                if (state.sending) return;
+                if (typeof FLA !== 'undefined') FLA.trackEvent('first_checkin_starter', { starter: STARTERS.indexOf(text) });
+                inputEl.value = text;
+                sendMessage();
+            });
+            wrap.appendChild(b);
+        });
+        chat.appendChild(wrap);
+        scrollChat();
     }
 
     function buildGreeting(sessionCount, prevSummary, greetingInsights) {
@@ -1029,6 +1103,8 @@
         // Stop voice if still listening
         if (isListening && recognition) recognition.stop();
 
+        var chips = document.getElementById('starterChips');
+        if (chips) chips.remove();
         appendUserMessage(text);
         state.allUserMessages.push(text);
         inputEl.value = '';
@@ -1071,6 +1147,11 @@
                     state.sending = false;
                     focusInput();
                 }
+            } else if (data.code === 'AI_DAILY_LIMIT') {
+                // Daily AI limit (lib/ai-budget.js): say so plainly instead of "try again".
+                appendBuddyMessage(data.message);
+                sendBtn.disabled = false;
+                state.sending = false;
             } else {
                 appendBuddyMessage('Sorry, something went sideways. Try sending that again.');
                 sendBtn.disabled = false;
@@ -1220,6 +1301,27 @@
         return lines[seed % lines.length];
     }
 
+    // Home-screen tip, shown once the first check-in is done (it used to be a
+    // blocking modal straight after signup, before the app had shown any value).
+    function showInstallTip() {
+        try {
+            if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true) return;
+            var ua = navigator.userAgent;
+            var isIOS = /iPhone|iPad|iPod/.test(ua);
+            var isAndroid = /Android/.test(ua);
+            if (!isIOS && !isAndroid) return;
+            var how = isIOS
+                ? 'tap <strong>Share</strong> ⬆️, then <strong>Add to Home Screen</strong>'
+                : 'tap <strong>⋮</strong>, then <strong>Add to Home Screen</strong>';
+            var tip = el('installTip');
+            tip.innerHTML = '📱 Want this one tap away tomorrow? In your browser, ' + how + '.';
+            tip.style.display = '';
+            if (typeof FLA !== 'undefined') FLA.trackEvent('add_to_homescreen_tip_shown', { platform: isIOS ? 'ios' : 'android' });
+        } catch (e) {
+            console.warn('[checkin] install tip failed:', e.message);
+        }
+    }
+
     // ── Completion flow ───────────────────────────────────────────────────────
     function proceeedToCompletion() {
         el('taskPreview').classList.remove('visible');
@@ -1229,6 +1331,8 @@
 
         // Record mode completion for preference learning
         recordModeOutcome('conversation', true, false);
+
+        if (state.firstSession) showInstallTip();
 
         var mood = state.detectedMood || 'okay';
 

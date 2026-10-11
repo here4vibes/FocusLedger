@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { authenticateToken } = require('../middleware/auth');
 const { queryWithRetry } = require('../lib/queryWithRetry');
+const { getActivationFunnel } = require('../db/activation');
 const { sendEmail } = require('../lib/emailService');
 const { v2LaunchTemplate } = require('../lib/emailTemplates');
 
@@ -45,6 +46,20 @@ module.exports = function(pool) {
     }
     return { id: req.user.id, email: user.email };
   }
+
+  // GET /api/admin/activation — how far each new account gets (db/activation.js)
+  // ?days=N limits to accounts created in the last N days (default: all).
+  router.get('/activation', authenticateToken, async (req, res) => {
+    try {
+      if (!(await requireAdmin(req, res))) return;
+      const days = req.query.days ? Math.min(Math.max(parseInt(req.query.days, 10) || 0, 1), 3650) : null;
+      const funnel = await getActivationFunnel(pool, { days });
+      res.json({ success: true, days, ...funnel });
+    } catch (err) {
+      console.error('[admin/activation] failed:', err.message, '| user:', req.user && req.user.id);
+      res.status(500).json({ success: false, message: 'Failed to load activation' });
+    }
+  });
 
   // GET /api/admin/stats — aggregate user + subscription metrics
   router.get('/stats', authenticateToken, async (req, res) => {

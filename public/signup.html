@@ -363,21 +363,6 @@
         <p>FocusLedger &mdash; <a href="/terms">Terms of Service</a> &middot; <a href="/privacy">Privacy Policy</a></p>
     </div>
 
-    <!-- ═══════════════════════════════════════════════════════════════════════
-         Add to Home Screen Modal (shown after successful signup, before app)
-         ══════════════════════════════════════════════════════════════════════ -->
-    <div id="athsModal" role="dialog" aria-modal="true" aria-label="Add FocusLedger to Home Screen"
-         style="display:none;position:fixed;inset:0;z-index:99999;background:rgba(1,30,92,0.94);padding:20px;box-sizing:border-box;overflow-y:auto;-webkit-overflow-scrolling:touch;">
-      <div style="background:#fff;border-radius:20px;max-width:400px;margin:0 auto;padding:36px 24px 28px;text-align:center;position:relative;margin-top:max(20px,calc(50svh - 280px));">
-        <div id="athsEmoji" style="font-size:3rem;margin-bottom:16px;line-height:1;">📱</div>
-        <h2 id="athsTitle" style="font-family:Georgia,serif;font-size:1.45rem;color:#011e5c;margin:0 0 8px;line-height:1.3;"></h2>
-        <p id="athsSubtitle" style="color:#6b6560;font-size:0.875rem;margin:0 0 20px;line-height:1.55;"></p>
-        <div id="athsSteps"></div>
-        <div id="athsBtns" style="margin-top:20px;display:flex;flex-direction:column;gap:10px;"></div>
-        <button id="athsSkip" style="display:block;background:none;border:none;color:#9e9994;font-size:0.8rem;cursor:pointer;margin:16px auto 0;padding:4px 8px;font-family:inherit;text-decoration:underline;text-underline-offset:3px;">Maybe later</button>
-      </div>
-    </div>
-
     <script>
     (function() {
         'use strict';
@@ -400,13 +385,6 @@
                 }
             } catch(e) {}
         })();
-
-        // ── Capture native install prompt ASAP ────────────────────────────────
-        var _athsDeferredPrompt = null;
-        window.addEventListener('beforeinstallprompt', function(e) {
-            e.preventDefault();
-            _athsDeferredPrompt = e;
-        });
 
         // Determine post-auth destination (support share redirect)
         // New signups go through the check-in flow (handles once-per-day gating itself).
@@ -452,7 +430,9 @@
             // Migrate demo session if the user came from the landing page demo
             // fl_demo_session_token survives the OAuth redirect because it's in localStorage (same origin)
             migrateDemoSession(googleToken);
-            showATHSModal(postAuthDest);
+            // Straight into the app: the home-screen tip now comes after the
+            // first check-in (checkin.html), once there's a reason to come back.
+            window.location.href = postAuthDest;
             return;
         }
 
@@ -533,117 +513,6 @@
             errorMsg.classList.remove('visible');
         }
 
-        // ── Add to Home Screen modal ──────────────────────────────────────────
-        function showATHSModal(dest) {
-            // Already installed as PWA — skip modal entirely
-            if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true) {
-                window.location.href = dest;
-                return;
-            }
-
-            var modal    = document.getElementById('athsModal');
-            var titleEl  = document.getElementById('athsTitle');
-            var subtitleEl = document.getElementById('athsSubtitle');
-            var stepsEl  = document.getElementById('athsSteps');
-            var btnsEl   = document.getElementById('athsBtns');
-            var skipBtn  = document.getElementById('athsSkip');
-
-            var ua         = navigator.userAgent;
-            var isIOS      = /iPhone|iPad|iPod/.test(ua) && !window.MSStream;
-            var isIOSSafari = isIOS && /Safari/.test(ua) && !/CriOS|FxiOS|OPiOS|mercury/.test(ua);
-            var isAndroid  = /Android/.test(ua);
-            var platform   = isIOSSafari ? 'ios' : (isAndroid ? 'android' : 'desktop');
-
-            // Analytics: shown
-            if (typeof FLA !== 'undefined') FLA.trackEvent('add_to_homescreen_shown', { platform: platform });
-
-            function doComplete() {
-                if (typeof FLA !== 'undefined') FLA.trackEvent('add_to_homescreen_completed', { platform: platform });
-                document.body.style.overflow = '';
-                window.location.href = dest;
-            }
-            function doSkip() {
-                if (typeof FLA !== 'undefined') FLA.trackEvent('add_to_homescreen_skipped', { platform: platform });
-                document.body.style.overflow = '';
-                window.location.href = dest;
-            }
-
-            skipBtn.addEventListener('click', doSkip);
-
-            var stepStyle = 'background:#f7f6f3;border-radius:12px;padding:16px 18px;text-align:left;';
-            var rowStyle  = 'display:flex;gap:12px;align-items:flex-start;';
-            var numStyle  = 'width:28px;height:28px;border-radius:50%;background:#011e5c;color:#fff;display:flex;align-items:center;justify-content:center;font-size:0.72rem;font-weight:700;flex-shrink:0;';
-            var txtStyle  = 'font-size:0.875rem;color:#2d2a26;line-height:1.45;padding-top:5px;';
-
-            function makeRow(num, html) {
-                return '<div style="' + rowStyle + (num < 99 ? 'margin-bottom:12px;' : '') + '">' +
-                    '<div style="' + numStyle + '">' + num + '</div>' +
-                    '<div style="' + txtStyle + '">' + html + '</div>' +
-                    '</div>';
-            }
-            function makePrimaryBtn(label, handler) {
-                var btn = document.createElement('button');
-                btn.textContent = label;
-                btn.style.cssText = 'width:100%;padding:14px;background:#c9a84c;color:#fff;border:none;border-radius:8px;font-size:1rem;font-weight:600;cursor:pointer;font-family:inherit;letter-spacing:0.01em;';
-                btn.addEventListener('click', handler);
-                btnsEl.appendChild(btn);
-            }
-
-            titleEl.textContent    = 'Add to your Home Screen';
-            subtitleEl.textContent = 'Your life. One tab. — always one tap away.';
-
-            if (isIOSSafari) {
-                stepsEl.innerHTML = '<div style="' + stepStyle + '">' +
-                    makeRow(1, 'Tap the <strong>Share</strong> button ⬆️ at the bottom of Safari') +
-                    makeRow(2, 'Scroll down and tap <strong>"Add to Home Screen"</strong> ➕') +
-                    makeRow(99, 'Tap <strong>"Add"</strong> to confirm') +
-                    '</div>';
-                makePrimaryBtn('✓  Done, I added it!', doComplete);
-
-            } else if (isAndroid && _athsDeferredPrompt) {
-                subtitleEl.textContent = 'Get instant access from your home screen — no app store needed.';
-                stepsEl.innerHTML = '';
-                makePrimaryBtn('📲  Add to Home Screen', function() {
-                    _athsDeferredPrompt.prompt();
-                    _athsDeferredPrompt.userChoice.then(function(choice) {
-                        if (choice.outcome === 'accepted') { doComplete(); }
-                        else { doSkip(); }
-                    });
-                });
-
-            } else if (isAndroid) {
-                stepsEl.innerHTML = '<div style="' + stepStyle + '">' +
-                    makeRow(1, 'Tap <strong>⋮</strong> (menu) in the top-right corner of Chrome') +
-                    makeRow(2, 'Tap <strong>"Add to Home Screen"</strong>') +
-                    makeRow(99, 'Tap <strong>"Add"</strong> to confirm') +
-                    '</div>';
-                makePrimaryBtn('✓  Done, I added it!', doComplete);
-
-            } else {
-                // Desktop
-                titleEl.textContent    = 'Install FocusLedger';
-                subtitleEl.textContent = 'Pin it to your taskbar — your life, always one click away.';
-                if (_athsDeferredPrompt) {
-                    stepsEl.innerHTML = '';
-                    makePrimaryBtn('⊕  Install FocusLedger', function() {
-                        _athsDeferredPrompt.prompt();
-                        _athsDeferredPrompt.userChoice.then(function(choice) {
-                            if (choice.outcome === 'accepted') { doComplete(); }
-                            else { doSkip(); }
-                        });
-                    });
-                } else {
-                    stepsEl.innerHTML = '<div style="' + stepStyle + '">' +
-                        makeRow('⊕', 'Look for the <strong>install icon ⊕</strong> in your browser\'s address bar, then click <strong>"Install"</strong>.') +
-                        '</div>';
-                    makePrimaryBtn('✓  Got it!', doComplete);
-                }
-            }
-
-            // Show modal, lock scroll
-            modal.style.display = 'block';
-            document.body.style.overflow = 'hidden';
-        }
 
         form.addEventListener('submit', function(e) {
             e.preventDefault();
@@ -690,7 +559,7 @@
                     if (typeof FLA !== 'undefined') FLA.trackEvent('funnel_signup_complete');
                     // Migrate demo session (fire-and-forget — never blocks signup)
                     migrateDemoSession(data.token);
-                    showATHSModal(postAuthDest);
+                    window.location.href = postAuthDest;
                 } else {
                     showError(data.message || 'Couldn\'t create your account. Try again?');
                     submitBtn.disabled = false;

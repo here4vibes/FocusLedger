@@ -10,7 +10,8 @@
 
 const express = require('express');
 const router = express.Router();
-const { getClient } = require('../lib/claude-client');
+const { createMessage } = require('../lib/claude-client');
+const { isQuotaError } = require('../lib/ai-budget');
 const { authenticateToken } = require('../middleware/auth');
 const rateLimit = require('express-rate-limit');
 
@@ -96,7 +97,7 @@ module.exports = function() {
       const resolvedMode = detectMode(image, mode);
       const prompt = resolvedMode === 'receipt' ? RECEIPT_PROMPT : NOTE_PROMPT;
 
-      const response = await getClient().messages.create({
+      const response = await createMessage({
         model: 'claude-haiku-4-5',
         max_tokens: 800,
         messages: [{

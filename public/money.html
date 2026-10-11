@@ -434,6 +434,9 @@
     </div>
   </div>
 
+  <!-- CARD 2b: Upcoming bills + one remembered question (lib/bill-guardian.js) -->
+  <div id="bills-placeholder"></div>
+
   <!-- CARD 3: This Week (unlocks at day 3) -->
   <div id="card3-placeholder"></div>
 
@@ -770,10 +773,73 @@ async function checkUnlockConditions() {
 
   // Load all cards
   await Promise.all([
+    loadBillsCard(),
     loadWeekCard(),
     loadImpulseCard(),
     loadCategoriesCard(),
   ]);
+}
+
+// ─── Card 2b: Upcoming bills ─────────────────────────────────────────────────
+// Bills predicted from your bank history, plus at most ONE question: for a
+// charge that looks bill-like but isn't clearly a bill (a gym, a beauty plan),
+// ask once and remember. Hidden when there's nothing recurring yet.
+function escBill(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+function billDate(iso) {
+  return new Date(iso + 'T12:00:00Z').toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
+}
+async function loadBillsCard() {
+  const container = document.getElementById('bills-placeholder');
+  if (!container) return;
+  let r;
+  try {
+    r = await api('/api/plaid/recurring');
+  } catch (e) {
+    console.error('[money] bills card load failed:', e.message);
+    return;
+  }
+  if (!r || !r.success || !r.streams || !r.streams.length) { container.innerHTML = ''; return; }
+
+  const upcoming = r.streams.filter(s => s.bucket === 'obligation').slice(0, 3);
+  let html = '<div class="dash-card"><div class="card-label">Upcoming bills</div>';
+  if (upcoming.length) {
+    html += upcoming.map(s =>
+      '<div style="display:flex;justify-content:space-between;gap:0.75rem;padding:0.35rem 0;font-size:0.92rem;">' +
+        '<span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escBill(s.name) + '</span>' +
+        '<span style="white-space:nowrap;color:var(--text-muted);font-variant-numeric:tabular-nums;">' + billDate(s.predicted_next) + ' · ~' + fmt(s.typical_amount) + '</span>' +
+      '</div>').join('');
+    html += '<div class="card-meta">Predicted from your bank history. You\'ll get a reminder 3 days before each one.</div>';
+  } else {
+    html += '<div class="card-meta">No bills spotted yet. They show up here once a few months of payments are in.</div>';
+  }
+  if (r.ask) {
+    html += '<div id="billAsk" style="margin-top:0.85rem;padding-top:0.75rem;border-top:1px solid var(--border, rgba(127,127,127,0.2));">' +
+      '<div style="font-size:0.9rem;margin-bottom:0.55rem;">Is <strong>' + escBill(r.ask.name) + '</strong> (~' + fmt(r.ask.typical_amount) + ' ' + escBill(r.ask.frequency) + ') a bill you want reminders for?</div>' +
+      '<div style="display:flex;gap:0.5rem;flex-wrap:wrap;">' +
+        '<button type="button" data-bucket="obligation" class="bill-ask-btn" style="min-height:44px;padding:0.5rem 0.9rem;border-radius:10px;border:1.5px solid var(--navy, #011e5c);background:var(--navy, #011e5c);color:#fff;font-weight:600;cursor:pointer;">Yes, remind me</button>' +
+        '<button type="button" data-bucket="habit" class="bill-ask-btn" style="min-height:44px;padding:0.5rem 0.9rem;border-radius:10px;border:1.5px solid var(--border, rgba(127,127,127,0.35));background:transparent;color:inherit;cursor:pointer;">No, it\'s a treat</button>' +
+      '</div></div>';
+  }
+  html += '</div>';
+  container.innerHTML = html;
+
+  container.querySelectorAll('.bill-ask-btn').forEach(btn => btn.addEventListener('click', async () => {
+    const ask = document.getElementById('billAsk');
+    container.querySelectorAll('.bill-ask-btn').forEach(b => { b.disabled = true; });
+    try {
+      const res = await api('/api/plaid/recurring/' + encodeURIComponent(r.ask.merchant_key) + '/bucket', {
+        method: 'POST', body: JSON.stringify({ bucket: btn.dataset.bucket, name: r.ask.name }),
+      });
+      if (!res.success) throw new Error(res.message || 'save failed');
+      loadBillsCard(); // next question (if any) and the updated list
+    } catch (e) {
+      console.error('[money] bill answer failed:', e.message);
+      if (ask) ask.insertAdjacentHTML('beforeend', '<div style="color:#B42318;font-size:0.82rem;margin-top:0.4rem;">Couldn\'t save that. Try again?</div>');
+      container.querySelectorAll('.bill-ask-btn').forEach(b => { b.disabled = false; });
+    }
+  }));
 }
 
 // ─── Card 1: Account Summary / Bank Sync ─────────────────────────────────────

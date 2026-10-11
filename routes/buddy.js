@@ -34,6 +34,7 @@
 const express = require('express');
 const { authenticateToken } = require('../middleware/auth');
 const { chatMessages } = require('../lib/ai-chat');
+const { isQuotaError } = require('../lib/ai-budget');
 const { extractTasks, detectCompletions, extractPassiveCapture, isBrainDump, extractBrainDump } = require('../lib/taskParsingService');
 const {
   runPatternDetection,
@@ -356,7 +357,7 @@ module.exports = function(pool) {
   router.post('/increment-session', async (req, res) => {
     try {
       await pool.query(
-        `UPDATE users SET session_count = session_count + 1 WHERE id = $1`,
+        `UPDATE users SET session_count = COALESCE(session_count, 0) + 1 WHERE id = $1`,
         [req.user.id]
       );
       res.json({ success: true });
@@ -513,6 +514,8 @@ module.exports = function(pool) {
             const reply = await chatMessages(messages, { maxTokens: 450, model: 'claude-sonnet-4-6' });
             return { reply, error: false };
           } catch (aiErr) {
+            // Over today's AI limit: say so (a canned reply would hide it).
+            if (isQuotaError(aiErr)) return { reply: aiErr.userMessage, error: true };
             console.error('[buddy] conversation AI error:', aiErr.message);
             return { reply: getFallbackBuddyReply(userTurns), error: true };
           }

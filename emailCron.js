@@ -256,6 +256,8 @@ function scheduleEmailCrons(pool) {
 module.exports = { scheduleEmailCrons, runEmailCrons };
 
 async function runEmailCrons(pool) {
+  await require('./lib/tandem-recap').sendTandemRecaps(pool)
+    .catch(e => console.error('[emailCron] Tandem recap error:', e.message));
   await sendWeeklyNudges(pool);
   await sendReEngagementEmails(pool);
   await sendProExpiryReminders(pool);
