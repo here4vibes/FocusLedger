@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="color-scheme" content="light">
+<title>Bills & subscriptions — FocusLedger</title>
+<link rel="icon" type="image/svg+xml" href="/icons/fl-icon.svg">
+<link rel="stylesheet" href="/shared-nav.css">
+<style>
+  :root{
+    --ground:#f3efe7;--canvas:#faf8f4;--surface:#ffffff;--ink:#1a1a1a;--muted:#5f6a78;--faint:#696d76;
+    --accent:#011e5c;--accent-soft:#e8ecf4;--warm:#c9a84c;--warm-soft:#f6efdc;--line:#e8e5e0;--line-2:#ddd8cf;
+    --good:#5BA4A4;--good-soft:#e6f1f1;--alert:#c0552f;--alert-soft:#f7e6df;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;background:var(--canvas);color:var(--ink);font-family:var(--sans);-webkit-font-smoothing:antialiased;}
+  .wrap{max-width:680px;margin:0 auto;padding:1rem 1rem calc(96px + env(safe-area-inset-bottom));}
+  h1{font-size:1.35rem;letter-spacing:-.02em;margin:.4rem 0 .2rem;}
+  .lede{color:var(--muted);font-size:.9rem;margin:0 0 1rem;line-height:1.45;}
+  .totals{display:flex;gap:.6rem;margin-bottom:1rem;}
+  .tot{flex:1;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:.7rem .8rem;}
+  .tot .k{font-size:.6rem;letter-spacing:.12em;text-transform:uppercase;font-weight:700;color:var(--accent);}
+  .tot .v{font-size:1.35rem;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums;margin-top:.15rem;}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:.8rem .9rem;margin-bottom:.9rem;
+    box-shadow:0 8px 20px -14px rgba(1,30,92,.25);}
+  .card .k{font-size:.62rem;letter-spacing:.12em;text-transform:uppercase;font-weight:700;color:var(--accent);margin-bottom:.35rem;}
+  .row{display:flex;align-items:center;gap:.6rem;padding:.5rem 0;border-top:1px solid var(--line);}
+  .row:first-of-type{border-top:none;}
+  .row .main{flex:1;min-width:0;}
+  .row .nm{font-weight:600;font-size:.94rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .row .sub{font-size:.76rem;color:var(--faint);margin-top:.1rem;}
+  .row .amt{font-weight:700;font-size:.92rem;font-variant-numeric:tabular-nums;text-align:right;flex:none;}
+  .row .amt small{display:block;font-weight:500;font-size:.7rem;color:var(--faint);}
+  .tag{display:inline-block;font-size:.56rem;letter-spacing:.08em;text-transform:uppercase;font-weight:800;border-radius:999px;
+    padding:.12rem .42rem;margin-left:.35rem;vertical-align:middle;}
+  .tag.pend{background:var(--good-soft);color:var(--good);}
+  .tag.kept{background:var(--accent-soft);color:var(--accent);}
+  .tag.again{background:var(--alert-soft);color:var(--alert);}
+  .lnk{font-size:.75rem;color:var(--accent);font-weight:700;text-decoration:none;white-space:nowrap;}
+  .chips{display:flex;gap:.4rem;flex-wrap:wrap;margin-top:.45rem;}
+  .chip{font-size:.78rem;font-weight:600;padding:.38rem .7rem;border-radius:999px;border:none;cursor:pointer;font-family:inherit;
+    background:var(--accent-soft);color:var(--accent);}
+  .chip.solid{background:var(--accent);color:#fff;}
+  .chip:disabled{opacity:.55;cursor:default;}
+  .win{background:var(--good-soft);color:#2f6f6f;border-radius:12px;padding:.55rem .7rem;font-size:.86rem;margin-bottom:.9rem;}
+  .empty{text-align:center;color:var(--muted);padding:2rem 1rem;line-height:1.5;}
+  .empty a{color:var(--accent);font-weight:700;}
+  .note{font-size:.78rem;color:var(--muted);margin-top:.4rem;}
+</style>
+</head>
+<body>
+<main class="wrap" id="main">
+  <h1>Bills &amp; subscriptions</h1>
+  <p class="lede">Everything that charges you on a schedule, found in your bank history. Amounts are typical, not exact.</p>
+  <div id="content"><p class="empty">Loading…</p></div>
+</main>
+<script>
+(function () {
+  'use strict';
+  var TOKEN = localStorage.getItem('fl_token');
+  if (!TOKEN) { location.href = '/login?redirect=' + encodeURIComponent(location.pathname); return; }
+  var content = document.getElementById('content');
+
+  function api(path, opts) {
+    opts = opts || {};
+    opts.headers = Object.assign({ Authorization: 'Bearer ' + TOKEN }, opts.headers || {});
+    if (opts.body && typeof opts.body !== 'string') { opts.headers['Content-Type'] = 'application/json'; opts.body = JSON.stringify(opts.body); }
+    return fetch(path, opts).then(function (r) {
+      if (r.status === 401) { localStorage.removeItem('fl_token'); location.href = '/login?reason=expired'; throw new Error('unauthorized'); }
+      return r.json();
+    });
+  }
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  function cents(x) { return Math.round(Number(x || 0) * 100); }
+  function dollars(c) { var v = c / 100; return '$' + (c % 100 ? v.toFixed(2) : v.toFixed(0)); }
+  // Monthly equivalent, in cents, for the totals.
+  var PER_MONTH = { weekly: 52 / 12, biweekly: 26 / 12, monthly: 1, quarterly: 1 / 3, annual: 1 / 12 };
+  var CADENCE = { weekly: 'weekly', biweekly: 'every 2 weeks', monthly: 'monthly', quarterly: 'quarterly', annual: 'yearly' };
+  function nextLabel(iso) {
+    var d = new Date(iso + 'T00:00:00'); if (isNaN(d)) return iso;
+    var t = new Date(); t.setHours(0, 0, 0, 0);
+    var diff = Math.round((d - t) / 86400000);
+    if (diff === 0) return 'today';
+    if (diff === 1) return 'tomorrow';
+    if (diff > 1 && diff <= 6) return d.toLocaleDateString(undefined, { weekday: 'short' });
+    return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  }
+
+  function row(s) {
+    var tag = s.cancel_status === 'pending' ? '<span class="tag pend">cancelling</span>'
+      : s.cancel_status === 'charged_again' ? '<span class="tag again">charged again</span>'
+      : (s.kept_at ? '<span class="tag kept">kept</span>' : '');
+    var link = s.bucket === 'subscription' && s.cancel_link && s.cancel_status !== 'confirmed'
+      ? ' · <a class="lnk" target="_blank" rel="noopener noreferrer" href="' + esc(s.cancel_link.url) + '">Cancel page ↗</a>' : '';
+    var yearly = PER_MONTH[s.frequency] ? Math.round(cents(s.typical_amount) * PER_MONTH[s.frequency] * 12) : 0;
+    return '<div class="row"><div class="main"><div class="nm">' + esc(s.name) + tag + '</div>' +
+      '<div class="sub">' + esc(CADENCE[s.frequency] || s.frequency) + ' · next ' + esc(nextLabel(s.predicted_next)) + link + '</div></div>' +
+      '<div class="amt">~' + dollars(cents(s.typical_amount)) + (yearly ? '<small>~' + dollars(yearly) + '/yr</small>' : '') + '</div></div>';
+  }
+
+  function askCard(s) {
+    var card = document.createElement('div'); card.className = 'card';
+    card.innerHTML = '<div class="k">Quick question</div><div>Is <strong>' + esc(s.name) + '</strong> (~' + dollars(cents(s.typical_amount)) +
+      ', ' + esc(CADENCE[s.frequency] || s.frequency) + ') a bill, a subscription, or neither?</div>';
+    var chips = document.createElement('div'); chips.className = 'chips';
+    [['A bill — remind me', 'obligation', 'solid'], ['Subscription', 'subscription', ''], ['Neither', 'habit', '']].forEach(function (o) {
+      var b = document.createElement('button'); b.className = 'chip ' + o[2]; b.textContent = o[0];
+      b.onclick = function () {
+        chips.querySelectorAll('button').forEach(function (x) { x.disabled = true; });
+        api('/api/plaid/recurring/' + encodeURIComponent(s.merchant_key) + '/bucket', { method: 'POST', body: { bucket: o[1], name: s.name } })
+          .then(function (r) { if (!r || !r.success) throw new Error('save failed'); load(); })
+          .catch(function (err) {
+            if (err && err.message === 'unauthorized') return;
+            console.error('[money-bills] answer failed:', err && err.message, '| merchant:', s.merchant_key);
+            chips.querySelectorAll('button').forEach(function (x) { x.disabled = false; });
+          });
+      };
+      chips.appendChild(b);
+    });
+    card.appendChild(chips);
+    return card;
+  }
+
+  function render(rec) {
+    var streams = (rec.streams || []).filter(function (s) { return s.cancel_status !== 'confirmed'; });
+    var bills = streams.filter(function (s) { return s.bucket === 'obligation'; });
+    var subs = streams.filter(function (s) { return s.bucket === 'subscription'; });
+    var unsure = streams.filter(function (s) { return s.bucket === 'unsure'; });
+    var won = (rec.cancellations || []).filter(function (c) { return c.status === 'confirmed'; });
+
+    if (!bills.length && !subs.length && !unsure.length && !won.length) {
+      content.innerHTML = '<div class="empty">No recurring charges found yet.<br>Connect your bank on <a href="/app/money">Overview</a> and FocusLedger will spot your bills and subscriptions from your history.</div>';
+      return;
+    }
+    var monthly = bills.concat(subs).reduce(function (sum, s) { return sum + cents(s.typical_amount) * (PER_MONTH[s.frequency] || 0); }, 0);
+    var subsYear = subs.reduce(function (sum, s) { return sum + cents(s.typical_amount) * (PER_MONTH[s.frequency] || 0) * 12; }, 0);
+    var html = '<div class="totals"><div class="tot"><div class="k">Every month</div><div class="v">~' + dollars(Math.round(monthly)) + '</div></div>' +
+      '<div class="tot"><div class="k">Subscriptions / yr</div><div class="v">~' + dollars(Math.round(subsYear)) + '</div></div></div>';
+    won.forEach(function (c) {
+      var yr = PER_MONTH[c.frequency] && c.amount ? Math.round(cents(c.amount) * PER_MONTH[c.frequency] * 12) : 0;
+      html += '<div class="win">✓ <strong>' + esc(c.name) + '</strong> cancelled — no charge since.' + (yr ? ' About ' + dollars(yr) + ' a year back.' : '') + '</div>';
+    });
+    if (bills.length) html += '<div class="card"><div class="k">Bills · ' + bills.length + '</div>' + bills.map(row).join('') +
+      '<div class="note">FocusLedger reminds you 3 days before each one.</div></div>';
+    if (subs.length) html += '<div class="card"><div class="k">Subscriptions · ' + subs.length + '</div>' + subs.map(row).join('') +
+      '<div class="note">Cancel, keep or reclassify one from the bills card on <a class="lnk" href="/weightless">Home</a> the week it’s due.</div></div>';
+    content.innerHTML = html;
+    unsure.forEach(function (s) { content.appendChild(askCard(s)); });
+  }
+
+  function load() {
+    api('/api/plaid/recurring').then(function (rec) {
+      if (!rec || !rec.success) throw new Error((rec && rec.message) || 'load failed');
+      render(rec);
+    }).catch(function (err) {
+      if (err && err.message === 'unauthorized') return;
+      console.error('[money-bills] load failed:', err && err.message);
+      content.innerHTML = '<p class="empty">Couldn’t load your bills just now. Try again in a moment.</p>';
+    });
+  }
+  load();
+})();
+</script>
+<script src="/shared-nav.js"></script>
+</body>
+</html>

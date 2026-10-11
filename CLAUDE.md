@@ -107,7 +107,9 @@ Node.js + Express · PostgreSQL (Neon) · Render deployment · Vanilla HTML/CSS/
     - `render.yaml` moves `cold-start-nudge` and `evening-checkin` to hourly. Confirm in Render if Blueprint sync is off.
   - **Before merging:** merge `main` in again. Resolve `public/changelog.html` conflicts by keeping all entries.
 
-- **#235** `claude/tasks-hub-wAcNr`: UI phase 2 (Tasks hub), plus the `fl_token` sign-in fix for Routines, the partner pages, link-email and pricing.
+- **#236** `claude/money-hub-wAcNr`: UI phase 3 (Money hub: Overview · Transactions · Bills), with a new `/app/money/bills` page (`public/money-bills.html`).
+  - Also fixes `/transactions` and `/reset-password`, both broken since #177 (July 18).
+  - Adds `__tests__/inline-scripts-parse.test.js`, which parses every inline `<script>` in `public/`.
 
 ### UI consolidation plan (agreed with the user, 2026-10-11)
 Four places plus a Settings gear. One small PR per phase; old URLs keep working through redirects.
@@ -125,12 +127,12 @@ Four places plus a Settings gear. One small PR per phase; old URLs keep working 
    - The Weightless header links to Tasks · Money · Life · ⚙.
    - `/app`, `/app/buddy` and unknown `/app/*` now go to `/weightless`. `/app/buddy?mode=form` still serves `buddy.html`.
    - `/home` and `/portal` are handled by #218.
-2. **Phase 2, Tasks hub (#235):** sections All tasks · Today · Routines · Calendar · Ideas.
+2. **Phase 2, Tasks hub (#235, merged):** sections All tasks · Today · Routines · Calendar · Ideas.
    - Defined once in `PLACE_TABS` in `shared-nav.js`: a sticky `.place-tabs` strip on phones, and sub-items under the place in the desktop sidebar.
    - Don't dock a strip under page headers on desktop; old pages have their own sticky/fixed bars, which phase 5 removes.
    - `/app/done` is a flow screen, not a section.
    - For phases 3 and 4, add the Money and Life entries to `PLACE_TABS` and drop them from "More".
-3. **Phase 3, Money hub.**
+3. **Phase 3, Money hub (#236):** Overview (`/app/money`) · Transactions (`/transactions`) · Bills (`/app/money/bills`, the full recurring list with monthly and yearly totals, statuses and the "unsure" question). The spending check-in is a flow, not a section.
 4. **Phase 4, Life hub,** then retire `buddy.html` (after moving the form check-in), `app.html`, `home.html`, `portal.html` and `landing-old`.
 5. **Phase 5, visual pass:** Weightless tokens on every page.
 
@@ -226,7 +228,8 @@ Four places plus a Settings gear. One small PR per phase; old URLs keep working 
 - **2026-10-11 (later):**
   - #233 cancel steps inside the card, no duplicate tasks.
   - #234 UI phase 1, one front door.
-  - Found: pages reading `localStorage.token` instead of `fl_token` were silently signed out (fixed in #235). Grep for it when a page "bounces to Home".
+  - #235 Tasks hub, plus the `fl_token` fix: pages reading `localStorage.token` instead of `fl_token` were silently signed out. Grep for it when a page "bounces to Home".
+  - Found: inline-script syntax errors silently killed `/transactions` and `/reset-password` for three months (fixed in #236). The new parse test guards every page.
 - **2026-10-11:**
   - #225 bill guardian.
   - #226 Tandem weekly recap.
