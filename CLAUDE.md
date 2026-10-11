@@ -107,6 +107,12 @@ Node.js + Express · PostgreSQL (Neon) · Render deployment · Vanilla HTML/CSS/
     - `render.yaml` moves `cold-start-nudge` and `evening-checkin` to hourly. Confirm in Render if Blueprint sync is off.
   - **Before merging:** merge `main` in again. Resolve `public/changelog.html` conflicts by keeping all entries.
 
+- **#233** `claude/cancel-help-dedupe-wAcNr`: fixes the bad cancel experience the user screenshotted (MySubaru).
+  - "Show me how" shows steps inside the card instead of sending a fake chat message. Model steps go through a contact-detail filter, with general steps as the fallback.
+  - Unknown services get a search link.
+  - Buddy's `create_task` refuses near-duplicates (`lib/task-dedupe.js`).
+  - The agent prompt lists pending cancellations and forbids phone numbers and URLs from memory.
+
 ### Waiting on the user
 - **Live Stripe purchase test.** Expected: Settings shows Autopilot $9.95 with a renewal date; after cancelling, "Cancelled — you won't be charged again" and a "Keep Autopilot" button.
 - **Render `DATABASE_URL`:** change `sslmode=require` → `verify-full` in both the `focusledger` env group and the web service (NODE-EXPRESS-4).
@@ -169,7 +175,8 @@ Node.js + Express · PostgreSQL (Neon) · Render deployment · Vanilla HTML/CSS/
     - Settles pending subscription cancellations from bank data (`cancellationVerdict`).
     - Runs in `jobs/plaid-sync.js` and after a bucket answer.
   - API: `GET /api/plaid/recurring` (streams, the one `ask`, settled `cancellations`); `POST …/:key/bucket|keep|cancel`; `DELETE …/:key/cancel`.
-  - Cancel pages: `lib/cancel-links.js`.
+  - Cancel pages: `lib/cancel-links.js`. In-card steps: `lib/cancel-help.js` (`POST …/:key/cancel-help`).
+  - Agent duplicate-task guard: `lib/task-dedupe.js`, used by `create_task` in `lib/agent-tools.js`.
 - **Weightless** (`public/weightless.html`, the one home):
   - Tap-to-complete radar with a reward loop (`public/js/reward.js`, undo, next task steps up).
   - Bills · next 7 days card.
