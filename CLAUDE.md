@@ -54,7 +54,7 @@ Node.js + Express · PostgreSQL (Neon) · Render deployment · Vanilla HTML/CSS/
 - `plaid_items + plaid_accounts + plaid_transactions` — bank sync: encrypted access_token (AES-256-GCM), account_ids, transaction dedup on Plaid transaction_id; confirmed=true means written to expenses
 - `plaid_tokens` — legacy per-user Plaid access token (Phase 1 v1 API); replaced by `plaid_items` table with AES-256-GCM encrypted tokens for current Plaid integration
 - `transactions + spending_sessions + transaction_classifications` — v1 API transaction ledger (legacy); current money tab uses Prisma-backed expense + plaid_transaction tables
-- `bill_preferences` — per-user per-merchant auto-task toggle; merchant_key is normalized name; is_disabled stops task creation
+- `bill_preferences` — per-user per-merchant: `bucket` (obligation/subscription/habit), `is_disabled` (legacy stop-auto-tasks), `kept_at` (subscription kept; review rests 90d), `cancel_*` (requested/expected_by/amount/frequency/status pending→confirmed|charged_again/resolved_at, settled by the bill guardian from bank data)
 - `customer_emails` — two-way admin inbox; direction enum ('inbound'/'outbound'); unique on resend_email_id
 - `account_deletion_tokens` — one-time confirmation tokens for self-service deletion; 24h expiry, SHA256 hashed, single-use
 - `notification_send_log` — push dedup: (user_id, notification_key, send_date) to prevent duplicates; daily cap of 3
@@ -87,115 +87,127 @@ Node.js + Express · PostgreSQL (Neon) · Render deployment · Vanilla HTML/CSS/
 - **Polsia Analytics** — first-party beacon pixel
 - **APNs** — iOS push via `apn` npm package; env vars: APNS_KEY_ID, APNS_TEAM_ID, APNS_KEY_P8, APNS_BUNDLE_ID
 
-## Current state & handoff (updated 2026-10-11)
+## Current state & handoff (updated 2026-10-11, end of session)
 
-Read this first in a new session. The user wants a **"Summary" section at the end of every reply**.
+**Read this section first.** It's the only context a new session gets.
+- **Every reply ends with a "Summary" section** (the user's standing request).
+- **Context is limited, so stay small:** one PR per feature, and read only the files a task touches.
+- **Keep this section current:** update it in the PR that changes the state, or in a small `docs(claude-md)` PR at the end of a work chunk. Keep it short and delete what's done.
 
-### Open PRs (merge order: #225 → #226 → #218, each needs the user to say "merge N")
-- **#218** `claude/test-coverage-analysis-wAcNr`: billing portal, nudge-quality pass, "one home", security upgrades, CI smoke fix, Settings crash fix. **Waiting on the user's live Stripe purchase test.**
-  - **Billing portal:** "Manage billing & invoices" (`POST /api/subscription/portal`).
-  - **Nudge-quality pass:**
-    - Lifecycle emails that said "undefined" and guilt-tripped.
-    - Buddy lapse timing.
-    - Deadline quiet hours (08:00–21:59 local, 3-day overdue cap).
-    - Routines gated by hour, day, active flag and completion.
-    - Cold-start nudge at 10am local, hourly.
-    - Document-expiry text.
-    - Evening check-in at `evening_time`.
-  - **"One home":** `/home` and `/portal` → `/weightless`; the Command Center lives on at `/portal/legacy`.
-  - **Canonical links:** `/app/money` and `/app/buddy`.
-  - **Security upgrades:**
-    - `apn` replaced by a native HTTP/2 APNs sender.
-    - `imap` replaced by `imapflow`, which also fixes `rejectUnauthorized:false`.
-  - **Migrations:**
-    - `user_email_preferences_boolean` fixes Sentry NODE-EXPRESS-5.
-    - `events_id_default`.
+### Open PRs (each needs the user's explicit "merge N")
+- **#218** `claude/test-coverage-analysis-wAcNr`: billing portal, nudge-quality pass, "one home", security upgrades. **CI is green and it's up to date with `main` (as of #228–#230). It waits only on the user's live Stripe purchase test.**
+  - **Contents:**
+    - `POST /api/subscription/portal`.
+    - Nudge fixes: lifecycle emails, Buddy lapse timing, deadline quiet hours 08:00–21:59 local, routine gating, cold-start nudge at 10am local, evening check-in at `evening_time`.
+    - `/home` and `/portal` → `/weightless` (Command Center at `/portal/legacy`).
+    - `apn` → native HTTP/2 sender; `imap` → `imapflow`.
+    - Migrations `user_email_preferences_boolean` (NODE-EXPRESS-5) and `events_id_default`.
   - **On deploy:**
-    - Re-engagement emails resume. **Only Miles (user 35) is eligible.** 22 users were paused via `user_email_preferences.re_engagement='false'`; flip them back at relaunch.
-    - `render.yaml` moves `cold-start-nudge` and `evening-checkin` to hourly. Confirm in the Render dashboard if Blueprint sync is off.
-  - **Rebase on `main` before merging.** `public/changelog.html` conflicts are always "keep all entries".
-- **#225** `claude/bill-guardian-wAcNr`: bill guardian, plus `tasks.description` JSON→TEXT. The column was JSON in prod, so every task note, email-to-task note and bill task insert failed; prod has 0 descriptions and 0 auto-bill tasks.
-- **#226** `claude/tandem-recap-wAcNr`: Tandem "Your week together" Monday recap.
+    - Re-engagement emails resume; only Miles (user 35) is eligible. 22 users are paused via `user_email_preferences.re_engagement='false'`; flip them back at relaunch.
+    - `render.yaml` moves `cold-start-nudge` and `evening-checkin` to hourly. Confirm in Render if Blueprint sync is off.
+  - **Before merging:** merge `main` in again. Resolve `public/changelog.html` conflicts by keeping all entries.
 
 ### Waiting on the user
-- **`DATABASE_URL` in Render:** change `sslmode=require` → `sslmode=verify-full` in both the `focusledger` env group and the web service. This silences NODE-EXPRESS-4. Claude can't do it; it needs the secret.
+- **Live Stripe purchase test.** Expected: Settings shows Autopilot $9.95 with a renewal date; after cancelling, "Cancelled — you won't be charged again" and a "Keep Autopilot" button.
+- **Render `DATABASE_URL`:** change `sslmode=require` → `verify-full` in both the `focusledger` env group and the web service (NODE-EXPRESS-4).
 - **`SENTRY_DSN`** must be in the `focusledger` env group so cron errors reach Sentry.
-- **Reconnect the Neon and Stripe connectors** at claude.ai/customize/connectors, then start a new session.
-- **Live purchase test.** Expected: Settings shows Autopilot $9.95 with a renewal date; after cancelling, "Cancelled — you won't be charged again" and a "Keep Autopilot" button.
-- **Plaid:** the Plaid MCP shows **zero production usage** on team FocusLedger (`69e2d08b7146d5000d5a94d1`). Confirm `PLAID_ENV`, and whether Liabilities and Recurring Transactions are enabled. If they are, layer Plaid recurring and Liabilities due dates onto the bill guardian.
+- **Neon and Stripe MCP connectors** fail to connect in cloud sessions. Reconnect them at claude.ai/customize/connectors.
+- **Plaid:** the MCP shows zero production usage on team `69e2d08b7146d5000d5a94d1`. Confirm `PLAID_ENV`, and whether Liabilities and Recurring Transactions are enabled. If so, layer them onto the bill guardian.
+- **Phone check of the live Weightless page:** tap a radar box, open a subscription review, and confirm the Buddy bubble still opens.
 
 ### Backlog (agreed or proposed)
-- **After #218:** add an "Invite an accountability partner" link to the weekly email for people with no partner (`/app/settings?focus=tandem`; add `focus=tandem` scrolling to `#tandemSection`).
-- **NODE-EXPRESS-6:** the cross-domain-insights job fails with `column "mood" does not exist`.
-- **`/api/plaid/diagnostic`:** no auth, and it leaks the Plaid key prefix and length. Make it admin-only.
+- **Subscription cancel, stage 2 (proposed):** Buddy emails the cancellation from the user's own address.
+  - Needs Gmail send scope: `routes/email.js` `GMAIL_SCOPE` is `gmail.readonly` today, so this means another Google verification.
+  - Today `draft_and_send_email` sends from the FocusLedger domain with reply-to set to the user.
+  - **Stage 3 (browser agent) and stage 4 (cancellation partners or virtual cards): deferred** until there are active users.
+- **Grow the cancel-link list** in `lib/cancel-links.js`, but only with well-known, stable URLs.
+- **Routine templates re-create tasks:** a user's starter routine tasks (`routine_templates`, "Drink a full glass of water"…) came back after being deleted or completed on page load (seen locally). Find what auto-adopts the template, check whether it's intended, and fix it if not.
+- **After #218:** add an "Invite an accountability partner" link to the weekly email for people with no partner (`/app/settings?focus=tandem`, scroll to `#tandemSection`).
+- **Cleanup:** `routes/admin.js` and `routes/account-deletion.js` duplicate `isAdminUser`; switch them to `lib/admin-access.js`.
 - **Hardening:**
-  1. `user_id NOT NULL` and foreign keys on core tables. Check for orphans first and test on a Neon branch.
-  2. 70 silent `catch {}` blocks.
-  3. Check Neon point-in-time restore and the snapshot schedule.
+  1. `user_id NOT NULL` and foreign keys on core tables. Check for orphans first; use a Neon branch.
+  2. About 70 silent `catch {}` blocks.
+  3. Neon point-in-time restore and snapshot schedule.
   4. A `routine_task_links` unique key on `(routine_id, task_id)`.
   5. 23 moderate npm advisories.
 - **Strategy (decided):**
-  - Agentic **type 2** (Buddy acts for you: bills, start-it-for-me) and **type 3** (shareable outcomes) come first.
-  - A FocusLedger **MCP server** for Claude, ChatGPT and Meta Muse connectors is deferred.
-  - Positioning against Meta Muse: ADHD-native; "ADHD tax"/money from a CPA founder; privacy ("never train on or sell your data"); partner accountability.
-- **Next product step:** iterate the first session using the admin Activation card. #223 added the starters; watch the `first_checkin_starter` events.
+  - Agentic **type 2** (Buddy acts: bills, subscriptions, start-it-for-me) and **type 3** (shareable outcomes, e.g. "cancelled Netflix, $186/yr back") come first.
+  - The MCP server for Claude/ChatGPT/Meta Muse is deferred.
+  - Positioning: ADHD-native; the "ADHD tax" from a CPA founder; privacy; partner accountability.
+- **Product loop:** watch the admin Activation card and the `first_checkin_starter` events (#223).
 
 ### Production facts (learned the hard way)
 - **Scale (Oct 2026):**
-  - About 28 real users, 1 active (the founder), and about 64 real visitors in 30 days.
-  - **19 of 28 never created a task or talked to Buddy.**
+  - About 28 real users, 1 active (the founder), about 64 real visitors in 30 days.
+  - 19 of 28 never created a task or talked to Buddy.
   - Stripe has never had a subscription. Live account `acct_1Td92HCX9qN8DGgb`.
   - Prices: Autopilot $9.95/$99.95, Tandem $14.95/$149.95.
-  - The webhook API version is dahlia (basil+): `current_period_end` is on items, and the invoice's subscription is at `invoice.parent.subscription_details.subscription`.
-- **The prod schema came from Prisma; genesis `CREATE TABLE IF NOT EXISTS` was a no-op on existing tables.** When something "silently doesn't work", **check the prod column type and default first.** Known traps:
-  - Missing id defaults and PKs (all fixed in #219–#221; every table with `id` now has a PK).
-  - JSON columns that code writes text into (`tasks.description`, fixed in #225).
-  - TEXT columns used as booleans (fixed in #218).
-  - `migrate.js` `runCoreMigrations` creates a minimal `users` table before genesis (fixed by `users_genesis_columns`).
-- **Many routes catch DB errors, log them and return 200.** Sentry now captures every `console.error` (`lib/sentry.js`). The CI boot smoke **fails on any logged "column/relation … does not exist"**.
-- **Migrations run on deploy** (`npm start` = `node migrate.js && node server.js`). A failed migration aborts the deploy and the old version keeps serving. Test risky migrations on a **Neon branch** first, and ask before deleting branches.
-- **Key user IDs:** Sean = 2, the **QA user = 25 (never touch)**, Miles = 35.
-- **Archives:** CI smoke analytics rows are in `*_automated`; rows saved without a user are in `orphaned_rows_archive`.
-- **Signup check:** a daily `prod-signup-check.yml` signs up `signup-monitor+<tag>@focusledger.net`, which is auto-flagged `is_qa_user`.
+  - The webhook API version is dahlia: `current_period_end` is on items; the invoice's subscription is at `invoice.parent.subscription_details.subscription`.
+- **The prod schema came from Prisma; genesis `CREATE TABLE IF NOT EXISTS` was a no-op.** When something "silently doesn't work", **check the prod column first.** Past traps:
+  - missing id defaults and PKs (#219–#221);
+  - JSON columns that code writes text into (`tasks.description`, #225);
+  - TEXT columns used as booleans (#218);
+  - `buddy_checkins` has no `mood` (#229; check-ins store `energy_level`).
+- **Silent failures:** many routes catch DB errors, log them and return 200. Sentry captures every `console.error`. The CI boot smoke fails on any logged "column/relation … does not exist".
+- **Migrations run on every deploy** (`npm start` = `node migrate.js && node server.js`). A failed migration aborts the deploy and the old version keeps serving. Test risky migrations on a Neon branch.
+- **Key user IDs:** Sean = 2, **QA user = 25 (never touch)**, Miles = 35.
+- **Free plan cap:** free users are capped at **10 active tasks**. `POST /api/tasks` returns 402 `TASK_LIMIT_REACHED`.
 
-### Modules added Oct 2026
-- **Sentry:** `lib/sentry.js`. Every process calls `initSentry(name)`, and console errors go to Sentry.
-- **Migration status:** `lib/migration-manifest.js` plus `db/migrations-status.js` back the `/health` migration status.
-- **Billing:** `lib/billing.js` and `db/billing.js` handle Stripe activation and sync. `lib/stripe-client.js` is shared.
-- **Activation:** `db/activation.js` and `GET /api/admin/activation` feed the admin Activation card.
-- **Monitor accounts:** `lib/monitor-accounts.js` and `db/users.js`.
-- **AI budget:**
-  - `lib/request-context.js` keeps per-request context with AsyncLocalStorage.
-  - `lib/ai-budget.js` enforces per-user daily AI limits: `AI_DAILY_LIMIT_FREE` 100 and `AI_DAILY_LIMIT_PRO` 500.
-  - **All AI calls must go through `lib/claude-client.js` `createMessage`/`complete`.**
-- **In open PRs:** `lib/bill-guardian.js`, `lib/bill-patterns.js` and `db/bills.js` (#225); `lib/tandem-recap.js` and `db/tandem-recap.js` (#226).
+### Where things live (Oct 2026 additions)
+- **Errors and health:**
+  - Sentry: `lib/sentry.js` (`initSentry(name)` in every process).
+  - `/health` migration status: `lib/migration-manifest.js` and `db/migrations-status.js`.
+- **Billing and admin:**
+  - Billing: `lib/billing.js`, `db/billing.js`, `lib/stripe-client.js`.
+  - Admin gate: `lib/admin-access.js` (`requireAdmin(pool)` middleware, judged from the DB row).
+  - Activation: `db/activation.js` and `GET /api/admin/activation`.
+- **AI:** every AI call goes through `lib/claude-client.js` (`createMessage`/`complete`). Per-user daily budget: `lib/ai-budget.js` (Free 100 / Pro 500).
+- **Bills and subscriptions:**
+  - Bill guardian: `lib/bill-guardian.js` and `db/bills.js`.
+    - Detects recurring streams from `plaid_transactions` and buckets them as obligation / subscription / habit / unsure.
+    - Creates reminders 3 days before an obligation is due.
+    - Settles pending subscription cancellations from bank data (`cancellationVerdict`).
+    - Runs in `jobs/plaid-sync.js` and after a bucket answer.
+  - API: `GET /api/plaid/recurring` (streams, the one `ask`, settled `cancellations`); `POST …/:key/bucket|keep|cancel`; `DELETE …/:key/cancel`.
+  - Cancel pages: `lib/cancel-links.js`.
+- **Weightless** (`public/weightless.html`, the one home):
+  - Tap-to-complete radar with a reward loop (`public/js/reward.js`, undo, next task steps up).
+  - Bills · next 7 days card.
+  - Subscription review: cancel (pending → confirmed / charged again from bank data) / keep (rests 90 days) / it's a bill.
+- **Tandem recap:** `lib/tandem-recap.js` and `db/tandem-recap.js`.
+- **Insights cron:** `jobs/crossDomainInsightsJob.js` (exports helpers; runs only when executed directly).
 
 ### Cloud-session gotchas
-- **The egress proxy blocks focusledger.net and onrender.com.** Test prod through GitHub Actions or the Neon/Render/Sentry MCPs.
-- **`npm ci` fails on `apn`'s GitHub tarball** until #218 merges. Workaround: remove `apn` from `package.json`, run `npm install`, then `git checkout -- package.json package-lock.json`.
+- **Prod isn't reachable from here:** the egress proxy blocks focusledger.net and onrender.com. Test prod via GitHub Actions or the Render/Sentry MCPs. Render service `srv-d8bpimul51nc73cjdg90`. Sentry org `sean-hendler` (`https://us.sentry.io`).
+- **Neon:** project `weathered-cherry-58315264`, prod branch `br-plain-darkness-aphya16p`. `get_connection_string` is blocked by a guardrail; don't work around it.
+- **`npm ci` on `main`** fails on `apn`'s GitHub tarball until #218 merges. Workaround: remove `apn` from `package.json`, `npm install`, then `git checkout -- package.json package-lock.json`.
 - **Local Postgres:**
-  - Start it with `pg_ctlcluster 16 main start`.
-  - In a fresh container, first run `su postgres -c "psql -c \"CREATE ROLE fl LOGIN PASSWORD 'fl' CREATEDB\""` and create the `focusledger` DB owned by `fl`.
-  - Use `DATABASE_URL=postgres://fl:fl@localhost:5432/focusledger`.
-- **Neon:** project `weathered-cherry-58315264`, prod branch `br-plain-darkness-aphya16p`. `get_connection_string` is blocked by a credential guardrail; don't work around it.
-- **Render:** service `srv-d8bpimul51nc73cjdg90`. Claude can't set secret env vars.
-- **Sentry:** org `sean-hendler`, `https://us.sentry.io`.
-- **Merging and GitHub tools:** merging needs the user's explicit "merge N"; use a squash merge with the full 40-character head SHA. The `gh` CLI may be unavailable, so use the GitHub MCP.
-- **Shell pitfalls:**
-  - Never `pkill -f` a pattern that matches your own shell; check `/proc/<pid>/environ` for `PORT=3999` instead.
-  - In Python, `str.replace` with `$'` in the text is fine, but JS `String.replace` treats `$'` specially.
+  - The container can restart mid-session and take Postgres down. Restart it with `pg_ctlcluster 16 main start`.
+  - In a fresh container, first create the role: `su postgres -c "psql -c \"CREATE ROLE fl LOGIN PASSWORD 'fl' CREATEDB\""`, then create the `focusledger` DB owned by `fl`.
+  - `DATABASE_URL=postgres://fl:fl@localhost:5432/focusledger`, then `node migrate.js`.
+- **Local browser testing:**
+  - Start the server: `PORT=3999 JWT_SECRET=x SESSION_SECRET=x node server.js`.
+  - Sign up with `POST /api/auth/signup`, set `fl_token` and `fl_user` in localStorage, then open the page with Playwright (`executablePath: '/opt/pw-browsers/chromium'`).
+  - Give test users `users.admin_pro_override=true` so the free task cap doesn't block them.
+  - Run Playwright scripts from inside the repo, so `require('playwright')` resolves.
+- **Merging:** only on the user's explicit "merge N". Use a squash merge with the full 40-character head SHA. A draft PR must be marked ready first (`update_pull_request draft:false`). Use the GitHub MCP, not `gh`.
+- **Shell:** never `pkill -f` a pattern that matches your own shell. Find the server by `/proc/<pid>/environ` containing `PORT=3999`.
 
 ## Recent changes
-- **2026-10-09/11** — Merged: #217 (Sentry captures logged errors, security patches, Meta Pixel Purchase); #219–#221 (user/table/Plaid id sequences and primary keys, which fixed signups broken since ~May 29); #222 (CI traffic excluded from analytics, daily prod signup check, activation funnel, orphan archive); #223 (first session: no install pop-up, explanatory greeting and starter chips, fresh-DB `users` columns, `session_count` NULL fix); #224 (per-user AI budget).
-- **2026-06-12** — Brain Dump Triage + Dopamine Menu (PR #56): Brain Dump quick-tool in Buddy panel with Web Speech API voice input (continuous mode, auto-restart on Chrome 60s timeout), native browser autocorrect, and AI triage into Now/Later/Trash categories. Later items park in `journal_entries` (`entry_type='deferred'`) and Buddy resurfaces them next morning via `GET /api/buddy/status`. Dopamine Menu generates 3-tier energy-matched task list from real pending tasks. Routes: `POST /api/buddy/brain-dump-triage`, `POST /api/buddy/defer-items`, `POST /api/buddy/dopamine-menu`.
-- **2026-06-12** — Schema repairs (PR #56): 4 idempotent migrations fix Prisma-vs-production-SQL column mismatches for `buddy_checkins` (`date`→`checkin_date`, `type`→`checkin_type`), `buddy_midday_checkins`, `task_substeps` (add `step_text`, `step_order`, `completed`, `user_id`, `completed_at`), and `buddy_daily_plans` (`date`→`plan_date`, `mood` type, `plan_json`→individual columns). Fixed `routes/daily-brief.js`, `routes/insights.js`, `routes/momentum-score.js` to use new column names.
-- **2026-06-12** — CI reliability (PR #57): Removed dead `npx prisma generate` step (schema.prisma deleted); added `defaultBrowserType: 'chromium'` to `playwright.smoke.config.js` mobile projects (CI only installs Chromium; `devices['iPhone 13']` was defaulting to WebKit).
-- **2026-05-27** — Energy/Movement Micro-Break Prompts: after 90 min of focus (configurable 45/60/90/120 min), Buddy sends a movement nudge "Stand up, stretch for 2 minutes — I'll wait." New `movement_break` nudge type; cron job `movementBreakCheck.js` checks active sessions against `break_interval_minutes` in `user_focus_prefs`; manual "I need a break" button on Focus Mode page; front-end interval selector (45m/60m/90m/2h).
-- **2026-05-27** — Compact task cards with value tag badges: redesigned `.task-card` from blocky to thin single-line layout (~52px min-height); title truncates with ellipsis; colored value-name pill badge from `user_values` table renders on each card; steps hidden in compact view (shown in edit modal); `values-service.js` loaded in tasks.html; `state.valuesMap` caches values for O(1) badge lookup; recurrence icon + steps count badge inline.
-- **2026-05-27** — Task card tap-to-expand + recurring settings: slide-down CSS animation (max-height transition, ~280ms); detail view with inline title edit, due date picker, value tag pills, recurring toggle (Off/Daily/Weekdays/Weekly/Monthly) with day selector, notes, steps, delete; tap-outside dismiss; recurring icon (🔄) on collapsed cards; `recurrence_type` + `recurrence_day` fields added to task model; completing a recurring task auto-spawns the next occurrence.
-- **2026-05-27** — Tasks page Prisma schema fix: `due_date` added `@db.Date`, `due_time` added `@db.Time(6)`, `auto_complete_transaction_id` changed `String?→Int?` to match actual DB column types. `routes/tasks-prisma.js` now uses `timeStrToDate()` (write) and `dateToTimeStr()`/`normTask()` (read) to bridge PostgreSQL time/date types with Prisma DateTime mapping. All task API responses normalized so frontend receives `"HH:MM"` strings.
-- **2026-05-26** — Quick-Add FAB: floating action button (+, bottom-right) on all 4 tabs (Tasks/Money/Vault/Buddy). Pre-focused modal with title input + real-time date chip suggestions. Natural language date parsing via `public/js/date-parser.js`: tomorrow, today, next [day], [day name], at [time], [time] combos. Backend: `due_time` added to `POST /api/tasks` in `routes/tasks-prisma.js`.
-- **2026-05-26** — Vault: fix `+ +` double-plus typo in card rendering (caused NaN in summary); fix `runExtractionAsync` to write `summaryText` back into `metadata.summary` before storing (prevents raw JSON leaking into card); guard `renderConfirmedMeta` and `renderReviewFields` against JSON-artifact summaries; textarea for long summaries in review modal; expand category typeMap for medical/health insurance cards; DB backfill fixed `extraction_status` for legacy `ai_extracted=true/status=none` docs.
+- **2026-10-11:**
+  - #225 bill guardian.
+  - #226 Tandem weekly recap.
+  - #228 `/api/plaid/diagnostic` made admin-only, with no secret characters in the response.
+  - #229 cross-domain-insights job fixed (NODE-EXPRESS-6).
+  - #230 Weightless: tap-to-complete radar with a reward loop, a bills card, and the greeting no longer says "Sean" to everyone.
+  - #231 subscription review with a cancel page and bank-confirmed cancellation.
+- **2026-10-09/10:**
+  - #217 Sentry captures logged errors.
+  - #219–#221 id sequences and PKs (fixed signups broken since ~May 29).
+  - #222 CI traffic excluded from analytics; daily prod signup check.
+  - #223 first-session starters.
+  - #224 per-user AI budget.
+- **Older history:** `public/changelog.html` and `git log`.
 
 ## Pre-Ship Checklist
 
@@ -344,7 +356,7 @@ render env list --service focusledger
 1. Run `node --check server.js` — syntax check passes.
 2. Run the Pre-Ship Checklist above (Buddy bubble, mobile/desktop viewports, overflow check).
 3. Confirm no new `require()` of packages not in `package.json`.
-4. If migration added: confirm it ran successfully on Neon before deploy (migrations don't auto-run on Render).
+4. If a migration was added: it runs automatically on deploy (`npm start` runs `migrate.js` first) and a failure aborts the deploy. Test risky ones on a Neon branch before merging.
 
 ### Environment variables
 Never hardcode. All secrets live in `.env` locally and in Render's environment dashboard. Known vars:
