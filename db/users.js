@@ -14,4 +14,10 @@ async function getUserAdminInfo(pool, userId) {
   return rows[0] || null;
 }
 
-module.exports = { markQaUser, getUserAdminInfo };
+/** QA/synthetic accounts are skipped by every metric and lifecycle push. */
+async function isQaUser(pool, userId) {
+  const { rows } = await pool.query('SELECT is_qa_user FROM users WHERE id = $1', [userId]);
+  return !!(rows[0] && rows[0].is_qa_user);
+}
+
+module.exports = { markQaUser, getUserAdminInfo, isQaUser };
