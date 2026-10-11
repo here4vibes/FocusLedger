@@ -561,14 +561,6 @@
 </head>
 <body>
 
-<!-- NAV -->
-<nav class="page-nav">
-  <div class="page-nav-inner">
-    <a href="/app/tasks" class="back-link">← Back</a>
-    <a href="/app/tasks" class="logo"><span class="logo-dot"></span>FocusLedger</a>
-    <span style="width:60px"></span>
-  </div>
-</nav>
 
 <!-- PAGE CONTENT -->
 <div class="page-wrap">
@@ -658,7 +650,7 @@
   // ── AUTH ──────────────────────────────────────────────────────────────────
   function getToken() {
     if (token) return token;
-    token = localStorage.getItem('token');
+    token = localStorage.getItem('fl_token') || localStorage.getItem('token');
     if (!token) { window.location.href = '/login'; return null; }
     return token;
   }
@@ -1020,5 +1012,7 @@
     // for discovery (show it but collapse to 3 items by default).
   });
 </script>
+<link rel="stylesheet" href="/shared-nav.css">
+<script src="/shared-nav.js"></script>
 </body>
 </html>

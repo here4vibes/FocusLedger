@@ -70,23 +70,28 @@
 
   // Primary tabs — exactly 4, shown in bottom nav (mobile) and sidebar top section (desktop)
   // Routes use /app/* namespace for true isolation — each tab is its own route, not a CSS toggle
-  const NAV_ITEMS = [    { label: 'Tasks',  href: '/app/tasks', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 12l2 2 4-4"/></svg>' },
-    { label: 'Money',  href: '/app/money', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="2" x2="12" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>' },
-    { label: 'Vault',  href: '/app/vault', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>' },
-    { label: 'Buddy',  href: '/app/buddy', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>' },
+  // UI consolidation: four places. Home is Weightless (Buddy + radar + bills).
+  // Mobile bottom nav renders Home · Tasks · (+) · Money · Life.
+  const SVG = function (paths) {
+    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + paths + '</svg>';
+  };
+  const NAV_ITEMS = [
+    { label: 'Home',  href: '/weightless', icon: SVG('<path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/>') },
+    { label: 'Tasks', href: '/app/tasks',  icon: SVG('<rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 12l2 2 4-4"/>') },
+    { label: 'Money', href: '/app/money',  icon: SVG('<line x1="12" y1="2" x2="12" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>') },
+    { label: 'Life',  href: '/app/life',   icon: SVG('<path d="M12 21s-7-4.5-9.5-9A5.5 5.5 0 0 1 12 6a5.5 5.5 0 0 1 9.5 6c-2.5 4.5-9.5 9-9.5 9z"/>') },
   ];
 
-  // Secondary links — shown in hamburger slide-out (mobile) and sidebar bottom section (desktop)
+  // Everything not yet inside a place's sub-tabs. Tasks' pages moved into its
+  // hub (PLACE_TABS); Life → Vault, Journal, Values, Insights is phase 4.
   const MENU_ITEMS = [
-    { label: 'Today',             href: '/app/today',         icon: '🕐' },
+    { label: 'Vault',             href: '/app/vault',         icon: '🗂️' },
     { label: 'Journal',           href: '/journal',           icon: '📓' },
-    { label: 'Routines',          href: '/routines',          icon: '🔄' },
-    { label: 'Ideas',             href: '/ideas',             icon: '💡' },
     { label: 'Values',            href: '/values',            icon: '🌟' },
     { label: 'Insights',          href: '/insights',          icon: '📊' },
     { label: 'Email → Tasks',     href: '/email',             icon: '📧' },
-    { label: 'Settings',          href: '/settings',          icon: '⚙️' },
     { label: 'Partner Dashboard', href: '/partner-dashboard', icon: '👥' },
+    { label: 'Settings',          href: '/settings',          icon: '⚙️' },
     { label: 'Help & Contact',    href: '/contact',           icon: '💬' },
   ];
 
@@ -127,6 +132,52 @@
 
   // ── Active page detection ──────────────────────────────────
 
+  // ── Place sub-tabs ──────────────────────────────────────
+  // One strip of sub-tabs on every page that belongs to a place, so a place
+  // feels like one screen with sections instead of separate modules.
+  var PLACE_TABS = {
+    '/app/tasks': [
+      { label: 'All tasks', href: '/app/tasks', also: ['/app/task/', '/app/focus/'] },
+      { label: 'Today',     href: '/app/today' },
+      { label: 'Routines',  href: '/routines', also: ['/app/routines'] },
+      { label: 'Calendar',  href: '/calendar', also: ['/app/calendar'] },
+      { label: 'Ideas',     href: '/ideas' },
+    ],
+    '/app/money': [
+      { label: 'Overview',     href: '/app/money' },
+      { label: 'Transactions', href: '/transactions' },
+      { label: 'Bills',        href: '/app/money/bills' },
+    ],
+  };
+  function tabMatches(tab, path) {
+    if (path === tab.href || path === tab.href + '/') return true;
+    return (tab.also || []).some(function (a) {
+      return a.charAt(a.length - 1) === '/' ? path.indexOf(a) === 0 : (path === a || path === a + '/');
+    });
+  }
+  function currentPlaceTabs() {
+    var path = window.location.pathname;
+    for (var place in PLACE_TABS) {
+      if (PLACE_TABS[place].some(function (t) { return tabMatches(t, path); })) return PLACE_TABS[place];
+    }
+    return null;
+  }
+  function buildPlaceTabs(tabs) {
+    var path = window.location.pathname;
+    var strip = document.createElement('nav');
+    strip.className = 'place-tabs';
+    strip.setAttribute('aria-label', 'Sections');
+    tabs.forEach(function (t) {
+      var a = document.createElement('a');
+      a.href = t.href;
+      a.textContent = t.label;
+      a.className = 'place-tab' + (tabMatches(t, path) ? ' active' : '');
+      if (tabMatches(t, path)) a.setAttribute('aria-current', 'page');
+      strip.appendChild(a);
+    });
+    return strip;
+  }
+
   function isActive(href) {
     var path = window.location.pathname;
     // /app/tasks is also active for legacy /app root (e.g. old bookmarks that 301 here)
@@ -136,8 +187,16 @@
         || path === '/app' || path === '/app/'
         || path.startsWith('/app/task/') || path.startsWith('/app/focus/');
     }
+    // Pages that belong to a place light up its tab, so you always know where you are.
+    var under = PLACE_CHILDREN[href];
+    if (under && under.some(function (p) { return path === p || path.startsWith(p + '/'); })) return true;
     return path === href || path === href + '/' || path.startsWith(href + '/');
   }
+  var PLACE_CHILDREN = {
+    '/app/tasks': ['/app/today', '/app/done', '/app/routines', '/routines', '/ideas', '/app/calendar', '/calendar'],
+    '/app/money': ['/transactions', '/checkin'],
+    '/app/life':  ['/app/vault', '/journal', '/values', '/insights'],
+  };
 
   // Returns true if the current page matches a MENU_ITEM (secondary page)
   // but does NOT match any NAV_ITEM — used to show the hamburger dot
@@ -236,9 +295,22 @@
     brand.style.gap = '0.5rem';
     nav.appendChild(brand);
 
-    // Primary tab items (same links as mobile bottom nav)
+    // Primary tab items (same links as mobile bottom nav); the active place
+    // lists its sections right under it.
+    var sections = currentPlaceTabs();
+    var path = window.location.pathname;
     NAV_ITEMS.forEach(function (item) {
       nav.appendChild(buildNavAnchor(item, 'shared-nav-item'));
+      if (sections && PLACE_TABS[item.href] === sections) {
+        sections.forEach(function (t) {
+          var a = document.createElement('a');
+          a.href = t.href;
+          a.textContent = t.label;
+          a.className = 'shared-nav-subitem' + (tabMatches(t, path) ? ' active' : '');
+          if (tabMatches(t, path)) a.setAttribute('aria-current', 'page');
+          nav.appendChild(a);
+        });
+      }
     });
 
     // Divider
@@ -617,6 +689,18 @@
     }
 
     setupMenuLogic(hamburgerBtn, overlay, menu, closeBtn);
+
+    // Sections: a sticky strip on phones; on desktop they're sub-items under the
+    // active place in the sidebar (see buildDesktopSidebar), so nothing can
+    // collide with a page's own header.
+    var placeTabs = mobileView && !isBottomNavExcluded() && currentPlaceTabs();
+    if (placeTabs) {
+      var strip = buildPlaceTabs(placeTabs);
+      document.body.insertBefore(strip, document.body.firstChild);
+      var on = strip.querySelector('.active');
+      // Center the active tab horizontally only; never scroll the page itself.
+      if (on) strip.scrollLeft = Math.max(0, on.offsetLeft - (strip.clientWidth - on.offsetWidth) / 2);
+    }
 
     // ── Page transitions — fade content on navigation ──────────────────
     document.addEventListener('click', function (e) {

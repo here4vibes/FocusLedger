@@ -81,6 +81,15 @@ async function recordNotificationSent(pool, userId, notificationKey, notificatio
 /**
  * Get all active push subscriptions for a user.
  */
+/** Whether a notification with this key was ever sent (any day), for one-per-event pushes. */
+async function wasNotificationKeySent(pool, userId, notificationKey) {
+  const { rows } = await pool.query(
+    'SELECT 1 FROM notification_send_log WHERE user_id = $1 AND notification_key = $2 LIMIT 1',
+    [userId, notificationKey]
+  );
+  return rows.length > 0;
+}
+
 async function getActiveSubscriptions(pool, userId) {
   const result = await pool.query(
     'SELECT id, subscription, endpoint FROM push_subscriptions WHERE user_id = $1 AND enabled = true',
@@ -100,6 +109,7 @@ async function deleteSubscriptionByEndpoint(pool, endpoint) {
 }
 
 module.exports = {
+  wasNotificationKeySent,
   DAILY_PUSH_CAP,
   wasNotificationSentToday,
   getTodayNotificationCount,
