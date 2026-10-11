@@ -658,7 +658,7 @@
   // ── AUTH ──────────────────────────────────────────────────────────────────
   function getToken() {
     if (token) return token;
-    token = localStorage.getItem('token');
+    token = localStorage.getItem('fl_token') || localStorage.getItem('token');
     if (!token) { window.location.href = '/login'; return null; }
     return token;
   }
