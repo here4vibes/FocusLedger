@@ -44,7 +44,7 @@
 
   .b{display:flex;gap:.5rem;align-items:flex-start;opacity:0;transform:translateY(6px);animation:in .32s ease forwards;}
   @keyframes in{to{opacity:1;transform:none;}}
-  @media (prefers-reduced-motion:reduce){.b,.u,.card,.chips{animation:none;opacity:1;transform:none;}.typing i{animation:none;}}
+  @media (prefers-reduced-motion:reduce){.b,.u,.card,.chips,.tasklist .row.entering{animation:none;opacity:1;transform:none;}.typing i{animation:none;}.tasklist .row{transition:none;}}
   .b .dot{flex:none;width:27px;height:27px;border-radius:50%;background:#f5f0e2;overflow:hidden;
     display:grid;place-items:center;box-shadow:0 2px 8px rgba(1,30,92,.2),inset 0 0 0 1px rgba(1,30,92,.14);}
   .b .msg{font-size:.95rem;line-height:1.46;color:var(--ink);padding-top:2px;max-width:85%;}
@@ -69,6 +69,47 @@
   .tasklist .lbl{font-size:.93rem;font-weight:600;}
   .tasklist .due{font-size:.72rem;color:var(--faint);margin-left:auto;flex:none;font-variant-numeric:tabular-nums;}
   .tasklist .due.over{color:var(--alert);}
+
+  /* Radar: tap the box to finish the task, right here. The row checks, bursts,
+     then slides out and the next task steps up (the dopamine loop). */
+  .tasklist .row{max-height:4rem;overflow:hidden;
+    transition:max-height .3s ease,opacity .25s ease,padding .3s ease,border-color .3s ease;}
+  .tasklist .row.entering{animation:in .32s ease;}
+  .tasklist .row.leaving{max-height:0;opacity:0;padding-top:0;padding-bottom:0;border-color:transparent;}
+  .tasklist .chk{flex:none;width:40px;height:40px;margin:-10px -6px -10px -10px;display:grid;place-items:center;
+    background:none;border:none;padding:0;cursor:pointer;-webkit-tap-highlight-color:transparent;}
+  .tasklist .chk .box{position:relative;transition:background .18s ease,border-color .18s ease,transform .15s ease;}
+  .tasklist .chk:hover .box{border-color:var(--good);}
+  .tasklist .chk:active .box{transform:scale(.86);}
+  .tasklist .chk:focus-visible{outline:2px solid var(--accent);outline-offset:-6px;border-radius:10px;}
+  .tasklist .row.done .box{background:var(--good);border-color:var(--good);}
+  .tasklist .row.done .box::after{content:'';position:absolute;left:5px;top:1px;width:5px;height:10px;
+    border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg);}
+  .tasklist .row.done .lbl{text-decoration:line-through;color:var(--faint);}
+  .tasklist .lbl{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .card .k .tally{float:right;color:var(--good);letter-spacing:.06em;}
+  .card .cheer{font-size:.84rem;color:var(--good);font-weight:600;margin-top:.45rem;min-height:1.1em;
+    transition:opacity .2s ease;}
+  .card .cheer:empty{display:none;}
+  .card .cheer .undo{background:none;border:none;color:var(--accent);font-weight:700;cursor:pointer;
+    font-size:.8rem;font-family:inherit;padding:0;text-decoration:underline;}
+  .card .cheer .undo:disabled{color:var(--faint);cursor:default;text-decoration:none;}
+  .card.clear{border-color:var(--good-soft);background:linear-gradient(180deg,var(--good-soft),var(--surface) 70%);}
+
+  /* Bills coming up — from the bill guardian's recurring-charge predictions. */
+  .billrow{display:flex;align-items:center;gap:.55rem;padding:.32rem 0;border-top:1px solid var(--line);}
+  .billrow:first-of-type{border-top:none;}
+  .billrow .bn{flex:1;min-width:0;font-size:.92rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .billrow .tag{flex:none;font-size:.56rem;letter-spacing:.08em;text-transform:uppercase;font-weight:800;
+    border-radius:999px;padding:.12rem .4rem;background:var(--accent-soft);color:var(--accent);}
+  .billrow .tag.sub{background:var(--warm-soft);color:#8a6d1f;}
+  .billrow .bw{flex:none;font-size:.74rem;color:var(--faint);font-variant-numeric:tabular-nums;}
+  .billrow .bw.soon{color:var(--alert);font-weight:600;}
+  .billrow .ba{flex:none;font-size:.88rem;font-weight:700;font-variant-numeric:tabular-nums;min-width:3.6rem;text-align:right;}
+  .billask{margin-top:.6rem;padding-top:.6rem;border-top:1px dashed var(--line-2);}
+  .billask .q{font-size:.86rem;color:var(--ink);line-height:1.4;}
+  .billask .chips{margin-top:.45rem;}
+  .billask .chip{font-size:.8rem;padding:.4rem .7rem;}
 
   .mh{display:flex;justify-content:space-between;align-items:baseline;gap:.6rem;margin:.15rem 0 .5rem;}
   .mh .big{font-size:1.5rem;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums;}
@@ -178,6 +219,10 @@
   if(!TOKEN){ window.location.href = '/login?redirect=weightless'; return; }
 
   var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  // The signed-in user's first name (set at login), never a hardcoded one.
+  var firstName = '';
+  try { firstName = ((JSON.parse(localStorage.getItem('fl_user') || '{}').name) || '').trim().split(/\s+/)[0]; } catch (e) { firstName = ''; }
+  function hello(part){ return part + (firstName ? ', ' + firstName : '') + '.'; }
   var thread = document.getElementById('thread');
   var input  = document.getElementById('input');
   var go      = document.getElementById('go');
@@ -212,7 +257,8 @@
     var wrap=document.createElement('div'); wrap.className='chips';
     list.forEach(function(c){
       var b=document.createElement('button'); b.className='chip '+(c.k||'ghost'); b.textContent=c.label;
-      b.onclick=function(){ if(busy) return; wrap.remove(); send(c.send||c.label); };
+      if(c.task!=null) b.setAttribute('data-task', c.task);
+      b.onclick=function(){ if(busy) return; wrap.remove(); if(c.fn) c.fn(); else send(c.send||c.label); };
       wrap.appendChild(b);
     });
     thread.appendChild(wrap); scroll(); return wrap;
@@ -269,7 +315,266 @@
     return {label:base.toLocaleDateString(undefined,{month:'short',day:'numeric'}), over:false};
   }
 
-  function greet(data, reveal){
+  // ── radar: finish a task right where you see it ─────────────────────────────
+  // Tap the box → it checks, bursts, says something short, then slides out and
+  // the next task steps up. Delay-aversion lever: the reward lands the instant
+  // you act, and the next small win is already in reach. Variable reward (the
+  // label and burst size change) keeps it from going stale.
+  var REWARD_LABELS = ['✓ done', '✓ nice', '✓ off your plate', '✓ one less', '✓ handled'];
+  function cheerLine(n){
+    if(n===1) return 'One down. Starting is the hard part.';
+    if(n===2) return "Two. That's momentum.";
+    if(n===3) return "Three. You're in it now.";
+    return n+' this sitting. Ride it, or stop here. Both count.';
+  }
+  var radar = null; // { card, list, label, tally, cheer, items, queue, today, doneToday, session }
+
+  function taskRow(t, today, onDone){
+    var due = fmtDue(t.due_date, today);
+    var row = node('<div class="row"><button class="chk" type="button" role="checkbox" aria-checked="false"><span class="box"></span></button>'+
+      '<span class="lbl"></span>'+(due?'<span class="due'+(due.over?' over':'')+'">'+due.label+'</span>':'')+'</div>');
+    row.querySelector('.lbl').textContent = t.title;
+    var btn = row.querySelector('.chk');
+    btn.setAttribute('aria-label', 'Mark "'+t.title+'" done');
+    btn.onclick = function(){ onDone(row, t); };
+    return row;
+  }
+  function markRow(row, on){
+    row.classList.toggle('done', on);
+    var btn = row.querySelector('.chk');
+    btn.setAttribute('aria-checked', on ? 'true' : 'false');
+    btn.disabled = on;
+  }
+  function burst(el, big, label){
+    if(window.flReward) window.flReward.celebrateEl(el, {
+      label: label || REWARD_LABELS[Math.floor(Math.random()*REWARD_LABELS.length)], count: big ? 16 : 8 });
+    try{ if(!reduce && navigator.vibrate) navigator.vibrate(12); }catch(e){}
+  }
+
+  // Same endpoint the tasks page uses (it also spawns the next occurrence of a
+  // recurring task). It's a toggle, so guard a stale radar: if the task was
+  // already finished elsewhere, the first flip reopened it — flip it back.
+  function toggleTask(t){
+    return api('/api/tasks/'+t.id+'/toggle', { method:'PATCH' }).then(function(res){
+      if(!res || !res.success || !res.task) throw new Error('toggle failed');
+      return res.task;
+    });
+  }
+  function completeTask(t){
+    return toggleTask(t).then(function(task){
+      if(task.is_completed) return task;
+      return toggleTask(t).then(function(again){
+        if(!again.is_completed) throw new Error('toggle failed');
+        return again;
+      });
+    });
+  }
+  function removeTaskChips(id){
+    thread.querySelectorAll('.chip[data-task="'+id+'"]').forEach(function(c){ c.remove(); });
+  }
+
+  function setRadarHeader(){
+    // Count only what's shown (max 3), never the whole pile behind it.
+    var shown = radar.items.length;
+    radar.label.textContent = !shown ? 'Radar clear' : (shown===1 && !radar.queue.length ? 'On your radar' : 'Your radar · '+shown);
+    radar.tally.textContent = radar.doneToday > 0 ? '✓ '+radar.doneToday+' done today' : '';
+  }
+  function setCheer(text, undoFn){
+    radar.cheer.textContent = text || '';
+    if(undoFn){
+      var u = document.createElement('button'); u.className = 'undo'; u.textContent = 'Undo';
+      u.style.marginLeft = '.4rem';
+      u.onclick = function(){ u.disabled = true; u.textContent = '…'; undoFn(u); };
+      radar.cheer.appendChild(u);
+      var shownFor = text;
+      setTimeout(function(){ if(u.isConnected && !u.disabled && radar.cheer.firstChild && radar.cheer.firstChild.nodeValue===shownFor) u.remove(); }, 8000);
+    }
+  }
+  function renderRadarList(){
+    radar.list.innerHTML = '';
+    radar.items.forEach(function(t){ radar.list.appendChild(taskRow(t, radar.today, onRadarDone)); });
+    radar.card.classList.toggle('clear', !radar.items.length);
+    setRadarHeader();
+  }
+
+  function renderRadar(tasks, today, doneToday){
+    radar = { items: tasks.slice(0,3), queue: tasks.slice(3), today: today, doneToday: doneToday, session: 0 };
+    radar.card = raw('<div class="card"><div class="k"><span class="kl"></span><span class="tally"></span></div>'+
+      '<div class="tasklist"></div><div class="cheer" aria-live="polite"></div></div>');
+    radar.label = radar.card.querySelector('.kl');
+    radar.tally = radar.card.querySelector('.tally');
+    radar.list  = radar.card.querySelector('.tasklist');
+    radar.cheer = radar.card.querySelector('.cheer');
+    renderRadarList();
+  }
+
+  function onRadarDone(row, t){
+    if(row.classList.contains('done')) return;
+    markRow(row, true);
+    radar.session++; radar.doneToday++;
+    var n = radar.session;
+    burst(row.querySelector('.box'), n % 3 === 0);
+    setRadarHeader();
+    setCheer(cheerLine(n));
+    removeTaskChips(t.id);
+    var advanceTimer = setTimeout(function(){ advanceRadar(row, t); }, reduce ? 150 : 900);
+
+    completeTask(t).then(function(){
+      setCheer(cheerLine(n), function(btn){
+        clearTimeout(advanceTimer);
+        toggleTask(t).then(function(task){
+          if(task.is_completed) throw new Error('undo failed');
+          putBack(row, t);
+          setCheer('↩ Back on your radar.');
+        }).catch(function(err){
+          if(err && err.message==='unauthorized') return;
+          console.error('[weightless] undo failed:', err && err.message, '| task:', t.id);
+          btn.disabled = false; btn.textContent = 'Undo';
+        });
+      });
+    }).catch(function(err){
+      if(err && err.message==='unauthorized') return;
+      console.error('[weightless] complete failed:', err && err.message, '| task:', t.id);
+      clearTimeout(advanceTimer);
+      putBack(row, t);
+      setCheer('');
+      buddy("That didn't save, so it's still on your radar. Try again?");
+    });
+  }
+
+  // Undo or a failed save: the task goes back to the top of the radar.
+  function putBack(row, t){
+    radar.session = Math.max(0, radar.session-1);
+    radar.doneToday = Math.max(0, radar.doneToday-1);
+    if(row.isConnected && !row.classList.contains('leaving')){
+      markRow(row, false);
+      setRadarHeader();
+      return;
+    }
+    markRow(row, false); // so a slide-out still in flight bails instead of pulling in another task
+    radar.items = radar.items.filter(function(x){ return x.id!==t.id; });
+    radar.items.unshift(t);
+    if(radar.items.length > 3) radar.queue.unshift(radar.items.pop());
+    renderRadarList();
+  }
+
+  function advanceRadar(row, t){
+    if(!row.isConnected || !row.classList.contains('done')) return;
+    radar.items = radar.items.filter(function(x){ return x.id!==t.id; });
+    row.classList.add('leaving');
+    setTimeout(function(){
+      if(!row.classList.contains('done')) return; // undone mid-slide
+      row.remove();
+      var next = radar.queue.shift();
+      if(next){
+        radar.items.push(next);
+        var r = taskRow(next, radar.today, onRadarDone);
+        r.classList.add('entering');
+        radar.list.appendChild(r);
+      }
+      setRadarHeader();
+      if(!radar.items.length) radarClear();
+    }, reduce ? 0 : 320);
+  }
+
+  function radarClear(){
+    radar.card.classList.add('clear');
+    setRadarHeader();
+    burst(radar.card, true, '✦ radar clear');
+    setCheer("Nothing left that's due right now.");
+    buddy(fmt('**Radar clear.** Everything due right now is handled.'), true);
+    // Retire the old "Start: …" row so there's one clear next step.
+    thread.querySelectorAll('.chips').forEach(function(c){ if(!c.closest('.billask')) c.remove(); });
+    chips([
+      { label:'Pull one more', k:'good', send:"What's next?" },
+      { label:"I'm done for today", k:'ghost', send:"I'm done for today" }
+    ]);
+  }
+
+  // ── bills coming up (bill guardian: /api/plaid/recurring) ──────────────────
+  // Obligations and subscriptions predicted in the next 7 days, plus the one
+  // question the guardian wants answered, at most once a day per merchant.
+  function addDays(iso, n){
+    var d = new Date(iso+'T00:00:00'); d.setDate(d.getDate()+n);
+    var m = d.getMonth()+1, day = d.getDate();
+    return d.getFullYear()+'-'+(m<10?'0':'')+m+'-'+(day<10?'0':'')+day;
+  }
+  function dollars(cents){
+    var v = cents/100;
+    return '$' + (cents % 100 ? v.toFixed(2) : v.toFixed(0));
+  }
+  function askAllowed(ask, today){
+    var mark = ask.merchant_key+'|'+today;
+    try{
+      if(localStorage.getItem('fl_bill_ask_seen') === mark) return false;
+      localStorage.setItem('fl_bill_ask_seen', mark);
+    }catch(e){ /* storage blocked: just show it */ }
+    return true;
+  }
+
+  function billsCard(rec, today, tasks){
+    if(!rec || !rec.success || !Array.isArray(rec.streams)) return;
+    var horizon = addDays(today, 7);
+    var up = rec.streams.filter(function(s){
+      return (s.bucket==='obligation' || s.bucket==='subscription') &&
+        s.predicted_next >= today && s.predicted_next <= horizon;
+    });
+    var ask = rec.ask && askAllowed(rec.ask, today) ? rec.ask : null;
+    if(!up.length && !ask) return;
+
+    var onRadar = {};
+    (tasks||[]).forEach(function(t){ if(t.source==='auto_bill' && t.bill_merchant_key) onRadar[t.bill_merchant_key] = true; });
+    var totalCents = up.reduce(function(sum, s){ return sum + Math.round(Number(s.typical_amount)*100); }, 0);
+
+    var html = '<div class="card"><div class="k">Bills · next 7 days</div>';
+    if(up.length){
+      html += '<div class="mh"><span class="big">~'+dollars(totalCents)+'</span>'+
+        '<span class="split">'+up.length+' coming up</span></div>';
+      html += up.map(function(s){
+        var when = fmtDue(s.predicted_next, today) || { label:'' };
+        var soon = when.label==='today' || when.label==='tomorrow';
+        return '<div class="billrow"><span class="bn">'+esc(s.name)+'</span>'+
+          (s.bucket==='subscription' ? '<span class="tag sub">sub</span>' : '')+
+          '<span class="bw'+(soon?' soon':'')+'">'+esc(when.label)+(onRadar[s.merchant_key]?' · on radar':'')+'</span>'+
+          '<span class="ba">~'+dollars(Math.round(Number(s.typical_amount)*100))+'</span></div>';
+      }).join('');
+    } else {
+      html += '<div class="say">Nothing predicted this week.</div>';
+    }
+    html += '</div>';
+    var card = raw(html);
+    if(ask) billAsk(card, ask);
+  }
+
+  function billAsk(card, ask){
+    var box = document.createElement('div'); box.className = 'billask';
+    var q = document.createElement('div'); q.className = 'q';
+    q.innerHTML = 'Quick one: is <strong>'+esc(ask.name)+'</strong> (~'+dollars(Math.round(Number(ask.typical_amount)*100))+', '+esc(ask.frequency)+') a bill I should remind you about?';
+    var row = document.createElement('div'); row.className = 'chips';
+    [['Yes, remind me','obligation','solid'], ["It's a subscription",'subscription','ghost'], ['Neither','habit','ghost']].forEach(function(o){
+      var b = document.createElement('button'); b.className = 'chip '+o[2]; b.textContent = o[0];
+      b.onclick = function(){
+        row.querySelectorAll('button').forEach(function(x){ x.disabled = true; });
+        api('/api/plaid/recurring/'+encodeURIComponent(ask.merchant_key)+'/bucket', { method:'POST', body:{ bucket:o[1], name:ask.name } })
+          .then(function(res){
+            if(!res || !res.success) throw new Error((res && res.message) || 'save failed');
+            row.remove();
+            q.textContent = o[1]==='obligation' ? "Got it. I'll remind you before it's due." : "Got it. I'll remember that.";
+          })
+          .catch(function(err){
+            if(err && err.message==='unauthorized') return;
+            console.error('[weightless] bill answer failed:', err && err.message, '| merchant:', ask.merchant_key);
+            row.querySelectorAll('button').forEach(function(x){ x.disabled = false; });
+            q.textContent = "Couldn't save that. Try again?";
+          });
+      };
+      row.appendChild(b);
+    });
+    box.appendChild(q); box.appendChild(row);
+    card.appendChild(box); scroll();
+  }
+
+  function greet(data, reveal, rec){
     document.getElementById('loading').remove();
     var tasks = (data.tasks||[]);
     var done  = data.tasksCompletedToday||0;
@@ -292,14 +597,23 @@
         var rt = tasks.filter(function(x){ return String(x.id)===String(remindId); })[0];
         try{ history.replaceState(null,'','/weightless'); }catch(e){}
         if(rt){
-          var rdue = fmtDue(rt.due_date, today);
-          buddy(partOfDay+', Sean. You asked me to remind you about this:', true);
-          raw('<div class="card"><div class="k">Reminder</div><div class="tasklist">'+
-            '<div class="row"><span class="box"></span><span class="lbl">'+esc(rt.title)+'</span>'+
-            (rdue?'<span class="due'+(rdue.over?' over':'')+'">'+rdue.label+'</span>':'')+
-            '</div></div></div>');
+          buddy(hello(partOfDay)+' You asked me to remind you about this:', true);
+          var rcard = raw('<div class="card"><div class="k">Reminder</div><div class="tasklist"></div></div>');
+          var rchips = null;
+          rcard.querySelector('.tasklist').appendChild(taskRow(rt, today, function(row, t){
+            if(row.classList.contains('done')) return;
+            markRow(row, true); burst(row.querySelector('.box'), true);
+            if(rchips) rchips.remove();
+            completeTask(t).then(function(){ buddy("Done. That one's off your mind."); })
+              .catch(function(err){
+                if(err && err.message==='unauthorized') return;
+                console.error('[weightless] reminder complete failed:', err && err.message, '| task:', t.id);
+                markRow(row, false);
+                buddy("That didn't save. Tap it again, or tell me and I'll mark it.");
+              });
+          }));
           buddy('Want to knock it out now?');
-          chips([
+          rchips = chips([
             { label:'✓ Mark it done', k:'ghost', send:'mark "'+rt.title+'" done' },
             { label:'Snooze to tomorrow', k:'ghost', send:'move "'+rt.title+'" to tomorrow' },
             { label:"I'll start now", k:'warm', send:"Let's start on: "+rt.title }
@@ -335,27 +649,24 @@
       if(!tasks.length && !slots){
         // Deep-but-empty: invite a brain dump rather than showing a blank slate.
         buddy(partOfDay+'. Clean slate — nothing on your plate that I can see.', true);
+        billsCard(rec, today, tasks);
         buddy("Want to empty your head at me? Just say everything that's rattling around and I'll sort it into what matters now, what can wait, and what you can let go of.");
         return;
       }
 
       var top = tasks.slice(0,3);
       var singular = top.length===1;
-      buddy(partOfDay+', Sean.' + (done? ' '+done+' already done today — nice.' : '') +
+      buddy(hello(partOfDay) + (done? ' '+done+' already done today — nice.' : '') +
         (singular ? ' Just one thing on your radar.' : ' Here\'s what\'s actually on your radar — not the whole pile.'), true);
 
-      raw('<div class="card"><div class="k">'+(singular?'On your radar':'Your radar · '+top.length)+'</div><div class="tasklist">'+
-        top.map(function(t){
-          var due=fmtDue(t.due_date, today);
-          return '<div class="row"><span class="box"></span><span class="lbl">'+esc(t.title)+'</span>'+
-            (due?'<span class="due'+(due.over?' over':'')+'">'+due.label+'</span>':'')+'</div>';
-        }).join('')+'</div></div>');
+      renderRadar(tasks, today, done);
+      billsCard(rec, today, tasks);
 
       buddy(singular ? 'Want to knock it out now, or should I hold it?'
                      : 'Where do you want to start? Or tell me what\'s actually going on.');
       chips(top.map(function(t){
         return { label:'Start: '+ (t.title.length>22?t.title.slice(0,22)+'…':t.title),
-                 k:'ghost', send:"Let's start on: "+t.title };
+                 k:'ghost', send:"Let's start on: "+t.title, task:t.id };
       }).concat([{label:"I'm stuck", k:'warm', send:"I'm stuck"}]));
     });
   }
@@ -627,13 +938,18 @@
   // calm home, not the dense dashboard). A reveal failure never blocks the greeting.
   Promise.all([
     api('/api/buddy/status'),
-    api('/api/reveals/today').catch(function(){ return null; })
+    api('/api/reveals/today').catch(function(){ return null; }),
+    // Bills are a bonus: no bank connected, or a failure, just means no card.
+    api('/api/plaid/recurring').catch(function(err){
+      if(err && err.message!=='unauthorized') console.error('[weightless] bills load failed:', err.message);
+      return null;
+    })
   ])
     .then(function(results){
       var data = results[0];
       if(!data || !data.success){ throw new Error(data && data.message || 'status failed'); }
       var reveal = (results[1] && results[1].reveal) ? results[1].reveal : null;
-      greet(data, reveal);
+      greet(data, reveal, results[2]);
     })
     .catch(function(err){
       if(err && err.message==='unauthorized') return;
