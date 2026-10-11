@@ -28,7 +28,6 @@ const {
   getAccountMap,
   getCategoriesMap,
   insertPlaidTransaction,
-  trackBillMerchant,
   getDisabledMerchantKeys,
 } = require('../db/money-prisma');
 
@@ -103,102 +102,13 @@ const LEGACY_CATEGORY_MAP = {
   'Payment':                   'Bills & Utilities',
 };
 
-const BILL_PLAID_CATEGORIES = new Set([
-  'UTILITIES', 'BILL_PAYMENTS', 'RENT_AND_UTILITIES',
-  'LOAN_PAYMENTS', 'INSURANCE', 'SUBSCRIPTION', 'RENT',
-]);
+const { runBillGuardian, detectStreams, bucketFor } = require('../lib/bill-guardian');
+const billsDb = require('../db/bills');
 
-const BILL_MERCHANT_PATTERNS = [
-  { pattern: /netflix/i, type: 'subscription', label: 'Netflix' },
-  { pattern: /spotify/i, type: 'subscription', label: 'Spotify' },
-  { pattern: /hulu/i, type: 'subscription', label: 'Hulu' },
-  { pattern: /disney+?/i, type: 'subscription', label: 'Disney+' },
-  { pattern: /apple.*(tv|music|one)/i, type: 'subscription', label: 'Apple Subscription' },
-  { pattern: /amazon.*(prime|video)/i, type: 'subscription', label: 'Amazon Prime' },
-  { pattern: /youtube.*premium/i, type: 'subscription', label: 'YouTube Premium' },
-  { pattern: /hbo|max\b/i, type: 'subscription', label: 'HBO Max' },
-  { pattern: /paramount/i, type: 'subscription', label: 'Paramount+' },
-  { pattern: /peacock/i, type: 'subscription', label: 'Peacock' },
-  { pattern: /adobe/i, type: 'subscription', label: 'Adobe' },
-  { pattern: /microsoft *(365|office)/i, type: 'subscription', label: 'Microsoft 365' },
-  { pattern: /dropbox/i, type: 'subscription', label: 'Dropbox' },
-  { pattern: /icloud/i, type: 'subscription', label: 'iCloud' },
-  { pattern: /google *(one|workspace)/i, type: 'subscription', label: 'Google One' },
-  { pattern: /sirius.*xm|siriusxm/i, type: 'subscription', label: 'SiriusXM' },
-  { pattern: /audible/i, type: 'subscription', label: 'Audible' },
-  { pattern: /con *ed|consolidated *edison/i, type: 'utility', label: 'Con Edison' },
-  { pattern: /pge|pacific *gas/i, type: 'utility', label: 'PG&E' },
-  { pattern: /duke *energy/i, type: 'utility', label: 'Duke Energy' },
-  { pattern: /dominion *energy/i, type: 'utility', label: 'Dominion Energy' },
-  { pattern: /xcel *energy/i, type: 'utility', label: 'Xcel Energy' },
-  { pattern: /national *grid/i, type: 'utility', label: 'National Grid' },
-  { pattern: /eversource/i, type: 'utility', label: 'Eversource' },
-  { pattern: /pepco|potomac *electric/i, type: 'utility', label: 'PEPCO' },
-  { pattern: /nicor *gas/i, type: 'utility', label: 'Nicor Gas' },
-  { pattern: /national *fuel/i, type: 'utility', label: 'National Fuel Gas' },
-  { pattern: /water *(authority|service|works|dept|utility)/i, type: 'utility', label: 'Water Utility' },
-  { pattern: /american *water/i, type: 'utility', label: 'American Water' },
-  { pattern: /verizon/i, type: 'utility', label: 'Verizon' },
-  { pattern: /at&t|\batatt\b/i, type: 'utility', label: 'AT&T' },
-  { pattern: /t.?mobile/i, type: 'utility', label: 'T-Mobile' },
-  { pattern: /comcast|xfinity/i, type: 'utility', label: 'Comcast/Xfinity' },
-  { pattern: /spectrum/i, type: 'utility', label: 'Spectrum' },
-  { pattern: /cox *communications/i, type: 'utility', label: 'Cox' },
-  { pattern: /centurylink|lumen/i, type: 'utility', label: 'CenturyLink' },
-  { pattern: /geico/i, type: 'insurance', label: 'GEICO' },
-  { pattern: /state *farm/i, type: 'insurance', label: 'State Farm' },
-  { pattern: /progressive/i, type: 'insurance', label: 'Progressive' },
-  { pattern: /allstate/i, type: 'insurance', label: 'Allstate' },
-  { pattern: /liberty *mutual/i, type: 'insurance', label: 'Liberty Mutual' },
-  { pattern: /usaa/i, type: 'insurance', label: 'USAA' },
-  { pattern: /aetna/i, type: 'insurance', label: 'Aetna' },
-  { pattern: /blue *cross|bcbs/i, type: 'insurance', label: 'Blue Cross' },
-  { pattern: /united *health(care)?/i, type: 'insurance', label: 'UnitedHealthcare' },
-  { pattern: /cigna/i, type: 'insurance', label: 'Cigna' },
-  { pattern: /humana/i, type: 'insurance', label: 'Humana' },
-  { pattern: /rent *payment|property *management/i, type: 'rent', label: 'Rent Payment' },
-  { pattern: /wells *fargo *mortgage/i, type: 'rent', label: 'Wells Fargo Mortgage' },
-  { pattern: /chase *mortgage/i, type: 'rent', label: 'Chase Mortgage' },
-  { pattern: /rocket *mortgage/i, type: 'rent', label: 'Rocket Mortgage' },
-  { pattern: /student *loan|sallie *mae|navient/i, type: 'loan', label: 'Student Loan' },
-  { pattern: /auto *loan|car *payment/i, type: 'loan', label: 'Car Payment' },
-];
 
-function normalizeMerchantKey(name) {
-  return (name || '')
-    .toLowerCase().replace(/[^a-z0-9]/g, '_').replace(/_+/g, '_').replace(/^_+|_+$/g, '').substring(0, 100);
-}
 
-function detectBillType(tx) {
-  if (tx.personal_finance_category) {
-    const primary = tx.personal_finance_category.primary;
-    if (BILL_PLAID_CATEGORIES.has(primary)) {
-      if (primary === 'SUBSCRIPTION') return { type: 'subscription', label: null };
-      if (primary === 'LOAN_PAYMENTS') return { type: 'loan', label: null };
-      if (primary === 'INSURANCE') return { type: 'insurance', label: null };
-      if (primary === 'RENT_AND_UTILITIES' || primary === 'UTILITIES') return { type: 'utility', label: null };
-      if (primary === 'RENT') return { type: 'rent', label: null };
-      return { type: 'other_bill', label: null };
-    }
-  }
-  if (tx.category) {
-    const catStr = tx.category.join(' ').toLowerCase();
-    if (catStr.includes('subscription') || catStr.includes('recurring')) return { type: 'subscription', label: null };
-    if (catStr.includes('utilities') || catStr.includes('electric') || catStr.includes('internet') || catStr.includes('phone')) return { type: 'utility', label: null };
-    if (catStr.includes('insurance')) return { type: 'insurance', label: null };
-    if (catStr.includes('rent') || catStr.includes('mortgage')) return { type: 'rent', label: null };
-  }
-  const merchantName = tx.merchant_name || tx.name || '';
-  for (const p of BILL_MERCHANT_PATTERNS) {
-    if (p.pattern.test(merchantName)) return { type: p.type, label: p.label };
-  }
-  return null;
-}
 
-function getBillTypeLabel(type) {
-  const labels = { subscription: 'Subscription', utility: 'Utility', insurance: 'Insurance', rent: 'Rent/Mortgage', loan: 'Loan Payment', other_bill: 'Bill' };
-  return labels[type] || 'Bill';
-}
+
 
 function classifyTransaction(transaction) {
   if (transaction.personal_finance_category) {
@@ -271,7 +181,6 @@ async function syncTransactions(pool, item) {
   let totalFromPlaid = 0;  // raw count of transactions Plaid returned across all pages
   const unknownAccountIds = new Set(); // account_ids skipped due to no map entry
   const ghostFailures = [];            // errors from ghost account creation attempts
-  const billCandidates = [];
 
   const accountMap = await getAccountMap(pool, item.id, item.user_id);
   const categoriesByName = await getCategoriesMap(pool);
@@ -450,7 +359,6 @@ async function syncTransactions(pool, item) {
 
       if (plaidTx) {
         added++;
-        billCandidates.push({ ...tx, transaction_date: tx.date });
       } else {
         insertFailed++;
         if (insertFailed <= 3) {
@@ -538,61 +446,16 @@ async function syncTransactions(pool, item) {
     console.log(`[Plaid] Synced item ${item.id} for user ${item.user_id}: plaid_returned=${totalFromPlaid}, inserted=${added}, skipped_credits=${skippedCredit}, skipped_no_acct=${skippedNoAcct}, insert_failed=${insertFailed}`);
   }
 
-  if (billCandidates.length > 0) {
-    detectAndCreateBillTasks(pool, item.user_id, billCandidates).catch(e => console.error('[BillTasks] Error:', e.message));
+  // Pre-due bill reminders from the user's recurring history (lib/bill-guardian.js).
+  // Replaces the old post-payment "Pay X" task, which was dated 3 days AFTER
+  // the bill had already been paid.
+  if (added > 0) {
+    runBillGuardian(pool, item.user_id).catch(e =>
+      console.error('[BillGuardian] run after sync failed:', e.message, '| user:', item.user_id));
   }
   return { added, plaidReturned: totalFromPlaid, skippedCredit, skippedNoAcct, insertFailed, accountMapSize: Object.keys(accountMap).length, unknownAccountIds: unknownIds, ghostFailures };
 }
 
-// ── Bill detection + auto-task creation ──────────────────────────────────────
-async function detectAndCreateBillTasks(pool, userId, newTransactionData) {
-  if (!newTransactionData || newTransactionData.length === 0) return;
-  const disabledMerchants = await getDisabledMerchantKeys(pool, userId);
-  const tasksCreated = [];
-
-  for (const tx of newTransactionData) {
-    const billInfo = detectBillType(tx);
-    if (!billInfo) continue;
-    const merchantName = tx.merchant_name || tx.name || tx.description || 'Unknown';
-    const merchantKey = normalizeMerchantKey(merchantName);
-    if (!merchantKey || disabledMerchants.has(merchantKey)) continue;
-    const displayName = billInfo.label || merchantName;
-
-    const cutoff = new Date();
-    cutoff.setDate(cutoff.getDate() - 35);
-    const { rows: existing } = await pool.query(
-      `SELECT id FROM tasks WHERE user_id = $1 AND source = 'auto_bill' AND bill_merchant_key = $2
-       AND is_completed = false AND created_at >= $3 LIMIT 1`,
-      [userId, merchantKey, cutoff]
-    );
-    if (existing.length) continue;
-
-    const txDate = tx.transaction_date ? new Date(tx.transaction_date) : new Date();
-    const dueDate = new Date(txDate);
-    dueDate.setDate(dueDate.getDate() + 3);
-
-    await pool.query(
-      `INSERT INTO tasks (user_id, title, description, priority, due_date, source, bill_merchant_key, bill_type)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-      [
-        userId,
-        `Pay ${displayName}`,
-        `Auto-detected from bank sync. ${getBillTypeLabel(billInfo.type)} payment.`,
-        'high',
-        dueDate,
-        'auto_bill',
-        merchantKey,
-        billInfo.type,
-      ]
-    );
-    tasksCreated.push({ merchantKey, displayName, type: billInfo.type });
-    await trackBillMerchant(pool, userId, merchantKey, displayName, billInfo.type);
-  }
-
-  if (tasksCreated.length > 0) {
-    console.log(`[BillTasks] Created ${tasksCreated.length} bill task(s) for user ${userId}:`, tasksCreated.map(t => t.displayName).join(', '));
-  }
-}
 
 // ── Express Router ────────────────────────────────────────────────────────────
 module.exports = function(pool) {
@@ -1336,6 +1199,51 @@ module.exports = function(pool) {
       );
       res.json({ success: true });
     } catch (err) { console.error('[Plaid] Error dismissing:', err); res.status(500).json({ success: false, message: 'Failed to dismiss transaction' }); }
+  });
+
+  // GET /api/plaid/recurring — recurring charges found in the user's history,
+  // each with its bucket and predicted next date. `ask` is the one merchant to
+  // ask about next (bill-like but unclear), so the UI only ever shows one question.
+  router.get('/recurring', async (req, res) => {
+    const userId = req.user.id;
+    try {
+      const [txs, prefs] = await Promise.all([
+        billsDb.getRecentOutflows(pool, userId),
+        billsDb.getBillPreferences(pool, userId),
+      ]);
+      const prefsByKey = new Map(prefs.map(p => [p.merchant_key, p]));
+      const streams = detectStreams(txs, Date.now())
+        .map(s => ({ ...s, bucket: bucketFor(s, prefsByKey.get(s.merchant_key)) }))
+        .sort((a, b) => a.predicted_next.localeCompare(b.predicted_next));
+      const ask = streams.find(s => s.bucket === 'unsure') || null;
+      res.json({ success: true, streams, ask });
+    } catch (err) {
+      console.error('[BillGuardian] GET /recurring failed:', err.message, '| user:', userId);
+      res.status(500).json({ success: false, message: 'Could not load recurring charges.' });
+    }
+  });
+
+  // POST /api/plaid/recurring/:key/bucket { bucket, name } — remember the answer.
+  router.post('/recurring/:key/bucket', async (req, res) => {
+    const userId = req.user.id;
+    const { bucket, name } = req.body || {};
+    if (!['obligation', 'subscription', 'habit'].includes(bucket)) {
+      return res.status(400).json({ success: false, message: 'bucket must be obligation, subscription or habit' });
+    }
+    const key = String(req.params.key || '').slice(0, 100);
+    if (!/^[a-z0-9_]+$/.test(key)) return res.status(400).json({ success: false, message: 'Invalid merchant' });
+    try {
+      await billsDb.setBucket(pool, userId, key, typeof name === 'string' ? name.slice(0, 120) : null, bucket);
+      // A "yes, remind me" should take effect now, not at tomorrow's sync.
+      if (bucket === 'obligation') {
+        runBillGuardian(pool, userId).catch(e =>
+          console.error('[BillGuardian] run after answer failed:', e.message, '| user:', userId));
+      }
+      res.json({ success: true });
+    } catch (err) {
+      console.error('[BillGuardian] save answer failed:', err.message, '| user:', userId, '| merchant:', key);
+      res.status(500).json({ success: false, message: 'Could not save that. Try again?' });
+    }
   });
 
   router.get('/bills', async (req, res) => {
