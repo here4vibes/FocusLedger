@@ -109,6 +109,12 @@ Node.js + Express · PostgreSQL (Neon) · Render deployment · Vanilla HTML/CSS/
 
 - **#235** `claude/tasks-hub-wAcNr`: UI phase 2 (Tasks hub), plus the `fl_token` sign-in fix for Routines, the partner pages, link-email and pricing.
 
+- **#237** `claude/renewal-heads-up-wAcNr`: renewal heads-up for annual and quarterly subscriptions.
+  - New hourly cron `renewal-heads-up` (`jobs/renewalHeadsUpJob.js`): one push per merchant per renewal date, at 10am local, about 7 days ahead; respects the daily cap; skips QA users.
+  - The bill guardian reads 800 days of outflows. Weekly/monthly detection still uses only the last 400 days (`SHORT_CADENCE_WINDOW_DAYS`).
+  - Plaid link now requests `transactions.days_requested: 730`. That only affects new connections; existing items keep their original backfill.
+  - **On deploy:** if Render Blueprint sync is off, create the cron in the dashboard with the `focusledger` env group.
+
 ### UI consolidation plan (agreed with the user, 2026-10-11)
 Four places plus a Settings gear. One small PR per phase; old URLs keep working through redirects.
 
