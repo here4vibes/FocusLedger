@@ -120,6 +120,16 @@
   .subpanel .undo{background:none;border:none;color:var(--accent);font-weight:700;cursor:pointer;
     font-size:.8rem;font-family:inherit;padding:0;margin-left:.35rem;text-decoration:underline;}
   .subpanel .undo:disabled{color:var(--faint);cursor:default;text-decoration:none;}
+  .billrow .tag.pend{background:var(--good-soft);color:var(--good);}
+  .subpanel a.chip{text-decoration:none;display:inline-block;}
+  .subpanel .fine{font-size:.78rem;color:var(--muted);margin-top:.4rem;line-height:1.4;}
+  .cancelnote{border-radius:12px;padding:.55rem .7rem;margin:.1rem 0 .55rem;font-size:.86rem;line-height:1.45;}
+  .cancelnote.win{background:var(--good-soft);color:#2f6f6f;}
+  .cancelnote.win strong{color:#245757;}
+  .cancelnote.alert{background:var(--alert-soft);color:#8a3a1d;}
+  .cancelnote .chips{margin-top:.4rem;}
+  .cancelnote .chip{font-size:.8rem;padding:.38rem .68rem;}
+  .cancelnote a.chip{text-decoration:none;display:inline-block;}
   .billask{margin-top:.6rem;padding-top:.6rem;border-top:1px dashed var(--line-2);}
   .billask .q{font-size:.86rem;color:var(--ink);line-height:1.4;}
   .billask .chips{margin-top:.45rem;}
@@ -530,11 +540,12 @@
     if(!rec || !rec.success || !Array.isArray(rec.streams)) return;
     var horizon = addDays(today, 7);
     var up = rec.streams.filter(function(s){
-      return (s.bucket==='obligation' || s.bucket==='subscription') &&
+      return (s.bucket==='obligation' || s.bucket==='subscription') && s.cancel_status!=='confirmed' &&
         s.predicted_next >= today && s.predicted_next <= horizon;
     });
     var ask = rec.ask && askAllowed(rec.ask, today) ? rec.ask : null;
-    if(!up.length && !ask) return;
+    var settled = Array.isArray(rec.cancellations) ? rec.cancellations : [];
+    if(!up.length && !ask && !settled.length) return;
 
     var onRadar = {};
     (tasks||[]).forEach(function(t){ if(t.source==='auto_bill' && t.bill_merchant_key) onRadar[t.bill_merchant_key] = true; });
@@ -549,13 +560,16 @@
     }
     html += '</div>';
     var card = raw(html);
+    settled.forEach(function(c){ cancellationNote(card, c, rec, today); });
     up.forEach(function(s){
       var when = fmtDue(s.predicted_next, today) || { label:'' };
       var soon = when.label==='today' || when.label==='tomorrow';
-      var reviewable = s.bucket==='subscription' && !recentlyKept(s.kept_at);
+      var pending = s.cancel_status==='pending';
+      var reviewable = s.bucket==='subscription' && !pending && !recentlyKept(s.kept_at);
       var row = node('<div class="billrow"><span class="bn">'+esc(s.name)+'</span>'+
-        (s.bucket==='subscription' ? '<span class="tag sub">sub</span>' : '')+
-        '<span class="bw'+(soon?' soon':'')+'">'+esc(when.label)+(onRadar[s.merchant_key]?' · on radar':'')+'</span>'+
+        (pending ? '<span class="tag pend">cancelling</span>' : s.bucket==='subscription' ? '<span class="tag sub">sub</span>' : '')+
+        '<span class="bw'+(soon&&!pending?' soon':'')+'">'+(pending ? 'checking after '+esc((fmtDue(s.cancel_expected_by||s.predicted_next, today)||{label:''}).label)
+          : esc(when.label)+(onRadar[s.merchant_key]?' · on radar':''))+'</span>'+
         '<span class="ba">~'+dollars(Math.round(Number(s.typical_amount)*100))+'</span>'+
         (reviewable ? '<span class="chev" aria-hidden="true">›</span>' : '')+'</div>');
       card.appendChild(row);
@@ -648,55 +662,145 @@
     scroll();
   }
 
-  // Buddy can't cancel a service for you, so do the next-best real thing: put a
-  // dated task on your list before the next charge, then offer the steps.
+  // Buddy can't cancel a service for you. So: record the cancel (the bill guardian
+  // then checks the bank and reports whether it actually worked), open the
+  // merchant's own cancel page when we know it, and keep a dated backup task.
+  function cancelLinkChip(link){
+    var a = document.createElement('a'); a.className = 'chip solid';
+    a.href = link.url; a.target = '_blank'; a.rel = 'noopener noreferrer';
+    a.textContent = link.store ? 'Open '+link.label+' subscriptions ↗' : 'Open '+link.label+'’s cancel page ↗';
+    a.onclick = function(e){ e.stopPropagation(); };
+    return a;
+  }
+  function requestCancel(s){
+    return api('/api/plaid/recurring/'+encodeURIComponent(s.merchant_key)+'/cancel', { method:'POST', body:{
+      name: s.name, expected_by: s.predicted_next, amount: Number(s.typical_amount), frequency: s.frequency } })
+      .then(function(res){
+        if(!res || !res.success) throw new Error((res && res.message) || 'cancel request failed');
+        return res;
+      });
+  }
+
   function cancelSub(box, say, row, s, today, onDecided, fail){
     var due = addDays(s.predicted_next, -1);
     if(due < today) due = today;
     var cents = Math.round(Number(s.typical_amount)*100);
     var perYear = PER_YEAR[s.frequency];
     var title = ('Cancel '+s.name+' before it renews').slice(0, 150);
-    api('/api/tasks', { method:'POST', body:{
-      title: title, due_date: due, priority: 'medium',
-      description: 'Renews around '+s.predicted_next+' for about '+dollars(cents)+
-        (perYear && perYear>1 ? ' (roughly '+dollars(cents*perYear)+' a year)' : '')+'. Spotted by FocusLedger in your bank history.'
-    }}).then(function(res){
-      if(!res || !res.success || !res.task){
-        var e = new Error((res && res.message) || 'create failed');
-        if(res && res.message) e.userMessage = res.message; // e.g. the free-plan task cap
-        throw e;
-      }
-      var taskId = res.task.id;
+    requestCancel(s).then(function(res){
+      // Backup task; if it can't be added (e.g. the free-plan cap) the cancel still stands.
+      return api('/api/tasks', { method:'POST', body:{
+        title: title, due_date: due, priority: 'medium',
+        description: 'Renews around '+s.predicted_next+' for about '+dollars(cents)+
+          (perYear && perYear>1 ? ' (roughly '+dollars(cents*perYear)+' a year)' : '')+'. Spotted by FocusLedger in your bank history.'
+      }}).then(function(t){ return { link: res.cancel_link, task: t && t.success && t.task ? t.task : null, taskMsg: t && !t.success ? t.message : null }; },
+               function(err){
+                 if(err && err.message==='unauthorized') throw err;
+                 console.error('[weightless] backup cancel task failed:', err && err.message, '| merchant:', s.merchant_key);
+                 return { link: res.cancel_link, task: null, taskMsg: null };
+               });
+    }).then(function(r){
       row.remove();
-      var whenLbl = (fmtDue(due, today) || { label:due }).label;
-      say.textContent = '✓ Added “'+title+'” for '+whenLbl+(due===today ? '' : ', the day before it renews')+'.';
+      say.innerHTML = '✓ On it. I’ll watch your bank: if no <strong>'+esc(s.name)+'</strong> charge shows up after '+
+        esc((fmtDue(s.predicted_next, today) || { label:s.predicted_next }).label)+', I’ll mark it cancelled.';
       var undo = document.createElement('button'); undo.className = 'undo'; undo.textContent = 'Undo';
-      undo.onclick = function(e){
-        e.stopPropagation(); undo.disabled = true; undo.textContent = '…';
-        api('/api/tasks/'+taskId, { method:'DELETE' }).then(function(r){
-          if(!r || !r.success) throw new Error('delete failed');
-          say.textContent = 'Removed. It stays on your bills.';
-          next.remove();
-        }).catch(function(err){
-          if(err && err.message==='unauthorized') return;
-          console.error('[weightless] undo cancel-task failed:', err && err.message, '| task:', taskId);
-          undo.disabled = false; undo.textContent = 'Undo';
-        });
-      };
       say.appendChild(undo);
+
       var next = document.createElement('div'); next.className = 'chips';
+      if(r.link) next.appendChild(cancelLinkChip(r.link));
       var how = document.createElement('button'); how.className = 'chip good'; how.textContent = 'Show me how';
       how.onclick = function(e){
         e.stopPropagation();
         if(busy) return;
-        next.remove();
+        how.remove();
         send('How do I cancel my '+s.name+' subscription? Give me the exact steps, short.');
       };
       next.appendChild(how);
       box.appendChild(next);
+
+      var fine = document.createElement('div'); fine.className = 'fine';
+      var whenLbl = (fmtDue(due, today) || { label:due }).label;
+      fine.textContent = r.task ? 'Backup task added for '+whenLbl+(due===today ? '' : ', the day before it renews')+'.'
+        : (r.taskMsg ? 'No backup task: '+r.taskMsg : '');
+      if(fine.textContent) box.appendChild(fine);
+
+      undo.onclick = function(e){
+        e.stopPropagation(); undo.disabled = true; undo.textContent = '…';
+        Promise.all([
+          api('/api/plaid/recurring/'+encodeURIComponent(s.merchant_key)+'/cancel', { method:'DELETE' }),
+          r.task ? api('/api/tasks/'+r.task.id, { method:'DELETE' }) : Promise.resolve({ success:true })
+        ]).then(function(rs){
+          if(!rs[0] || !rs[0].success || !rs[1] || !rs[1].success) throw new Error('undo failed');
+          say.textContent = 'Undone. It stays on your bills.';
+          next.remove(); if(fine.parentNode) fine.remove();
+        }).catch(function(err){
+          if(err && err.message==='unauthorized') return;
+          console.error('[weightless] undo cancel failed:', err && err.message, '| merchant:', s.merchant_key);
+          undo.disabled = false; undo.textContent = 'Undo';
+        });
+      };
       onDecided('cancel');
       scroll();
     }).catch(function(err){ fail(err, 'cancel'); });
+  }
+
+  // A settled cancellation, decided by the bill guardian from bank data.
+  function cancellationNote(card, c, rec, today){
+    var k = card.querySelector('.k');
+    var cents = c.amount ? Math.round(c.amount*100) : 0;
+    var perYear = PER_YEAR[c.frequency] || 0;
+    var note = document.createElement('div');
+    if(c.status === 'confirmed'){
+      note.className = 'cancelnote win';
+      note.innerHTML = '✓ <strong>'+esc(c.name)+' cancelled.</strong> No charge since you cancelled'+
+        (cents && perYear ? '. That’s about <strong>'+dollars(cents*perYear)+' a year</strong> back.' : '.');
+      k.after(note);
+      // Celebrate once per merchant: the win is the point.
+      var seenKey = 'fl_cancel_win_'+c.merchant_key, seen = false;
+      try{ seen = localStorage.getItem(seenKey)==='1'; localStorage.setItem(seenKey,'1'); }catch(e){}
+      if(!seen) setTimeout(function(){ burst(note, true, '✓ cancelled'); }, 400);
+      return;
+    }
+    note.className = 'cancelnote alert';
+    note.innerHTML = '<strong>'+esc(c.name)+'</strong> charged you again after you cancelled. It may not have gone through.';
+    var chipsRow = document.createElement('div'); chipsRow.className = 'chips';
+    if(c.cancel_link){ var a = cancelLinkChip(c.cancel_link); chipsRow.appendChild(a); }
+    var stream = (rec.streams||[]).filter(function(x){ return x.merchant_key===c.merchant_key; })[0];
+    var retry = document.createElement('button'); retry.className = 'chip warm'; retry.textContent = 'Try again';
+    var keep = document.createElement('button'); keep.className = 'chip ghost'; keep.textContent = 'Keep it';
+    function lock(on){ retry.disabled = on; keep.disabled = on; }
+    retry.onclick = function(){
+      lock(true);
+      var s = stream || { merchant_key:c.merchant_key, name:c.name, typical_amount:c.amount,
+        frequency:c.frequency || 'monthly', predicted_next:addDays(today, 30) };
+      requestCancel(s).then(function(){
+        chipsRow.querySelectorAll('button').forEach(function(b){ b.remove(); });
+        note.className = 'cancelnote win';
+        note.innerHTML = 'Watching again. I’ll check your bank after '+
+          esc((fmtDue(s.predicted_next, today) || { label:s.predicted_next }).label)+'.';
+        if(c.cancel_link) note.appendChild(chipsRow);
+      }).catch(function(err){
+        if(err && err.message==='unauthorized') return;
+        console.error('[weightless] cancel retry failed:', err && err.message, '| merchant:', c.merchant_key);
+        lock(false);
+      });
+    };
+    keep.onclick = function(){
+      lock(true);
+      api('/api/plaid/recurring/'+encodeURIComponent(c.merchant_key)+'/keep', { method:'POST', body:{ name:c.name } })
+        .then(function(res){
+          if(!res || !res.success) throw new Error('keep failed');
+          note.className = 'cancelnote win';
+          note.textContent = 'Kept. I’ll check in about '+c.name+' again in 3 months.';
+        }).catch(function(err){
+          if(err && err.message==='unauthorized') return;
+          console.error('[weightless] keep after charge failed:', err && err.message, '| merchant:', c.merchant_key);
+          lock(false);
+        });
+    };
+    chipsRow.appendChild(retry); chipsRow.appendChild(keep);
+    note.appendChild(chipsRow);
+    k.after(note);
   }
 
   function billAsk(card, ask, today){
