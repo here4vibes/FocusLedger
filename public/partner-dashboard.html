@@ -530,7 +530,7 @@
     };
 
     function jwt() {
-      try { return localStorage.getItem('token') || sessionStorage.getItem('token') || ''; }
+      try { return localStorage.getItem('fl_token') || localStorage.getItem('token') || sessionStorage.getItem('token') || ''; }
       catch { return ''; }
     }
 

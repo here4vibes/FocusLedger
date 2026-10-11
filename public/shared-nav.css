@@ -1030,3 +1030,51 @@ body.shared-nav-active {
     padding-right: 4rem;
   }
 }
+
+/* ── Place sub-tabs (one strip per place: Tasks · Today · Routines · …) ── */
+.place-tabs {
+  display: flex;
+  gap: 0.4rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding: 0.6rem 1rem 0.35rem;
+  max-width: 100%;
+  box-sizing: border-box;
+  /* Sticky so the sections stay reachable on long or auto-scrolled pages (Today
+     scrolls to "now"). Sits under the mobile top bar; at the top on desktop. */
+  position: sticky;
+  top: calc(52px + env(safe-area-inset-top, 0px));
+  z-index: 40;
+  background: rgba(250, 248, 244, 0.94);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+.place-tabs::-webkit-scrollbar { display: none; }
+.place-tab {
+  flex: none;
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 0.42rem 0.85rem;
+  border-radius: 999px;
+  color: #5f6a78;
+  background: #fff;
+  border: 1px solid #e8e5e0;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.place-tab:hover { border-color: #011e5c; color: #011e5c; }
+.place-tab.active { background: #011e5c; color: #fff; border-color: #011e5c; }
+.place-tab:focus-visible { outline: 2px solid #c9a84c; outline-offset: 2px; }
+
+/* Desktop: a place's sections listed under it in the sidebar. */
+.shared-nav-subitem {
+  display: block;
+  padding: 0.38rem 1rem 0.38rem 3.1rem;
+  font-size: 0.84rem;
+  color: rgba(255, 255, 255, 0.62);
+  text-decoration: none;
+  border-left: 3px solid transparent;
+}
+.shared-nav-subitem:hover { color: #fff; background: rgba(255, 255, 255, 0.06); }
+.shared-nav-subitem.active { color: #f0c96a; font-weight: 600; }
+.shared-nav-subitem:focus-visible { outline: 2px solid #c9a84c; outline-offset: -2px; }
