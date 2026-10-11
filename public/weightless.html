@@ -122,6 +122,8 @@
   .subpanel .undo:disabled{color:var(--faint);cursor:default;text-decoration:none;}
   .billrow .tag.pend{background:var(--good-soft);color:var(--good);}
   .subpanel a.chip{text-decoration:none;display:inline-block;}
+  .subpanel ol.steps{margin:.5rem 0 0;padding-left:1.15rem;font-size:.86rem;line-height:1.45;color:var(--ink);}
+  .subpanel ol.steps li{margin:.15rem 0;}
   .subpanel .fine{font-size:.78rem;color:var(--muted);margin-top:.4rem;line-height:1.4;}
   .cancelnote{border-radius:12px;padding:.55rem .7rem;margin:.1rem 0 .55rem;font-size:.86rem;line-height:1.45;}
   .cancelnote.win{background:var(--good-soft);color:#2f6f6f;}
@@ -672,6 +674,38 @@
     a.onclick = function(e){ e.stopPropagation(); };
     return a;
   }
+  // No curated cancel page: a web search is honest and always works.
+  function searchChip(name){
+    var a = document.createElement('a'); a.className = 'chip solid';
+    a.href = 'https://www.google.com/search?q='+encodeURIComponent('how to cancel '+name+' subscription');
+    a.target = '_blank'; a.rel = 'noopener noreferrer';
+    a.textContent = 'Find '+name+'’s cancel page ↗';
+    a.onclick = function(e){ e.stopPropagation(); };
+    return a;
+  }
+
+  // Steps render right here in the card, not as a chat message the user didn't type.
+  function showSteps(box, chipsRow, how, s){
+    how.disabled = true; how.textContent = '…';
+    api('/api/plaid/recurring/'+encodeURIComponent(s.merchant_key)+'/cancel-help', { method:'POST', body:{ name:s.name } })
+      .then(function(res){
+        if(!res || !res.success || !Array.isArray(res.steps) || !res.steps.length) throw new Error('no steps');
+        how.remove();
+        var ol = document.createElement('ol'); ol.className = 'steps';
+        res.steps.forEach(function(t){ var li = document.createElement('li'); li.textContent = t; ol.appendChild(li); });
+        chipsRow.before(ol);
+        var fine = document.createElement('div'); fine.className = 'fine';
+        fine.textContent = res.source==='ai' ? "Buddy's best directions. Menus change, so go by what you see." : 'General steps. Menus vary by service.';
+        ol.after(fine);
+        scroll();
+      })
+      .catch(function(err){
+        if(err && err.message==='unauthorized') return;
+        console.error('[weightless] cancel steps failed:', err && err.message, '| merchant:', s.merchant_key);
+        how.disabled = false; how.textContent = 'Show me how';
+      });
+  }
+
   function requestCancel(s){
     return api('/api/plaid/recurring/'+encodeURIComponent(s.merchant_key)+'/cancel', { method:'POST', body:{
       name: s.name, expected_by: s.predicted_next, amount: Number(s.typical_amount), frequency: s.frequency } })
@@ -707,13 +741,11 @@
       say.appendChild(undo);
 
       var next = document.createElement('div'); next.className = 'chips';
-      if(r.link) next.appendChild(cancelLinkChip(r.link));
+      next.appendChild(r.link ? cancelLinkChip(r.link) : searchChip(s.name));
       var how = document.createElement('button'); how.className = 'chip good'; how.textContent = 'Show me how';
       how.onclick = function(e){
         e.stopPropagation();
-        if(busy) return;
-        how.remove();
-        send('How do I cancel my '+s.name+' subscription? Give me the exact steps, short.');
+        showSteps(box, next, how, s);
       };
       next.appendChild(how);
       box.appendChild(next);
@@ -764,7 +796,7 @@
     note.className = 'cancelnote alert';
     note.innerHTML = '<strong>'+esc(c.name)+'</strong> charged you again after you cancelled. It may not have gone through.';
     var chipsRow = document.createElement('div'); chipsRow.className = 'chips';
-    if(c.cancel_link){ var a = cancelLinkChip(c.cancel_link); chipsRow.appendChild(a); }
+    chipsRow.appendChild(c.cancel_link ? cancelLinkChip(c.cancel_link) : searchChip(c.name));
     var stream = (rec.streams||[]).filter(function(x){ return x.merchant_key===c.merchant_key; })[0];
     var retry = document.createElement('button'); retry.className = 'chip warm'; retry.textContent = 'Try again';
     var keep = document.createElement('button'); keep.className = 'chip ghost'; keep.textContent = 'Keep it';
@@ -778,7 +810,7 @@
         note.className = 'cancelnote win';
         note.innerHTML = 'Watching again. I’ll check your bank after '+
           esc((fmtDue(s.predicted_next, today) || { label:s.predicted_next }).label)+'.';
-        if(c.cancel_link) note.appendChild(chipsRow);
+        note.appendChild(chipsRow);
       }).catch(function(err){
         if(err && err.message==='unauthorized') return;
         console.error('[weightless] cancel retry failed:', err && err.message, '| merchant:', c.merchant_key);

@@ -105,6 +105,7 @@ const LEGACY_CATEGORY_MAP = {
 
 const { runBillGuardian, detectStreams, bucketFor, FREQUENCIES } = require('../lib/bill-guardian');
 const { cancelLinkFor } = require('../lib/cancel-links');
+const { cancelHelp } = require('../lib/cancel-help');
 const billsDb = require('../db/bills');
 
 
@@ -1314,6 +1315,17 @@ module.exports = function(pool) {
       console.error('[BillGuardian] cancel request failed:', err.message, '| user:', userId, '| merchant:', key);
       res.status(500).json({ success: false, message: 'Could not save that. Try again?' });
     }
+  });
+
+  // POST /api/plaid/recurring/:key/cancel-help { name } — short steps to cancel,
+  // shown inside the bills card (never phone numbers or URLs from the model),
+  // plus a web search link and the curated cancel page when we have one.
+  router.post('/recurring/:key/cancel-help', async (req, res) => {
+    const key = String(req.params.key || '').slice(0, 100);
+    if (!/^[a-z0-9_]+$/.test(key)) return res.status(400).json({ success: false, message: 'Invalid merchant' });
+    const name = typeof (req.body || {}).name === 'string' ? req.body.name.slice(0, 80) : key;
+    const help = await cancelHelp(name);
+    res.json({ success: true, ...help, cancel_link: cancelLinkFor(name) });
   });
 
   // DELETE /api/plaid/recurring/:key/cancel — undo a still-pending cancel request.
