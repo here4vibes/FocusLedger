@@ -87,7 +87,106 @@ Node.js + Express · PostgreSQL (Neon) · Render deployment · Vanilla HTML/CSS/
 - **Polsia Analytics** — first-party beacon pixel
 - **APNs** — iOS push via `apn` npm package; env vars: APNS_KEY_ID, APNS_TEAM_ID, APNS_KEY_P8, APNS_BUNDLE_ID
 
+## Current state & handoff (updated 2026-10-11)
+
+Read this first in a new session. The user wants a **"Summary" section at the end of every reply**.
+
+### Open PRs (merge order: #225 → #226 → #218, each needs the user to say "merge N")
+- **#218** `claude/test-coverage-analysis-wAcNr`: billing portal, nudge-quality pass, "one home", security upgrades, CI smoke fix, Settings crash fix. **Waiting on the user's live Stripe purchase test.**
+  - **Billing portal:** "Manage billing & invoices" (`POST /api/subscription/portal`).
+  - **Nudge-quality pass:**
+    - Lifecycle emails that said "undefined" and guilt-tripped.
+    - Buddy lapse timing.
+    - Deadline quiet hours (08:00–21:59 local, 3-day overdue cap).
+    - Routines gated by hour, day, active flag and completion.
+    - Cold-start nudge at 10am local, hourly.
+    - Document-expiry text.
+    - Evening check-in at `evening_time`.
+  - **"One home":** `/home` and `/portal` → `/weightless`; the Command Center lives on at `/portal/legacy`.
+  - **Canonical links:** `/app/money` and `/app/buddy`.
+  - **Security upgrades:**
+    - `apn` replaced by a native HTTP/2 APNs sender.
+    - `imap` replaced by `imapflow`, which also fixes `rejectUnauthorized:false`.
+  - **Migrations:**
+    - `user_email_preferences_boolean` fixes Sentry NODE-EXPRESS-5.
+    - `events_id_default`.
+  - **On deploy:**
+    - Re-engagement emails resume. **Only Miles (user 35) is eligible.** 22 users were paused via `user_email_preferences.re_engagement='false'`; flip them back at relaunch.
+    - `render.yaml` moves `cold-start-nudge` and `evening-checkin` to hourly. Confirm in the Render dashboard if Blueprint sync is off.
+  - **Rebase on `main` before merging.** `public/changelog.html` conflicts are always "keep all entries".
+- **#225** `claude/bill-guardian-wAcNr`: bill guardian, plus `tasks.description` JSON→TEXT. The column was JSON in prod, so every task note, email-to-task note and bill task insert failed; prod has 0 descriptions and 0 auto-bill tasks.
+- **#226** `claude/tandem-recap-wAcNr`: Tandem "Your week together" Monday recap.
+
+### Waiting on the user
+- **`DATABASE_URL` in Render:** change `sslmode=require` → `sslmode=verify-full` in both the `focusledger` env group and the web service. This silences NODE-EXPRESS-4. Claude can't do it; it needs the secret.
+- **`SENTRY_DSN`** must be in the `focusledger` env group so cron errors reach Sentry.
+- **Reconnect the Neon and Stripe connectors** at claude.ai/customize/connectors, then start a new session.
+- **Live purchase test.** Expected: Settings shows Autopilot $9.95 with a renewal date; after cancelling, "Cancelled — you won't be charged again" and a "Keep Autopilot" button.
+- **Plaid:** the Plaid MCP shows **zero production usage** on team FocusLedger (`69e2d08b7146d5000d5a94d1`). Confirm `PLAID_ENV`, and whether Liabilities and Recurring Transactions are enabled. If they are, layer Plaid recurring and Liabilities due dates onto the bill guardian.
+
+### Backlog (agreed or proposed)
+- **After #218:** add an "Invite an accountability partner" link to the weekly email for people with no partner (`/app/settings?focus=tandem`; add `focus=tandem` scrolling to `#tandemSection`).
+- **NODE-EXPRESS-6:** the cross-domain-insights job fails with `column "mood" does not exist`.
+- **`/api/plaid/diagnostic`:** no auth, and it leaks the Plaid key prefix and length. Make it admin-only.
+- **Hardening:**
+  1. `user_id NOT NULL` and foreign keys on core tables. Check for orphans first and test on a Neon branch.
+  2. 70 silent `catch {}` blocks.
+  3. Check Neon point-in-time restore and the snapshot schedule.
+  4. A `routine_task_links` unique key on `(routine_id, task_id)`.
+  5. 23 moderate npm advisories.
+- **Strategy (decided):**
+  - Agentic **type 2** (Buddy acts for you: bills, start-it-for-me) and **type 3** (shareable outcomes) come first.
+  - A FocusLedger **MCP server** for Claude, ChatGPT and Meta Muse connectors is deferred.
+  - Positioning against Meta Muse: ADHD-native; "ADHD tax"/money from a CPA founder; privacy ("never train on or sell your data"); partner accountability.
+- **Next product step:** iterate the first session using the admin Activation card. #223 added the starters; watch the `first_checkin_starter` events.
+
+### Production facts (learned the hard way)
+- **Scale (Oct 2026):**
+  - About 28 real users, 1 active (the founder), and about 64 real visitors in 30 days.
+  - **19 of 28 never created a task or talked to Buddy.**
+  - Stripe has never had a subscription. Live account `acct_1Td92HCX9qN8DGgb`.
+  - Prices: Autopilot $9.95/$99.95, Tandem $14.95/$149.95.
+  - The webhook API version is dahlia (basil+): `current_period_end` is on items, and the invoice's subscription is at `invoice.parent.subscription_details.subscription`.
+- **The prod schema came from Prisma; genesis `CREATE TABLE IF NOT EXISTS` was a no-op on existing tables.** When something "silently doesn't work", **check the prod column type and default first.** Known traps:
+  - Missing id defaults and PKs (all fixed in #219–#221; every table with `id` now has a PK).
+  - JSON columns that code writes text into (`tasks.description`, fixed in #225).
+  - TEXT columns used as booleans (fixed in #218).
+  - `migrate.js` `runCoreMigrations` creates a minimal `users` table before genesis (fixed by `users_genesis_columns`).
+- **Many routes catch DB errors, log them and return 200.** Sentry now captures every `console.error` (`lib/sentry.js`). The CI boot smoke **fails on any logged "column/relation … does not exist"**.
+- **Migrations run on deploy** (`npm start` = `node migrate.js && node server.js`). A failed migration aborts the deploy and the old version keeps serving. Test risky migrations on a **Neon branch** first, and ask before deleting branches.
+- **Key user IDs:** Sean = 2, the **QA user = 25 (never touch)**, Miles = 35.
+- **Archives:** CI smoke analytics rows are in `*_automated`; rows saved without a user are in `orphaned_rows_archive`.
+- **Signup check:** a daily `prod-signup-check.yml` signs up `signup-monitor+<tag>@focusledger.net`, which is auto-flagged `is_qa_user`.
+
+### Modules added Oct 2026
+- **Sentry:** `lib/sentry.js`. Every process calls `initSentry(name)`, and console errors go to Sentry.
+- **Migration status:** `lib/migration-manifest.js` plus `db/migrations-status.js` back the `/health` migration status.
+- **Billing:** `lib/billing.js` and `db/billing.js` handle Stripe activation and sync. `lib/stripe-client.js` is shared.
+- **Activation:** `db/activation.js` and `GET /api/admin/activation` feed the admin Activation card.
+- **Monitor accounts:** `lib/monitor-accounts.js` and `db/users.js`.
+- **AI budget:**
+  - `lib/request-context.js` keeps per-request context with AsyncLocalStorage.
+  - `lib/ai-budget.js` enforces per-user daily AI limits: `AI_DAILY_LIMIT_FREE` 100 and `AI_DAILY_LIMIT_PRO` 500.
+  - **All AI calls must go through `lib/claude-client.js` `createMessage`/`complete`.**
+- **In open PRs:** `lib/bill-guardian.js`, `lib/bill-patterns.js` and `db/bills.js` (#225); `lib/tandem-recap.js` and `db/tandem-recap.js` (#226).
+
+### Cloud-session gotchas
+- **The egress proxy blocks focusledger.net and onrender.com.** Test prod through GitHub Actions or the Neon/Render/Sentry MCPs.
+- **`npm ci` fails on `apn`'s GitHub tarball** until #218 merges. Workaround: remove `apn` from `package.json`, run `npm install`, then `git checkout -- package.json package-lock.json`.
+- **Local Postgres:**
+  - Start it with `pg_ctlcluster 16 main start`.
+  - In a fresh container, first run `su postgres -c "psql -c \"CREATE ROLE fl LOGIN PASSWORD 'fl' CREATEDB\""` and create the `focusledger` DB owned by `fl`.
+  - Use `DATABASE_URL=postgres://fl:fl@localhost:5432/focusledger`.
+- **Neon:** project `weathered-cherry-58315264`, prod branch `br-plain-darkness-aphya16p`. `get_connection_string` is blocked by a credential guardrail; don't work around it.
+- **Render:** service `srv-d8bpimul51nc73cjdg90`. Claude can't set secret env vars.
+- **Sentry:** org `sean-hendler`, `https://us.sentry.io`.
+- **Merging and GitHub tools:** merging needs the user's explicit "merge N"; use a squash merge with the full 40-character head SHA. The `gh` CLI may be unavailable, so use the GitHub MCP.
+- **Shell pitfalls:**
+  - Never `pkill -f` a pattern that matches your own shell; check `/proc/<pid>/environ` for `PORT=3999` instead.
+  - In Python, `str.replace` with `$'` in the text is fine, but JS `String.replace` treats `$'` specially.
+
 ## Recent changes
+- **2026-10-09/11** — Merged: #217 (Sentry captures logged errors, security patches, Meta Pixel Purchase); #219–#221 (user/table/Plaid id sequences and primary keys, which fixed signups broken since ~May 29); #222 (CI traffic excluded from analytics, daily prod signup check, activation funnel, orphan archive); #223 (first session: no install pop-up, explanatory greeting and starter chips, fresh-DB `users` columns, `session_count` NULL fix); #224 (per-user AI budget).
 - **2026-06-12** — Brain Dump Triage + Dopamine Menu (PR #56): Brain Dump quick-tool in Buddy panel with Web Speech API voice input (continuous mode, auto-restart on Chrome 60s timeout), native browser autocorrect, and AI triage into Now/Later/Trash categories. Later items park in `journal_entries` (`entry_type='deferred'`) and Buddy resurfaces them next morning via `GET /api/buddy/status`. Dopamine Menu generates 3-tier energy-matched task list from real pending tasks. Routes: `POST /api/buddy/brain-dump-triage`, `POST /api/buddy/defer-items`, `POST /api/buddy/dopamine-menu`.
 - **2026-06-12** — Schema repairs (PR #56): 4 idempotent migrations fix Prisma-vs-production-SQL column mismatches for `buddy_checkins` (`date`→`checkin_date`, `type`→`checkin_type`), `buddy_midday_checkins`, `task_substeps` (add `step_text`, `step_order`, `completed`, `user_id`, `completed_at`), and `buddy_daily_plans` (`date`→`plan_date`, `mood` type, `plan_json`→individual columns). Fixed `routes/daily-brief.js`, `routes/insights.js`, `routes/momentum-score.js` to use new column names.
 - **2026-06-12** — CI reliability (PR #57): Removed dead `npx prisma generate` step (schema.prisma deleted); added `defaultBrowserType: 'chromium'` to `playwright.smoke.config.js` mobile projects (CI only installs Chromium; `devices['iPhone 13']` was defaulting to WebKit).
