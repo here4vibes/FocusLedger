@@ -767,7 +767,8 @@ module.exports = function(pool) {
       // Tasks due 4+ days out are excluded — not actionable now, and showing them adds cognitive load.
       // Uses shared actionableDateFilter — DO NOT inline a separate copy of this filter.
       const tasksResult = await pool.query(`
-        SELECT id, title, is_completed, due_date, completed_at, created_at, priority, value_id
+        SELECT id, title, is_completed, due_date, completed_at, created_at, priority, value_id,
+               source, bill_merchant_key
         FROM tasks
         WHERE user_id = $1
           AND is_completed = false
