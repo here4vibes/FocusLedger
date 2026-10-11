@@ -276,7 +276,7 @@
         .then(function (r) { return r.json(); })
         .then(function (data) {
             if (data.success && !data.needsOnboarding) {
-                window.location.href = '/app/buddy';
+                window.location.href = '/weightless';
                 return;
             }
             startOnboarding();
@@ -400,11 +400,11 @@
             || !('PushManager' in window)
             || !('serviceWorker' in navigator)
             || Notification.permission === 'denied') {
-            window.location.href = '/app/buddy';
+            window.location.href = '/weightless';
             return;
         }
         Notification.requestPermission().then(function (permission) {
-            if (permission !== 'granted') { window.location.href = '/app/buddy'; return; }
+            if (permission !== 'granted') { window.location.href = '/weightless'; return; }
             return fetch('/api/notifications/vapid-public-key')
                 .then(function (r) { return r.json(); })
                 .then(function (keyData) {
@@ -428,8 +428,8 @@
                         });
                 })
                 .catch(function () {})
-                .then(function () { window.location.href = '/app/buddy'; });
-        }).catch(function () { window.location.href = '/app/buddy'; });
+                .then(function () { window.location.href = '/weightless'; });
+        }).catch(function () { window.location.href = '/weightless'; });
     }
 
     function completeOnboarding(seedPayload) {

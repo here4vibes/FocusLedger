@@ -70,23 +70,31 @@
 
   // Primary tabs — exactly 4, shown in bottom nav (mobile) and sidebar top section (desktop)
   // Routes use /app/* namespace for true isolation — each tab is its own route, not a CSS toggle
-  const NAV_ITEMS = [    { label: 'Tasks',  href: '/app/tasks', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 12l2 2 4-4"/></svg>' },
-    { label: 'Money',  href: '/app/money', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="2" x2="12" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>' },
-    { label: 'Vault',  href: '/app/vault', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>' },
-    { label: 'Buddy',  href: '/app/buddy', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>' },
+  // UI consolidation: four places. Home is Weightless (Buddy + radar + bills).
+  // Mobile bottom nav renders Home · Tasks · (+) · Money · Life.
+  const SVG = function (paths) {
+    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + paths + '</svg>';
+  };
+  const NAV_ITEMS = [
+    { label: 'Home',  href: '/weightless', icon: SVG('<path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/>') },
+    { label: 'Tasks', href: '/app/tasks',  icon: SVG('<rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 12l2 2 4-4"/>') },
+    { label: 'Money', href: '/app/money',  icon: SVG('<line x1="12" y1="2" x2="12" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>') },
+    { label: 'Life',  href: '/app/life',   icon: SVG('<path d="M12 21s-7-4.5-9.5-9A5.5 5.5 0 0 1 12 6a5.5 5.5 0 0 1 9.5 6c-2.5 4.5-9.5 9-9.5 9z"/>') },
   ];
 
-  // Secondary links — shown in hamburger slide-out (mobile) and sidebar bottom section (desktop)
+  // Everything else, grouped by the place it will fold into (phases 2–4):
+  // Tasks → Today, Routines, Ideas · Life → Vault, Journal, Values, Insights.
   const MENU_ITEMS = [
     { label: 'Today',             href: '/app/today',         icon: '🕐' },
-    { label: 'Journal',           href: '/journal',           icon: '📓' },
     { label: 'Routines',          href: '/routines',          icon: '🔄' },
     { label: 'Ideas',             href: '/ideas',             icon: '💡' },
+    { label: 'Vault',             href: '/app/vault',         icon: '🗂️' },
+    { label: 'Journal',           href: '/journal',           icon: '📓' },
     { label: 'Values',            href: '/values',            icon: '🌟' },
     { label: 'Insights',          href: '/insights',          icon: '📊' },
     { label: 'Email → Tasks',     href: '/email',             icon: '📧' },
-    { label: 'Settings',          href: '/settings',          icon: '⚙️' },
     { label: 'Partner Dashboard', href: '/partner-dashboard', icon: '👥' },
+    { label: 'Settings',          href: '/settings',          icon: '⚙️' },
     { label: 'Help & Contact',    href: '/contact',           icon: '💬' },
   ];
 
@@ -136,8 +144,16 @@
         || path === '/app' || path === '/app/'
         || path.startsWith('/app/task/') || path.startsWith('/app/focus/');
     }
+    // Pages that belong to a place light up its tab, so you always know where you are.
+    var under = PLACE_CHILDREN[href];
+    if (under && under.some(function (p) { return path === p || path.startsWith(p + '/'); })) return true;
     return path === href || path === href + '/' || path.startsWith(href + '/');
   }
+  var PLACE_CHILDREN = {
+    '/app/tasks': ['/app/today', '/app/done', '/app/routines', '/routines', '/ideas', '/app/calendar', '/calendar'],
+    '/app/money': ['/transactions', '/checkin'],
+    '/app/life':  ['/app/vault', '/journal', '/values', '/insights'],
+  };
 
   // Returns true if the current page matches a MENU_ITEM (secondary page)
   // but does NOT match any NAV_ITEM — used to show the hamburger dot
