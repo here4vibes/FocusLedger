@@ -143,6 +143,11 @@
       { label: 'Calendar',  href: '/calendar', also: ['/app/calendar'] },
       { label: 'Ideas',     href: '/ideas' },
     ],
+    '/app/money': [
+      { label: 'Overview',     href: '/app/money' },
+      { label: 'Transactions', href: '/transactions' },
+      { label: 'Bills',        href: '/app/money/bills' },
+    ],
   };
   function tabMatches(tab, path) {
     if (path === tab.href || path === tab.href + '/') return true;
