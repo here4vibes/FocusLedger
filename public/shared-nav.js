@@ -82,12 +82,9 @@
     { label: 'Life',  href: '/app/life',   icon: SVG('<path d="M12 21s-7-4.5-9.5-9A5.5 5.5 0 0 1 12 6a5.5 5.5 0 0 1 9.5 6c-2.5 4.5-9.5 9-9.5 9z"/>') },
   ];
 
-  // Everything else, grouped by the place it will fold into (phases 2–4):
-  // Tasks → Today, Routines, Ideas · Life → Vault, Journal, Values, Insights.
+  // Everything not yet inside a place's sub-tabs. Tasks' pages moved into its
+  // hub (PLACE_TABS); Life → Vault, Journal, Values, Insights is phase 4.
   const MENU_ITEMS = [
-    { label: 'Today',             href: '/app/today',         icon: '🕐' },
-    { label: 'Routines',          href: '/routines',          icon: '🔄' },
-    { label: 'Ideas',             href: '/ideas',             icon: '💡' },
     { label: 'Vault',             href: '/app/vault',         icon: '🗂️' },
     { label: 'Journal',           href: '/journal',           icon: '📓' },
     { label: 'Values',            href: '/values',            icon: '🌟' },
@@ -134,6 +131,47 @@
   }
 
   // ── Active page detection ──────────────────────────────────
+
+  // ── Place sub-tabs ──────────────────────────────────────
+  // One strip of sub-tabs on every page that belongs to a place, so a place
+  // feels like one screen with sections instead of separate modules.
+  var PLACE_TABS = {
+    '/app/tasks': [
+      { label: 'All tasks', href: '/app/tasks', also: ['/app/task/', '/app/focus/'] },
+      { label: 'Today',     href: '/app/today' },
+      { label: 'Routines',  href: '/routines', also: ['/app/routines'] },
+      { label: 'Calendar',  href: '/calendar', also: ['/app/calendar'] },
+      { label: 'Ideas',     href: '/ideas' },
+    ],
+  };
+  function tabMatches(tab, path) {
+    if (path === tab.href || path === tab.href + '/') return true;
+    return (tab.also || []).some(function (a) {
+      return a.charAt(a.length - 1) === '/' ? path.indexOf(a) === 0 : (path === a || path === a + '/');
+    });
+  }
+  function currentPlaceTabs() {
+    var path = window.location.pathname;
+    for (var place in PLACE_TABS) {
+      if (PLACE_TABS[place].some(function (t) { return tabMatches(t, path); })) return PLACE_TABS[place];
+    }
+    return null;
+  }
+  function buildPlaceTabs(tabs) {
+    var path = window.location.pathname;
+    var strip = document.createElement('nav');
+    strip.className = 'place-tabs';
+    strip.setAttribute('aria-label', 'Sections');
+    tabs.forEach(function (t) {
+      var a = document.createElement('a');
+      a.href = t.href;
+      a.textContent = t.label;
+      a.className = 'place-tab' + (tabMatches(t, path) ? ' active' : '');
+      if (tabMatches(t, path)) a.setAttribute('aria-current', 'page');
+      strip.appendChild(a);
+    });
+    return strip;
+  }
 
   function isActive(href) {
     var path = window.location.pathname;
@@ -252,9 +290,22 @@
     brand.style.gap = '0.5rem';
     nav.appendChild(brand);
 
-    // Primary tab items (same links as mobile bottom nav)
+    // Primary tab items (same links as mobile bottom nav); the active place
+    // lists its sections right under it.
+    var sections = currentPlaceTabs();
+    var path = window.location.pathname;
     NAV_ITEMS.forEach(function (item) {
       nav.appendChild(buildNavAnchor(item, 'shared-nav-item'));
+      if (sections && PLACE_TABS[item.href] === sections) {
+        sections.forEach(function (t) {
+          var a = document.createElement('a');
+          a.href = t.href;
+          a.textContent = t.label;
+          a.className = 'shared-nav-subitem' + (tabMatches(t, path) ? ' active' : '');
+          if (tabMatches(t, path)) a.setAttribute('aria-current', 'page');
+          nav.appendChild(a);
+        });
+      }
     });
 
     // Divider
@@ -633,6 +684,18 @@
     }
 
     setupMenuLogic(hamburgerBtn, overlay, menu, closeBtn);
+
+    // Sections: a sticky strip on phones; on desktop they're sub-items under the
+    // active place in the sidebar (see buildDesktopSidebar), so nothing can
+    // collide with a page's own header.
+    var placeTabs = mobileView && !isBottomNavExcluded() && currentPlaceTabs();
+    if (placeTabs) {
+      var strip = buildPlaceTabs(placeTabs);
+      document.body.insertBefore(strip, document.body.firstChild);
+      var on = strip.querySelector('.active');
+      // Center the active tab horizontally only; never scroll the page itself.
+      if (on) strip.scrollLeft = Math.max(0, on.offsetLeft - (strip.clientWidth - on.offsetWidth) / 2);
+    }
 
     // ── Page transitions — fade content on navigation ──────────────────
     document.addEventListener('click', function (e) {
