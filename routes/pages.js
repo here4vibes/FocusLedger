@@ -107,7 +107,10 @@ router.get('/app/today',    (_, res) => res.sendFile(pub('app/today.html')));
 router.get('/app/done',     (_, res) => res.sendFile(pub('app/done.html')));
 router.get('/app/money',    (_, res) => res.sendFile(pub('money.html')));
 router.get('/app/vault',    (_, res) => res.sendFile(pub('vault.html')));
-router.get('/app/buddy',    (_, res) => res.sendFile(pub('buddy.html')));
+// One front door (UI consolidation phase 1): Buddy lives on Weightless. The
+// form check-in (?mode=form, linked from the first-session check-in) still
+// uses the Buddy page until it moves.
+router.get('/app/buddy',    (req, res) => req.query.mode ? res.sendFile(pub('buddy.html')) : res.redirect(302, '/weightless'));
 
 // WHY: /app/settings must be explicit — the /app/* catch-all below would
 // otherwise serve app.html (Tasks), silently breaking Stripe redirects,
@@ -115,7 +118,7 @@ router.get('/app/buddy',    (_, res) => res.sendFile(pub('buddy.html')));
 router.get('/app/settings', (_, res) => res.sendFile(pub('settings.html')));
 
 // /app root → home hub page
-router.get('/app',          (_, res) => res.sendFile(pub('home.html')));
+router.get('/app',          (_, res) => res.redirect(302, '/weightless'));
 
 // Backward-compat aliases — old top-level routes kept as 301 redirects
 // so bookmarks, emails, and push notifications don't break.
@@ -146,7 +149,7 @@ router.get('/app/calendar',   (_, res) => res.sendFile(pub('calendar.html')));
 router.get('/app/routines',   (_, res) => res.sendFile(pub('routines.html')));
 router.get('/app/life/score', (_, res) => res.sendFile(pub('score.html')));
 
-router.get('/app/*',        (_, res) => res.sendFile(pub('app.html')));
+router.get('/app/*',        (_, res) => res.redirect(302, '/weightless'));
 
 // Portal / command center
 router.get('/portal', (_, res) => res.sendFile(pub('portal.html')));
