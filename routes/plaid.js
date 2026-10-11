@@ -103,7 +103,8 @@ const LEGACY_CATEGORY_MAP = {
   'Payment':                   'Bills & Utilities',
 };
 
-const { runBillGuardian, detectStreams, bucketFor } = require('../lib/bill-guardian');
+const { runBillGuardian, detectStreams, bucketFor, FREQUENCIES } = require('../lib/bill-guardian');
+const { cancelLinkFor } = require('../lib/cancel-links');
 const billsDb = require('../db/bills');
 
 
@@ -1215,12 +1216,35 @@ module.exports = function(pool) {
       const prefsByKey = new Map(prefs.map(p => [p.merchant_key, p]));
       const streams = detectStreams(txs, Date.now())
         .map(s => {
-          const pref = prefsByKey.get(s.merchant_key);
-          return { ...s, bucket: bucketFor(s, pref), kept_at: (pref && pref.kept_at) || null };
+          const pref = prefsByKey.get(s.merchant_key) || {};
+          return {
+            ...s,
+            bucket: bucketFor(s, pref),
+            kept_at: pref.kept_at || null,
+            cancel_status: pref.cancel_status || null,
+            cancel_expected_by: pref.cancel_expected_by || null,
+            cancel_link: cancelLinkFor(s.name),
+          };
         })
         .sort((a, b) => a.predicted_next.localeCompare(b.predicted_next));
       const ask = streams.find(s => s.bucket === 'unsure') || null;
-      res.json({ success: true, streams, ask });
+      // Settled cancellations to report back (the stream itself may be gone):
+      // confirmed in the last 30 days, or charged again (until the user acts).
+      const monthAgo = Date.now() - 30 * 86400000;
+      const cancellations = prefs
+        .filter(p => p.cancel_status === 'charged_again' ||
+          (p.cancel_status === 'confirmed' && p.cancel_resolved_at && new Date(p.cancel_resolved_at).getTime() >= monthAgo))
+        .map(p => ({
+          merchant_key: p.merchant_key,
+          name: p.merchant_display_name || p.merchant_key,
+          status: p.cancel_status,
+          amount: p.cancel_amount == null ? null : Number(p.cancel_amount),
+          frequency: p.cancel_frequency,
+          expected_by: p.cancel_expected_by,
+          resolved_at: p.cancel_resolved_at,
+          cancel_link: cancelLinkFor(p.merchant_display_name || p.merchant_key),
+        }));
+      res.json({ success: true, streams, ask, cancellations });
     } catch (err) {
       console.error('[BillGuardian] GET /recurring failed:', err.message, '| user:', userId);
       res.status(500).json({ success: false, message: 'Could not load recurring charges.' });
@@ -1263,6 +1287,46 @@ module.exports = function(pool) {
     } catch (err) {
       console.error('[BillGuardian] keep subscription failed:', err.message, '| user:', userId, '| merchant:', key);
       res.status(500).json({ success: false, message: 'Could not save that. Try again?' });
+    }
+  });
+
+  // POST /api/plaid/recurring/:key/cancel { name, expected_by, amount, frequency }
+  // The user is cancelling a subscription. Recorded as pending; the bill guardian
+  // confirms it (or flags a new charge) from bank data. Returns the merchant's
+  // cancel page when we know it.
+  router.post('/recurring/:key/cancel', async (req, res) => {
+    const userId = req.user.id;
+    const key = String(req.params.key || '').slice(0, 100);
+    if (!/^[a-z0-9_]+$/.test(key)) return res.status(400).json({ success: false, message: 'Invalid merchant' });
+    const { name, expected_by, amount, frequency } = req.body || {};
+    const amt = Number(amount);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(expected_by || '')) || !(amt > 0 && amt < 100000) ||
+        !FREQUENCIES.some(f => f.key === frequency)) {
+      return res.status(400).json({ success: false, message: 'expected_by (YYYY-MM-DD), amount and frequency are required' });
+    }
+    const display = typeof name === 'string' ? name.slice(0, 120) : null;
+    try {
+      await billsDb.requestCancellation(pool, userId, key, display, {
+        expectedBy: expected_by, amount: amt.toFixed(2), frequency,
+      });
+      res.json({ success: true, cancel_link: cancelLinkFor(display || key) });
+    } catch (err) {
+      console.error('[BillGuardian] cancel request failed:', err.message, '| user:', userId, '| merchant:', key);
+      res.status(500).json({ success: false, message: 'Could not save that. Try again?' });
+    }
+  });
+
+  // DELETE /api/plaid/recurring/:key/cancel — undo a still-pending cancel request.
+  router.delete('/recurring/:key/cancel', async (req, res) => {
+    const userId = req.user.id;
+    const key = String(req.params.key || '').slice(0, 100);
+    if (!/^[a-z0-9_]+$/.test(key)) return res.status(400).json({ success: false, message: 'Invalid merchant' });
+    try {
+      await billsDb.clearCancellation(pool, userId, key);
+      res.json({ success: true });
+    } catch (err) {
+      console.error('[BillGuardian] cancel undo failed:', err.message, '| user:', userId, '| merchant:', key);
+      res.status(500).json({ success: false, message: 'Could not undo that. Try again?' });
     }
   });
 
