@@ -10,6 +10,7 @@ const { completeWithTools } = require('../lib/claude-client');
 const { TOOL_DEFS, tierOf, scopeOf, isKnown, dispatch, reverse } = require('../lib/agent-tools');
 const { logAction, getAction, markUndone, markExecuted, markCancelled, markFailed, recentActionCount } = require('../db/agent-actions');
 const { checkProStatus } = require('../middleware/proUtils');
+const { getBillPreferences } = require('../db/bills');
 
 // Daily cap on real-world sends per user (guardrail; see spec).
 const DAILY_SEND_CAP = 20;
@@ -66,7 +67,7 @@ function buildSystemPrompt(today, tasks) {
 // One brain: the coaching "soul" from routes/buddy.js PLUS the action tools.
 // Because it performs actions itself (and sees the receipts), it can report the
 // truth — unlike the old tool-less coaching brain, which fabricated confirmations.
-function buildUnifiedSystemPrompt(today, tasks) {
+function buildUnifiedSystemPrompt(today, tasks, ctx = {}) {
   const list = tasks.length
     ? tasks.map(t => `- id=${t.id} · "${t.title}"${t.due_date ? ` (due ${String(t.due_date).slice(0, 10)})` : ' (no due date)'}`).join('\n')
     : '(no open tasks)';
@@ -105,6 +106,17 @@ function buildUnifiedSystemPrompt(today, tasks) {
     "venting, don't call a tool — just be present and coach.",
     'Never invent a task_id or an email address — use only ids from the list below and addresses they gave you.',
     '',
+    'NEVER give phone numbers, URLs, email addresses or menu paths for a company from memory — you',
+    'can\'t check them and they go stale. Say where to look in general terms instead (the company\'s',
+    'app or website account settings), and say you can\'t verify specifics.',
+    ...(ctx.cancelling && ctx.cancelling.length ? [
+      '',
+      'Subscriptions the user is already cancelling. FocusLedger is watching their bank and will mark each',
+      'one cancelled once no new charge shows up, and the bills card gave them the cancel link and a backup',
+      'task. Build on that; never create another cancel task for these:',
+      ...ctx.cancelling.map(n => `- ${n}`),
+    ] : []),
+    '',
     "The user's open tasks:",
     list,
   ].join('\n');
@@ -123,6 +135,14 @@ async function runAgentTurn(pool, userId, message, clientHistory, systemPromptBu
     [userId]
   );
   const tasks = tasksResult.rows;
+  // Best-effort extra context; a failure here must never block the turn.
+  let cancelling = [];
+  try {
+    const prefs = await getBillPreferences(pool, userId);
+    cancelling = prefs.filter(p => p.cancel_status === 'pending').map(p => p.merchant_display_name || p.merchant_key);
+  } catch (e) {
+    console.error('[Agent] load pending cancellations failed:', e.message, '| userId:', userId);
+  }
 
   const history = Array.isArray(clientHistory) ? clientHistory : [];
   const contextHistory = history
@@ -134,7 +154,7 @@ async function runAgentTurn(pool, userId, message, clientHistory, systemPromptBu
   let resp;
   try {
     resp = await completeWithTools({
-      system: systemPromptBuilder(today, tasks),
+      system: systemPromptBuilder(today, tasks, { cancelling }),
       messages: contextHistory,
       tools: TOOL_DEFS,
       model: 'claude-sonnet-4-6',
