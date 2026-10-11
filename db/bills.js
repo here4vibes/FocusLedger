@@ -18,7 +18,7 @@ async function getRecentOutflows(pool, userId) {
 
 async function getBillPreferences(pool, userId) {
   const { rows } = await pool.query(
-    'SELECT merchant_key, merchant_display_name, bill_type, is_disabled, bucket FROM bill_preferences WHERE user_id = $1',
+    'SELECT merchant_key, merchant_display_name, bill_type, is_disabled, bucket, kept_at FROM bill_preferences WHERE user_id = $1',
     [userId]);
   return rows;
 }
@@ -72,6 +72,17 @@ async function setBucket(pool, userId, merchantKey, displayName, bucket) {
     [userId, merchantKey, displayName || null, bucket, bucket !== 'obligation']);
 }
 
+/** The user reviewed a subscription and is keeping it: remember when, so the review rests for a while. */
+async function keepSubscription(pool, userId, merchantKey, displayName) {
+  await pool.query(`
+    INSERT INTO bill_preferences (user_id, merchant_key, merchant_display_name, bucket, is_disabled, kept_at, created_at, updated_at)
+    VALUES ($1, $2, $3, 'subscription', true, NOW(), NOW(), NOW())
+    ON CONFLICT (user_id, merchant_key) DO UPDATE
+      SET bucket = 'subscription', is_disabled = true, kept_at = NOW(), updated_at = NOW(),
+          merchant_display_name = COALESCE(bill_preferences.merchant_display_name, EXCLUDED.merchant_display_name)`,
+    [userId, merchantKey, displayName || null]);
+}
+
 /** Users with an active bank connection (for the daily run). */
 async function usersWithActivePlaid(pool) {
   const { rows } = await pool.query(
@@ -86,5 +97,6 @@ module.exports = {
   createBillReminder,
   trackRecurringMerchant,
   setBucket,
+  keepSubscription,
   usersWithActivePlaid,
 };

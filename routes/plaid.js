@@ -1214,7 +1214,10 @@ module.exports = function(pool) {
       ]);
       const prefsByKey = new Map(prefs.map(p => [p.merchant_key, p]));
       const streams = detectStreams(txs, Date.now())
-        .map(s => ({ ...s, bucket: bucketFor(s, prefsByKey.get(s.merchant_key)) }))
+        .map(s => {
+          const pref = prefsByKey.get(s.merchant_key);
+          return { ...s, bucket: bucketFor(s, pref), kept_at: (pref && pref.kept_at) || null };
+        })
         .sort((a, b) => a.predicted_next.localeCompare(b.predicted_next));
       const ask = streams.find(s => s.bucket === 'unsure') || null;
       res.json({ success: true, streams, ask });
@@ -1243,6 +1246,22 @@ module.exports = function(pool) {
       res.json({ success: true });
     } catch (err) {
       console.error('[BillGuardian] save answer failed:', err.message, '| user:', userId, '| merchant:', key);
+      res.status(500).json({ success: false, message: 'Could not save that. Try again?' });
+    }
+  });
+
+  // POST /api/plaid/recurring/:key/keep { name } — the user reviewed a
+  // subscription and is keeping it; Weightless rests the review for 90 days.
+  router.post('/recurring/:key/keep', async (req, res) => {
+    const userId = req.user.id;
+    const key = String(req.params.key || '').slice(0, 100);
+    if (!/^[a-z0-9_]+$/.test(key)) return res.status(400).json({ success: false, message: 'Invalid merchant' });
+    const { name } = req.body || {};
+    try {
+      await billsDb.keepSubscription(pool, userId, key, typeof name === 'string' ? name.slice(0, 120) : null);
+      res.json({ success: true });
+    } catch (err) {
+      console.error('[BillGuardian] keep subscription failed:', err.message, '| user:', userId, '| merchant:', key);
       res.status(500).json({ success: false, message: 'Could not save that. Try again?' });
     }
   });
