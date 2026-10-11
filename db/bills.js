@@ -18,7 +18,10 @@ async function getRecentOutflows(pool, userId) {
 
 async function getBillPreferences(pool, userId) {
   const { rows } = await pool.query(
-    'SELECT merchant_key, merchant_display_name, bill_type, is_disabled, bucket FROM bill_preferences WHERE user_id = $1',
+    `SELECT merchant_key, merchant_display_name, bill_type, is_disabled, bucket, kept_at,
+            cancel_requested_at, cancel_expected_by::text AS cancel_expected_by, cancel_amount,
+            cancel_frequency, cancel_status, cancel_resolved_at
+     FROM bill_preferences WHERE user_id = $1`,
     [userId]);
   return rows;
 }
@@ -72,6 +75,59 @@ async function setBucket(pool, userId, merchantKey, displayName, bucket) {
     [userId, merchantKey, displayName || null, bucket, bucket !== 'obligation']);
 }
 
+/** The user reviewed a subscription and is keeping it: remember when, so the review rests for a while. */
+async function keepSubscription(pool, userId, merchantKey, displayName) {
+  await pool.query(`
+    INSERT INTO bill_preferences (user_id, merchant_key, merchant_display_name, bucket, is_disabled, kept_at, created_at, updated_at)
+    VALUES ($1, $2, $3, 'subscription', true, NOW(), NOW(), NOW())
+    ON CONFLICT (user_id, merchant_key) DO UPDATE
+      SET bucket = 'subscription', is_disabled = true, kept_at = NOW(), updated_at = NOW(),
+          cancel_requested_at = NULL, cancel_expected_by = NULL, cancel_amount = NULL,
+          cancel_frequency = NULL, cancel_status = NULL, cancel_resolved_at = NULL,
+          merchant_display_name = COALESCE(bill_preferences.merchant_display_name, EXCLUDED.merchant_display_name)`,
+    [userId, merchantKey, displayName || null]);
+}
+
+/**
+ * The user asked to cancel a subscription. Pending until bank data says whether
+ * it worked (lib/bill-guardian.js verifyCancellations).
+ */
+async function requestCancellation(pool, userId, merchantKey, displayName, { expectedBy, amount, frequency }) {
+  await pool.query(`
+    INSERT INTO bill_preferences (user_id, merchant_key, merchant_display_name, bucket, is_disabled,
+      cancel_requested_at, cancel_expected_by, cancel_amount, cancel_frequency, cancel_status, created_at, updated_at)
+    VALUES ($1, $2, $3, 'subscription', true, NOW(), $4::date, $5, $6, 'pending', NOW(), NOW())
+    ON CONFLICT (user_id, merchant_key) DO UPDATE
+      SET bucket = 'subscription', is_disabled = true, kept_at = NULL,
+          cancel_requested_at = NOW(), cancel_expected_by = EXCLUDED.cancel_expected_by,
+          cancel_amount = EXCLUDED.cancel_amount, cancel_frequency = EXCLUDED.cancel_frequency,
+          cancel_status = 'pending', cancel_resolved_at = NULL, updated_at = NOW(),
+          merchant_display_name = COALESCE(bill_preferences.merchant_display_name, EXCLUDED.merchant_display_name)`,
+    [userId, merchantKey, displayName || null, expectedBy, amount, frequency]);
+}
+
+/** Undo a cancel request that is still pending. */
+async function clearCancellation(pool, userId, merchantKey) {
+  await pool.query(`
+    UPDATE bill_preferences
+    SET cancel_requested_at = NULL, cancel_expected_by = NULL, cancel_amount = NULL,
+        cancel_frequency = NULL, cancel_status = NULL, cancel_resolved_at = NULL, updated_at = NOW()
+    WHERE user_id = $1 AND merchant_key = $2 AND cancel_status = 'pending'`,
+    [userId, merchantKey]);
+}
+
+/**
+ * Settle a pending cancellation from bank evidence.
+ * @returns {Promise<boolean>} true when a pending row was updated
+ */
+async function resolveCancellation(pool, userId, merchantKey, status) {
+  const { rowCount } = await pool.query(`
+    UPDATE bill_preferences SET cancel_status = $3, cancel_resolved_at = NOW(), updated_at = NOW()
+    WHERE user_id = $1 AND merchant_key = $2 AND cancel_status = 'pending'`,
+    [userId, merchantKey, status]);
+  return rowCount > 0;
+}
+
 /** Users with an active bank connection (for the daily run). */
 async function usersWithActivePlaid(pool) {
   const { rows } = await pool.query(
@@ -86,5 +142,9 @@ module.exports = {
   createBillReminder,
   trackRecurringMerchant,
   setBucket,
+  keepSubscription,
+  requestCancellation,
+  clearCancellation,
+  resolveCancellation,
   usersWithActivePlaid,
 };
