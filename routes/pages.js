@@ -106,6 +106,7 @@ router.get('/app/tasks',    (_, res) => res.sendFile(pub('app/tasks.html')));
 router.get('/app/today',    (_, res) => res.sendFile(pub('app/today.html')));
 router.get('/app/done',     (_, res) => res.sendFile(pub('app/done.html')));
 router.get('/app/money',    (_, res) => res.sendFile(pub('money.html')));
+router.get('/app/money/bills', (_, res) => res.sendFile(pub('money-bills.html')));
 router.get('/app/vault',    (_, res) => res.sendFile(pub('vault.html')));
 // One front door (UI consolidation phase 1): Buddy lives on Weightless. The
 // form check-in (?mode=form, linked from the first-session check-in) still

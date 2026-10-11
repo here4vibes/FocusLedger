@@ -898,7 +898,7 @@ function toggleRecurring() {
   recurringOn = !recurringOn;
   toggle.classList.toggle('on', recurringOn);
   const toast = document.getElementById('recurringToast');
-  toast.textContent = recurringOn ? 'We'll track this pattern!' : 'Recurring removed';
+  toast.textContent = recurringOn ? 'We’ll track this pattern!' : 'Recurring removed';
   toast.classList.add('show');
   setTimeout(() => toast.classList.remove('show'), 2000);
 }
