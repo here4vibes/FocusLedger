@@ -68,7 +68,9 @@ async function fetchUserData(pool, userId, sinceDate) {
       [userId, sinceDate]
     ),
     pool.query(
-      `SELECT checkin_type, mood, checkin_date
+      // buddy_checkins has no mood column (NODE-EXPRESS-6); the morning
+      // check-in records energy_level instead.
+      `SELECT checkin_type, energy_level, checkin_date
        FROM buddy_checkins
        WHERE user_id = $1 AND checkin_date >= $2
        ORDER BY checkin_date DESC
@@ -134,9 +136,9 @@ function summariseForPrompt({ tasks, expenses, checkins, focus }) {
   if (checkins.length > 0) {
     const mornings = checkins.filter(c => c.checkin_type === 'morning').length;
     const evenings = checkins.filter(c => c.checkin_type === 'evening').length;
-    const moodList = checkins.filter(c => c.mood).map(c => c.mood);
+    const energyList = checkins.filter(c => c.energy_level).map(c => c.energy_level);
     lines.push(`CHECK-INS (last 7 days): ${mornings} morning, ${evenings} evening`);
-    if (moodList.length > 0) lines.push(`  Moods logged: ${moodList.join(', ')}`);
+    if (energyList.length > 0) lines.push(`  Energy levels logged: ${energyList.join(', ')}`);
   }
 
   if (focus.length > 0) {
@@ -227,4 +229,6 @@ async function run() {
   }
 }
 
-run();
+if (require.main === module) run();
+
+module.exports = { fetchUserData, summariseForPrompt };
