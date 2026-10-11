@@ -113,6 +113,29 @@ Node.js + Express · PostgreSQL (Neon) · Render deployment · Vanilla HTML/CSS/
   - Buddy's `create_task` refuses near-duplicates (`lib/task-dedupe.js`).
   - The agent prompt lists pending cancellations and forbids phone numbers and URLs from memory.
 
+- **#234** `claude/one-front-door-wAcNr`: UI consolidation, phase 1 (below).
+
+### UI consolidation plan (agreed with the user, 2026-10-11)
+Four places plus a Settings gear. One small PR per phase; old URLs keep working through redirects.
+
+| Place | Absorbs |
+|---|---|
+| **Home** = `/weightless` | `/app`, `/app/buddy`, `/home`, `/portal`, `/app/*` fallback |
+| **Tasks** `/app/tasks` | Today, Done, Routines, Calendar, Ideas |
+| **Money** `/app/money` | transactions, spending check-in, bills/subscriptions |
+| **Life** `/app/life` | Vault, Insurance, Nudges, Score, Values, Journal, Insights |
+| ⚙ **Settings** | Email → Tasks, Partner, Help & Contact, billing |
+
+1. **Phase 1, one front door (#234):**
+   - The shared nav (`public/shared-nav.js`) has 4 tabs, and "More" is grouped by future home. Child pages light up their place's tab (`PLACE_CHILDREN`).
+   - The Weightless header links to Tasks · Money · Life · ⚙.
+   - `/app`, `/app/buddy` and unknown `/app/*` now go to `/weightless`. `/app/buddy?mode=form` still serves `buddy.html`.
+   - `/home` and `/portal` are handled by #218.
+2. **Phase 2, Tasks hub:** Today/Done/Routines/Calendar/Ideas become tabs in Tasks.
+3. **Phase 3, Money hub.**
+4. **Phase 4, Life hub,** then retire `buddy.html` (after moving the form check-in), `app.html`, `home.html`, `portal.html` and `landing-old`.
+5. **Phase 5, visual pass:** Weightless tokens on every page.
+
 ### Waiting on the user
 - **Live Stripe purchase test.** Expected: Settings shows Autopilot $9.95 with a renewal date; after cancelling, "Cancelled — you won't be charged again" and a "Keep Autopilot" button.
 - **Render `DATABASE_URL`:** change `sslmode=require` → `verify-full` in both the `focusledger` env group and the web service (NODE-EXPRESS-4).
