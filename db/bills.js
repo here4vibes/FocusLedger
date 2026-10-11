@@ -4,7 +4,7 @@
  * Plaid convention: amount > 0 is money out.
  */
 
-/** Settled outflows from the last ~13 months (enough for annual bills). */
+/** Settled outflows from the last ~2 years: two charges of an annual bill (lib/bill-guardian.js). */
 async function getRecentOutflows(pool, userId) {
   const { rows } = await pool.query(`
     SELECT merchant_name, description, amount, transaction_date, plaid_category
@@ -12,7 +12,7 @@ async function getRecentOutflows(pool, userId) {
     WHERE user_id = $1
       AND amount > 0
       AND COALESCE(is_pending, false) = false
-      AND transaction_date >= CURRENT_DATE - INTERVAL '400 days'`, [userId]);
+      AND transaction_date >= CURRENT_DATE - INTERVAL '800 days'`, [userId]);
   return rows;
 }
 

@@ -837,6 +837,9 @@ module.exports = function(pool) {
         user: { client_user_id: String(userId) },
         client_name: 'FocusLedger',
         products: ['transactions'],
+        // Two years of history (Plaid's default is 90 days) so annual and
+        // quarterly bills/subscriptions are detectable from day one.
+        transactions: { days_requested: 730 },
         country_codes: ['US'],
         language: 'en',
       };

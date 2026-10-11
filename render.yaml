@@ -149,6 +149,15 @@ services:
       - fromGroup: focusledger
 
   - type: cron
+    name: renewal-heads-up
+    runtime: node
+    schedule: "0 * * * *"
+    buildCommand: npm install
+    startCommand: node jobs/renewalHeadsUpJob.js
+    envVars:
+      - fromGroup: focusledger
+
+  - type: cron
     name: cold-start-nudge
     runtime: node
     schedule: "0 9 * * *"

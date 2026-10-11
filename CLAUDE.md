@@ -107,10 +107,6 @@ Node.js + Express · PostgreSQL (Neon) · Render deployment · Vanilla HTML/CSS/
     - `render.yaml` moves `cold-start-nudge` and `evening-checkin` to hourly. Confirm in Render if Blueprint sync is off.
   - **Before merging:** merge `main` in again. Resolve `public/changelog.html` conflicts by keeping all entries.
 
-- **#236** `claude/money-hub-wAcNr`: UI phase 3 (Money hub: Overview · Transactions · Bills), with a new `/app/money/bills` page (`public/money-bills.html`).
-  - Also fixes `/transactions` and `/reset-password`, both broken since #177 (July 18).
-  - Adds `__tests__/inline-scripts-parse.test.js`, which parses every inline `<script>` in `public/`.
-
 ### UI consolidation plan (agreed with the user, 2026-10-11)
 Four places plus a Settings gear. One small PR per phase; old URLs keep working through redirects.
 
@@ -230,6 +226,8 @@ Four places plus a Settings gear. One small PR per phase; old URLs keep working 
   - #234 UI phase 1, one front door.
   - #235 Tasks hub, plus the `fl_token` fix: pages reading `localStorage.token` instead of `fl_token` were silently signed out. Grep for it when a page "bounces to Home".
   - Found: inline-script syntax errors silently killed `/transactions` and `/reset-password` for three months (fixed in #236). The new parse test guards every page.
+  - #236 UI phase 3, Money hub (Overview · Transactions · Bills at `/app/money/bills`), plus `__tests__/inline-scripts-parse.test.js`.
+  - #237 renewal heads-up: hourly cron `renewal-heads-up` (`jobs/renewalHeadsUpJob.js`), one push per merchant per renewal date, 10am local, ~7 days ahead; the bill guardian reads 800 days (weekly/monthly use the last 400, `SHORT_CADENCE_WINDOW_DAYS`); Plaid link requests `days_requested: 730` (new connections only). **If Render Blueprint sync is off, create the cron in the dashboard with the `focusledger` env group.**
 - **2026-10-11:**
   - #225 bill guardian.
   - #226 Tandem weekly recap.
