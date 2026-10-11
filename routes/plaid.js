@@ -4,6 +4,7 @@
 const express = require('express');
 const crypto = require('crypto');
 const { checkProStatus } = require('../middleware/proUtils');
+const { requireAdmin } = require('../lib/admin-access');
 
 // ── Auth: session cookie (fl_sid) OR Bearer JWT ──────────────────────────────
 function requireAuth(req, res, next) {
@@ -461,14 +462,17 @@ async function syncTransactions(pool, item) {
 module.exports = function(pool) {
   const router = express.Router();
 
-  // GET /api/plaid/diagnostic — test Plaid API keys directly, no auth required
-  router.get('/diagnostic', async (req, res) => {
+  router.use(requireAuth);
+
+  // GET /api/plaid/diagnostic — test Plaid API keys directly. Admin only: it
+  // reveals the Plaid environment and credential shape, and each call hits Plaid.
+  router.get('/diagnostic', requireAdmin(pool), async (req, res) => {
     const clientId = (process.env.PLAID_CLIENT_ID || '').trim();
     const secret   = (process.env.PLAID_SECRET || '').trim();
     const plaidEnv = (process.env.PLAID_ENV || 'sandbox').trim();
     const plaid = getPlaidClient();
-    // WHY expose lengths/prefixes: helps identify truncated or swapped credentials
-    // without leaking the full secret
+    // WHY expose lengths: helps identify truncated or swapped credentials. No
+    // secret characters are returned, even to admins.
     const diagInfo = {
       env: plaidEnv,
       has_client_id: !!clientId,
@@ -476,7 +480,6 @@ module.exports = function(pool) {
       client_id_length: clientId.length,
       secret_length: secret.length,
       client_id_prefix: clientId.substring(0, 6) + '...',
-      secret_prefix: secret.substring(0, 4) + '...',
     };
     if (!plaid) {
       return res.json({
@@ -510,8 +513,6 @@ module.exports = function(pool) {
       });
     }
   });
-
-  router.use(requireAuth);
 
   // GET /api/plaid/db-status — authenticated DB-state diagnostic; shows exactly what's stored
   // for this user's Plaid setup so we can pinpoint sync failures without reading Render logs.
