@@ -145,7 +145,7 @@ async function handleWebhookAsync(pool, item_id) {
         'SELECT subscription, endpoint FROM push_subscriptions WHERE user_id = $1 AND enabled = true',
         [userId]
       );
-      const payload = JSON.stringify({ title, body, url: '/money', tag: 'fl-spend', renotify: true });
+      const payload = JSON.stringify({ title, body, url: '/app/money', tag: 'fl-spend', renotify: true });
       for (const row of subs.rows) {
         const sub = typeof row.subscription === 'string' ? JSON.parse(row.subscription) : row.subscription;
         webpush.sendNotification(sub, payload).catch(e => {
@@ -164,7 +164,7 @@ async function handleWebhookAsync(pool, item_id) {
     const tokenRows = await pool.query('SELECT token FROM push_tokens WHERE user_id = $1', [userId]);
     const tokens = tokenRows.rows.map(r => r.token);
     if (tokens.length) {
-      await sendApnsNotification(tokens, { title, body, url: '/money' }, (bad) =>
+      await sendApnsNotification(tokens, { title, body, url: '/app/money' }, (bad) =>
         pool.query('DELETE FROM push_tokens WHERE token = $1', [bad]).catch(e => console.warn('[plaid-webhook] cleanup push_tokens:', e.message))
       );
     }

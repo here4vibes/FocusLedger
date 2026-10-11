@@ -51,7 +51,7 @@ module.exports = function (pool) {
           locked: true,
           reason: 'evening_checkin',
           message: 'Complete your evening check-in to unlock tomorrow\'s brief',
-          unlock_action: '/buddy',
+          unlock_action: '/app/buddy',
         });
       }
 

@@ -32,7 +32,6 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.101.0",
     "@sentry/node": "^8.0.0",
-    "apn": "^2.2.0",
     "connect-pg-simple": "^9.0.1",
     "cors": "^2.8.5",
     "express": "^4.18.2",
@@ -40,7 +39,7 @@
     "express-session": "^1.18.1",
     "form-data": "^4.0.5",
     "helmet": "^8.0.0",
-    "imap": "^0.8.19",
+    "imapflow": "^2.3.0",
     "jsonwebtoken": "^9.0.3",
     "multer": "^2.1.1",
     "node-fetch": "^2.7.0",

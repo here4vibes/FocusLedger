@@ -22,8 +22,8 @@
 
 <!-- NAV -->
 <nav class="portal-nav">
-  <a href="/home" class="back-link">← Back</a>
-  <a href="/home" class="portal-logo"><span class="logo-dot"></span>FocusLedger</a>
+  <a href="/weightless" class="back-link">← Back</a>
+  <a href="/weightless" class="portal-logo"><span class="logo-dot"></span>FocusLedger</a>
   <button class="logout-btn" id="logoutBtn">Logout</button>
 </nav>
 
@@ -201,7 +201,7 @@
   <!-- Empty state -->
   <div class="empty-state" id="emptyState" style="display:none">
     <p>Start using FocusLedger to unlock insights.</p>
-    <a href="/home" class="btn-home-link">Go to Dashboard</a>
+    <a href="/weightless" class="btn-home-link">Go to Dashboard</a>
   </div>
 </div>
 
@@ -648,7 +648,7 @@
       unlocksData = await fetch('/api/v1/insights/unlocks', { headers: auth }).then(function(r) { return r.json(); });
       statsData   = await fetch('/api/v1/insights/stats',   { headers: auth }).then(function(r) { return r.json(); });
     } catch (e) {
-      document.getElementById('skeletonGrid').innerHTML = '<div class="empty-state">Could not load insights. <a href="/home">Go home</a></div>';
+      document.getElementById('skeletonGrid').innerHTML = '<div class="empty-state">Could not load insights. <a href="/weightless">Go home</a></div>';
       return;
     }
 

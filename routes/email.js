@@ -474,84 +474,57 @@ async function getValidYahooToken(pool, userId) {
   return { token: accessToken, emailAddress: email_address };
 }
 
-// Fetch Yahoo inbox via IMAP with XOAUTH2
-// Uses the `imap` package (lightweight pure-Node IMAP client)
-async function yahooListMessages(emailAddress, accessToken) {
-  // Lazy require — avoids hard crash if imap package not installed yet
-  let Imap;
-  try { Imap = require('imap'); }
-  catch { throw new Error('imap package not available'); }
-
-  return new Promise((resolve, reject) => {
-    const xoauth2Token = Buffer.from(
-      `user=${emailAddress}\x01auth=Bearer ${accessToken}\x01\x01`
-    ).toString('base64');
-
-    const imap = new Imap({
-      user:        emailAddress,
-      xoauth2:     xoauth2Token,
-      host:        'imap.mail.yahoo.com',
-      port:        993,
-      tls:         true,
-      tlsOptions:  { rejectUnauthorized: false },
-      connTimeout: 15000,
-      authTimeout: 15000
-    });
-
-    const messages = [];
-    let fetchError = null;
-
-    imap.once('ready', () => {
-      imap.openBox('INBOX', true, (err, box) => {
-        if (err) { fetchError = err; imap.end(); return; }
-        if (!box.messages.total) { imap.end(); return; }
-
-        const total = box.messages.total;
-        const start = Math.max(1, total - 24);
-
-        const f = imap.seq.fetch(`${start}:${total}`, {
-          bodies: 'HEADER.FIELDS (SUBJECT FROM DATE MESSAGE-ID)',
-          struct: true
-        });
-
-        f.on('message', (msg, seqno) => {
-          const msgData = { seqno, id: null, subject: '(no subject)', from: '', date: '', snippet: '', flags: [] };
-
-          msg.on('body', (stream) => {
-            let buf = '';
-            stream.on('data', (chunk) => { buf += chunk.toString('utf8'); });
-            stream.once('end', () => {
-              const parsed = Imap.parseHeader(buf);
-              msgData.subject = (parsed.subject || ['(no subject)'])[0] || '(no subject)';
-              msgData.from    = (parsed.from || [''])[0] || '';
-              msgData.date    = (parsed.date || [''])[0] || '';
-              const msgId     = (parsed['message-id'] || [''])[0];
-              msgData.id      = msgId || `yahoo-seq-${seqno}`;
-            });
-          });
-
-          msg.once('attributes', (attrs) => {
-            msgData.uid   = attrs.uid;
-            msgData.flags = attrs.flags || [];
-          });
-
-          msg.once('end', () => { messages.push(msgData); });
-        });
-
-        f.once('error', (err) => { fetchError = err; });
-        f.once('end', () => { imap.end(); });
-      });
-    });
-
-    imap.once('error', (err) => { reject(err); });
-    imap.once('end', () => {
-      if (fetchError) return reject(fetchError);
-      messages.sort((a, b) => b.seqno - a.seqno);
-      resolve(messages.slice(0, 25));
-    });
-
-    imap.connect();
+// Fetch Yahoo inbox via IMAP with XOAUTH2.
+// Uses imapflow (maintained). The old `imap` package was abandoned and pulled a
+// vulnerable semver via utf7; its config also disabled TLS certificate checks,
+// so the user's OAuth token could be read by anyone able to intercept the
+// connection. imapflow verifies certificates by default.
+// Message shape matches the Gmail/Outlook lists: from = address, from_name = display name.
+async function yahooListMessages(emailAddress, accessToken, { ImapFlow = require('imapflow').ImapFlow, host = 'imap.mail.yahoo.com', port = 993, secure = true } = {}) {
+  const client = new ImapFlow({
+    host, port, secure,
+    auth: { user: emailAddress, accessToken },
+    logger: false,
+    connectionTimeout: 15000,
+    greetingTimeout: 15000,
+    socketTimeout: 30000,
   });
+
+  await client.connect();
+  const messages = [];
+  try {
+    const lock = await client.getMailboxLock('INBOX', { readOnly: true });
+    try {
+      const total = client.mailbox && client.mailbox.exists;
+      if (!total) return [];
+      const start = Math.max(1, total - 24);
+      for await (const msg of client.fetch(`${start}:${total}`, { envelope: true, flags: true, uid: true })) {
+        const env = msg.envelope || {};
+        const sender = (env.from && env.from[0]) || {};
+        messages.push({
+          seqno:     msg.seq,
+          uid:       msg.uid,
+          id:        env.messageId || `yahoo-seq-${msg.seq}`,
+          subject:   env.subject || '(no subject)',
+          from:      sender.address || '',
+          from_name: sender.name || '',
+          date:      env.date instanceof Date && !isNaN(env.date) ? env.date.toISOString() : '',
+          snippet:   '',
+          flags:     msg.flags ? Array.from(msg.flags) : [],
+        });
+      }
+    } finally {
+      lock.release();
+    }
+  } finally {
+    await client.logout().catch((err) => {
+      console.error('[email/yahoo] IMAP logout failed:', err.message);
+      client.close();
+    });
+  }
+
+  messages.sort((x, y) => y.seqno - x.seqno);
+  return messages.slice(0, 25);
 }
 
 // ============================================================
@@ -1567,3 +1540,6 @@ module.exports = function(pool) {
 
   return router;
 };
+
+// Test hook
+module.exports._internal = { yahooListMessages };

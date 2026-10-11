@@ -338,6 +338,40 @@ module.exports = function(pool) {
     }
   });
 
+  // POST /portal — open Stripe's hosted billing portal (update card, invoices,
+  // cancel/undo). Changes made there come back through /stripe-webhook.
+  router.post('/portal', authenticateToken, async (req, res) => {
+    const userId = req.user.id;
+    try {
+      const sub = await billingDb.getLatestSubscription(pool, userId);
+      const subId = sub && sub.stripe_subscription_id && String(sub.stripe_subscription_id);
+      let customerId = sub && sub.stripe_customer_id && String(sub.stripe_customer_id);
+      if (!(customerId && customerId.startsWith('cus_')) && !(subId && subId.startsWith('sub_'))) {
+        return res.status(404).json({ success: false, message: 'There’s no Stripe billing on this account yet.' });
+      }
+      const stripe = getStripe();
+      if (!stripe) {
+        console.error('[subscription/portal] STRIPE_SECRET_KEY not set | user:', userId);
+        return res.status(503).json({ success: false, message: 'Billing is temporarily unavailable. Please try again shortly.' });
+      }
+      if (!(customerId && customerId.startsWith('cus_'))) {
+        // Older rows stored only the subscription id.
+        customerId = billing.subscriptionDetails(await stripe.subscriptions.retrieve(subId)).customerId;
+        if (!customerId) throw new Error(`subscription ${subId} has no customer`);
+      }
+      const appUrl = (process.env.APP_URL || 'https://focusledger.net').replace(/\/$/, '');
+      const session = await stripe.billingPortal.sessions.create({
+        customer: customerId,
+        return_url: `${appUrl}/app/settings?billing=updated`,
+      });
+      console.log('[subscription/portal] session created | user:', userId, '| customer:', customerId);
+      res.json({ success: true, url: session.url });
+    } catch (err) {
+      console.error('[subscription/portal] failed:', err.message, '| user:', userId);
+      res.status(500).json({ success: false, message: 'Couldn’t open billing just now. Please try again.' });
+    }
+  });
+
   return router;
 };
 

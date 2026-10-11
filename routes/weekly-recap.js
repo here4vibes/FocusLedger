@@ -45,7 +45,7 @@ module.exports = function (pool) {
           locked: true,
           reason: 'spending_classification',
           message: 'Review at least one expense this week to unlock your Executive Summary',
-          unlock_action: '/money',
+          unlock_action: '/app/money',
         });
       }
 

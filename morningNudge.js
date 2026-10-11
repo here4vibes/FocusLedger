@@ -94,7 +94,10 @@ async function sendMorningNudges(pool) {
 
         // Always send the morning prompt — even if no tasks yet.
         // The nudge itself is the prompt to plan.
-        let notifTitle = 'Good morning \u2600\uFE0F';
+        // Evening-peak users get this at 15:00–17:59, so greet by the actual hour.
+        let notifTitle = localHour < 12 ? 'Good morning \u2600\uFE0F'
+                       : localHour < 17 ? 'Good afternoon \uD83C\uDF24\uFE0F'
+                       : 'Hey there \uD83D\uDC4B';
         let notifBody  = "What\u2019s on tap for today?";
         let notifUrl   = '/weightless';   // the calm home, not the dense command center
 

@@ -165,8 +165,14 @@ describe('syncSubscription', () => {
     expect(billingDb.syncByStripeSubscription.mock.calls[0][1].status).toBe('cancelled');
   });
 
-  test('Autopilot updates never touch Tandem', async () => {
+  test('subscription on the Autopilot price (e.g. downgraded in the portal) ends Tandem, never grants it', async () => {
     await billing.syncSubscription({}, stripeSub({ lookup: 'Autopilot_monthly' }));
+    expect(billingDb.setTandem).not.toHaveBeenCalled();
+    expect(billingDb.endTandem).toHaveBeenCalledWith({}, 42);
+  });
+
+  test('unrecognised price never touches Tandem', async () => {
+    await billing.syncSubscription({}, stripeSub({ lookup: 'Mystery_plan' }));
     expect(billingDb.setTandem).not.toHaveBeenCalled();
     expect(billingDb.endTandem).not.toHaveBeenCalled();
   });

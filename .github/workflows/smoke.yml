@@ -10,6 +10,9 @@ jobs:
   smoke:
     name: Nav smoke tests
     runs-on: ubuntu-latest
+    # A hang anywhere (historically: apt-get inside install-deps) fails the job
+    # instead of holding a merge for half an hour or more.
+    timeout-minutes: 20
 
     steps:
       - uses: actions/checkout@v4
@@ -23,11 +26,30 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # Install Chromium binary + OS-level system dependencies separately
-      # (combining --with-deps + browser in one call is unreliable on some runner images)
+      # Browser binaries are cached per Playwright version (lockfile-pinned).
+      - name: Resolve Playwright version
+        id: pw
+        run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}
       - name: Install Playwright browsers
+        timeout-minutes: 5
         run: npx playwright install chromium
-      - name: Install Playwright system dependencies
+
+      # `install-deps` runs apt-get, which has repeatedly hung for 30+ min on the
+      # runner. GitHub's Ubuntu image already ships Chrome's system libraries, so
+      # only fall back to apt when Chromium genuinely can't launch.
+      - name: Check Chromium launches with the runner's libraries
+        id: probe
+        continue-on-error: true
+        timeout-minutes: 2
+        run: node -e "require('@playwright/test').chromium.launch().then(b => b.close())"
+      - name: Install Playwright system dependencies (fallback)
+        if: steps.probe.outcome == 'failure'
+        timeout-minutes: 10
         run: npx playwright install-deps chromium
 
       # On pushes to main, Render takes ~2 min to deploy.
@@ -37,6 +59,7 @@ jobs:
         run: sleep 150
 
       - name: Run nav smoke tests (both URLs)
+        timeout-minutes: 10
         run: npm run test:smoke
 
       - name: Upload failure screenshots
