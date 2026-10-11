@@ -107,13 +107,7 @@ Node.js + Express · PostgreSQL (Neon) · Render deployment · Vanilla HTML/CSS/
     - `render.yaml` moves `cold-start-nudge` and `evening-checkin` to hourly. Confirm in Render if Blueprint sync is off.
   - **Before merging:** merge `main` in again. Resolve `public/changelog.html` conflicts by keeping all entries.
 
-- **#233** `claude/cancel-help-dedupe-wAcNr`: fixes the bad cancel experience the user screenshotted (MySubaru).
-  - "Show me how" shows steps inside the card instead of sending a fake chat message. Model steps go through a contact-detail filter, with general steps as the fallback.
-  - Unknown services get a search link.
-  - Buddy's `create_task` refuses near-duplicates (`lib/task-dedupe.js`).
-  - The agent prompt lists pending cancellations and forbids phone numbers and URLs from memory.
-
-- **#234** `claude/one-front-door-wAcNr`: UI consolidation, phase 1 (below).
+- **#235** `claude/tasks-hub-wAcNr`: UI phase 2 (Tasks hub), plus the `fl_token` sign-in fix for Routines, the partner pages, link-email and pricing.
 
 ### UI consolidation plan (agreed with the user, 2026-10-11)
 Four places plus a Settings gear. One small PR per phase; old URLs keep working through redirects.
@@ -126,12 +120,16 @@ Four places plus a Settings gear. One small PR per phase; old URLs keep working 
 | **Life** `/app/life` | Vault, Insurance, Nudges, Score, Values, Journal, Insights |
 | ⚙ **Settings** | Email → Tasks, Partner, Help & Contact, billing |
 
-1. **Phase 1, one front door (#234):**
+1. **Phase 1, one front door (#234, merged):**
    - The shared nav (`public/shared-nav.js`) has 4 tabs, and "More" is grouped by future home. Child pages light up their place's tab (`PLACE_CHILDREN`).
    - The Weightless header links to Tasks · Money · Life · ⚙.
    - `/app`, `/app/buddy` and unknown `/app/*` now go to `/weightless`. `/app/buddy?mode=form` still serves `buddy.html`.
    - `/home` and `/portal` are handled by #218.
-2. **Phase 2, Tasks hub:** Today/Done/Routines/Calendar/Ideas become tabs in Tasks.
+2. **Phase 2, Tasks hub (#235):** sections All tasks · Today · Routines · Calendar · Ideas.
+   - Defined once in `PLACE_TABS` in `shared-nav.js`: a sticky `.place-tabs` strip on phones, and sub-items under the place in the desktop sidebar.
+   - Don't dock a strip under page headers on desktop; old pages have their own sticky/fixed bars, which phase 5 removes.
+   - `/app/done` is a flow screen, not a section.
+   - For phases 3 and 4, add the Money and Life entries to `PLACE_TABS` and drop them from "More".
 3. **Phase 3, Money hub.**
 4. **Phase 4, Life hub,** then retire `buddy.html` (after moving the form check-in), `app.html`, `home.html`, `portal.html` and `landing-old`.
 5. **Phase 5, visual pass:** Weightless tokens on every page.
@@ -221,9 +219,14 @@ Four places plus a Settings gear. One small PR per phase; old URLs keep working 
   - Give test users `users.admin_pro_override=true` so the free task cap doesn't block them.
   - Run Playwright scripts from inside the repo, so `require('playwright')` resolves.
 - **Merging:** only on the user's explicit "merge N". Use a squash merge with the full 40-character head SHA. A draft PR must be marked ready first (`update_pull_request draft:false`). Use the GitHub MCP, not `gh`.
+- **Local rate limiter:** repeated `POST /api/auth/login` in test scripts trips the auth limiter, and pages then bounce to login or Home. Log in once per run, or restart the server.
 - **Shell:** never `pkill -f` a pattern that matches your own shell. Find the server by `/proc/<pid>/environ` containing `PORT=3999`.
 
 ## Recent changes
+- **2026-10-11 (later):**
+  - #233 cancel steps inside the card, no duplicate tasks.
+  - #234 UI phase 1, one front door.
+  - Found: pages reading `localStorage.token` instead of `fl_token` were silently signed out (fixed in #235). Grep for it when a page "bounces to Home".
 - **2026-10-11:**
   - #225 bill guardian.
   - #226 Tandem weekly recap.
