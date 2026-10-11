@@ -15,10 +15,11 @@ const { getLocalDateParts } = require('./lib/timezone');
 const { sendEmail } = require('./lib/emailService');
 const { weeklyNudgeTemplate, reEngagementTemplate, proExpiryReminderTemplate } = require('./lib/emailTemplates');
 
-// Stripe checkout links — same as routes/subscription.js
+// Checkout links — single source of truth is config/pricing.js.
+const { PLANS } = require('./config/pricing');
 const STRIPE_LINKS = {
-  monthly: 'https://buy.stripe.com/8x200i6m784y4bS0KZcs800',
-  annual: 'https://buy.stripe.com/4gM14m7qb0C60ZGbpDcs801'
+  monthly: PLANS.autopilot.stripe.link_monthly,
+  annual: PLANS.autopilot.stripe.link_annual,
 };
 
 // ── Weekly Nudge ───────────────────────────────────────────────────────────────
@@ -65,18 +66,20 @@ async function sendWeeklyNudges(pool) {
       );
       if (prefs.rows.length > 0 && !prefs.rows[0].weekly_nudge) continue;
 
-      // Get tasks due this week and completed last week
+      // Tasks due in the user's coming week (their local date, not UTC) and
+      // completed in the last 7 days (completed_at, not updated_at — any edit
+      // to an old completed task bumped updated_at and inflated the count).
       const [dueResult, completedResult] = await Promise.all([
         pool.query(
           `SELECT COUNT(*) FROM tasks
            WHERE user_id = $1 AND is_completed = false
-             AND due_date >= CURRENT_DATE AND due_date < CURRENT_DATE + INTERVAL '7 days'`,
-          [user.id]
+             AND due_date >= $2::date AND due_date < $2::date + INTERVAL '7 days'`,
+          [user.id, localDate]
         ),
         pool.query(
           `SELECT COUNT(*) FROM tasks
            WHERE user_id = $1 AND is_completed = true
-             AND updated_at >= NOW() - INTERVAL '7 days'`,
+             AND COALESCE(completed_at, updated_at) >= NOW() - INTERVAL '7 days'`,
           [user.id]
         )
       ]);
@@ -84,22 +87,16 @@ async function sendWeeklyNudges(pool) {
       const tasksDueThisWeek = parseInt(dueResult.rows[0].count, 10) || 0;
       const tasksCompletedLastWeek = parseInt(completedResult.rows[0].count, 10) || 0;
 
-      const { subject, html } = weeklyNudgeTemplate({
+      const { subject, html, text } = weeklyNudgeTemplate({
         name: user.name,
         tasksDueThisWeek,
-        tasksCompletedLastWeek
+        tasksCompleted: tasksCompletedLastWeek
       });
 
-      // Fire and forget
-      sendEmail(pool, {
-        to: user.email,
-        subject,
-        html,
-        templateType: 'weekly_nudge',
-        userId: user.id
-      }).catch((err) => {
-        console.error('[emailCron] Weekly nudge send failed:', user.id, err.message);
-      });
+      // Awaited: the job ends its pool right after, and email_log (the dedup
+      // record) is written inside sendEmail. sendEmail never throws.
+      const r = await sendEmail(pool, { to: user.email, subject, html, text, templateType: 'weekly_nudge', userId: user.id });
+      if (!r.success && !r.suppressed) console.error('[emailCron] Weekly nudge send failed:', user.id, r.error);
     }
   } catch (err) {
     console.error('[emailCron] Weekly nudge error:', err.message);
@@ -154,17 +151,10 @@ async function sendReEngagementEmails(pool) {
       );
       if (alreadySent.rows.length > 0) continue;
 
-      const { subject, html } = reEngagementTemplate({ name: user.name });
+      const { subject, html, text } = reEngagementTemplate({ name: user.name });
 
-      sendEmail(pool, {
-        to: user.email,
-        subject,
-        html,
-        templateType: 're_engagement',
-        userId: user.id
-      }).catch((err) => {
-        console.error('[emailCron] Re-engagement send failed:', user.id, err.message);
-      });
+      const r = await sendEmail(pool, { to: user.email, subject, html, text, templateType: 're_engagement', userId: user.id });
+      if (!r.success && !r.suppressed) console.error('[emailCron] Re-engagement send failed:', user.id, r.error);
     }
 
     if (usersResult.rows.length > 0) {
@@ -209,28 +199,22 @@ async function sendProExpiryReminders(pool) {
 
     for (const user of usersResult.rows) {
       // Only send at 8am in the user's local time
-      const { date: localDate, hour } = getLocalDateParts(user.timezone, now);
+      const { hour } = getLocalDateParts(user.timezone, now);
       if (hour !== 8) continue;
 
-      const expiryDate = new Date(user.pro_granted_until).toLocaleDateString('en-US', {
-        month: 'long', day: 'numeric', year: 'numeric'
+      // In the user's timezone — server UTC could show the day before/after.
+      const expiresOn = new Date(user.pro_granted_until).toLocaleDateString('en-US', {
+        month: 'long', day: 'numeric', year: 'numeric', timeZone: user.timezone
       });
-      const { subject, html } = proExpiryReminderTemplate({
+      const { subject, html, text } = proExpiryReminderTemplate({
         name: user.name,
-        expiryDate,
+        expiresOn,
         monthlyLink: STRIPE_LINKS.monthly,
         annualLink: STRIPE_LINKS.annual
       });
 
-      sendEmail(pool, {
-        to: user.email,
-        subject,
-        html,
-        templateType: 'pro_expiry_reminder',
-        userId: user.id
-      }).catch((err) => {
-        console.error('[emailCron] Pro expiry reminder failed:', user.id, err.message);
-      });
+      const r = await sendEmail(pool, { to: user.email, subject, html, text, templateType: 'pro_expiry_reminder', userId: user.id });
+      if (!r.success && !r.suppressed) console.error('[emailCron] Pro expiry reminder failed:', user.id, r.error);
     }
 
     if (usersResult.rows.length > 0) {

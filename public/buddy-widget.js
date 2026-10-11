@@ -274,7 +274,7 @@
         context: 'first_money_visit',
         prompt: "Here's where your spending shows up. Want me to walk you through it?",
         actionLabel: "Show me",
-        actionPath: '/money',
+        actionPath: '/app/money',
         dismissKey: 'bw_money_intro',
       };
     }
@@ -283,7 +283,7 @@
         context: 'buddy_new_message',
         prompt: "You've got a message from Buddy.",
         actionLabel: "Read it",
-        actionPath: '/buddy',
+        actionPath: '/app/buddy',
         dismissKey: 'bw_buddy_msg',
       };
     }
@@ -974,7 +974,7 @@
         var now = Date.now();
         if (now - lastDoubleTap < 400) {
           lastDoubleTap = 0;
-          window.location.href = '/buddy';
+          window.location.href = '/app/buddy';
           return;
         }
         lastDoubleTap = now;
@@ -1083,7 +1083,7 @@
 
       var now = Date.now();
       if (now - lastTapTime < 400) {
-        window.location.href = '/buddy';
+        window.location.href = '/app/buddy';
         lastTapTime = 0;
       } else {
         lastTapTime = now;

@@ -16,11 +16,15 @@
  *   - login_checkin_done_date = target date on the users row
  *   - buddy_checkins row for target date (morning or evening type)
  *
+ * Each user is processed once per local day, between 09:00 and 20:00 their
+ * time, so pushes and emails never land overnight. Lapse day N = Nth missed
+ * local day; email flags flip only on a confirmed send.
+ *
  * Idempotent — last_processed_date gates double-processing of the same day.
  * No guilt language in any messaging. Warm re-entry, zero shame.
  */
 
-const { getUserLocalDate } = require('./lib/timezone');
+const { getLocalDateParts, getUserLocalHour } = require('./lib/timezone');
 const { sendEmail }        = require('./lib/emailService');
 const {
   buddyReengageDay5Template,
@@ -46,14 +50,30 @@ function subtractOneDay(dateStr) {
   return d.toISOString().slice(0, 10);
 }
 
-/**
- * Return days elapsed since a given ISO timestamp (or date string).
- * Returns 0 if null.
- */
-function daysSince(ts) {
-  if (!ts) return 0;
-  const ms = Date.now() - new Date(ts).getTime();
-  return Math.floor(ms / (1000 * 60 * 60 * 24));
+
+/** Whole days from YYYY-MM-DD a to YYYY-MM-DD b. */
+function daysBetween(a, b) {
+  return Math.round((Date.parse(b + 'T12:00:00Z') - Date.parse(a + 'T12:00:00Z')) / 86400000);
+}
+
+// Touches (push + emails) go out in the user's daytime only. Yesterday is
+// still "yesterday" all day, so waiting until 9am loses nothing — before
+// this, the first run after local midnight sent the restart push at ~00:30.
+const SEND_WINDOW_START_HOUR = 9;
+const SEND_WINDOW_END_HOUR   = 20; // exclusive
+
+
+/** Send a lapse email; true only when it was actually sent (or the user opted out). */
+async function sendLapseEmail(pool, user, templateFn, templateType) {
+  const { subject, html, text } = templateFn({ name: user.name });
+  const r = await sendEmail(pool, { to: user.email, subject, html, text, templateType, userId: user.id });
+  if (r.success) {
+    console.log(`[BuddyEngagement] ${templateType} sent | user: ${user.id}`);
+    return true;
+  }
+  if (r.suppressed) return true; // opted out of marketing — don't retry daily
+  console.error(`[BuddyEngagement] ${templateType} failed | user: ${user.id} |`, r.error);
+  return false;
 }
 
 // ── Upsert buddy_engagement row ───────────────────────────────────────────────
@@ -191,7 +211,7 @@ async function processUser(pool, user, now) {
   const tz     = user.timezone || 'America/New_York';
 
   // Compute today's local date and yesterday's local date
-  const localToday     = getUserLocalDate(tz, now);
+  const localToday     = getLocalDateParts(tz, now).date;
   const localYesterday = subtractOneDay(localToday);
 
   const eng = user.engagement || {};
@@ -199,7 +219,10 @@ async function processUser(pool, user, now) {
   // Only process each user once per local day (idempotency guard)
   const lastProcessed = eng.last_processed_date
     ? String(eng.last_processed_date).slice(0, 10) : null;
-  if (lastProcessed === localYesterday) return; // already processed
+  if (lastProcessed === localYesterday) return false; // already processed
+
+  const hour = getUserLocalHour(tz, now);
+  if (hour < SEND_WINDOW_START_HOUR || hour >= SEND_WINDOW_END_HOUR) return false;
 
   const checkedIn = await didCheckinOnDate(pool, userId, localYesterday);
 
@@ -214,14 +237,17 @@ async function processUser(pool, user, now) {
       lapse_day14_email_sent:      false,
       last_processed_date:         localYesterday,
     });
-    return;
+    return true;
   }
 
   // User missed yesterday — update counters
   const prevMissed       = eng.consecutive_missed_checkins || 0;
   const newMissed        = prevMissed + 1;
   const lapseStartedAt   = eng.lapse_started_at || now.toISOString();
-  const lapseDay         = daysSince(lapseStartedAt) || newMissed; // days of inactivity
+  // Lapse day N = Nth consecutive missed day. Counted in the user's local
+  // calendar days from when the lapse was first recorded (day 1). The old
+  // elapsed-hours count lagged a day behind, so 'Day 3' fired after 4 misses.
+  const lapseDay         = daysBetween(getLocalDateParts(tz, new Date(lapseStartedAt)).date, localToday) + 1;
 
   const pushSent     = !!eng.lapse_push_sent;
   const day5Sent     = !!eng.lapse_day5_email_sent;
@@ -250,38 +276,18 @@ async function processUser(pool, user, now) {
     console.log(`[BuddyEngagement] Hook restarted for user ${userId} (lapse day ${lapseDay})`);
   }
 
-  // ── Day 5: re-engagement email ─────────────────────────────────────────────
-  if (lapseDay >= 5 && !day5Sent && process.env.RESEND_API_KEY) {
-    try {
-      const { subject, html } = buddyReengageDay5Template({ name: user.name });
-      sendEmail(pool, {
-        to:           user.email,
-        subject,
-        html,
-        templateType: 'buddy_reengage_day5',
-        userId,
-      }).catch(err => console.error('[BuddyEngagement] Day-5 email error user', userId, err.message));
-    } catch (emailErr) {
-      console.warn('[BuddyEngagement] Day-5 email build error user', userId, ':', emailErr.message);
+  // ── Day 5 / Day 14 emails ─────────────────────────────────────────────────
+  // Flags flip only on a confirmed send. These templates used to be missing,
+  // so every 'Day-5 email queued' log was false and the flag was set anyway.
+  let newDay5Sent  = day5Sent;
+  let newDay14Sent = day14Sent;
+  if (process.env.RESEND_API_KEY) {
+    if (lapseDay >= 5 && !day5Sent) {
+      newDay5Sent = await sendLapseEmail(pool, user, buddyReengageDay5Template, 'buddy_reengage_day5');
     }
-    console.log(`[BuddyEngagement] Day-5 email queued for user ${userId}`);
-  }
-
-  // ── Day 14: final email ────────────────────────────────────────────────────
-  if (lapseDay >= 14 && !day14Sent && process.env.RESEND_API_KEY) {
-    try {
-      const { subject, html } = buddyReengageDay14Template({ name: user.name });
-      sendEmail(pool, {
-        to:           user.email,
-        subject,
-        html,
-        templateType: 'buddy_reengage_day14',
-        userId,
-      }).catch(err => console.error('[BuddyEngagement] Day-14 email error user', userId, err.message));
-    } catch (emailErr) {
-      console.warn('[BuddyEngagement] Day-14 email build error user', userId, ':', emailErr.message);
+    if (lapseDay >= 14 && !day14Sent) {
+      newDay14Sent = await sendLapseEmail(pool, user, buddyReengageDay14Template, 'buddy_reengage_day14');
     }
-    console.log(`[BuddyEngagement] Day-14 final email queued for user ${userId}`);
   }
 
   await upsertEngagement(pool, userId, {
@@ -290,10 +296,11 @@ async function processUser(pool, user, now) {
     last_restart_at:             newLastRestartAt,
     lapse_started_at:            lapseStartedAt,
     lapse_push_sent:             newPushSent,
-    lapse_day5_email_sent:       day5Sent || lapseDay >= 5,
-    lapse_day14_email_sent:      day14Sent || lapseDay >= 14,
+    lapse_day5_email_sent:       newDay5Sent,
+    lapse_day14_email_sent:      newDay14Sent,
     last_processed_date:         localYesterday,
   });
+  return true;
 }
 
 // ── Main job ──────────────────────────────────────────────────────────────────
@@ -353,8 +360,7 @@ async function runBuddyEngagementCheck(pool) {
     };
 
     try {
-      await processUser(pool, user, now);
-      processed++;
+      if (await processUser(pool, user, now)) processed++;
     } catch (userErr) {
       console.warn('[BuddyEngagement] Error processing user', row.id, ':', userErr.message);
     }
@@ -386,4 +392,4 @@ function scheduleBuddyEngagementCron(pool) {
   console.log('[BuddyEngagement] Cron started — checking every hour');
 }
 
-module.exports = { scheduleBuddyEngagementCron, runBuddyEngagementCheck };
+module.exports = { scheduleBuddyEngagementCron, runBuddyEngagementCheck, _internal: { processUser, daysBetween } };

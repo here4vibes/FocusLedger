@@ -1079,7 +1079,7 @@ No events today — <a href=/calendar style=color:var(--orange)>set up calendar<
   };
 
   window.handleQuickActionExpense = function() {
-    location.href = '/money';
+    location.href = '/app/money';
   };
 
   window.handleQuickActionNote = function() {
@@ -1667,7 +1667,7 @@ No events today — <a href=/calendar style=color:var(--orange)>set up calendar<
         try { localStorage.setItem('fl_ml_last_launch', today); } catch(e) {}
         openLaunch();
         // Clean URL so refresh doesn't re-trigger
-        try { history.replaceState({}, '', '/home'); } catch(e) {}
+        try { history.replaceState({}, '', '/portal/legacy'); } catch(e) {}
       }, 300);
     } else {
       var isAutoLaunchHour = getHour() >= 6 && getHour() < 11;
