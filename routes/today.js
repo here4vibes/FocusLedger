@@ -7,6 +7,7 @@ const express = require('express');
 const { authenticateToken } = require('../middleware/auth');
 const { fetchUserTimezone, getUserLocalDate } = require('../lib/timezone');
 const TimeEstimationService = require('../services/TimeEstimationService');
+const { logFailure } = require('../lib/log-failure');
 
 // Calibration ratios outside this range are noise (too few samples, one wild
 // task) — clamp so a block never renders at 10x its estimate.
@@ -50,7 +51,7 @@ module.exports = function (pool) {
            ORDER BY fs.started_at DESC LIMIT 1`,
           [userId]
         ),
-        TimeEstimationService.getCalibration(pool, userId).catch(() => null),
+        TimeEstimationService.getCalibration(pool, userId).catch(logFailure('[today]', 'getCalibration', { userId }, null)),
       ]);
 
       const ratio = clampRatio(calibration?.avg_ratio);

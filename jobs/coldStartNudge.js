@@ -28,6 +28,7 @@ const {
 const { isApnsConfigured, sendApnsNotification } = require('../lib/apns-sender');
 const { configureWebPush } = require('../lib/webpush');
 const { getPushTokens, deletePushToken } = require('../db/push-tokens');
+const { logFailure } = require('../lib/log-failure');
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -51,7 +52,7 @@ async function sendWebPush(webpush, subscriptions, payload, pool) {
       sent++;
     } catch (err) {
       if (err.statusCode === 410 || err.statusCode === 404) {
-        await deleteSubscriptionByEndpoint(pool, row.endpoint).catch(() => {});
+        await deleteSubscriptionByEndpoint(pool, row.endpoint).catch(logFailure('[cold-start-nudge]', 'deleteSubscriptionByEndpoint'));
       }
     }
   }
@@ -60,7 +61,7 @@ async function sendWebPush(webpush, subscriptions, payload, pool) {
 
 async function sendApnsPush(userId, payload) {
   if (!isApnsConfigured()) return 0;
-  const tokens = await getPushTokens(pool, userId).catch(() => []);
+  const tokens = await getPushTokens(pool, userId).catch(logFailure('[cold-start-nudge]', 'getPushTokens', { userId }, []));
   if (!tokens.length) return 0;
   // sendApnsNotification expects { title, body, url } — NOT a raw aps envelope
   // (it builds the aps alert itself). Passing an aps-shaped object dropped the
@@ -69,7 +70,7 @@ async function sendApnsPush(userId, payload) {
   const { sent } = await sendApnsNotification(
     tokens.map(t => t.token),
     { title: parsed.title, body: parsed.body, url: parsed.url },
-    async (invalidToken) => { await deletePushToken(pool, invalidToken).catch(() => {}); }
+    async (invalidToken) => { await deletePushToken(pool, invalidToken).catch(logFailure('[cold-start-nudge]', 'deletePushToken', { userId })); }
   );
   return sent;
 }

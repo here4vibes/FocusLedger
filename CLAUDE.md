@@ -146,12 +146,12 @@ Four places plus a Settings gear. One small PR per phase; old URLs keep working 
   - Today `draft_and_send_email` sends from the FocusLedger domain with reply-to set to the user.
   - **Stage 3 (browser agent) and stage 4 (cancellation partners or virtual cards): deferred** until there are active users.
 - **Grow the cancel-link list** in `lib/cancel-links.js`, but only with well-known, stable URLs.
-- **Routine templates re-create tasks:** a user's starter routine tasks (`routine_templates`, "Drink a full glass of water"…) came back after being deleted or completed on page load (seen locally). Find what auto-adopts the template, check whether it's intended, and fix it if not.
+- **Routine templates re-create tasks:** a user's starter routine tasks (`routine_templates`, "Drink a full glass of water"…) came back after being deleted or completed on page load (seen locally). Find what auto-adopts the template, check whether it's intended, and fix it if not. **Likely cause:** `routes/auth.js` calls `seedStarterRoutine` on every login (password, Google callback, One Tap), not only at signup. The function re-creates the routine and its tasks whenever the user has no active AM routine.
 - **After #218:** add an "Invite an accountability partner" link to the weekly email for people with no partner (`/app/settings?focus=tandem`, scroll to `#tandemSection`).
 - **Cleanup:** `routes/admin.js` and `routes/account-deletion.js` duplicate `isAdminUser`; switch them to `lib/admin-access.js`.
 - **Hardening:**
   1. `user_id NOT NULL` and foreign keys on core tables. Check for orphans first; use a Neon branch.
-  2. About 70 silent `catch {}` blocks.
+  2. Silent catches: the 58 one-line `.catch(() => {})` calls in server code now log via `lib/log-failure.js` (#239). About 30 block catches remain: multi-line or comment-only `catch {}` bodies (e.g. "table may not exist", "non-blocking"). Some may be hiding real schema bugs, so investigate each one rather than just adding a log line.
   3. Neon point-in-time restore and snapshot schedule.
   4. A `routine_task_links` unique key on `(routine_id, task_id)`.
   5. 23 moderate npm advisories.
@@ -186,6 +186,7 @@ Four places plus a Settings gear. One small PR per phase; old URLs keep working 
   - Billing: `lib/billing.js`, `db/billing.js`, `lib/stripe-client.js`.
   - Admin gate: `lib/admin-access.js` (`requireAdmin(pool)` middleware, judged from the DB row).
   - Activation: `db/activation.js` and `GET /api/admin/activation`.
+- **Best-effort work:** use `.catch(logFailure('[Module]', 'op', { userId }, fallback))` from `lib/log-failure.js`. Never use `.catch(() => {})`.
 - **AI:** every AI call goes through `lib/claude-client.js` (`createMessage`/`complete`). Per-user daily budget: `lib/ai-budget.js` (Free 100 / Pro 500).
 - **Bills and subscriptions:**
   - Bill guardian: `lib/bill-guardian.js` and `db/bills.js`.
