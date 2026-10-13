@@ -202,6 +202,11 @@ Four places plus a Settings gear. One small PR per phase; old URLs keep working 
   - Subscription review: cancel (pending → confirmed / charged again from bank data) / keep (rests 90 days) / it's a bill.
 - **Tandem recap:** `lib/tandem-recap.js` and `db/tandem-recap.js`.
 - **Insights cron:** `jobs/crossDomainInsightsJob.js` (exports helpers; runs only when executed directly).
+- **Claude Code helpers (`.claude/`, committed):** agents `silent-failure-hunter`, `database-reviewer` and `security-reviewer`, plus the skill `postgres-patterns`.
+  - They're adapted from ECC (`affaan-m/everything-claude-code`, MIT, commit `b92f181`) and rewritten around this file's rules.
+  - Use them for reviews and the hardening backlog, e.g. the silent `catch {}` sweep.
+  - **Don't install the full ECC plugin, its hooks, its MCP configs or its auto-update in this repo;** only reviewed copies go in.
+  - `.gitignore` keeps the rest of `.claude/` (worktrees, local settings) local.
 
 ### Cloud-session gotchas
 - **Prod isn't reachable from here:** the egress proxy blocks focusledger.net and onrender.com. Test prod via GitHub Actions or the Render/Sentry MCPs. Render service `srv-d8bpimul51nc73cjdg90`. Sentry org `sean-hendler` (`https://us.sentry.io`).
