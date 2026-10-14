@@ -179,15 +179,20 @@ module.exports = function(pool) {
           // Plaid transactions this week
           let plaidRows = [];
           try {
+            // Only bank outflows not yet confirmed into expenses (confirmed ones
+            // are already counted in expResult above) and not still pending.
             const plaidResult = await pool.query(
               `SELECT category_id, SUM(amount) as total
                FROM plaid_transactions
-               WHERE user_id = $1 AND date >= $2 AND is_dismissed = false
+               WHERE user_id = $1 AND transaction_date >= $2
+                 AND is_confirmed = false AND is_pending = false AND amount > 0
                GROUP BY category_id`,
               [userId, weekStart.toISOString().slice(0, 10)]
             );
             plaidRows = plaidResult.rows;
-          } catch { /* Plaid might not be set up */ }
+          } catch (e) {
+            console.error('[AlignmentNudges] Plaid spend query failed:', e.message, '| userId:', userId);
+          }
 
           // Merge spend
           const spendByCat = {};
@@ -260,7 +265,7 @@ module.exports = function(pool) {
         const blocksResult = await pool.query(
           `SELECT value_id,
              SUM(
-               EXTRACT(EPOCH FROM (end_time - start_time)) / 3600
+               EXTRACT(EPOCH FROM (end_time::time - start_time::time)) / 3600
              ) as hours
            FROM time_blocks
            WHERE user_id = $1 AND block_date >= $2
