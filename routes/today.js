@@ -69,7 +69,10 @@ module.exports = function (pool) {
           try {
             const suggested = await TimeEstimationService.suggestEstimate(pool, userId, t.title);
             if (suggested) { baseMinutes = suggested; baseSource = 'history'; }
-          } catch { /* suggestion is a bonus, never a blocker */ }
+          } catch (e) {
+            // The suggestion is a bonus, never a blocker.
+            console.error('[today] suggestEstimate failed:', e.message, '| userId:', userId);
+          }
         }
         if (!baseMinutes) { baseMinutes = 30; baseSource = 'default'; }
         tasks.push({

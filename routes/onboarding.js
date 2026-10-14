@@ -138,7 +138,9 @@ module.exports = function (pool) {
               };
               await pool.query('UPDATE users SET adhd_profile = $1 WHERE id = $2', [JSON.stringify(merged), userId]);
             }
-          } catch { /* non-blocking */ }
+          } catch (e) {
+            console.error('[onboarding] adhd_profile merge failed:', e.message, '| userId:', userId);
+          }
         });
       }
 

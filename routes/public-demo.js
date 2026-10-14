@@ -69,7 +69,9 @@ module.exports = function () {
             .filter(s => typeof s === 'string' && s.trim().length > 0)
             .slice(0, 7)
             .map(s => s.trim().slice(0, 120));
-        } catch { /* fall through to empty */ }
+        } catch (e) {
+          console.error('[public-demo] could not parse AI steps:', e.message);
+        }
       }
       if (!steps.length) {
         return res.status(422).json({ success: false, message: 'Couldn’t break that one down — try phrasing it as a task ("clean the garage").' });

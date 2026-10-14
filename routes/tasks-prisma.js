@@ -340,7 +340,10 @@ async function createTask(req, res) {
         if (countRows[0].c >= 10) {
           return res.status(402).json({ success: false, message: 'You have 10 active tasks — the free plan cap. Finish a few, or open it up with Autopilot.', code: 'TASK_LIMIT_REACHED', upgrade_required: true });
         }
-      } catch { /* full DB outage — let creation attempt proceed */ }
+      } catch (e) {
+        // Full DB outage: let the creation attempt proceed (and fail on its own).
+        console.error('[tasks] fallback task-count check failed:', e.message, '| userId:', userId);
+      }
     }
 
     // Auto-tag to value
@@ -445,7 +448,9 @@ async function createTask(req, res) {
               [Math.min(Math.round(parsed.minutes), 480), 'ai', taskRow.id]
             );
           }
-        } catch { /* silent */ }
+        } catch (e) {
+          console.error('[tasks] AI duration estimate failed:', e.message, '| taskId:', taskRow.id);
+        }
       });
     }
   } catch (err) {

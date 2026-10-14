@@ -89,8 +89,8 @@ module.exports = function (pool) {
           taskBreakdown[t.value_id] = (taskBreakdown[t.value_id] || 0) + 1;
         }
       });
-    } catch {
-      // table may not exist yet — treat as 0
+    } catch (e) {
+      console.error('[AlignmentScore] task score query failed, treating as 0:', e.message, '| userId:', userId);
     }
 
     const task_score = taskTotal > 0 ? Math.round((taskAligned / taskTotal) * 100) : 0;
@@ -139,8 +139,8 @@ module.exports = function (pool) {
           spendBreakdown[vId] = (spendBreakdown[vId] || 0) + parseFloat(e.amount || 0);
         }
       });
-    } catch {
-      // expenses table may not exist — treat as 0
+    } catch (e) {
+      console.error('[AlignmentScore] spending score query failed, treating as 0:', e.message, '| userId:', userId);
     }
 
     const spending_score = spendingTotal > 0

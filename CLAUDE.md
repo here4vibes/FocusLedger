@@ -151,7 +151,7 @@ Four places plus a Settings gear. One small PR per phase; old URLs keep working 
 - **Cleanup:** `routes/admin.js` and `routes/account-deletion.js` duplicate `isAdminUser`; switch them to `lib/admin-access.js`.
 - **Hardening:**
   1. `user_id NOT NULL` and foreign keys on core tables. Check for orphans first; use a Neon branch.
-  2. Silent catches: the 58 one-line `.catch(() => {})` calls in server code now log via `lib/log-failure.js` (#239). About 30 block catches remain: multi-line or comment-only `catch {}` bodies (e.g. "table may not exist", "non-blocking"). Some may be hiding real schema bugs, so investigate each one rather than just adding a log line.
+  2. ~~Silent catches~~ done: #239 (one-liners, `lib/log-failure.js`) and #240 (block catches). `__tests__/no-silent-catches.test.js` now fails CI on any new empty or comment-only catch in server code. Catches that do something but don't log (e.g. `catch { return null; }`) are not covered yet.
   3. Neon point-in-time restore and snapshot schedule.
   4. A `routine_task_links` unique key on `(routine_id, task_id)`.
   5. 23 moderate npm advisories.
@@ -159,6 +159,11 @@ Four places plus a Settings gear. One small PR per phase; old URLs keep working 
   - Agentic **type 2** (Buddy acts: bills, subscriptions, start-it-for-me) and **type 3** (shareable outcomes, e.g. "cancelled Netflix, $186/yr back") come first.
   - The MCP server for Claude/ChatGPT/Meta Muse is deferred.
   - Positioning: ADHD-native; the "ADHD tax" from a CPA founder; privacy; partner accountability.
+- **Production errors in Sentry (found 2026-10-14, not yet fixed):**
+  - NODE-EXPRESS-B: `followupEmailCheck` fails with `column "tasks_due" does not exist`.
+  - NODE-EXPRESS-A: `GET /api/buddy-widget/context` fails with `operator does not exist: text = integer`.
+  - NODE-EXPRESS-8: `pattern-detection` fails with `timestamp with time zone >= integer`.
+  - The Plaid v1 `connect` stores the institution *id* as the bank name (`services/PlaidService.js`).
 - **Product loop:** watch the admin Activation card and the `first_checkin_starter` events (#223).
 
 ### Production facts (learned the hard way)
