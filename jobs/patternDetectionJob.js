@@ -16,6 +16,7 @@ const { initSentry, flushAndExit } = require('../lib/sentry');
 initSentry('patternDetectionJob'); // console.error → Sentry for this cron (see lib/sentry.js)
 
 const { Pool } = require('pg');
+const { logFailure } = require('../lib/log-failure');
 const {
   upsertDetectedPattern,
   createRoutineSuggestion,
@@ -136,7 +137,7 @@ async function detectPatternsForUser(pool, userId) {
     });
 
     if (pattern && confidenceScore >= MIN_CONFIDENCE_SUGGEST) {
-      await createRoutineSuggestion(pool, userId, pattern.id).catch(() => null);
+      await createRoutineSuggestion(pool, userId, pattern.id).catch(logFailure('[pattern-detection]', 'createRoutineSuggestion', { userId, patternId: pattern.id }, null));
     }
   }
 }

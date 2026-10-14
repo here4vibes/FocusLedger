@@ -4,6 +4,7 @@
 const { checkProStatus } = require('../middleware/proUtils');
 const { fetchUserTimezone, getUserLocalDate } = require('../lib/timezone');
 const { complete } = require('../lib/claude-client');
+const { logFailure } = require('../lib/log-failure');
 
 // ── Helpers: time string normalization ───────────────────────────────────────
 // DB stores time as 'time without time zone'; pg returns it as a string "HH:MM:SS".
@@ -212,7 +213,7 @@ async function suggestSteps(req, res) {
       return res.json({ success: true, suggestions: [], skip: true, reason: 'simple_task' });
     }
 
-    const isPro = await checkProStatus(pool, userId).catch(() => false);
+    const isPro = await checkProStatus(pool, userId).catch(logFailure('[tasks]', 'checkProStatus', { userId }, false));
     if (!isPro) return res.json({ success: true, suggestions: [], skip: false, is_pro: false });
 
     let content;

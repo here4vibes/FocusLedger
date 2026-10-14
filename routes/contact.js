@@ -4,6 +4,7 @@
 const express = require('express');
 const { authenticateToken } = require('../middleware/auth');
 const { Resend } = require('resend');
+const { logFailure } = require('../lib/log-failure');
 
 const FROM_ADDRESS = 'FocusLedger <hello@focusledger.net>';
 
@@ -124,7 +125,7 @@ module.exports = function(pool) {
         [name || null, email.trim().toLowerCase(), message.trim(), validCategory]
       );
 
-      sendSupportNotification({ email, name: name || null, message, category: validCategory }).catch(() => {});
+      sendSupportNotification({ email, name: name || null, message, category: validCategory }).catch(logFailure('[contact]', 'sendSupportNotification', { category: validCategory }));
       sendAckEmail({ email: email.trim().toLowerCase(), name, category: validCategory });
 
       res.json({ success: true, id: result.rows[0].id });
@@ -165,7 +166,7 @@ module.exports = function(pool) {
         user_id: userId,
         page_url,
         browser_info,
-      }).catch(() => {});
+      }).catch(logFailure('[contact]', 'sendSupportNotification', { userId, category: 'bug' }));
       if (req.user.email) {
         sendAckEmail({ email: req.user.email, name: req.user.name, category: 'bug' });
       }

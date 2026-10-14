@@ -107,6 +107,7 @@ const { runBillGuardian, detectStreams, bucketFor, FREQUENCIES } = require('../l
 const { cancelLinkFor } = require('../lib/cancel-links');
 const { cancelHelp } = require('../lib/cancel-help');
 const billsDb = require('../db/bills');
+const { logFailure } = require('../lib/log-failure');
 
 
 
@@ -826,7 +827,7 @@ module.exports = function(pool) {
   router.post('/create-link-token', async (req, res) => {
     try {
       const userId = req.user.id;
-      const isPro = await checkProStatus(pool, userId).catch(() => false);
+      const isPro = await checkProStatus(pool, userId).catch(logFailure('[Plaid]', 'checkProStatus', { userId }, false));
       if (!isPro) return res.status(403).json({ success: false, message: 'Bank sync is an Autopilot feature.' });
       const plaid = getPlaidClient();
       if (!plaid) {
@@ -894,7 +895,7 @@ module.exports = function(pool) {
       const userId = req.user.id;
       const { public_token, institution_name, institution_id } = req.body;
       if (!public_token) return res.status(400).json({ success: false, message: 'public_token required' });
-      const isPro = await checkProStatus(pool, userId).catch(() => false);
+      const isPro = await checkProStatus(pool, userId).catch(logFailure('[Plaid]', 'checkProStatus', { userId }, false));
       if (!isPro) return res.status(403).json({ success: false, message: 'Bank sync is an Autopilot feature.' });
       const plaid = getPlaidClient();
       if (!plaid) return res.status(503).json({ success: false, message: 'Bank sync is being set up.' });

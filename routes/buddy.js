@@ -56,6 +56,7 @@ const {
 } = require('../lib/routineNudgeEngine');
 const { getSessionSuggestion } = require('../lib/patternDetection');
 const { getAdhdProfile, updateAdhdProfile, buildProfilePromptAddition, bootstrapAdhdProfile } = require('../lib/adhd-profile');
+const { logFailure } = require('../lib/log-failure');
 
 // ── Scoring weights ─────────────────────────────────────────────────────────
 // Deadline urgency (40%), values alignment (25%), avoidance detection (20%),
@@ -398,7 +399,7 @@ module.exports = function(pool) {
           [userId, today]
         ),
         // Only fetch partner context on first turn to avoid repeated DB queries per turn
-        buildPartnerContext(pool, userId, today).catch(() => null),
+        buildPartnerContext(pool, userId, today).catch(logFailure('[buddy]', 'buildPartnerContext', { userId }, null)),
       ]);
       const history = histResult.rows;
       const activeTasks = activeTasksResult.rows;
@@ -497,7 +498,7 @@ module.exports = function(pool) {
       // Existing users land here with adhd_profile = {} until bootstrapped.
       // Fire-and-forget: synthesize from history so the NEXT session has a profile.
       if (Object.keys(adhdProfile).length === 0) {
-        setImmediate(() => bootstrapAdhdProfile(pool, userId).catch(() => {}));
+        setImmediate(() => bootstrapAdhdProfile(pool, userId).catch(logFailure('[buddy]', 'bootstrapAdhdProfile', { userId })));
       }
 
       const systemPrompt = buildConversationSystemPrompt(userTurns, enrichedContext, partnerContextForPrompt, sessionCount, hookRestartCount, adhdProfile);

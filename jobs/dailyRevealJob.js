@@ -26,6 +26,7 @@ initSentry('dailyRevealJob'); // console.error → Sentry for this cron (see lib
 
 const { upsertReveal, revealExists } = require('../db/reveals');
 const { getUserLocalDate } = require('../lib/timezone');
+const { logFailure } = require('../lib/log-failure');
 
 const LOOKBACK_DAYS = 7;
 
@@ -668,7 +669,7 @@ async function run() {
           const data = await fetchUserWeek(pool, user.id, sinceDate);
           // Belt-and-suspenders: even a total interest-corpus failure yields no
           // interests rather than aborting the whole reveal for this user.
-          const interests = deriveInterests(await fetchInterestCorpus(pool, user.id).catch(() => []));
+          const interests = deriveInterests(await fetchInterestCorpus(pool, user.id).catch(logFailure('[daily-reveal]', 'fetchInterestCorpus', { userId: user.id }, [])));
           // Personal-insight prompts also see interests — even stat reveals
           // land harder when they reference something the user loves.
           const userContext = summariseForPrompt(data) +

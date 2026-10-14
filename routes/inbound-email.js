@@ -24,6 +24,7 @@ const {
   countUnread,
 } = require('../db/customer-emails');
 const { processEmailToTask } = require('./email-to-tasks');
+const { logFailure } = require('../lib/log-failure');
 
 // WHY: emails to tasks@focusledger.net trigger task creation, not inbox storage.
 // All other inbound emails go to the admin inbox as before.
@@ -254,7 +255,7 @@ module.exports = function(pool) {
             html: '<div style="font-family:-apple-system,Segoe UI,Roboto,sans-serif;font-size:15px;color:#141416;line-height:1.6;padding:16px;"><p>Done — you won’t get any more emails from FocusLedger.</p><p style="color:#888;font-size:13px;">(Account-related emails like password resets still work if you ever need them.)</p></div>',
             text: 'Done — you won\'t get any more emails from FocusLedger. (Account-related emails like password resets still work if you ever need them.)',
             templateType: 'unsubscribe_confirmation',
-          }).catch(() => {});
+          }).catch(logFailure('[inbound-email]', 'sendUnsubscribeConfirmation'));
           console.log(`[inbound-email] opt-out honored for ${fromEmail}`);
         }
       } catch (optErr) {

@@ -63,6 +63,7 @@ const { buildSessionMiddleware } = require('./lib/session');
 const { getMigrationStatus } = require('./db/migrations-status');
 const { requestContext } = require('./lib/request-context');
 const { quotaAwareResponses } = require('./lib/ai-budget');
+const { logFailure } = require('./lib/log-failure');
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -125,7 +126,7 @@ app.use('/api', (req, res, next) => {
         if (now - lastWrite >= LAST_ACTIVE_THROTTLE_MS) {
           lastActiveCache.set(userId, now);
           pool.query('UPDATE users SET last_active_at = NOW() WHERE id = $1', [userId])
-            .catch(() => {});
+            .catch(logFailure('[server]', 'touchLastActive', { userId }));
         }
       }
     } catch {

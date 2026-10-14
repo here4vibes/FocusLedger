@@ -22,6 +22,7 @@
 const express = require('express');
 const { complete } = require('../lib/claude-client');
 const { authenticateToken } = require('../middleware/auth');
+const { logFailure } = require('../lib/log-failure');
 
 const _CONFIDENCE_HIGH = 0.85;   // Suggest auto-complete (comment reference only; threshold enforced in AI prompt)
 const CONFIDENCE_MED  = 0.60;    // "Did you mean?" suggestion
@@ -609,7 +610,7 @@ Analyze the journal and return the JSON response.`;
       try {
         const autoTagger = require('../lib/auto-tagger');
         if (autoTagger && autoTagger.matchTaskToValue) {
-          autoTagger.matchTaskToValue(pool, userId, task.title).catch(() => {});
+          autoTagger.matchTaskToValue(pool, userId, task.title).catch(logFailure('[journal]', 'matchTaskToValue', { userId, taskId: task.id }));
         }
       } catch (_) { /* auto-tagger not available, skip */ }
 

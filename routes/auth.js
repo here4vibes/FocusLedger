@@ -10,6 +10,7 @@ const { getSessionData, markSessionMigrated, isSessionMigrated } = require('../d
 const { validateTimezone, fetchUserTimezone, getUserLocalDate } = require('../lib/timezone');
 const { isMonitorEmail } = require('../lib/monitor-accounts');
 const { markQaUser } = require('../db/users');
+const { logFailure } = require('../lib/log-failure');
 
 // ============================================================
 // Google OAuth Configuration (Auth Scopes)
@@ -38,7 +39,7 @@ const TRUSTED_REDIRECT_HOSTS = new Set([
   'localhost:3000',
 ]);
 if (process.env.ALLOWED_ORIGIN) {
-  try { TRUSTED_REDIRECT_HOSTS.add(new URL(process.env.ALLOWED_ORIGIN).host); } catch {}
+  try { TRUSTED_REDIRECT_HOSTS.add(new URL(process.env.ALLOWED_ORIGIN).host); } catch (e) { console.error('[Auth] ALLOWED_ORIGIN is not a valid URL:', e.message); }
 }
 
 // State format: {returnTo}~{host}~{ts}~{sig}  (~ avoids colon clash with localhost:port)
@@ -211,7 +212,7 @@ module.exports = function(pool, loginLimiter, signupLimiter) {
 
       // Save UTM attribution (fire-and-forget — never block the response)
       if (attribution) {
-        saveAttribution(user.id, attribution).catch(() => {});
+        saveAttribution(user.id, attribution).catch(logFailure('[Auth]', 'saveAttribution', { userId: user.id }));
       }
 
       res.status(201).json({
@@ -235,7 +236,7 @@ module.exports = function(pool, loginLimiter, signupLimiter) {
 
       // Seed Maslow-based default values for new users (fire-and-forget)
       seedDefaultValues(pool, user.id);
-      seedStarterRoutine(pool, user.id).catch(() => {});
+      seedStarterRoutine(pool, user.id).catch(logFailure('[Auth]', 'seedStarterRoutine', { userId: user.id }));
     } catch (err) {
       // Granular diagnostics — pinpoint which query/constraint failed from
       // Render logs alone (per engineering rules: no silent/opaque failures).
@@ -292,12 +293,12 @@ module.exports = function(pool, loginLimiter, signupLimiter) {
         Promise.resolve(pool.query(
           `UPDATE users SET login_count = COALESCE(login_count, 0) + 1, last_login_at = NOW(), timezone = $2 WHERE id = $1`,
           [user.id, loginTz]
-        )).catch(() => {});
+        )).catch(logFailure('[Auth]', 'recordLogin', { userId: user.id }));
       } else {
         Promise.resolve(pool.query(
           `UPDATE users SET login_count = COALESCE(login_count, 0) + 1, last_login_at = NOW() WHERE id = $1`,
           [user.id]
-        )).catch(() => {});
+        )).catch(logFailure('[Auth]', 'recordLogin', { userId: user.id }));
       }
 
       const token = generateToken(user);
@@ -313,7 +314,7 @@ module.exports = function(pool, loginLimiter, signupLimiter) {
 
       // Seed defaults for existing users who have no values (fire-and-forget)
       seedDefaultValues(pool, user.id);
-      seedStarterRoutine(pool, user.id).catch(() => {});
+      seedStarterRoutine(pool, user.id).catch(logFailure('[Auth]', 'seedStarterRoutine', { userId: user.id }));
     } catch (err) {
       console.error('[auth/login] ERROR:', err.message, err.stack);
       res.status(500).json({ success: false, message: 'Failed to log in' });
@@ -440,7 +441,7 @@ module.exports = function(pool, loginLimiter, signupLimiter) {
         accountLinked = !!existing.password_hash;
         // Seed defaults for returning Google users who have no values (fire-and-forget)
         seedDefaultValues(pool, user.id);
-      seedStarterRoutine(pool, user.id).catch(() => {});
+      seedStarterRoutine(pool, user.id).catch(logFailure('[Auth]', 'seedStarterRoutine', { userId: user.id }));
       } else {
         const result = await pool.query(
           `INSERT INTO users (email, name, google_id, auth_method, avatar_url)
@@ -469,7 +470,7 @@ module.exports = function(pool, loginLimiter, signupLimiter) {
 
         // Seed Maslow-based default values for new Google users (fire-and-forget)
         seedDefaultValues(pool, user.id);
-      seedStarterRoutine(pool, user.id).catch(() => {});
+      seedStarterRoutine(pool, user.id).catch(logFailure('[Auth]', 'seedStarterRoutine', { userId: user.id }));
       }
 
       const token = generateToken(user);
@@ -642,7 +643,7 @@ module.exports = function(pool, loginLimiter, signupLimiter) {
         `INSERT INTO analytics_events (visitor_hash, user_id, event_name, event_data, occurred_at)
          VALUES ($1, $2, 'password_reset_completed', '{}', NOW())`,
         [`user-${record.user_id}`, record.user_id]
-      ).catch(() => {});
+      ).catch(logFailure('[Auth]', 'trackPasswordResetCompleted', { userId: record.user_id }));
 
       res.json({ success: true, message: 'Your password has been updated. You can now log in.' });
     } catch (err) {
@@ -711,7 +712,7 @@ module.exports = function(pool, loginLimiter, signupLimiter) {
         user = { id: existing.id, email, name: existing.name || name };
         // Seed defaults for returning One Tap users who have no values (fire-and-forget)
         seedDefaultValues(pool, user.id);
-      seedStarterRoutine(pool, user.id).catch(() => {});
+      seedStarterRoutine(pool, user.id).catch(logFailure('[Auth]', 'seedStarterRoutine', { userId: user.id }));
       } else {
         // New user
         isNewUser = true;
@@ -739,7 +740,7 @@ module.exports = function(pool, loginLimiter, signupLimiter) {
 
         // Save UTM attribution for new users (fire-and-forget)
         if (attribution) {
-          saveAttribution(user.id, attribution).catch(() => {});
+          saveAttribution(user.id, attribution).catch(logFailure('[Auth]', 'saveAttribution', { userId: user.id }));
         }
       }
 
@@ -749,7 +750,7 @@ module.exports = function(pool, loginLimiter, signupLimiter) {
         `INSERT INTO analytics_events (visitor_hash, user_id, event_name, event_data, occurred_at)
          VALUES ($1, $2, $3, '{}', NOW())`,
         [`user-${user.id}`, user.id, isNewUser ? 'signup_google_one_tap' : 'login_google_one_tap']
-      ).catch(() => {});
+      ).catch(logFailure('[Auth]', 'trackGoogleOneTap', { userId: user.id }));
 
       // Phase 2: Establish HttpOnly session cookie alongside JWT
       establishSession(req, user);
@@ -856,8 +857,8 @@ module.exports = function(pool, loginLimiter, signupLimiter) {
             );
             imported.values.push(cleanVal);
           }
-        } catch (_valErr) {
-          // Non-fatal.
+        } catch (valErr) {
+          console.error('[migrate-demo-session] Value import failed:', valErr.message, '| userId:', userId);
         }
       }
 
@@ -896,7 +897,7 @@ module.exports = function(pool, loginLimiter, signupLimiter) {
         pool.query(
           `UPDATE users SET previous_checkin_summary = $1 WHERE id = $2 AND previous_checkin_summary IS NULL`,
           [session.conversation_summary.slice(0, 1000), userId]
-        ).catch(() => {});
+        ).catch(logFailure('[migrate-demo-session]', 'storeConversationSummary', { userId }));
       }
 
       // ── Mark migrated ──────────────────────────────────────────────────────
@@ -911,7 +912,7 @@ module.exports = function(pool, loginLimiter, signupLimiter) {
           userId,
           JSON.stringify({ task_count: imported.tasks.length, value_count: imported.values.length })
         ]
-      ).catch(() => {});
+      ).catch(logFailure('[migrate-demo-session]', 'trackMigration', { userId }));
 
       res.json({
         success: true,

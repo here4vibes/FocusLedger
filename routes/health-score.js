@@ -232,6 +232,7 @@ async function calculateScore(pool, userId) {
 // ─── Router ───────────────────────────────────────────────────────────────────
 
 const { fetchUserTimezone, getUserLocalDate } = require('../lib/timezone');
+const { logFailure } = require('../lib/log-failure');
 
 module.exports = function(pool) {
   const router = express.Router();
@@ -312,7 +313,7 @@ module.exports = function(pool) {
           const drop = prevScore - calc.overall_score;
           if (drop >= 10) {
             const { generateScoreDropNudge } = require('../lib/nudgeGenerator');
-            generateScoreDropNudge(pool, userId, calc.overall_score, prevScore).catch(() => {});
+            generateScoreDropNudge(pool, userId, calc.overall_score, prevScore).catch(logFailure('[health-score]', 'generateScoreDropNudge', { userId }));
           }
         }
       } catch { /* nudge failure is non-fatal */ }

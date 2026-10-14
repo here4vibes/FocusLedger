@@ -16,6 +16,7 @@ const { complete } = require('../lib/claude-client');
 const { authenticateToken } = require('../middleware/auth');
 const { checkProStatus } = require('../middleware/proUtils');
 const { fetchUserTimezone, getUserLocalDate, getUserLocalHour } = require('../lib/timezone');
+const { logFailure } = require('../lib/log-failure');
 
 const FREE_DAILY_LIMIT = 3;
 const BATCH_SIZE_PRO = 5;
@@ -254,7 +255,7 @@ Generate ${batchSize} personalized, highly specific task suggestions tied to the
     const userId = req.user.id;
     try {
       const tz = await fetchUserTimezone(pool, userId);
-      const isPro = await checkProStatus(pool, userId).catch(() => false);
+      const isPro = await checkProStatus(pool, userId).catch(logFailure('[AI Suggestions]', 'checkProStatus', { userId }, false));
       const dailyCount = await getDailyGeneratedCount(userId, tz);
       const dailyLimit = isPro ? null : FREE_DAILY_LIMIT;
       const atCap = !isPro && dailyCount >= FREE_DAILY_LIMIT;
@@ -346,7 +347,7 @@ Generate ${batchSize} personalized, highly specific task suggestions tied to the
     const userId = req.user.id;
     try {
       const tz = await fetchUserTimezone(pool, userId);
-      const isPro = await checkProStatus(pool, userId).catch(() => false);
+      const isPro = await checkProStatus(pool, userId).catch(logFailure('[AI Suggestions]', 'checkProStatus', { userId }, false));
       const dailyCount = await getDailyGeneratedCount(userId, tz);
 
       if (!isPro && dailyCount >= FREE_DAILY_LIMIT) {
@@ -417,7 +418,7 @@ Generate ${batchSize} personalized, highly specific task suggestions tied to the
       }
 
       // Check free task limit
-      const isPro = await checkProStatus(pool, userId).catch(() => false);
+      const isPro = await checkProStatus(pool, userId).catch(logFailure('[AI Suggestions]', 'checkProStatus', { userId }, false));
       if (!isPro) {
         const activeCount = await pool.query(
           'SELECT COUNT(*) as count FROM tasks WHERE is_completed = false AND user_id = $1',
