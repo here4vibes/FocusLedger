@@ -156,8 +156,9 @@ async function connect(pool, userId, publicToken) {
     const instResponse = await plaid.itemGet({ access_token });
     institutionName = instResponse.data.item?.institution_id || institutionName;
     institutionId = instResponse.data.item?.institution_id || null;
-  } catch {
-    // Non-fatal — institution info is optional
+  } catch (e) {
+    // Non-fatal: institution info is optional.
+    console.error('[Plaid] itemGet for institution info failed:', e.message);
   }
 
   // Upsert token to plaid_tokens
@@ -165,7 +166,7 @@ async function connect(pool, userId, publicToken) {
   await upsertPlaidToken(pool, {
     userId,
     encryptedAccessToken: encryptToken(access_token),
-    itemId,
+    itemId: item_id,
     institutionName,
     institutionId,
   });
