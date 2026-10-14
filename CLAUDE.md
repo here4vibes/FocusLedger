@@ -146,14 +146,13 @@ Four places plus a Settings gear. One small PR per phase; old URLs keep working 
   - Today `draft_and_send_email` sends from the FocusLedger domain with reply-to set to the user.
   - **Stage 3 (browser agent) and stage 4 (cancellation partners or virtual cards): deferred** until there are active users.
 - **Grow the cancel-link list** in `lib/cancel-links.js`, but only with well-known, stable URLs.
-- **Routine templates re-create tasks:** a user's starter routine tasks (`routine_templates`, "Drink a full glass of water"…) came back after being deleted or completed on page load (seen locally). Find what auto-adopts the template, check whether it's intended, and fix it if not. **Likely cause:** `routes/auth.js` calls `seedStarterRoutine` on every login (password, Google callback, One Tap), not only at signup. The function re-creates the routine and its tasks whenever the user has no active AM routine.
 - **After #218:** add an "Invite an accountability partner" link to the weekly email for people with no partner (`/app/settings?focus=tandem`, scroll to `#tandemSection`).
 - **Cleanup:** `routes/admin.js` and `routes/account-deletion.js` duplicate `isAdminUser`; switch them to `lib/admin-access.js`.
 - **Hardening:**
   1. `user_id NOT NULL` and foreign keys on core tables. Check for orphans first; use a Neon branch.
   2. ~~Silent catches~~ done: #239 (one-liners, `lib/log-failure.js`) and #240 (block catches). `__tests__/no-silent-catches.test.js` now fails CI on any new empty or comment-only catch in server code. Catches that do something but don't log (e.g. `catch { return null; }`) are not covered yet.
   3. Neon point-in-time restore and snapshot schedule.
-  4. A `routine_task_links` unique key on `(routine_id, task_id)`.
+  4. ~~`routine_task_links` unique key~~ done in #242.
   5. 23 moderate npm advisories.
 - **Strategy (decided):**
   - Agentic **type 2** (Buddy acts: bills, subscriptions, start-it-for-me) and **type 3** (shareable outcomes, e.g. "cancelled Netflix, $186/yr back") come first.
@@ -175,6 +174,7 @@ Four places plus a Settings gear. One small PR per phase; old URLs keep working 
   - JSON columns that code writes text into (`tasks.description`, #225);
   - TEXT columns used as booleans (#218);
   - `buddy_checkins` has no `mood` (#229; check-ins store `energy_level`).
+  - Missing defaults: `routines.is_active` and `created_at` had none, so every routine was saved inactive (fixed in #242).
   - Counters stored as text, boolean or timestamp: `routine_streaks.current_streak`/`best_streak`, `routine_suggestions.presented_count`, `routines.day_of_week`, `task_substeps.step_order` and the `weekly_stats` counters (all fixed in #241). If you suspect another one, find it with a prod `information_schema.columns` query.
 - **Silent failures:** many routes catch DB errors, log them and return 200. Sentry captures every `console.error`. The CI boot smoke fails on any logged "column/relation … does not exist".
 - **Migrations run on every deploy** (`npm start` = `node migrate.js && node server.js`). A failed migration aborts the deploy and the old version keeps serving. Test risky migrations on a Neon branch.
