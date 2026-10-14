@@ -159,11 +159,8 @@ Four places plus a Settings gear. One small PR per phase; old URLs keep working 
   - Agentic **type 2** (Buddy acts: bills, subscriptions, start-it-for-me) and **type 3** (shareable outcomes, e.g. "cancelled Netflix, $186/yr back") come first.
   - The MCP server for Claude/ChatGPT/Meta Muse is deferred.
   - Positioning: ADHD-native; the "ADHD tax" from a CPA founder; privacy; partner accountability.
-- **Production errors in Sentry (found 2026-10-14, not yet fixed):**
-  - NODE-EXPRESS-B: `followupEmailCheck` fails with `column "tasks_due" does not exist`.
-  - NODE-EXPRESS-A: `GET /api/buddy-widget/context` fails with `operator does not exist: text = integer`.
-  - NODE-EXPRESS-8: `pattern-detection` fails with `timestamp with time zone >= integer`.
-  - The Plaid v1 `connect` stores the institution *id* as the bank name (`services/PlaidService.js`).
+- **Plaid v1 `connect`** stores the institution *id* as the bank name (`services/PlaidService.js`). The legacy path isn't used by the frontend.
+- **`weekly_stats` is never populated** (0 rows in prod; the "P2 cron" was never built). Its columns are integers since #241, so it's ready if a rollup job is ever added.
 - **Product loop:** watch the admin Activation card and the `first_checkin_starter` events (#223).
 
 ### Production facts (learned the hard way)
@@ -178,6 +175,7 @@ Four places plus a Settings gear. One small PR per phase; old URLs keep working 
   - JSON columns that code writes text into (`tasks.description`, #225);
   - TEXT columns used as booleans (#218);
   - `buddy_checkins` has no `mood` (#229; check-ins store `energy_level`).
+  - Counters stored as text, boolean or timestamp: `routine_streaks.current_streak`/`best_streak`, `routine_suggestions.presented_count`, `routines.day_of_week`, `task_substeps.step_order` and the `weekly_stats` counters (all fixed in #241). If you suspect another one, find it with a prod `information_schema.columns` query.
 - **Silent failures:** many routes catch DB errors, log them and return 200. Sentry captures every `console.error`. The CI boot smoke fails on any logged "column/relation … does not exist".
 - **Migrations run on every deploy** (`npm start` = `node migrate.js && node server.js`). A failed migration aborts the deploy and the old version keeps serving. Test risky migrations on a Neon branch.
 - **Key user IDs:** Sean = 2, **QA user = 25 (never touch)**, Miles = 35.
