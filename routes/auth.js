@@ -312,9 +312,10 @@ module.exports = function(pool, loginLimiter, signupLimiter) {
         user: { id: user.id, email: user.email, name: user.name }
       });
 
-      // Seed defaults for existing users who have no values (fire-and-forget)
+      // Seed defaults for existing users who have no values (fire-and-forget).
+      // The starter routine is seeded at signup only: re-seeding here brought a
+      // routine the user had removed back on every login.
       seedDefaultValues(pool, user.id);
-      seedStarterRoutine(pool, user.id).catch(logFailure('[Auth]', 'seedStarterRoutine', { userId: user.id }));
     } catch (err) {
       console.error('[auth/login] ERROR:', err.message, err.stack);
       res.status(500).json({ success: false, message: 'Failed to log in' });
@@ -439,9 +440,9 @@ module.exports = function(pool, loginLimiter, signupLimiter) {
 
         user = { id: existing.id, email, name };
         accountLinked = !!existing.password_hash;
-        // Seed defaults for returning Google users who have no values (fire-and-forget)
+        // Seed defaults for returning Google users who have no values (fire-and-forget).
+        // No starter routine here: that's for new accounts only.
         seedDefaultValues(pool, user.id);
-      seedStarterRoutine(pool, user.id).catch(logFailure('[Auth]', 'seedStarterRoutine', { userId: user.id }));
       } else {
         const result = await pool.query(
           `INSERT INTO users (email, name, google_id, auth_method, avatar_url)
@@ -470,7 +471,7 @@ module.exports = function(pool, loginLimiter, signupLimiter) {
 
         // Seed Maslow-based default values for new Google users (fire-and-forget)
         seedDefaultValues(pool, user.id);
-      seedStarterRoutine(pool, user.id).catch(logFailure('[Auth]', 'seedStarterRoutine', { userId: user.id }));
+        seedStarterRoutine(pool, user.id).catch(logFailure('[Auth]', 'seedStarterRoutine', { userId: user.id }));
       }
 
       const token = generateToken(user);
@@ -710,9 +711,9 @@ module.exports = function(pool, loginLimiter, signupLimiter) {
           [googleId, newAuthMethod, name, existing.id, avatarUrl]
         );
         user = { id: existing.id, email, name: existing.name || name };
-        // Seed defaults for returning One Tap users who have no values (fire-and-forget)
+        // Seed defaults for returning One Tap users who have no values (fire-and-forget).
+        // No starter routine here: that's for new accounts only.
         seedDefaultValues(pool, user.id);
-      seedStarterRoutine(pool, user.id).catch(logFailure('[Auth]', 'seedStarterRoutine', { userId: user.id }));
       } else {
         // New user
         isNewUser = true;
@@ -737,6 +738,9 @@ module.exports = function(pool, loginLimiter, signupLimiter) {
         const { subject: ws, html: wh } = welcomeTemplate({ name: user.name });
         sendEmail(pool, { to: user.email, subject: ws, html: wh, templateType: 'welcome', userId: user.id })
           .catch(err => console.error('[auth/google/one-tap] Welcome email failed:', err.message));
+
+        // Starter routine, as for every other signup path (fire-and-forget)
+        seedStarterRoutine(pool, user.id).catch(logFailure('[Auth]', 'seedStarterRoutine', { userId: user.id }));
 
         // Save UTM attribution for new users (fire-and-forget)
         if (attribution) {
