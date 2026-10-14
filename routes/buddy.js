@@ -258,7 +258,9 @@ module.exports = function(pool) {
       let greetingInsights = [];
       try {
         greetingInsights = await buildGreetingContext(pool, userId, sessionCount, tz);
-      } catch (_) { /* non-blocking */ }
+      } catch (e) {
+        console.error('[buddy] buildGreetingContext failed:', e.message, '| userId:', userId);
+      }
 
       // Routine nudges — generate any missed-routine events, then fetch pending.
       // Best-effort — Buddy session works fine even if this fails.
@@ -268,7 +270,9 @@ module.exports = function(pool) {
         const localTime = getLocalTimeString(tz);
         await checkAndGenerateNudges(pool, userId, localDate, tz);
         routineNudges = await getSessionNudges(pool, userId, localDate, localTime);
-      } catch (_) { /* non-blocking */ }
+      } catch (e) {
+        console.error('[buddy] routine nudges failed:', e.message, '| userId:', userId);
+      }
 
       // Auto-routines suggestion — passive pattern detection surfaced at session start.
       // Max 1 suggestion per session; ephemeral (expires after 3 ignored sessions).
@@ -276,7 +280,9 @@ module.exports = function(pool) {
       let autoRoutineSuggestion = null;
       try {
         autoRoutineSuggestion = await getSessionSuggestion(pool, userId);
-      } catch (_) { /* non-blocking */ }
+      } catch (e) {
+        console.error('[buddy] getSessionSuggestion failed:', e.message, '| userId:', userId);
+      }
 
       // Starter routine suggestion — shown to users with no morning routine.
       // Surfaces the Morning Essentials hygiene template for one-tap adoption.
@@ -301,7 +307,9 @@ module.exports = function(pool) {
             };
           }
         }
-      } catch (_) { /* non-blocking */ }
+      } catch (e) {
+        console.error('[buddy] starter routine suggestion failed:', e.message, '| userId:', userId);
+      }
 
       let planSummary = null;
       if (!dueToday) {
@@ -442,7 +450,9 @@ module.exports = function(pool) {
               [userId, (t.title || '').slice(0, 200), priority, t.value_id || null]
             );
             if (ins.rows[0]) created.push({ ...ins.rows[0], category: t.category });
-          } catch (_) { /* skip individual task errors */ }
+          } catch (e) {
+            console.error('[buddy] brain-dump task insert failed, skipping it:', e.message, '| userId:', userId);
+          }
         }
 
         const doToday  = created.filter(t => t.category === 'do_today');
@@ -487,7 +497,9 @@ module.exports = function(pool) {
       if (contextForPrompt.length === 0 && sessionCount >= 3 && sessionCount <= 8 && userTurns <= 1) {
         try {
           enrichedContext = await buildGreetingContext(pool, userId, sessionCount, tz);
-        } catch (_) { /* non-blocking */ }
+        } catch (e) {
+          console.error('[buddy] buildGreetingContext (chat) failed:', e.message, '| userId:', userId);
+        }
       }
 
       // Partner context injected only on first 2 turns — Buddy uses it to set coaching tone,
@@ -748,7 +760,9 @@ module.exports = function(pool) {
           if (convResult.rows.length > 0) {
             await updateAdhdProfile(pool, userId, convResult.rows);
           }
-        } catch { /* non-blocking */ }
+        } catch (e) {
+          console.error('[buddy] updateAdhdProfile failed:', e.message, '| userId:', userId);
+        }
       });
     } catch (err) {
       console.error('[buddy] POST /login-checkin-done error:', err.message);

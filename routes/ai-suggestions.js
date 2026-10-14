@@ -207,7 +207,9 @@ Generate ${batchSize} personalized, highly specific task suggestions tied to the
           if (Array.isArray(arr)) {
             parsed = arr.slice(0, batchSize).filter(s => s && typeof s.title === 'string' && s.title.trim());
           }
-        } catch (_e2) { /* give up */ }
+        } catch (e2) {
+          console.error('[AI Suggestions] could not parse AI response as JSON:', e2.message);
+        }
       }
     }
 

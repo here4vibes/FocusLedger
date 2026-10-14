@@ -359,7 +359,9 @@ module.exports = function(pool) {
               url: '/app/tasks',
             });
           }
-        } catch { /* non-blocking */ }
+        } catch (e) {
+          console.error('[routineNudges] habit-stack push failed:', e.message, '| userId:', userId, '| routineId:', routineId);
+        }
       });
     } catch (err) {
       console.error('[routines] POST /:id/complete error:', err.message);

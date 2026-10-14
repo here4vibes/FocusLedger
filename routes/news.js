@@ -296,7 +296,9 @@ async function fetchAllFeeds(pool) {
           'UPDATE rss_feeds SET last_error = $1, last_fetched_at = NOW() WHERE id = $2',
           [err.message.slice(0, 500), feed.id]
         );
-      } catch { /* ignore */ }
+      } catch (e) {
+        console.error('[News] recording last_error failed:', e.message, '| feedId:', feed.id);
+      }
     }
 
     // Brief pause between feeds to avoid overwhelming sources

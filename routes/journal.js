@@ -612,7 +612,9 @@ Analyze the journal and return the JSON response.`;
         if (autoTagger && autoTagger.matchTaskToValue) {
           autoTagger.matchTaskToValue(pool, userId, task.title).catch(logFailure('[journal]', 'matchTaskToValue', { userId, taskId: task.id }));
         }
-      } catch (_) { /* auto-tagger not available, skip */ }
+      } catch (e) {
+        console.error('[journal] auto-tagger unavailable:', e.message);
+      }
 
       res.json({
         success: true,

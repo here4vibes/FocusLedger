@@ -202,7 +202,9 @@ async function calculateScore(pool, userId) {
         bills: parseInt(wResult.rows[0].bills, 10),
       };
     }
-  } catch { /* use defaults */ }
+  } catch (e) {
+    console.error('[health-score] weights query failed, using defaults:', e.message, '| userId:', userId);
+  }
 
   const [docs, ins, tsk, bll] = await Promise.all([
     calcDocumentsScore(pool, userId, weights.documents),
@@ -316,7 +318,10 @@ module.exports = function(pool) {
             generateScoreDropNudge(pool, userId, calc.overall_score, prevScore).catch(logFailure('[health-score]', 'generateScoreDropNudge', { userId }));
           }
         }
-      } catch { /* nudge failure is non-fatal */ }
+      } catch (e) {
+        // A nudge failure is non-fatal.
+        console.error('[health-score] score-drop check failed:', e.message, '| userId:', userId);
+      }
 
       res.json({
         success: true,
