@@ -57,6 +57,7 @@ const {
 const { getSessionSuggestion } = require('../lib/patternDetection');
 const { getAdhdProfile, updateAdhdProfile, buildProfilePromptAddition, bootstrapAdhdProfile } = require('../lib/adhd-profile');
 const { logFailure } = require('../lib/log-failure');
+const { onTasksCompleted, refreshRoutineTasks } = require('../lib/routine-capture');
 
 // ── Scoring weights ─────────────────────────────────────────────────────────
 // Deadline urgency (40%), values alignment (25%), avoidance detection (20%),
@@ -570,6 +571,8 @@ module.exports = function(pool) {
               [match.task_id, userId]
             );
             if (result.rows.length > 0) {
+              onTasksCompleted(pool, userId, match.task_id)
+                .catch(logFailure('[buddy]', 'onTasksCompleted', { userId, taskId: match.task_id }, []));
               autoCompleted.push({
                 task_id: match.task_id,
                 title: result.rows[0].title,
@@ -775,6 +778,8 @@ module.exports = function(pool) {
   router.get('/status', async (req, res) => {
     try {
       const userId = req.user.id;
+      // Reopen yesterday's routine tasks before reading the task list.
+      await refreshRoutineTasks(pool, userId).catch(logFailure('[buddy]', 'refreshRoutineTasks', { userId }, 0));
       const tz = await fetchUserTimezone(pool, userId);
       const today = req.query.date || getUserLocalDate(tz);
 
@@ -1511,6 +1516,8 @@ module.exports = function(pool) {
               [match.task_id, userId]
             );
             if (result.rows.length > 0) {
+              onTasksCompleted(pool, userId, match.task_id)
+                .catch(logFailure('[buddy]', 'onTasksCompleted', { userId, taskId: match.task_id }, []));
               autoCompleted.push({
                 task_id: match.task_id,
                 title: result.rows[0].title,
@@ -1676,6 +1683,10 @@ Example output: ["Walk to the kitchen","Pick up one item from the counter","Put 
             [updated.task_id, userId]
           );
           parentCompleted = taskUpdate.rows.length > 0;
+          if (parentCompleted) {
+            onTasksCompleted(pool, userId, updated.task_id)
+              .catch(logFailure('[buddy]', 'onTasksCompleted', { userId, taskId: updated.task_id }, []));
+          }
         }
       }
 

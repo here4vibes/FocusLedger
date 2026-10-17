@@ -5,6 +5,7 @@ const { checkProStatus } = require('../middleware/proUtils');
 const { fetchUserTimezone, getUserLocalDate } = require('../lib/timezone');
 const { complete } = require('../lib/claude-client');
 const { logFailure } = require('../lib/log-failure');
+const { onTasksCompleted, refreshRoutineTasks } = require('../lib/routine-capture');
 
 // ── Helpers: time string normalization ───────────────────────────────────────
 // DB stores time as 'time without time zone'; pg returns it as a string "HH:MM:SS".
@@ -89,6 +90,8 @@ async function listTasks(req, res) {
       : 'ORDER BY t.is_completed ASC, t.created_at DESC';
 
     const pool = res.locals._pool;
+    // Routine tasks finished on an earlier day reopen, so today's routine is fresh.
+    await refreshRoutineTasks(pool, userId).catch(logFailure('[tasks]', 'refreshRoutineTasks', { userId }, 0));
     const { rows } = await pool.query(
       `SELECT * FROM tasks t ${whereClause} ${orderClause}`,
       [userId]
@@ -517,7 +520,10 @@ async function updateTask(req, res) {
 
     const { rows } = await pool.query(sql, vals);
     if (!rows.length) return res.status(404).json({ success: false, message: 'Task not found' });
-    res.json({ success: true, task: normTask(rows[0]) });
+    const routineCompleted = is_completed
+      ? await onTasksCompleted(pool, userId, rows[0].id).catch(logFailure('[tasks]', 'onTasksCompleted', { userId, taskId: rows[0].id }, []))
+      : [];
+    res.json({ success: true, task: normTask(rows[0]), routine_completed: routineCompleted });
   } catch (err) {
     if (err.code === '42703') return res.status(500).json({ success: false, message: 'Failed to update task — schema mismatch' });
     console.error('[tasks] update error:', err);
@@ -581,7 +587,10 @@ async function toggleTask(req, res) {
       }
     }
 
-    res.json({ success: true, task: normTask(task), next_recurring_task: nextRecurring });
+    const routineCompleted = newCompleted
+      ? await onTasksCompleted(pool, userId, task.id).catch(logFailure('[tasks]', 'onTasksCompleted', { userId, taskId: task.id }, []))
+      : [];
+    res.json({ success: true, task: normTask(task), next_recurring_task: nextRecurring, routine_completed: routineCompleted });
   } catch (err) {
     console.error('[tasks] toggle error:', err);
     res.status(500).json({ success: false, message: 'Failed to toggle task' });
@@ -787,6 +796,8 @@ async function toggleStep(req, res) {
         'UPDATE tasks SET is_completed = true, completed_at = NOW() WHERE id = $1',
         [parseInt(taskId)]
       );
+      onTasksCompleted(pool, req.user.id, parseInt(taskId))
+        .catch(logFailure('[tasks]', 'onTasksCompleted', { taskId: parseInt(taskId) }, []));
     } else if (noneDone && task.is_completed) {
       await pool.query(
         'UPDATE tasks SET is_completed = false, completed_at = NULL WHERE id = $1',

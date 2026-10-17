@@ -222,6 +222,57 @@ async function recordRoutineCompletion(pool, userId, routineId, localDate) {
 }
 
 /**
+ * Routine tasks are ordinary tasks, so once ticked they'd stay done forever.
+ * Reopen the ones finished before today (user-local), so each routine starts
+ * fresh every day; weekly routines reopen once their last tick is 7+ days old.
+ * Idempotent and cheap: callers run it when the task lists load.
+ *
+ * @param {string} tz        validated IANA timezone
+ * @param {string} localDate YYYY-MM-DD in that timezone
+ * @returns {Promise<number>} tasks reopened
+ */
+async function reopenStaleRoutineTasks(pool, userId, tz, localDate) {
+  const { rowCount } = await pool.query(
+    `UPDATE tasks t
+     SET is_completed = false, completed_at = NULL, updated_at = NOW()
+     FROM routine_task_links l
+     JOIN routines r ON r.id = l.routine_id
+     WHERE l.task_id = t.id
+       AND r.user_id = $1 AND t.user_id = $1
+       AND r.is_active = true
+       AND t.is_completed = true
+       AND t.completed_at IS NOT NULL
+       AND (t.completed_at AT TIME ZONE $2)::date
+           <= $3::date - CASE WHEN r.routine_type = 'weekly' THEN 7 ELSE 1 END`,
+    [userId, tz, localDate]
+  );
+  return rowCount;
+}
+
+/**
+ * Active routines, linked to any of `taskIds`, whose every linked task is now
+ * done today (user-local): finishing the last one completes the routine.
+ * @returns {Promise<{id:number,name:string}[]>}
+ */
+async function getRoutinesFinishedByTasks(pool, userId, taskIds, tz, localDate) {
+  const { rows } = await pool.query(
+    `SELECT r.id, r.name
+     FROM routines r
+     WHERE r.user_id = $1 AND r.is_active = true
+       AND EXISTS (SELECT 1 FROM routine_task_links l
+                   WHERE l.routine_id = r.id AND l.task_id = ANY($2::int[]))
+       AND NOT EXISTS (
+         SELECT 1 FROM routine_task_links l
+         JOIN tasks t ON t.id = l.task_id
+         WHERE l.routine_id = r.id
+           AND NOT (t.is_completed = true AND t.completed_at IS NOT NULL
+                    AND (t.completed_at AT TIME ZONE $3)::date = $4::date))`,
+    [userId, taskIds, tz, localDate]
+  );
+  return rows;
+}
+
+/**
  * Get all streaks for a user's routines.
  */
 async function getUserStreaks(pool, userId) {
@@ -377,6 +428,8 @@ module.exports = {
   removeTaskFromRoutine,
   getOrCreateStreak,
   recordRoutineCompletion,
+  reopenStaleRoutineTasks,
+  getRoutinesFinishedByTasks,
   getUserStreaks,
   getOrCreateNudgeEvent,
   getPendingNudges,

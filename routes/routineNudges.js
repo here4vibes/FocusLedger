@@ -52,6 +52,8 @@ const {
   getSessionNudges,
   getLocalTimeString,
 } = require('../lib/routineNudgeEngine');
+const { logFailure } = require('../lib/log-failure');
+const { refreshRoutineTasks } = require('../lib/routine-capture');
 
 const VALID_TYPES = ['am', 'pm', 'weekly'];
 const VALID_STATUSES = ['on_it', 'skipped', 'snoozed'];
@@ -69,6 +71,7 @@ module.exports = function(pool) {
   // List all active routines for the user, each with their linked tasks.
   router.get('/', async (req, res) => {
     try {
+      await refreshRoutineTasks(pool, req.user.id).catch(logFailure('[routines]', 'refreshRoutineTasks', { userId: req.user.id }, 0));
       const routines = await getUserRoutines(pool, req.user.id);
       res.json({ success: true, routines });
     } catch (err) {
