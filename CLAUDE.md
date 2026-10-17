@@ -207,7 +207,8 @@ Four places plus a Settings gear. One small PR per phase; old URLs keep working 
 - **Routine capture:** `lib/routine-capture.js`.
   - `onTasksCompleted` runs at every task-completion point (Tasks API toggle, update and steps; Buddy; the agent's `mark_task_done`). When a tick finishes a routine's last open task, it records the routine completion and streak.
   - `refreshRoutineTasks` reopens routine tasks finished on an earlier local day (weekly routines after 7 days). It runs when `/api/tasks`, `/api/buddy/status`, `/api/routines` and `/api/today/timeline` load, so there's no cron to set up.
-  - **Capture plan, still to do:** a "Done ✓" action on pushes (needs service-worker auth), Buddy logging things from conversation, a one-list evening round-up, and bank-charge suggestions.
+  - **Evening round-up:** after 5pm local, Home (`roundupCard` in `public/weightless.html`) lists today's open routine items that aren't already on the radar, with one tap each. "Not today" hides it per device per day.
+  - **Capture plan, still to do:** a "Done ✓" action on pushes (#245, open) and bank-charge suggestions.
 - **Tandem recap:** `lib/tandem-recap.js` and `db/tandem-recap.js`.
 - **Insights cron:** `jobs/crossDomainInsightsJob.js` (exports helpers; runs only when executed directly).
 - **Claude Code helpers (`.claude/`, committed):** agents `silent-failure-hunter`, `database-reviewer` and `security-reviewer`, plus the skill `postgres-patterns`.
