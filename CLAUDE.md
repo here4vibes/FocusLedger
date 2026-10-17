@@ -129,7 +129,7 @@ Four places plus a Settings gear. One small PR per phase; old URLs keep working 
    - `/app/done` is a flow screen, not a section.
    - For phases 3 and 4, add the Money and Life entries to `PLACE_TABS` and drop them from "More".
 3. **Phase 3, Money hub (#236):** Overview (`/app/money`) · Transactions (`/transactions`) · Bills (`/app/money/bills`, the full recurring list with monthly and yearly totals, statuses and the "unsure" question). The spending check-in is a flow, not a section.
-4. **Phase 4, Life hub,** then retire `buddy.html` (after moving the form check-in), `app.html`, `home.html`, `portal.html` and `landing-old`.
+4. **Phase 4, Life hub (#243):** Overview (`/app/life`, also Score and Nudges) · Vault · Insurance · Values · Journal · Insights; "More" now holds only Email → Tasks, Partner, Settings and Help. **Still to do:** retire `buddy.html` (after moving the form check-in), `app.html`, `home.html`, `portal.html` and `landing-old`.
 5. **Phase 5, visual pass:** Weightless tokens on every page.
 
 ### Waiting on the user
