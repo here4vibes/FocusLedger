@@ -13,12 +13,7 @@ const {
   getAutopilotExpiry
 } = require('../db/promo-codes');
 const { queryWithRetry } = require('../lib/queryWithRetry');
-
-function isAdminUser(user) {
-  if (user.is_admin) return true;
-  const adminEmails = (process.env.ADMIN_EMAILS || '').split(',').map(e => e.trim().toLowerCase()).filter(Boolean);
-  return adminEmails.includes((user.email || '').toLowerCase());
-}
+const { isAdminUser } = require('../lib/admin-access');
 
 async function requireAdmin(pool, userId) {
   const result = await queryWithRetry(pool, 'SELECT is_admin, email FROM users WHERE id = $1', [userId]);

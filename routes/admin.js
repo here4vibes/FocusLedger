@@ -5,6 +5,7 @@ const { queryWithRetry } = require('../lib/queryWithRetry');
 const { getActivationFunnel } = require('../db/activation');
 const { sendEmail } = require('../lib/emailService');
 const { v2LaunchTemplate } = require('../lib/emailTemplates');
+const { isAdminUser } = require('../lib/admin-access');
 
 // ============================================
 // Admin Access Control
@@ -25,11 +26,6 @@ const { v2LaunchTemplate } = require('../lib/emailTemplates');
 // API data endpoints return 403 for non-admins, rendering the page empty.
 // ============================================
 
-function isAdminUser(user) {
-  if (user.is_admin) return true;
-  const adminEmails = (process.env.ADMIN_EMAILS || '').split(',').map(e => e.trim().toLowerCase()).filter(Boolean);
-  return adminEmails.includes((user.email || '').toLowerCase());
-}
 
 module.exports = function(pool) {
 

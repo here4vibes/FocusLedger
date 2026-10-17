@@ -12,6 +12,7 @@ const { sendEmail } = require('../lib/emailService');
 const { accountDeletionTemplate } = require('../lib/emailTemplates');
 const { getStripe } = require('../lib/stripe-client');
 const { cancelAllStripeSubscriptions } = require('../lib/billing');
+const { isAdminUser } = require('../lib/admin-access');
 const {
   createDeletionToken,
   findValidToken,
@@ -21,14 +22,6 @@ const {
   getUserAdminInfo,
   cancelActiveSubscription
 } = require('../db/account-deletion');
-
-// Admin gate helper — mirrors pattern from routes/admin.js
-function isAdminUser(user) {
-  if (user.is_admin) return true;
-  const adminEmails = (process.env.ADMIN_EMAILS || '')
-    .split(',').map(e => e.trim().toLowerCase()).filter(Boolean);
-  return adminEmails.includes((user.email || '').toLowerCase());
-}
 
 module.exports = function(pool) {
   const router = express.Router();

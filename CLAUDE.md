@@ -147,7 +147,6 @@ Four places plus a Settings gear. One small PR per phase; old URLs keep working 
   - **Stage 3 (browser agent) and stage 4 (cancellation partners or virtual cards): deferred** until there are active users.
 - **Grow the cancel-link list** in `lib/cancel-links.js`, but only with well-known, stable URLs.
 - **After #218:** add an "Invite an accountability partner" link to the weekly email for people with no partner (`/app/settings?focus=tandem`, scroll to `#tandemSection`).
-- **Cleanup:** `routes/admin.js` and `routes/account-deletion.js` duplicate `isAdminUser`; switch them to `lib/admin-access.js`.
 - **Hardening:**
   1. `user_id NOT NULL` and foreign keys on core tables. Check for orphans first; use a Neon branch.
   2. ~~Silent catches~~ done: #239 (one-liners, `lib/log-failure.js`) and #240 (block catches). `__tests__/no-silent-catches.test.js` now fails CI on any new empty or comment-only catch in server code. Catches that do something but don't log (e.g. `catch { return null; }`) are not covered yet.
@@ -187,7 +186,7 @@ Four places plus a Settings gear. One small PR per phase; old URLs keep working 
   - `/health` migration status: `lib/migration-manifest.js` and `db/migrations-status.js`.
 - **Billing and admin:**
   - Billing: `lib/billing.js`, `db/billing.js`, `lib/stripe-client.js`.
-  - Admin gate: `lib/admin-access.js` (`requireAdmin(pool)` middleware, judged from the DB row).
+  - Admin gate: `lib/admin-access.js` (`requireAdmin(pool)` middleware, judged from the DB row). It holds the only `isAdminUser`; import it, don't copy it.
   - Activation: `db/activation.js` and `GET /api/admin/activation`.
 - **Best-effort work:** use `.catch(logFailure('[Module]', 'op', { userId }, fallback))` from `lib/log-failure.js`. Never use `.catch(() => {})`.
 - **AI:** every AI call goes through `lib/claude-client.js` (`createMessage`/`complete`). Per-user daily budget: `lib/ai-budget.js` (Free 100 / Pro 500).
