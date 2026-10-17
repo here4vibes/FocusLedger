@@ -390,6 +390,7 @@
   function toggleTask(t){
     return api('/api/tasks/'+t.id+'/toggle', { method:'PATCH' }).then(function(res){
       if(!res || !res.success || !res.task) throw new Error('toggle failed');
+      res.task.routine_completed = res.routine_completed || [];
       return res.task;
     });
   }
@@ -441,6 +442,14 @@
     renderRadarList();
   }
 
+  // Finishing a routine's last task completes the routine on the server.
+  function announceRoutines(task){
+    (task && task.routine_completed || []).forEach(function(r){
+      var days = Number(r.current_streak) || 1;
+      note(r.name+' done · '+(days > 1 ? days+'-day streak 🔥' : 'streak started'), true);
+    });
+  }
+
   function onRadarDone(row, t){
     if(row.classList.contains('done')) return;
     markRow(row, true);
@@ -452,7 +461,8 @@
     removeTaskChips(t.id);
     var advanceTimer = setTimeout(function(){ advanceRadar(row, t); }, reduce ? 150 : 900);
 
-    completeTask(t).then(function(){
+    completeTask(t).then(function(task){
+      announceRoutines(task);
       setCheer(cheerLine(n), function(btn){
         clearTimeout(advanceTimer);
         toggleTask(t).then(function(task){
@@ -905,7 +915,7 @@
             if(row.classList.contains('done')) return;
             markRow(row, true); burst(row.querySelector('.box'), true);
             if(rchips) rchips.remove();
-            completeTask(t).then(function(){ buddy("Done. That one's off your mind."); })
+            completeTask(t).then(function(task){ buddy("Done. That one's off your mind."); announceRoutines(task); })
               .catch(function(err){
                 if(err && err.message==='unauthorized') return;
                 console.error('[weightless] reminder complete failed:', err && err.message, '| task:', t.id);

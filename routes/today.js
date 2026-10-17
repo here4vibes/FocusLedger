@@ -8,6 +8,7 @@ const { authenticateToken } = require('../middleware/auth');
 const { fetchUserTimezone, getUserLocalDate } = require('../lib/timezone');
 const TimeEstimationService = require('../services/TimeEstimationService');
 const { logFailure } = require('../lib/log-failure');
+const { refreshRoutineTasks } = require('../lib/routine-capture');
 
 // Calibration ratios outside this range are noise (too few samples, one wild
 // task) — clamp so a block never renders at 10x its estimate.
@@ -23,6 +24,7 @@ module.exports = function (pool) {
   router.get('/timeline', authenticateToken, async (req, res) => {
     try {
       const userId = req.user.id;
+      await refreshRoutineTasks(pool, userId).catch(logFailure('[today]', 'refreshRoutineTasks', { userId }, 0));
       const tz = await fetchUserTimezone(pool, userId);
       const localDate = getUserLocalDate(tz);
 
