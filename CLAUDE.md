@@ -158,6 +158,9 @@ Four places plus a Settings gear. One small PR per phase; old URLs keep working 
   - Agentic **type 2** (Buddy acts: bills, subscriptions, start-it-for-me) and **type 3** (shareable outcomes, e.g. "cancelled Netflix, $186/yr back") come first.
   - The MCP server for Claude/ChatGPT/Meta Muse is deferred.
   - Positioning: ADHD-native; the "ADHD tax" from a CPA founder; privacy; partner accountability.
+- **Silent catches left in root-level cron modules:** `morningNudge.js`, `eveningNudge.js`, `buddyEngagementCron.js` and `taskDeadlineNudge.js` each have a `.catch(() => {})` on push cleanup. #218 rewrites the first three and #245 fixes the fourth. After both merge, fix the rest and add the root cron files to `FILES` in `__tests__/no-silent-catches.test.js`.
+- **News sync runs on an in-process `setInterval`** (`routes/news.js` `startRssCron`), which breaks the no-in-process-schedulers rule. The `rss-sync` cron in `render.yaml` is commented out. Either move it to that cron or drop the feature.
+- **AI JSON:** parse model replies with `parseAiJson` from `lib/ai-json.js` (it handles code fences and surrounding prose). Never call `JSON.parse` on a raw model reply.
 - **Plaid v1 `connect`** stores the institution *id* as the bank name (`services/PlaidService.js`). The legacy path isn't used by the frontend.
 - **`weekly_stats` is never populated** (0 rows in prod; the "P2 cron" was never built). Its columns are integers since #241, so it's ready if a rollup job is ever added.
 - **Product loop:** watch the admin Activation card and the `first_checkin_starter` events (#223).
