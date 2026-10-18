@@ -61,19 +61,24 @@ self.addEventListener('install', event => {
 
 // ─── Activate: clean old caches, notify clients ─────────────────────────────
 self.addEventListener('activate', event => {
+  // WHY only on upgrade: on a first visit there is no old cache, and telling
+  // the tab to reload wiped whatever a new visitor had started typing (the
+  // signup form reloaded ~1s after it appeared).
+  let isUpgrade = false;
   event.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(
-        keys
-          .filter(k => k !== CACHE_VERSION)
-          .map(k => {
-            console.log('[SW] Deleting old cache:', k);
-            return caches.delete(k);
-          })
-      )
-    )
+    caches.keys().then(keys => {
+      const old = keys.filter(k => k !== CACHE_VERSION);
+      isUpgrade = old.length > 0;
+      return Promise.all(
+        old.map(k => {
+          console.log('[SW] Deleting old cache:', k);
+          return caches.delete(k);
+        })
+      );
+    })
     .then(() => self.clients.claim())
     .then(() => {
+      if (!isUpgrade) return;
       // Tell all open tabs a new SW version activated so they can reload
       return self.clients.matchAll({ type: 'window' }).then(clients => {
         clients.forEach(client => {

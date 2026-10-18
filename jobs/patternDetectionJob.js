@@ -220,7 +220,7 @@ async function detectSequencesForUser(pool, userId, tz) {
     const existing = await pool.query(
       `SELECT id FROM detected_patterns
        WHERE user_id = $1 AND pattern_type = 'sequence'
-         AND pattern_data->>'pair_key' = $2`,
+         AND pattern_data::jsonb->>'pair_key' = $2`,
       [userId, key]
     );
     if (existing.rows.length > 0) continue;

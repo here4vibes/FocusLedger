@@ -159,4 +159,13 @@ router.get('/home',   (_, res) => res.sendFile(pub('portal.html')));
 // New users will default here; existing users opt in. See CLAUDE.md "Recent changes".
 router.get('/weightless', (_, res) => res.sendFile(pub('weightless.html')));
 
+// Unknown URL: a real 404 status with a branded page (Express's default was a
+// bare "Cannot GET" page). Must stay the last route in this router.
+router.use((req, res) => {
+  if ((req.method === 'GET' || req.method === 'HEAD') && req.accepts('html')) {
+    return res.status(404).sendFile(pub('404.html'));
+  }
+  res.status(404).json({ success: false, message: 'Not found' });
+});
+
 module.exports = router;
