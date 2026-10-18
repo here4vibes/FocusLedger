@@ -132,10 +132,11 @@ module.exports = function (pool) {
 
     try {
       const result = await pool.query(
-        `SELECT role, content, created_at
+        // Prod stores the text in "message" (no "content" column); the widget reads .content.
+        `SELECT role, message AS content, created_at
          FROM buddy_conversations
          WHERE user_id = $1
-         ORDER BY created_at DESC
+         ORDER BY id DESC
          LIMIT $2`,
         [userId, limit]
       );

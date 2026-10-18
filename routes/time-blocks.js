@@ -33,8 +33,9 @@ module.exports = function(pool) {
            COALESCE(v.value_name, 'Uncategorized') as value_name,
            COALESCE(v.color, '#94a3b8') as value_color,
            v.weekly_hours_target,
+           -- start_time / end_time are TEXT ('HH:MM') in prod; cast before subtracting.
            SUM(
-             EXTRACT(EPOCH FROM (tb.end_time - tb.start_time)) / 3600
+             EXTRACT(EPOCH FROM (tb.end_time::time - tb.start_time::time)) / 3600
            ) as hours_blocked
          FROM time_blocks tb
          LEFT JOIN user_values v ON tb.value_id = v.id

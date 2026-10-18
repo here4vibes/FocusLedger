@@ -28,7 +28,7 @@ async function getComebackStatus(pool, userId) {
       SELECT COUNT(*)::int AS count
       FROM tasks
       WHERE user_id = $1
-        AND is_done = false
+        AND is_completed IS NOT TRUE
         AND (
           (due_date IS NOT NULL AND due_date <= CURRENT_DATE + 1)
           OR due_date IS NULL
