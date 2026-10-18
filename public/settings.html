@@ -1193,41 +1193,6 @@
             <div id="timeEstHistoryList" style="display:none;"></div>
         </div>
 
-        <!-- LOCATION SECTION (for local news + weather) -->
-        <div class="settings-section" id="locationSection">
-            <h2>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-                Location
-            </h2>
-            <p style="font-size:0.875rem;color:var(--text-muted);margin-bottom:1rem">Used for local news and weather. Not shared with third parties.</p>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:0.75rem">
-                <div>
-                    <label style="font-size:0.8rem;font-weight:600;color:var(--navy);display:block;margin-bottom:0.3rem">City</label>
-                    <input type="text" id="locCity" placeholder="e.g. Chicago" style="width:100%;padding:0.55rem 0.75rem;border:1px solid var(--border);border-radius:4px;font-size:0.875rem;font-family:system-ui,sans-serif;outline:none;min-height:40px" maxlength="100">
-                </div>
-                <div>
-                    <label style="font-size:0.8rem;font-weight:600;color:var(--navy);display:block;margin-bottom:0.3rem">State / Region</label>
-                    <input type="text" id="locState" placeholder="e.g. IL" style="width:100%;padding:0.55rem 0.75rem;border:1px solid var(--border);border-radius:4px;font-size:0.875rem;font-family:system-ui,sans-serif;outline:none;min-height:40px" maxlength="100">
-                </div>
-                <div>
-                    <label style="font-size:0.8rem;font-weight:600;color:var(--navy);display:block;margin-bottom:0.3rem">ZIP Code</label>
-                    <input type="text" id="locZip" placeholder="e.g. 60601" style="width:100%;padding:0.55rem 0.75rem;border:1px solid var(--border);border-radius:4px;font-size:0.875rem;font-family:system-ui,sans-serif;outline:none;min-height:40px" maxlength="20">
-                </div>
-                <div>
-                    <label style="font-size:0.8rem;font-weight:600;color:var(--navy);display:block;margin-bottom:0.3rem">Country</label>
-                    <select id="locCountry" style="width:100%;padding:0.55rem 0.75rem;border:1px solid var(--border);border-radius:4px;font-size:0.875rem;font-family:system-ui,sans-serif;outline:none;min-height:40px;background:white">
-                        <option value="US">United States</option>
-                        <option value="CA">Canada</option>
-                        <option value="GB">United Kingdom</option>
-                        <option value="AU">Australia</option>
-                        <option value="OTHER">Other</option>
-                    </select>
-                </div>
-            </div>
-            <button id="saveLocationBtn" style="padding:0.55rem 1.5rem;background:var(--navy);color:white;border:none;border-radius:4px;font-size:0.875rem;font-weight:600;cursor:pointer;font-family:system-ui,sans-serif;min-height:40px">Save Location</button>
-            <span id="locationSaveMsg" style="display:none;margin-left:0.75rem;font-size:0.8rem;color:var(--green-muted)">✓ Saved</span>
-        </div>
-
         <!-- EMAIL PREFERENCES SECTION -->
         <div class="settings-section" id="emailPrefsSection">
             <h2>
@@ -2537,35 +2502,6 @@
             status.textContent = h ? 'Saved — spending alerts will now show hours of work.' : 'Cleared.';
             status.style.display = 'block';
             setTimeout(function() { status.style.display = 'none'; }, 3000);
-          }
-        }).catch(function() { saveBtn.disabled = false; });
-      });
-    })();
-    </script>
-    <!-- Location Save -->
-    <script>
-    (function() {
-      var saveBtn = document.getElementById('saveLocationBtn');
-      if (!saveBtn) return;
-      saveBtn.addEventListener('click', function() {
-        var token = localStorage.getItem('fl_token');
-        if (!token) return;
-        var city = (document.getElementById('locCity').value || '').trim();
-        var state = (document.getElementById('locState').value || '').trim();
-        var zip = (document.getElementById('locZip').value || '').trim();
-        var country = document.getElementById('locCountry').value || 'US';
-        saveBtn.disabled = true;
-        fetch('/api/news/location', {
-          method: 'POST',
-          headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ city: city, state_region: state, zip_code: zip, country: country })
-        }).then(function(r) { return r.json(); }).then(function(data) {
-          saveBtn.disabled = false;
-          if (data.success) {
-            // Clear weather cache so portal picks up the new location immediately
-            try { localStorage.removeItem('fl_weather_v1'); } catch(e) {}
-            var msg = document.getElementById('locationSaveMsg');
-            if (msg) { msg.style.display = 'inline'; setTimeout(function() { msg.style.display = 'none'; }, 2500); }
           }
         }).catch(function() { saveBtn.disabled = false; });
       });

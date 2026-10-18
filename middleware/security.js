@@ -63,10 +63,7 @@ const helmetMiddleware = helmet({
         "https://login.microsoftonline.com",
         "https://api.login.yahoo.com",
         "https://api.open-meteo.com",
-        "https://geocoding-api.open-meteo.com",
         "https://ipapi.co",
-        "https://gnews.io",
-        "https://api.gnews.io",
         // Meta Pixel event beacons
         "https://www.facebook.com",
         "https://connect.facebook.net"

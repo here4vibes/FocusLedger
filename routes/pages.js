@@ -65,7 +65,7 @@ router.get('/recap',     (_, res) => res.sendFile(pub('recap.html')));   // link
 router.get('/email',     (_, res) => res.sendFile(pub('email.html')));
 router.get('/journal',   (_, res) => res.sendFile(pub('journal.html')));
 router.get('/share',     (_, res) => res.sendFile(pub('share.html')));
-router.get('/news',      (_, res) => res.sendFile(pub('news.html')));
+router.get('/news',      (_, res) => res.redirect(301, '/weightless'));   // news feed removed
 router.get('/transactions', (_, res) => res.sendFile(pub('transactions.html')));
 // /documents, /vault, /money, /buddy → redirected to /app/* canonical routes below
 router.get('/checkin',           (_, res) => res.sendFile(pub('checkin-spending.html')));

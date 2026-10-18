@@ -10,7 +10,6 @@ Disallow: /calendar
 Disallow: /journal
 Disallow: /ideas
 Disallow: /values
-Disallow: /news
 Disallow: /portal
 Disallow: /email
 Disallow: /admin
