@@ -961,6 +961,7 @@
         // Deep-but-empty: invite a brain dump rather than showing a blank slate.
         buddy(partOfDay+'. Clean slate — nothing on your plate that I can see.', true);
         billsCard(rec, today, tasks);
+        roundupCard(today);
         buddy("Want to empty your head at me? Just say everything that's rattling around and I'll sort it into what matters now, what can wait, and what you can let go of.");
         return;
       }
@@ -972,6 +973,7 @@
 
       renderRadar(tasks, today, done);
       billsCard(rec, today, tasks);
+      roundupCard(today);
 
       buddy(singular ? 'Want to knock it out now, or should I hold it?'
                      : 'Where do you want to start? Or tell me what\'s actually going on.');
@@ -979,6 +981,52 @@
         return { label:'Start: '+ (t.title.length>22?t.title.slice(0,22)+'…':t.title),
                  k:'ghost', send:"Let's start on: "+t.title, task:t.id };
       }).concat([{label:"I'm stuck", k:'warm', send:"I'm stuck"}]));
+    });
+  }
+
+  // ── evening round-up: tick today's routine items in one pass ────────────────
+  // After 5pm, one card with the routine items still open today, each one tap,
+  // so recording the day isn't a chore. Skips anything already on the radar.
+  // "Not today" hides it until tomorrow (per-device; storage may be unavailable).
+  function roundupCard(today){
+    if(new Date().getHours() < 17) return;
+    var hideKey = 'fl_roundup_hidden_' + today;
+    try{ if(localStorage.getItem(hideKey)) return; }catch(e){ console.warn('[weightless] storage unavailable:', e && e.message); }
+    var onRadar = {};
+    (radar && radar.items || []).forEach(function(t){ onRadar[t.id] = true; });
+    api('/api/routines').then(function(res){
+      var open = [];
+      (res && res.routines || []).forEach(function(r){
+        (r.tasks || []).forEach(function(t){
+          if(!t.is_completed && !onRadar[t.task_id]) open.push({ id: t.task_id, title: t.title, routine: r.name });
+        });
+      });
+      if(!open.length) return;
+      var card = raw('<div class="card"><div class="k">Before you wrap up</div>'+
+        '<div class="hint" style="font-size:.85rem;opacity:.75;margin:-.2rem 0 .5rem;">Did any of these happen today? One tap each.</div>'+
+        '<div class="tasklist"></div><div class="roundup-foot" style="margin-top:.6rem;"></div></div>');
+      var list = card.querySelector('.tasklist');
+      open.slice(0, 8).forEach(function(t){
+        list.appendChild(taskRow(t, today, function(row, task){
+          if(row.classList.contains('done')) return;
+          markRow(row, true); burst(row.querySelector('.box'), false, '✓');
+          completeTask(task).then(announceRoutines).catch(function(err){
+            if(err && err.message==='unauthorized') return;
+            console.error('[weightless] round-up complete failed:', err && err.message, '| task:', task.id);
+            markRow(row, false);
+          });
+        }));
+      });
+      var skip = document.createElement('button');
+      skip.className = 'chip ghost'; skip.textContent = 'Not today';
+      skip.onclick = function(){
+        try{ localStorage.setItem(hideKey, '1'); }catch(e){ console.warn('[weightless] storage unavailable:', e && e.message); }
+        card.remove();
+      };
+      card.querySelector('.roundup-foot').appendChild(skip);
+    }).catch(function(err){
+      if(err && err.message==='unauthorized') return;
+      console.error('[weightless] round-up load failed:', err && err.message);
     });
   }
 
