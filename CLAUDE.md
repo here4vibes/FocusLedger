@@ -205,7 +205,7 @@ Four places plus a Settings gear. One small PR per phase; old URLs keep working 
   - `/health` migration status: `lib/migration-manifest.js` and `db/migrations-status.js`.
 - **Billing and admin:**
   - Billing: `lib/billing.js`, `db/billing.js`, `lib/stripe-client.js`.
-  - OAuth callbacks: sign `state` with `lib/oauth-state.js` (`signUserState(purpose, userId)`), never put a login token in it. Google Calendar uses it; `routes/email.js` and `routes/auth.js` still have their own signers.
+  - OAuth callbacks: every flow signs `state` with `lib/oauth-state.js` (purpose-bound HMAC, constant-time, 10 min, no fallback secret): `signUserState(purpose, userId)` for connect flows (Calendar `gcal`, `email-gmail`/`-outlook`/`-yahoo`), `signPayload` for Google sign-in (`returnTo` login|signup, trusted host only). Never put a login token in it.
   - Admin gate: `lib/admin-access.js` (`requireAdmin(pool)` middleware after `authenticateToken`, judged from the DB row; sets `req.admin`). Every admin route uses it (`routes/analytics.js` still has its own lookup). It holds the only `isAdminUser`; import it, don't copy it.
   - Activation: `db/activation.js` and `GET /api/admin/activation`.
 - **Best-effort work:** use `.catch(logFailure('[Module]', 'op', { userId }, fallback))` from `lib/log-failure.js`. Never use `.catch(() => {})`.
