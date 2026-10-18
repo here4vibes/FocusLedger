@@ -151,6 +151,8 @@ async function handleWebhookAsync(pool, item_id) {
         webpush.sendNotification(sub, payload).catch(e => {
           if (e.statusCode === 410 || e.statusCode === 404) {
             pool.query('DELETE FROM push_subscriptions WHERE endpoint = $1', [row.endpoint]).catch(e => console.warn('[plaid-webhook] cleanup push_subscriptions:', e.message));
+          } else {
+            console.warn('[plaid-webhook] web push send failed | userId:', userId, '|', e.statusCode || '', e.message);
           }
         });
       }

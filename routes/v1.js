@@ -22,8 +22,10 @@ const { connect, disconnect, getAccounts } = require('../services/PlaidService')
 // function" the moment transactions.html called it. Thin adapters below bridge
 // the route call-shape to the db function signatures.
 const txDb = require('../db/transactions');
+const { fetchUserLocalDate } = require('../lib/timezone');
 const list = (pool, userId, opts) => txDb.listTransactions(pool, { userId, ...opts });
-const getToday = (pool, userId) => txDb.getTodayTransactions(pool, userId);
+// The user's today, not UTC's (from 8pm EDT the list showed tomorrow's, i.e. nothing)
+const getToday = async (pool, userId) => txDb.getTodayTransactions(pool, userId, await fetchUserLocalDate(pool, userId));
 const getAggregate = (pool, userId, { from, to } = {}) => txDb.getAggregate(pool, userId, from, to);
 const get_transaction_with_classification = (pool, id, userId) => txDb.getTransactionWithClassification(pool, id, userId);
 const update_classification = (pool, id, userId, classification) => txDb.updateClassification(pool, id, userId, classification);
@@ -118,6 +120,21 @@ module.exports = function(pool) {
     }
   });
 
+  // ── GET /api/v1/transactions/aggregate ──────────────────────────────────────
+  // Registered before /transactions/:id, which would otherwise capture "aggregate".
+  router.get('/transactions/aggregate', async (req, res) => {
+    try {
+      const { from, to } = req.query;
+
+      const aggregate = await getAggregate(pool, req.user.id, { from, to });
+
+      res.json(aggregate);
+    } catch (err) {
+      console.error('[v1/transactions/aggregate]', err.message);
+      res.status(500).json({ success: false, message: 'Failed to compute aggregate' });
+    }
+  });
+
   // ── GET /api/v1/transactions/:id ─────────────────────────────────────────────
   router.get('/transactions/:id', async (req, res) => {
     try {
@@ -186,20 +203,6 @@ module.exports = function(pool) {
     } catch (err) {
       console.error('[v1/transactions/:id/triage POST]', err.message);
       res.status(500).json({ success: false, message: 'Failed to classify transaction' });
-    }
-  });
-
-  // ── GET /api/v1/transactions/aggregate ──────────────────────────────────────
-  router.get('/transactions/aggregate', async (req, res) => {
-    try {
-      const { from, to } = req.query;
-
-      const aggregate = await getAggregate(pool, req.user.id, { from, to });
-
-      res.json(aggregate);
-    } catch (err) {
-      console.error('[v1/transactions/aggregate]', err.message);
-      res.status(500).json({ success: false, message: 'Failed to compute aggregate' });
     }
   });
 

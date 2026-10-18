@@ -19,6 +19,7 @@ const FormData = require('form-data');
 const { authenticateToken } = require('../middleware/auth');
 const { checkProStatus } = require('../middleware/proUtils');
 const { extractDocumentMetadata } = require('../lib/documentExtraction');
+const { logFailure } = require('../lib/log-failure');
 
 const FREE_DOC_LIMIT = 20;
 const AI_EXTRACTION_MONTHLY_LIMIT = 25;
@@ -111,7 +112,7 @@ module.exports = function(pool) {
 
     try {
       // Free tier: check doc count limit
-      const isPro = await checkProStatus(pool, userId).catch(() => false);
+      const isPro = await checkProStatus(pool, userId).catch(logFailure('[documents]', 'checkProStatus', { userId }, false));
       if (!isPro) {
         const countResult = await pool.query(
           'SELECT COUNT(*) FROM documents WHERE user_id = $1',
@@ -193,7 +194,7 @@ module.exports = function(pool) {
         pool.query(
           "UPDATE documents SET extraction_status = 'processing' WHERE id = $1",
           [doc.id]
-        ).catch(() => {});
+        ).catch(logFailure('[documents]', 'markExtractionProcessing', { docId: doc.id }));
 
         // extraction fetches the file — use a signed URL so the bucket can stay private
         const extractUrl = storage.signedGetUrl(objectKey, 600);
@@ -415,7 +416,7 @@ async function runExtractionAsync(pool, docId, fileUrl, mimeType, fileName, user
     pool.query(
       "UPDATE documents SET extraction_status = 'failed' WHERE id = $1",
       [docId]
-    ).catch(() => {});
+    ).catch(logFailure('[documents]', 'markExtractionFailed', { docId }));
   }
 }
 
@@ -426,12 +427,4 @@ function getCurrentMonth() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
 }
 
-function extractR2Key(url) {
-  try {
-    const u = new URL(url);
-    return u.pathname.slice(1);
-  } catch {
-    return null;
-  }
-}
 

@@ -16,6 +16,7 @@ const { complete } = require('../lib/claude-client');
 const { authenticateToken } = require('../middleware/auth');
 const { checkProStatus } = require('../middleware/proUtils');
 const { fetchUserTimezone, getUserLocalDate, getUserLocalHour } = require('../lib/timezone');
+const { logFailure } = require('../lib/log-failure');
 
 const FREE_DAILY_LIMIT = 3;
 const BATCH_SIZE_PRO = 5;
@@ -38,9 +39,8 @@ module.exports = function(pool) {
       `SELECT COUNT(*) as cnt
        FROM ai_task_suggestions
        WHERE user_id = $1
-         AND generated_at::date >= $2::date
-         AND generated_at::date < $2::date + INTERVAL '1 day'`,
-      [userId, localToday]
+         AND (generated_at AT TIME ZONE $3)::date = $2::date`,
+      [userId, localToday, tz]
     );
     return parseInt(result.rows[0].cnt) || 0;
   }
@@ -74,17 +74,19 @@ module.exports = function(pool) {
   async function getSpendingContext(userId) {
     try {
       const result = await pool.query(
-        `SELECT category, SUM(amount) as total, COUNT(*) as count
-         FROM expenses
-         WHERE user_id = $1
-           AND created_at >= NOW() - INTERVAL '30 days'
-         GROUP BY category
+        `SELECT COALESCE(c.name, 'Uncategorized') AS category, SUM(e.amount) AS total, COUNT(*) AS count
+         FROM expenses e
+         LEFT JOIN categories c ON c.id = e.category_id
+         WHERE e.user_id = $1
+           AND e.created_at >= NOW() - INTERVAL '30 days'
+         GROUP BY 1
          ORDER BY total DESC
          LIMIT 5`,
         [userId]
       );
       return result.rows;
-    } catch (_e) {
+    } catch (err) {
+      console.warn('[AI Suggestions] spending context unavailable:', err.message, '| userId:', userId);
       return [];
     }
   }
@@ -197,7 +199,7 @@ Generate ${batchSize} personalized, highly specific task suggestions tied to the
       if (Array.isArray(arr)) {
         parsed = arr.slice(0, batchSize).filter(s => s && typeof s.title === 'string' && s.title.trim());
       }
-    } catch (_parseErr) {
+    } catch (_parseErr) { // silent-ok: falls back to the first [...] block, which logs if it fails
       // Fallback: try to extract JSON array from response
       const match = raw.match(/\[[\s\S]*\]/);
       if (match) {
@@ -206,7 +208,9 @@ Generate ${batchSize} personalized, highly specific task suggestions tied to the
           if (Array.isArray(arr)) {
             parsed = arr.slice(0, batchSize).filter(s => s && typeof s.title === 'string' && s.title.trim());
           }
-        } catch (_e2) { /* give up */ }
+        } catch (e2) {
+          console.error('[AI Suggestions] could not parse AI response as JSON:', e2.message);
+        }
       }
     }
 
@@ -254,7 +258,7 @@ Generate ${batchSize} personalized, highly specific task suggestions tied to the
     const userId = req.user.id;
     try {
       const tz = await fetchUserTimezone(pool, userId);
-      const isPro = await checkProStatus(pool, userId).catch(() => false);
+      const isPro = await checkProStatus(pool, userId).catch(logFailure('[AI Suggestions]', 'checkProStatus', { userId }, false));
       const dailyCount = await getDailyGeneratedCount(userId, tz);
       const dailyLimit = isPro ? null : FREE_DAILY_LIMIT;
       const atCap = !isPro && dailyCount >= FREE_DAILY_LIMIT;
@@ -266,9 +270,9 @@ Generate ${batchSize} personalized, highly specific task suggestions tied to the
          LEFT JOIN user_values uv ON uv.id = s.value_id
          WHERE s.user_id = $1
            AND s.status = 'pending'
-           AND s.generated_at >= CURRENT_DATE
+           AND (s.generated_at AT TIME ZONE $3)::date = $2::date
          ORDER BY s.generated_at DESC`,
-        [userId]
+        [userId, getUserLocalDate(tz), tz]
       );
 
       if (pending.rows.length > 0) {
@@ -346,7 +350,7 @@ Generate ${batchSize} personalized, highly specific task suggestions tied to the
     const userId = req.user.id;
     try {
       const tz = await fetchUserTimezone(pool, userId);
-      const isPro = await checkProStatus(pool, userId).catch(() => false);
+      const isPro = await checkProStatus(pool, userId).catch(logFailure('[AI Suggestions]', 'checkProStatus', { userId }, false));
       const dailyCount = await getDailyGeneratedCount(userId, tz);
 
       if (!isPro && dailyCount >= FREE_DAILY_LIMIT) {
@@ -417,7 +421,7 @@ Generate ${batchSize} personalized, highly specific task suggestions tied to the
       }
 
       // Check free task limit
-      const isPro = await checkProStatus(pool, userId).catch(() => false);
+      const isPro = await checkProStatus(pool, userId).catch(logFailure('[AI Suggestions]', 'checkProStatus', { userId }, false));
       if (!isPro) {
         const activeCount = await pool.query(
           'SELECT COUNT(*) as count FROM tasks WHERE is_completed = false AND user_id = $1',

@@ -26,6 +26,7 @@ const { insertEvent }                             = require('../db/events');
 const { wasNotificationSentToday, recordNotificationSent } = require('../db/notifications');
 const { sendApnsNotification, isApnsConfigured }  = require('../lib/apns-sender');
 const { getActiveSubscriptions }                  = require('../db/notifications');
+const { logFailure }                             = require('../lib/log-failure');
 const { getPushTokens, deletePushToken }          = require('../db/push-tokens');
 const { getUserLocalDate }                        = require('../lib/timezone');
 
@@ -109,11 +110,15 @@ async function sendPushToUser(pool, userId, title, body, url) {
           sentCount++;
         } catch (err) {
           if (err.statusCode === 410 || err.statusCode === 404) {
-            await deleteSubscriptionByEndpoint(pool, row.endpoint).catch(() => {});
+            await deleteSubscriptionByEndpoint(pool, row.endpoint).catch(logFailure('[NotificationService]', 'deleteSubscriptionByEndpoint'));
+          } else {
+            console.error('[NotificationService] web push failed:', err.message, '| status:', err.statusCode, '| userId:', userId);
           }
         }
       }
-    } catch (_) { /* web-push not available */ }
+    } catch (e) {
+      console.error('[NotificationService] web push setup failed:', e.message, '| userId:', userId);
+    }
   }
 
   // APNs

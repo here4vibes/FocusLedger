@@ -13,7 +13,7 @@
  * when offline. The ~50ms latency cost is invisible on modern connections.
  */
 
-const CACHE_VERSION = 'fl-v56';
+const CACHE_VERSION = 'fl-v57';
 const OFFLINE_URL = '/offline.html';
 
 // Assets to precache on install (app shell)
@@ -21,7 +21,7 @@ const PRECACHE_URLS = [
   '/',
   '/weightless', // PWA start_url — conversation-first home
   '/app',
-  '/app/buddy',  // Accountabilibuddy check-in page
+  '/app/buddy',  // legacy link; redirects to /weightless
   '/app/money',  // Money page (canonical; /money is a 301 alias)
   '/login',
   '/signup',
@@ -228,7 +228,7 @@ self.addEventListener('push', event => {
     badge: '/icons/icon-192.png',
     tag: data.tag || 'focusledger-nudge',
     renotify: false,
-    data: { url: data.url || '/app', actionUrls: data.actionUrls || null },
+    data: { url: data.url || '/app', actionUrls: data.actionUrls || null, actionTokens: data.actionTokens || null },
     actions,
     requireInteraction: false
   };
@@ -243,6 +243,37 @@ self.addEventListener('notificationclick', event => {
   event.notification.close();
 
   if (event.action === 'dismiss') return;
+
+  // "Done ✓": finish the task right here, without opening the app. The payload
+  // carries a signed one-task token (lib/push-action-token.js), so this works
+  // without the app's login. If it can't save, fall through to opening the app.
+  const doneToken = event.action === 'done' && event.notification.data?.actionTokens?.done;
+  if (doneToken) {
+    event.waitUntil(
+      fetch('/api/push-actions/done', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: doneToken }),
+      })
+        .then(r => r.json().then(j => ({ ok: r.ok && j.success, j })))
+        .then(({ ok, j }) => {
+          if (!ok) throw new Error((j && j.message) || 'not saved');
+          const routine = (j.routine_completed || [])[0];
+          const body = routine
+            ? routine.name + ' done · ' + (routine.current_streak > 1 ? routine.current_streak + '-day streak 🔥' : 'streak started')
+            : (j.title ? '“' + j.title + '” is off your list.' : 'Off your list.');
+          return self.registration.showNotification('Done ✓', {
+            body, icon: '/icons/icon-192.png', badge: '/icons/icon-192.png',
+            tag: 'fl-done-confirm', renotify: false, silent: true,
+          });
+        })
+        .catch(err => {
+          console.error('[sw] done action failed:', err && err.message);
+          return self.clients.openWindow(event.notification.data?.url || '/weightless');
+        })
+    );
+    return;
+  }
 
   // Route to the tapped action's URL if the server mapped one; otherwise the
   // notification's primary url. Body taps (no action) always use the primary url.

@@ -38,6 +38,7 @@ const {
 } = require('./db/notifications');
 const { sendApnsNotification, isApnsConfigured } = require('./lib/apns-sender');
 const { getPushTokens, deletePushToken }         = require('./db/push-tokens');
+const { logFailure } = require('./lib/log-failure');
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -161,13 +162,16 @@ async function sendBuddyRestartPush(pool, userId, localToday) {
           sentCount++;
         } catch (err) {
           if (err.statusCode === 410 || err.statusCode === 404) {
-            await deleteSubscriptionByEndpoint(pool, row.endpoint).catch(() => {});
+            await deleteSubscriptionByEndpoint(pool, row.endpoint)
+              .catch(logFailure('[BuddyEngagement]', 'deleteSubscriptionByEndpoint', { userId }));
           } else {
             console.warn('[BuddyEngagement] Web push error user', userId, err.message);
           }
         }
       }
-    } catch (_) { /* web-push module not available */ }
+    } catch (err) {
+      console.warn('[BuddyEngagement] web push disabled: web-push failed to load or VAPID keys are invalid:', err.message);
+    }
   }
 
   // ── APNs ─────────────────────────────────────────────────────────────────────

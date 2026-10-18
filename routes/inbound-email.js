@@ -14,7 +14,6 @@ const express = require('express');
 const router = express.Router();
 const { Resend } = require('resend');
 const { authenticateToken } = require('../middleware/auth');
-const { queryWithRetry } = require('../lib/queryWithRetry');
 const {
   insertInboundEmail,
   insertOutboundEmail,
@@ -24,6 +23,8 @@ const {
   countUnread,
 } = require('../db/customer-emails');
 const { processEmailToTask } = require('./email-to-tasks');
+const { logFailure } = require('../lib/log-failure');
+const { requireAdmin } = require('../lib/admin-access');
 
 // WHY: emails to tasks@focusledger.net trigger task creation, not inbox storage.
 // All other inbound emails go to the admin inbox as before.
@@ -254,7 +255,7 @@ module.exports = function(pool) {
             html: '<div style="font-family:-apple-system,Segoe UI,Roboto,sans-serif;font-size:15px;color:#141416;line-height:1.6;padding:16px;"><p>Done — you won’t get any more emails from FocusLedger.</p><p style="color:#888;font-size:13px;">(Account-related emails like password resets still work if you ever need them.)</p></div>',
             text: 'Done — you won\'t get any more emails from FocusLedger. (Account-related emails like password resets still work if you ever need them.)',
             templateType: 'unsubscribe_confirmation',
-          }).catch(() => {});
+          }).catch(logFailure('[inbound-email]', 'sendUnsubscribeConfirmation'));
           console.log(`[inbound-email] opt-out honored for ${fromEmail}`);
         }
       } catch (optErr) {
@@ -273,28 +274,12 @@ module.exports = function(pool) {
   // Admin Inbox API — all endpoints require admin auth
   // =============================================================================
 
-  function isAdminUser(user) {
-    if (user.is_admin) return true;
-    const adminEmails = (process.env.ADMIN_EMAILS || '').split(',').map(e => e.trim().toLowerCase()).filter(Boolean);
-    return adminEmails.includes((user.email || '').toLowerCase());
-  }
-
-  async function requireAdmin(req, res, pool) {
-    const userId = req.user?.id;
-    if (!userId) return false;
-    const result = await queryWithRetry(pool, 'SELECT is_admin, email FROM users WHERE id = $1', [userId]);
-    const user = result.rows[0] || {};
-    if (!isAdminUser({ ...user, id: userId })) {
-      res.status(403).json({ success: false, message: 'Admin access required' });
-      return false;
-    }
-    return true;
-  }
+  // Auth first, then the shared admin gate (DB row, fails closed)
+  const admin = [authenticateToken, requireAdmin(pool)];
 
   // GET /api/inbox/threads — list conversation threads
-  router.get('/threads', authenticateToken, async (req, res) => {
+  router.get('/threads', admin, async (req, res) => {
     try {
-      if (!await requireAdmin(req, res, pool)) return;
       const threads = await listThreads(pool);
       const unread  = await countUnread(pool);
       res.json({ success: true, threads, unread });
@@ -305,9 +290,8 @@ module.exports = function(pool) {
   });
 
   // GET /api/inbox/threads/:threadId — fetch all messages in a thread + mark read
-  router.get('/threads/:threadId', authenticateToken, async (req, res) => {
+  router.get('/threads/:threadId', admin, async (req, res) => {
     try {
-      if (!await requireAdmin(req, res, pool)) return;
       const { threadId } = req.params;
       const decodedThreadId = decodeURIComponent(threadId);
       console.log(`[inbox] GET thread: ${decodedThreadId} by user ${req.user?.id}`);
@@ -321,9 +305,8 @@ module.exports = function(pool) {
   });
 
   // POST /api/inbox/threads/:threadId/reply — send a reply + store outbound record
-  router.post('/threads/:threadId/reply', authenticateToken, async (req, res) => {
+  router.post('/threads/:threadId/reply', admin, async (req, res) => {
     try {
-      if (!await requireAdmin(req, res, pool)) return;
 
       const { threadId } = req.params;
       const { body, to_email, subject } = req.body;
@@ -385,9 +368,8 @@ module.exports = function(pool) {
   });
 
   // PATCH /api/inbox/threads/:threadId/read — mark thread as read
-  router.patch('/threads/:threadId/read', authenticateToken, async (req, res) => {
+  router.patch('/threads/:threadId/read', admin, async (req, res) => {
     try {
-      if (!await requireAdmin(req, res, pool)) return;
       await markThreadRead(pool, decodeURIComponent(req.params.threadId));
       res.json({ success: true });
     } catch (err) {

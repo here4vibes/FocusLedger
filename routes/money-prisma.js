@@ -2,6 +2,7 @@
 // Owns: expense CRUD, Plaid transaction review, Account Summary, spending aggregates.
 // Does NOT own: Plaid Link setup (routes/plaid.js), auth middleware beyond session/JWT support.
 const { fetchUserLocalDate } = require('../lib/timezone');
+const { getSession } = require('../db/spendingSessions');
 const {
   createExpense,
   getExpenses,
@@ -244,21 +245,16 @@ async function getTodaySession(req, res) {
     const pool = res.locals._pool;
     const today = await fetchUserLocalDate(pool, userId);
 
-    const { rows } = await pool.query(
-      `SELECT * FROM spending_sessions WHERE user_id = $1 AND started_at::date = $2::date ORDER BY started_at DESC LIMIT 1`,
-      [userId, today]
-    );
-
-    const session = rows[0] || null;
+    // Prod's spending_sessions is keyed by session_date with a boolean
+    // `complete` (no started_at / ended_at columns).
+    const session = await getSession(pool, userId, today);
     res.json({
       success: true,
       session: session ? {
         id: session.id,
-        started_at: session.started_at,
-        ended_at: session.ended_at,
-        planned_count: session.planned_count,
-        impulse_count: session.impulse_count,
-        complete: !!session.ended_at,
+        session_date: session.session_date,
+        transaction_count: session.transaction_count,
+        complete: session.complete === true,
       } : null,
     });
   } catch (err) {

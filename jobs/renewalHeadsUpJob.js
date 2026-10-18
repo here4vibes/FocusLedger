@@ -20,6 +20,7 @@ const tz = require('../lib/timezone');
 const notif = require('../db/notifications');
 const { sendPushToUser } = require('../lib/sendPushToUser');
 const { isQaUser } = require('../db/users');
+const { logFailure } = require('../lib/log-failure');
 
 const SEND_HOUR = 10;
 
@@ -68,7 +69,7 @@ async function main() {
     console.log(`[renewal-heads-up] checked ${users} user(s): ${attempted} heads-up push(es) attempted, ${failed} failed`);
   } catch (e) {
     console.error('[renewal-heads-up] Fatal:', e.message);
-    await pool.end().catch(() => {});
+    await pool.end().catch(logFailure('[renewal-heads-up]', 'pool.end'));
     flushAndExit(1);
     return;
   }

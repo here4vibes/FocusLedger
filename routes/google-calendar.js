@@ -12,6 +12,8 @@
  */
 
 const express = require('express');
+const { signUserState, verifyUserState } = require('../lib/oauth-state');
+const { fetchUserTimezone, getLocalDateParts } = require('../lib/timezone');
 const router  = express.Router();
 const { verifyToken } = require('../middleware/auth');
 
@@ -81,10 +83,9 @@ module.exports = function(pool) {
       return res.status(503).json({ success: false, message: 'Google OAuth not configured' });
     }
     const redirectUri = `${getOAuthBase(req)}/api/gcal/callback`;
-    const state = Buffer.from(JSON.stringify({
-      userId: req.userId,
-      token:  req.headers['authorization'].split(' ')[1],
-    })).toString('base64url');
+    // Signed, and never the user's login token: the state travels through
+    // Google and comes back in the callback URL.
+    const state = signUserState('gcal', req.userId);
 
     const url = new URL('https://accounts.google.com/o/oauth2/v2/auth');
     url.searchParams.set('client_id',     process.env.GOOGLE_CLIENT_ID);
@@ -105,12 +106,9 @@ module.exports = function(pool) {
       return res.redirect('/app/calendar?gcal=denied');
     }
 
-    let userId;
-    try {
-      const parsed = JSON.parse(Buffer.from(state, 'base64url').toString());
-      userId = parsed.userId;
-      if (!userId) throw new Error('no userId in state');
-    } catch {
+    const userId = verifyUserState('gcal', state);
+    if (!userId) {
+      console.warn('[gcal] callback with an invalid or expired state');
       return res.redirect('/app/calendar?gcal=error');
     }
 
@@ -179,26 +177,31 @@ module.exports = function(pool) {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
       if (!evRes.ok) {
-        const errBody = await evRes.json().catch(() => ({}));
+        const errBody = await evRes.json().catch(() => ({})); // silent-ok: the next line throws with the status
         throw new Error(errBody.error?.message || `GCal API ${evRes.status}`);
       }
       const evData = await evRes.json();
       const events = (evData.items || []).filter(ev => ev.start?.dateTime || ev.start?.date);
 
+      // Place events on the user's local day and clock. toISOString/getHours
+      // used the server's UTC, so a 9am EDT meeting landed at 13:00 (and an
+      // evening one on the next day).
+      const tz = await fetchUserTimezone(pool, req.userId);
+      const hhmm = (p) => `${String(p.hour % 24).padStart(2,'0')}:${String(p.minute).padStart(2,'0')}`;
       let upserted = 0;
       for (const ev of events) {
         const isAllDay = !!ev.start.date && !ev.start.dateTime;
         if (isAllDay) continue; // skip all-day events — no time slot to place them
 
-        const startDt  = new Date(ev.start.dateTime);
-        const endDt    = new Date(ev.end.dateTime);
-        const dateStr  = startDt.toISOString().slice(0, 10);
+        const startP   = getLocalDateParts(tz, new Date(ev.start.dateTime));
+        const endP     = getLocalDateParts(tz, new Date(ev.end.dateTime));
+        const dateStr  = startP.date;
 
         // Map to time_blocks (prod columns: block_date, no `slot`; and no unique
         // on (user_id, gcal_event_id) — so manual upsert instead of ON CONFLICT).
         const tbTitle = ev.summary || '(No title)';
-        const tbStart = `${String(startDt.getHours()).padStart(2,'0')}:${String(startDt.getMinutes()).padStart(2,'0')}`;
-        const tbEnd   = `${String(endDt.getHours()).padStart(2,'0')}:${String(endDt.getMinutes()).padStart(2,'0')}`;
+        const tbStart = hhmm(startP);
+        const tbEnd   = hhmm(endP);
         const tbParams = [req.userId, tbTitle, dateStr, tbStart, tbEnd, ev.id];
         const upd = await pool.query(
           `UPDATE time_blocks SET title = $2, block_date = $3, start_time = $4, end_time = $5

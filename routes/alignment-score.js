@@ -21,6 +21,7 @@ const express = require('express');
 const { authenticateToken } = require('../middleware/auth');
 const { backfillUser } = require('../lib/auto-tagger');
 const { fetchUserTimezone, getUserLocalDate } = require('../lib/timezone');
+const { logFailure } = require('../lib/log-failure');
 
 module.exports = function (pool) {
   const router = express.Router();
@@ -88,8 +89,8 @@ module.exports = function (pool) {
           taskBreakdown[t.value_id] = (taskBreakdown[t.value_id] || 0) + 1;
         }
       });
-    } catch {
-      // table may not exist yet — treat as 0
+    } catch (e) {
+      console.error('[AlignmentScore] task score query failed, treating as 0:', e.message, '| userId:', userId);
     }
 
     const task_score = taskTotal > 0 ? Math.round((taskAligned / taskTotal) * 100) : 0;
@@ -138,8 +139,8 @@ module.exports = function (pool) {
           spendBreakdown[vId] = (spendBreakdown[vId] || 0) + parseFloat(e.amount || 0);
         }
       });
-    } catch {
-      // expenses table may not exist — treat as 0
+    } catch (e) {
+      console.error('[AlignmentScore] spending score query failed, treating as 0:', e.message, '| userId:', userId);
     }
 
     const spending_score = spendingTotal > 0
@@ -189,7 +190,7 @@ module.exports = function (pool) {
         `INSERT INTO analytics_events (visitor_hash, user_id, event_name, event_data, occurred_at)
          VALUES ($1, $2, 'values_score_viewed', $3::jsonb, NOW())`,
         ['user-' + userId, userId, JSON.stringify({ score: scores.overall_score })]
-      ).catch(() => {});
+      ).catch(logFailure('[AlignmentScore]', 'trackScoreViewed', { userId }));
 
       res.json({ success: true, ...scores, week_start: weekStart.toISOString().slice(0, 10) });
     } catch (err) {
@@ -239,7 +240,7 @@ module.exports = function (pool) {
         `INSERT INTO analytics_events (visitor_hash, user_id, event_name, event_data, occurred_at)
          VALUES ($1, $2, 'weekly_report_viewed', $3::jsonb, NOW())`,
         ['user-' + userId, userId, JSON.stringify({ week_start: report.week_start })]
-      ).catch(() => {});
+      ).catch(logFailure('[AlignmentScore]', 'trackWeeklyReportViewed', { userId }));
 
       res.json({ success: true, report });
     } catch (err) {
@@ -359,7 +360,7 @@ module.exports = function (pool) {
         `INSERT INTO analytics_events (visitor_hash, user_id, event_name, event_data, occurred_at)
          VALUES ($1, $2, $3, $4::jsonb, NOW())`,
         ['user-' + userId, userId, eventName, JSON.stringify({ context, value_id: value_id || null })]
-      ).catch(() => {});
+      ).catch(logFailure('[AlignmentScore]', 'trackNudgeAction', { userId, action }));
 
       res.json({ success: true });
     } catch (err) {

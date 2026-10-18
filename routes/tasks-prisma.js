@@ -4,6 +4,9 @@
 const { checkProStatus } = require('../middleware/proUtils');
 const { fetchUserTimezone, getUserLocalDate } = require('../lib/timezone');
 const { complete } = require('../lib/claude-client');
+const { logFailure } = require('../lib/log-failure');
+const { parseAiJson } = require('../lib/ai-json');
+const { onTasksCompleted, refreshRoutineTasks } = require('../lib/routine-capture');
 
 // ── Helpers: time string normalization ───────────────────────────────────────
 // DB stores time as 'time without time zone'; pg returns it as a string "HH:MM:SS".
@@ -88,6 +91,8 @@ async function listTasks(req, res) {
       : 'ORDER BY t.is_completed ASC, t.created_at DESC';
 
     const pool = res.locals._pool;
+    // Routine tasks finished on an earlier day reopen, so today's routine is fresh.
+    await refreshRoutineTasks(pool, userId).catch(logFailure('[tasks]', 'refreshRoutineTasks', { userId }, 0));
     const { rows } = await pool.query(
       `SELECT * FROM tasks t ${whereClause} ${orderClause}`,
       [userId]
@@ -212,7 +217,7 @@ async function suggestSteps(req, res) {
       return res.json({ success: true, suggestions: [], skip: true, reason: 'simple_task' });
     }
 
-    const isPro = await checkProStatus(pool, userId).catch(() => false);
+    const isPro = await checkProStatus(pool, userId).catch(logFailure('[tasks]', 'checkProStatus', { userId }, false));
     if (!isPro) return res.json({ success: true, suggestions: [], skip: false, is_pro: false });
 
     let content;
@@ -225,7 +230,9 @@ async function suggestSteps(req, res) {
         }),
         new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 3000)),
       ]);
-    } catch {
+    } catch (err) {
+      // Budget, API-key and network failures land here too, not just the 3s timeout.
+      console.warn('[tasks] suggest-steps AI call failed:', err.message, '| userId:', userId);
       return res.json({ success: true, suggestions: [], skip: true, reason: 'timeout' });
     }
     let suggestions = [];
@@ -235,7 +242,7 @@ async function suggestSteps(req, res) {
       if (Array.isArray(parsed)) {
         suggestions = parsed.slice(0, 5).map(s => String(s).trim()).filter(s => s.length > 2);
       }
-    } catch {
+    } catch { // silent-ok: heuristic fallback when the reply isn't JSON
       suggestions = content.split('\n').map(line => line.replace(/^[\n\""\/\/\/]+/, '').trim()).filter(line => line.length > 3).slice(0, 5);
     }
 
@@ -263,7 +270,10 @@ async function suggestDuration(req, res) {
         }),
         new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 4000)),
       ]);
-    } catch { return res.json({ success: true, duration_minutes: null }); }
+    } catch (err) {
+      console.warn('[tasks] suggest-duration AI call failed:', err.message, '| userId:', req.user?.id);
+      return res.json({ success: true, duration_minutes: null });
+    }
     let minutes = null;
     try {
       const cleaned = content.replace(/^```(?:json)?\n?|\n?```$/g, '').trim();
@@ -271,13 +281,14 @@ async function suggestDuration(req, res) {
       if (parsed && typeof parsed.minutes === 'number' && parsed.minutes > 0) {
         minutes = Math.min(Math.round(parsed.minutes), 480);
       }
-    } catch {
+    } catch { // silent-ok: heuristic fallback when the reply isn't JSON
       const match = content.match(/\d+/);
       if (match) minutes = Math.min(parseInt(match[0]), 480);
     }
 
     res.json({ success: true, duration_minutes: minutes });
-  } catch (_err) {
+  } catch (err) {
+    console.error('[tasks] suggest-duration error:', err.message, '| userId:', req.user?.id);
     res.json({ success: true, duration_minutes: null });
   }
 }
@@ -339,7 +350,10 @@ async function createTask(req, res) {
         if (countRows[0].c >= 10) {
           return res.status(402).json({ success: false, message: 'You have 10 active tasks — the free plan cap. Finish a few, or open it up with Autopilot.', code: 'TASK_LIMIT_REACHED', upgrade_required: true });
         }
-      } catch { /* full DB outage — let creation attempt proceed */ }
+      } catch (e) {
+        // Full DB outage: let the creation attempt proceed (and fail on its own).
+        console.error('[tasks] fallback task-count check failed:', e.message, '| userId:', userId);
+      }
     }
 
     // Auto-tag to value
@@ -437,14 +451,16 @@ async function createTask(req, res) {
             }),
             new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 5000)),
           ]);
-          const parsed = JSON.parse(raw);
+          const parsed = parseAiJson(raw);
           if (parsed && typeof parsed.minutes === 'number' && parsed.minutes > 0) {
             await pool.query(
               'UPDATE tasks SET duration_minutes = $1, duration_source = $2 WHERE id = $3',
               [Math.min(Math.round(parsed.minutes), 480), 'ai', taskRow.id]
             );
           }
-        } catch { /* silent */ }
+        } catch (e) {
+          console.error('[tasks] AI duration estimate failed:', e.message, '| taskId:', taskRow.id);
+        }
       });
     }
   } catch (err) {
@@ -511,7 +527,10 @@ async function updateTask(req, res) {
 
     const { rows } = await pool.query(sql, vals);
     if (!rows.length) return res.status(404).json({ success: false, message: 'Task not found' });
-    res.json({ success: true, task: normTask(rows[0]) });
+    const routineCompleted = is_completed
+      ? await onTasksCompleted(pool, userId, rows[0].id).catch(logFailure('[tasks]', 'onTasksCompleted', { userId, taskId: rows[0].id }, []))
+      : [];
+    res.json({ success: true, task: normTask(rows[0]), routine_completed: routineCompleted });
   } catch (err) {
     if (err.code === '42703') return res.status(500).json({ success: false, message: 'Failed to update task — schema mismatch' });
     console.error('[tasks] update error:', err);
@@ -575,7 +594,10 @@ async function toggleTask(req, res) {
       }
     }
 
-    res.json({ success: true, task: normTask(task), next_recurring_task: nextRecurring });
+    const routineCompleted = newCompleted
+      ? await onTasksCompleted(pool, userId, task.id).catch(logFailure('[tasks]', 'onTasksCompleted', { userId, taskId: task.id }, []))
+      : [];
+    res.json({ success: true, task: normTask(task), next_recurring_task: nextRecurring, routine_completed: routineCompleted });
   } catch (err) {
     console.error('[tasks] toggle error:', err);
     res.status(500).json({ success: false, message: 'Failed to toggle task' });
@@ -601,7 +623,8 @@ async function updateDuration(req, res) {
     );
     if (!rows.length) return res.status(404).json({ success: false, message: 'Task not found' });
     res.json({ success: true, task: normTask(rows[0]) });
-  } catch {
+  } catch (err) {
+    console.error('[tasks] update duration failed:', err.message, '| taskId:', req.params.id);
     res.status(500).json({ success: false, message: 'Failed to update duration' });
   }
 }
@@ -781,6 +804,8 @@ async function toggleStep(req, res) {
         'UPDATE tasks SET is_completed = true, completed_at = NOW() WHERE id = $1',
         [parseInt(taskId)]
       );
+      onTasksCompleted(pool, req.user.id, parseInt(taskId))
+        .catch(logFailure('[tasks]', 'onTasksCompleted', { taskId: parseInt(taskId) }, []));
     } else if (noneDone && task.is_completed) {
       await pool.query(
         'UPDATE tasks SET is_completed = false, completed_at = NULL WHERE id = $1',
@@ -841,11 +866,11 @@ async function getReentryBrief(req, res) {
       pool.query(
         'SELECT started_at, actual_duration_seconds FROM focus_sessions WHERE task_id = $1 ORDER BY started_at DESC LIMIT 1',
         [taskId]
-      ).catch(() => ({ rows: [] })),
+      ).catch(logFailure('[tasks]', 'focus_sessions query', { taskId }, { rows: [] })),
       pool.query(
         'SELECT step_text AS title FROM task_substeps WHERE task_id = $1 AND completed = false ORDER BY step_order ASC LIMIT 1',
         [taskId]
-      ).catch(() => ({ rows: [] })),
+      ).catch(logFailure('[tasks]', 'task_substeps query', { taskId }, { rows: [] })),
     ]);
 
     const lastSession = sessionResult.rows[0] || null;

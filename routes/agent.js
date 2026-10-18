@@ -11,6 +11,7 @@ const { TOOL_DEFS, tierOf, scopeOf, isKnown, dispatch, reverse } = require('../l
 const { logAction, getAction, markUndone, markExecuted, markCancelled, markFailed, recentActionCount } = require('../db/agent-actions');
 const { checkProStatus } = require('../middleware/proUtils');
 const { getBillPreferences } = require('../db/bills');
+const { logFailure } = require('../lib/log-failure');
 
 // Daily cap on real-world sends per user (guardrail; see spec).
 const DAILY_SEND_CAP = 20;
@@ -212,7 +213,7 @@ async function runAgentTurn(pool, userId, message, clientHistory, systemPromptBu
       await logAction(pool, {
         userId, actionType: tu.name, status: 'failed', riskTier: 'auto',
         params: tu.input || {}, error: dispErr.message,
-      }).catch(() => {});
+      }).catch(logFailure('[Agent]', 'logAction', { userId, tool: tu.name }));
       receipts.push({ id: null, summary: "Something broke doing that — nothing changed", undoable: false, ok: false, scope: scopeOf(tu.name) });
     }
   }
@@ -319,7 +320,7 @@ module.exports = function (pool) {
           await logAction(pool, {
             userId, actionType: tu.name, status: 'failed', riskTier: 'auto',
             params: tu.input || {}, error: dispErr.message,
-          }).catch(() => {});
+          }).catch(logFailure('[Agent]', 'logAction', { userId, tool: tu.name }));
           receipts.push({ id: null, summary: "Something broke doing that — nothing changed", undoable: false, ok: false, scope: scopeOf(tu.name) });
         }
       }
@@ -404,14 +405,14 @@ module.exports = function (pool) {
 
       // Paid gate: real-world execution is an Autopilot feature.
       if (scope === 'world') {
-        const isPro = await checkProStatus(pool, userId).catch(() => false);
+        const isPro = await checkProStatus(pool, userId).catch(logFailure('[Agent]', 'checkProStatus', { userId }, false));
         if (!isPro) {
           return res.status(402).json({
             success: false, upsell: true, feature: 'Sending on your behalf',
             message: "Drafting is free — but sending it for you is an Autopilot feature.",
           });
         }
-        const sentToday = await recentActionCount(pool, userId, action.action_type, '1 day').catch(() => 0);
+        const sentToday = await recentActionCount(pool, userId, action.action_type, '1 day').catch(logFailure('[Agent]', 'recentActionCount', { userId, action: action.action_type }, 0));
         if (sentToday >= DAILY_SEND_CAP) {
           return res.status(429).json({ success: false, message: "That's today's send limit — try again tomorrow." });
         }
@@ -427,7 +428,7 @@ module.exports = function (pool) {
         out = await dispatch(pool, userId, action.action_type, params);
       } catch (dispErr) {
         console.error('[Agent] confirm dispatch threw:', dispErr.message, '| action:', actionId, '| userId:', userId);
-        await markFailed(pool, actionId, userId, dispErr.message).catch(() => {});
+        await markFailed(pool, actionId, userId, dispErr.message).catch(logFailure('[Agent]', 'markFailed', { userId, action: actionId }));
         return res.status(500).json({ success: false, message: 'That failed to send — nothing went out.' });
       }
 

@@ -22,7 +22,8 @@ module.exports = function(pool) {
         [userId]
       );
       res.json({ success: true, blocks: result.rows });
-    } catch (_err) {
+    } catch (err) {
+      console.error('[work-hours] load failed:', err.message, '| userId:', req.user && req.user.id);
       res.status(500).json({ success: false, message: 'Failed to load work hours' });
     }
   });
@@ -50,7 +51,8 @@ module.exports = function(pool) {
         [userId, parseInt(day_of_week), start_time, end_time, label || null]
       );
       res.status(201).json({ success: true, block: result.rows[0] });
-    } catch (_err) {
+    } catch (err) {
+      console.error('[work-hours] save block failed:', err.message, '| userId:', req.user && req.user.id);
       res.status(500).json({ success: false, message: 'Failed to save work hours block' });
     }
   });
@@ -68,7 +70,8 @@ module.exports = function(pool) {
         return res.status(404).json({ success: false, message: 'Block not found' });
       }
       res.json({ success: true });
-    } catch (_err) {
+    } catch (err) {
+      console.error('[work-hours] delete block failed:', err.message, '| userId:', req.user && req.user.id);
       res.status(500).json({ success: false, message: 'Failed to delete work hours block' });
     }
   });
@@ -117,7 +120,8 @@ module.exports = function(pool) {
       } finally {
         client.release();
       }
-    } catch (_err) {
+    } catch (err) {
+      console.error('[work-hours] save all failed:', err.message, '| userId:', req.user && req.user.id);
       res.status(500).json({ success: false, message: 'Failed to save work hours' });
     }
   });

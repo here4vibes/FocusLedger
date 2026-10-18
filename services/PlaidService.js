@@ -39,7 +39,9 @@ function decryptToken(ciphertext) {
     const decipher = crypto.createDecipheriv('aes-256-gcm', _encKey, iv);
     decipher.setAuthTag(tag);
     return Buffer.concat([decipher.update(enc), decipher.final()]).toString('utf8');
-  } catch {
+  } catch (e) {
+    // A key mismatch or tampering also lands here, not just legacy plaintext tokens.
+    console.warn('[PlaidService] token decrypt failed, using it as a legacy plaintext token:', e.message);
     return ciphertext;
   }
 }
@@ -156,8 +158,9 @@ async function connect(pool, userId, publicToken) {
     const instResponse = await plaid.itemGet({ access_token });
     institutionName = instResponse.data.item?.institution_id || institutionName;
     institutionId = instResponse.data.item?.institution_id || null;
-  } catch {
-    // Non-fatal — institution info is optional
+  } catch (e) {
+    // Non-fatal: institution info is optional.
+    console.error('[Plaid] itemGet for institution info failed:', e.message);
   }
 
   // Upsert token to plaid_tokens
@@ -165,7 +168,7 @@ async function connect(pool, userId, publicToken) {
   await upsertPlaidToken(pool, {
     userId,
     encryptedAccessToken: encryptToken(access_token),
-    itemId,
+    itemId: item_id,
     institutionName,
     institutionId,
   });

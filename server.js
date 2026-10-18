@@ -63,6 +63,7 @@ const { buildSessionMiddleware } = require('./lib/session');
 const { getMigrationStatus } = require('./db/migrations-status');
 const { requestContext } = require('./lib/request-context');
 const { quotaAwareResponses } = require('./lib/ai-budget');
+const { logFailure } = require('./lib/log-failure');
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -125,11 +126,10 @@ app.use('/api', (req, res, next) => {
         if (now - lastWrite >= LAST_ACTIVE_THROTTLE_MS) {
           lastActiveCache.set(userId, now);
           pool.query('UPDATE users SET last_active_at = NOW() WHERE id = $1', [userId])
-            .catch(() => {});
+            .catch(logFailure('[server]', 'touchLastActive', { userId }));
         }
       }
-    } catch {
-      // Invalid token — auth middleware handles rejection downstream
+    } catch { // silent-ok: invalid token; authenticateToken rejects it downstream
     }
   }
   next();
@@ -158,6 +158,7 @@ app.get('/health', async (req, res) => {
     }
     res.json({ status: 'ok', db: 'ok', latency_ms: Date.now() - start, commit: process.env.RENDER_GIT_COMMIT || 'unknown', migrations });
   } catch (err) {
+    console.error('[health] DB check failed:', err.message, '| latency_ms:', Date.now() - start);
     res.status(503).json({ status: 'degraded', db: 'error', error: err.message, latency_ms: Date.now() - start });
   }
 });
@@ -186,9 +187,9 @@ app.use('/api/admin',           require('./routes/admin')(pool));
 app.use('/api/email',           require('./routes/email')(pool));
 app.use('/api/ai-suggestions',  require('./routes/ai-suggestions')(pool));
 app.use('/api/ai',               require('./routes/ai')(pool));
-app.use('/api/capture',          require('./routes/capture')());
+app.use('/api/capture',          require('./routes/capture')(pool));
 app.use('/api/notifications',   require('./routes/notifications')(pool));
-app.use('/api/v1/notifications', require('./routes/notifications-v1'));
+app.use('/api/v1/notifications', require('./routes/notifications-v1')(pool));
 app.use('/api/v1/spending-sessions', require('./routes/spending-sessions')(pool));
 app.use('/api/adhd-tax',        require('./routes/adhd-tax')(pool));
 app.use('/api/analytics',       require('./routes/analytics')(pool));
@@ -224,6 +225,7 @@ app.use('/api/routines',        require('./routes/routineNudges')(pool));
 app.use('/api/auto-routines',    require('./routes/autoRoutines')(pool));
 app.use('/api/followup-emails',   require('./routes/followupEmails')(pool));
 app.use('/api/push',             require('./routes/push-tokens')(pool));
+app.use('/api/push-actions',     require('./routes/push-actions')(pool));
 app.use('/api/health-score',     require('./routes/health-score')(pool));
 app.use('/api/gcal',             require('./routes/google-calendar')(pool));
 // v1 API: Plaid connect/disconnect + Transaction endpoints

@@ -16,6 +16,7 @@ const { initSentry, flushAndExit } = require('../lib/sentry');
 initSentry('patternDetectionJob'); // console.error → Sentry for this cron (see lib/sentry.js)
 
 const { Pool } = require('pg');
+const { logFailure } = require('../lib/log-failure');
 const {
   upsertDetectedPattern,
   createRoutineSuggestion,
@@ -54,21 +55,23 @@ function dominantDays(dayCounts) {
   return sorted;
 }
 
-async function detectPatternsForUser(pool, userId) {
+// tz: day-of-week patterns ("you do this on Mondays") must use the user's
+// clock; UTC put a Monday-evening habit (US) on Tuesday.
+async function detectPatternsForUser(pool, userId, tz) {
   const since = new Date();
   since.setDate(since.getDate() - LOOKBACK_DAYS);
   const sinceStr = since.toISOString().slice(0, 10);
 
   const result = await pool.query(
-    `SELECT id, title, completed_at::date AS completed_date,
-            EXTRACT(DOW FROM completed_at) AS dow
+    `SELECT id, title, (completed_at AT TIME ZONE $3)::date AS completed_date,
+            EXTRACT(DOW FROM completed_at AT TIME ZONE $3) AS dow
      FROM tasks
      WHERE user_id = $1
        AND is_completed = true
        AND completed_at IS NOT NULL
-       AND completed_at::date >= $2
+       AND completed_at >= $2::date
      ORDER BY completed_at ASC`,
-    [userId, sinceStr]
+    [userId, sinceStr, tz]
   );
 
   const rows = result.rows;
@@ -136,7 +139,7 @@ async function detectPatternsForUser(pool, userId) {
     });
 
     if (pattern && confidenceScore >= MIN_CONFIDENCE_SUGGEST) {
-      await createRoutineSuggestion(pool, userId, pattern.id).catch(() => null);
+      await createRoutineSuggestion(pool, userId, pattern.id).catch(logFailure('[pattern-detection]', 'createRoutineSuggestion', { userId, patternId: pattern.id }, null));
     }
   }
 }
@@ -147,29 +150,30 @@ async function detectPatternsForUser(pool, userId) {
  * Inserts detected_patterns rows with pattern_type='sequence' and matching
  * routine_suggestions with a "Stack these?" message.
  */
-async function detectSequencesForUser(pool, userId) {
+async function detectSequencesForUser(pool, userId, tz) {
   const since = new Date();
   since.setDate(since.getDate() - LOOKBACK_DAYS);
   const sinceStr = since.toISOString().slice(0, 10);
 
   const result = await pool.query(
-    `SELECT id, title, completed_at
+    `SELECT id, title, completed_at,
+            to_char(completed_at AT TIME ZONE $3, 'YYYY-MM-DD') AS local_date
      FROM tasks
      WHERE user_id = $1
        AND is_completed = true
        AND completed_at IS NOT NULL
-       AND completed_at::date >= $2
+       AND completed_at >= $2::date
      ORDER BY completed_at ASC`,
-    [userId, sinceStr]
+    [userId, sinceStr, tz]
   );
 
   const rows = result.rows;
   if (rows.length < 2) return;
 
-  // Group rows by UTC date string
+  // Group rows by the user's local date
   const byDate = {};
   for (const row of rows) {
-    const dateStr = new Date(row.completed_at).toISOString().slice(0, 10);
+    const dateStr = row.local_date;
     if (!byDate[dateStr]) byDate[dateStr] = [];
     byDate[dateStr].push(row);
   }
@@ -276,20 +280,22 @@ async function run() {
 
   try {
     const usersResult = await pool.query(
-      `SELECT DISTINCT user_id FROM tasks
-       WHERE is_completed = true
-         AND completed_at IS NOT NULL
-         AND completed_at >= NOW() - INTERVAL '${LOOKBACK_DAYS} days'`
+      `SELECT DISTINCT t.user_id, COALESCE(NULLIF(u.timezone, ''), 'America/New_York') AS timezone
+       FROM tasks t JOIN users u ON u.id = t.user_id
+       WHERE t.is_completed = true
+         AND t.completed_at IS NOT NULL
+         AND t.completed_at >= NOW() - INTERVAL '${LOOKBACK_DAYS} days'`
     );
 
     const userIds = usersResult.rows.map(r => r.user_id);
+    const tzOf = new Map(usersResult.rows.map(r => [r.user_id, r.timezone]));
     console.log(`[pattern-detection] Running for ${userIds.length} users`);
 
     let succeeded = 0;
     for (const userId of userIds) {
       try {
-        await detectPatternsForUser(pool, userId);
-        await detectSequencesForUser(pool, userId);
+        await detectPatternsForUser(pool, userId, tzOf.get(userId));
+        await detectSequencesForUser(pool, userId, tzOf.get(userId));
         succeeded++;
       } catch (err) {
         console.error(`[pattern-detection] Error for user ${userId}:`, err.message);

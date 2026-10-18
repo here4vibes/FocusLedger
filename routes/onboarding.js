@@ -85,7 +85,8 @@ module.exports = function (pool) {
         const jsonLine = raw.slice(completeIdx + '[[ONBOARDING_COMPLETE]]'.length).trim();
         try {
           seedPayload = JSON.parse(jsonLine.match(/\{[\s\S]*\}/)?.[0] || '{}');
-        } catch {
+        } catch (err) {
+          console.warn('[onboarding] completion payload was not JSON:', err.message, '| userId:', req.user.id);
           seedPayload = {};
         }
       }
@@ -138,7 +139,9 @@ module.exports = function (pool) {
               };
               await pool.query('UPDATE users SET adhd_profile = $1 WHERE id = $2', [JSON.stringify(merged), userId]);
             }
-          } catch { /* non-blocking */ }
+          } catch (e) {
+            console.error('[onboarding] adhd_profile merge failed:', e.message, '| userId:', userId);
+          }
         });
       }
 

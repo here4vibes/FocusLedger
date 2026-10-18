@@ -2118,11 +2118,14 @@
 
                 <div id="activationSection"><p class="section-label">Activation</p><div class="loading-state"><div class="spinner"></div>Loading activation...</div></div>
 
+                <div id="acquisitionSection"><p class="section-label">Acquisition · last 30 days</p><div class="loading-state"><div class="spinner"></div>Loading acquisition...</div></div>
+
                 ${buildTrafficSection(s)}
 
                 <p class="generated-at">Generated ${fmtDateTime(data.generatedAt)}</p>
             `;
             loadActivation();
+            loadAcquisition();
         } catch (err) {
             console.error(err);
             content.innerHTML = '<div class="error-state">Failed to load stats: ' + escHtml(err.message)
@@ -2160,6 +2163,41 @@
         } catch (err) {
             console.error('[admin] activation load failed:', err.message);
             el.innerHTML = '<p class="section-label">Activation</p><div class="error-state">Couldn\'t load activation: ' + escHtml(err.message) + '</div>';
+        }
+    }
+
+    // ── ACQUISITION ───────────────────────────────────────────────────────
+    // Which ad/channel brought each signup (GET /api/admin/attribution).
+    // Bots and our CI are filtered at write time; "engaged" = scrolled, stayed
+    // 5s+ or interacted. Divide each campaign's spend by its signups for CPA.
+    async function loadAcquisition() {
+        var el = document.getElementById('acquisitionSection');
+        if (!el) return;
+        var label = '<p class="section-label">Acquisition · last 30 days</p>';
+        try {
+            var res = await fetchWithTimeout('/api/admin/attribution', {
+                headers: { 'Authorization': 'Bearer ' + getToken() }
+            });
+            var d = await res.json();
+            if (!res.ok || !d.success) throw new Error(d.message || ('HTTP ' + res.status));
+            var cell = 'style="padding:0.3rem 0.5rem;border-bottom:1px solid rgba(127,127,127,0.15);"';
+            var num = 'style="padding:0.3rem 0.5rem;border-bottom:1px solid rgba(127,127,127,0.15);text-align:right;font-variant-numeric:tabular-nums;"';
+            var rows = d.signups_by_source.map(function (r) {
+                return '<tr><td ' + cell + '>' + escHtml(r.source) + '</td><td ' + cell + '>' + escHtml(r.campaign || '—')
+                    + '</td><td ' + num + '>' + fmt(r.signups) + '</td></tr>';
+            }).join('') || '<tr><td colspan="3" ' + cell + '>No signups in this range.</td></tr>';
+            var filtered = d.filtered.by_reason.map(function (r) { return escHtml(r.reason) + ' ' + fmt(r.hits); }).join(' · ') || 'none';
+            el.innerHTML = label
+                + '<div class="stat-card" style="padding:1rem 1.25rem;">'
+                + '<div class="stat-sub" style="font-size:0.9rem;">' + fmt(d.visitors) + ' visitors · ' + fmt(d.engaged_visitors) + ' engaged · '
+                + fmt(d.signup_page_visitors) + ' on signup page · ' + fmt(d.signups) + ' signups (' + fmt(d.signups_attributed) + ' attributed)</div>'
+                + '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:0.85rem;margin-top:0.6rem;">'
+                + '<thead><tr><th ' + cell + ' align="left">Source</th><th ' + cell + ' align="left">Campaign</th><th ' + num + '>Signups</th></tr></thead>'
+                + '<tbody>' + rows + '</tbody></table></div>'
+                + '<div class="stat-sub" style="margin-top:0.6rem;">Filtered as bot/CI: ' + filtered + '. Visitors are per day (anonymous daily hash).</div></div>';
+        } catch (err) {
+            console.error('[admin] acquisition load failed:', err.message);
+            el.innerHTML = label + '<div class="error-state">Couldn\'t load acquisition: ' + escHtml(err.message) + '</div>';
         }
     }
 

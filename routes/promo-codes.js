@@ -12,34 +12,19 @@ const {
   redeemPromoCode,
   getAutopilotExpiry
 } = require('../db/promo-codes');
-const { queryWithRetry } = require('../lib/queryWithRetry');
-
-function isAdminUser(user) {
-  if (user.is_admin) return true;
-  const adminEmails = (process.env.ADMIN_EMAILS || '').split(',').map(e => e.trim().toLowerCase()).filter(Boolean);
-  return adminEmails.includes((user.email || '').toLowerCase());
-}
-
-async function requireAdmin(pool, userId) {
-  const result = await queryWithRetry(pool, 'SELECT is_admin, email FROM users WHERE id = $1', [userId]);
-  const user = result.rows[0] || {};
-  if (!isAdminUser(user)) {
-    const err = new Error('Admin access required');
-    err.status = 403;
-    throw err;
-  }
-}
+const { requireAdmin } = require('../lib/admin-access');
 
 module.exports = function(pool) {
   const adminRouter = express.Router();
+  // Auth first, then the shared admin gate (DB row, fails closed)
+  const admin = [authenticateToken, requireAdmin(pool)];
   const promoRouter = express.Router();
 
   // ── Admin routes: /api/admin/promo-codes ─────────────────────────────────
 
   // POST /api/admin/promo-codes — create a new code
-  adminRouter.post('/', authenticateToken, async (req, res) => {
+  adminRouter.post('/', admin, async (req, res) => {
     try {
-      await requireAdmin(pool, req.user.id);
 
       const { code, type, value, max_redemptions, expires_at } = req.body;
 
@@ -64,7 +49,6 @@ module.exports = function(pool) {
 
       res.json({ success: true, promo_code: created });
     } catch (err) {
-      if (err.status === 403) return res.status(403).json({ success: false, message: err.message });
       // WHY: unique violation means duplicate code
       if (err.code === '23505') {
         return res.status(409).json({ success: false, message: 'A promo code with that name already exists' });
@@ -75,22 +59,19 @@ module.exports = function(pool) {
   });
 
   // GET /api/admin/promo-codes — list all codes
-  adminRouter.get('/', authenticateToken, async (req, res) => {
+  adminRouter.get('/', admin, async (req, res) => {
     try {
-      await requireAdmin(pool, req.user.id);
       const codes = await listPromoCodes(pool);
       res.json({ success: true, promo_codes: codes });
     } catch (err) {
-      if (err.status === 403) return res.status(403).json({ success: false, message: err.message });
       console.error('[promo-codes] list error:', err.message);
       res.status(500).json({ success: false, message: 'Failed to fetch promo codes' });
     }
   });
 
   // PATCH /api/admin/promo-codes/:id — toggle is_active, update max_redemptions/expires_at
-  adminRouter.patch('/:id', authenticateToken, async (req, res) => {
+  adminRouter.patch('/:id', admin, async (req, res) => {
     try {
-      await requireAdmin(pool, req.user.id);
 
       const id = parseInt(req.params.id, 10);
       if (!id) return res.status(400).json({ success: false, message: 'Invalid id' });
@@ -104,7 +85,6 @@ module.exports = function(pool) {
 
       res.json({ success: true, promo_code: updated });
     } catch (err) {
-      if (err.status === 403) return res.status(403).json({ success: false, message: err.message });
       console.error('[promo-codes] update error:', err.message);
       res.status(500).json({ success: false, message: 'Failed to update promo code' });
     }

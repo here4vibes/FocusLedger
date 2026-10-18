@@ -17,7 +17,8 @@ function createNotificationsRouter(pool) {
         return webpush;
       }
       return null;
-    } catch {
+    } catch (err) {
+      console.warn('[notifications] web push disabled: web-push failed to load or VAPID keys are invalid:', err.message);
       return null;
     }
   }
@@ -293,8 +294,9 @@ async function sendNudgePushNotifications(pool, userId, nudges) {
       process.env.VAPID_PUBLIC_KEY,
       process.env.VAPID_PRIVATE_KEY
     );
-  } catch {
-    return; // web-push not installed yet, skip silently
+  } catch (err) {
+    console.warn('[notifications] web push disabled: web-push failed to load or VAPID keys are missing/invalid:', err.message);
+    return;
   }
 
   try {

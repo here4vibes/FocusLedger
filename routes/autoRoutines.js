@@ -1,6 +1,6 @@
 // Owns: Auto-Routines API endpoints — pattern detection trigger, suggestion management.
 // Does NOT own: pattern detection engine (lib/patternDetection.js),
-//               buddy conversations, or suggestion UI (buddy.html).
+//               buddy conversations, or suggestion UI.
 //
 // Endpoints:
 //   POST /api/auto-routines/detect        — trigger pattern detection for current user

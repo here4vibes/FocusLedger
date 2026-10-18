@@ -10,7 +10,7 @@
  *   6. Handle notification taps (deep-link to relevant page).
  *
  * Only loaded in the iOS native shell — harmless no-op in a browser.
- * Included in app.html and home.html via <script> after the auth check.
+ * Include via <script> after the auth check.
  */
 
 (function () {

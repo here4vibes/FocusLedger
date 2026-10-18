@@ -1,5 +1,6 @@
 const express = require('express');
 const crypto = require('crypto');
+const { signPayload, verifyPayload } = require('../lib/oauth-state');
 const { authenticateToken, generateToken, hashPassword, verifyPassword, establishSession } = require('../middleware/auth');
 const { sendEmail } = require('../lib/emailService');
 const { welcomeTemplate, passwordResetTemplate, passwordResetGoogleOnlyTemplate } = require('../lib/emailTemplates');
@@ -9,7 +10,10 @@ const seedStarterRoutine = require('../lib/seedStarterRoutine');
 const { getSessionData, markSessionMigrated, isSessionMigrated } = require('../db/buddy-demo');
 const { validateTimezone, fetchUserTimezone, getUserLocalDate } = require('../lib/timezone');
 const { isMonitorEmail } = require('../lib/monitor-accounts');
-const { markQaUser } = require('../db/users');
+const { markQaUser, saveSignupAttribution } = require('../db/users');
+const { sanitizeAttribution } = require('../lib/attribution');
+const { insertEvent } = require('../db/analytics');
+const { logFailure } = require('../lib/log-failure');
 
 // ============================================================
 // Google OAuth Configuration (Auth Scopes)
@@ -27,7 +31,6 @@ const isGoogleAuthConfigured = () => !!(GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET
 // ============================================================
 // State signing — prevents CSRF on OAuth callback
 // ============================================================
-const STATE_SECRET = process.env.JWT_SECRET || 'focusledger-auth-state';
 
 // Trusted hosts for post-OAuth redirect — prevents open redirect
 const TRUSTED_REDIRECT_HOSTS = new Set([
@@ -38,32 +41,24 @@ const TRUSTED_REDIRECT_HOSTS = new Set([
   'localhost:3000',
 ]);
 if (process.env.ALLOWED_ORIGIN) {
-  try { TRUSTED_REDIRECT_HOSTS.add(new URL(process.env.ALLOWED_ORIGIN).host); } catch {}
+  try { TRUSTED_REDIRECT_HOSTS.add(new URL(process.env.ALLOWED_ORIGIN).host); } catch (e) { console.error('[Auth] ALLOWED_ORIGIN is not a valid URL:', e.message); }
 }
 
-// State format: {returnTo}~{host}~{ts}~{sig}  (~ avoids colon clash with localhost:port)
+// Signed with lib/oauth-state.js (purpose-bound HMAC, constant-time, 10 min,
+// no fallback secret). returnTo is only ever the login or signup page, and the
+// host must be a trusted one, checked on both ends.
+const STATE_PURPOSE = 'google-signin';
+const RETURN_PAGES = new Set(['login', 'signup']);
+
 function signState(returnTo, host) {
-  const ts = Date.now();
-  const data = `${returnTo}~${host}~${ts}`;
-  const sig = crypto.createHmac('sha256', STATE_SECRET).update(data).digest('hex').slice(0, 16);
-  return Buffer.from(`${data}~${sig}`).toString('base64url');
+  return signPayload(STATE_PURPOSE, { returnTo, host });
 }
 
 function verifyState(state) {
-  try {
-    const raw = Buffer.from(state, 'base64url').toString();
-    const parts = raw.split('~');
-    if (parts.length !== 4) return null;
-    const [returnTo, host, ts, sig] = parts;
-    if (Date.now() - Number(ts) > 600000) return null;
-    const expected = crypto.createHmac('sha256', STATE_SECRET)
-      .update(`${returnTo}~${host}~${ts}`).digest('hex').slice(0, 16);
-    if (sig !== expected) return null;
-    const safeHost = TRUSTED_REDIRECT_HOSTS.has(host) ? host : 'focusledger.net';
-    return { returnTo, host: safeHost };
-  } catch {
-    return null;
-  }
+  const d = verifyPayload(STATE_PURPOSE, state);
+  if (!d || !RETURN_PAGES.has(d.returnTo)) return null;
+  const safeHost = TRUSTED_REDIRECT_HOSTS.has(d.host) ? d.host : 'focusledger.net';
+  return { returnTo: d.returnTo, host: safeHost };
 }
 
 // ============================================================
@@ -95,29 +90,14 @@ async function getGoogleUserInfo(accessToken) {
 module.exports = function(pool, loginLimiter, signupLimiter) {
   const router = express.Router();
 
-  // ── UTM attribution helper ───────────────────────────────────────────────
-  // Writes first-touch UTM fields to a user row (only once — skips if already set).
-  // attr is a plain object from the frontend; only known keys are written.
-  async function saveAttribution(userId, attr) {
-    if (!attr || typeof attr !== 'object') return;
-    const allowed = ['utm_source','utm_medium','utm_campaign','utm_content','utm_term','signup_referrer'];
-    const sets = [];
-    const vals = [];
-    let idx = 2;
-    for (const key of allowed) {
-      const v = attr[key];
-      if (v && typeof v === 'string') {
-        // Only update if column is still NULL (first-touch attribution only)
-        sets.push(`${key} = COALESCE(${key}, $${idx})`);
-        vals.push(v.slice(0, 500));
-        idx++;
-      }
-    }
-    if (sets.length === 0) return;
-    await pool.query(
-      `UPDATE users SET ${sets.join(', ')} WHERE id = $1`,
-      [userId, ...vals]
-    );
+  // ── First-touch attribution ──────────────────────────────────────────────
+  // attr comes from the browser (localStorage fl_attribution, captured on first
+  // landing by public/js/analytics.js). Sanitized to known keys, referrer as a
+  // bare domain; first write wins (db/users.saveSignupAttribution).
+  async function saveAttribution(userId, attr, opts) {
+    const clean = sanitizeAttribution(attr);
+    if (!clean) return false;
+    return saveSignupAttribution(pool, userId, clean, opts);
   }
 
   // POST /api/auth/signup
@@ -211,7 +191,7 @@ module.exports = function(pool, loginLimiter, signupLimiter) {
 
       // Save UTM attribution (fire-and-forget — never block the response)
       if (attribution) {
-        saveAttribution(user.id, attribution).catch(() => {});
+        saveAttribution(user.id, attribution).catch(logFailure('[Auth]', 'saveAttribution', { userId: user.id }));
       }
 
       res.status(201).json({
@@ -235,7 +215,7 @@ module.exports = function(pool, loginLimiter, signupLimiter) {
 
       // Seed Maslow-based default values for new users (fire-and-forget)
       seedDefaultValues(pool, user.id);
-      seedStarterRoutine(pool, user.id).catch(() => {});
+      seedStarterRoutine(pool, user.id).catch(logFailure('[Auth]', 'seedStarterRoutine', { userId: user.id }));
     } catch (err) {
       // Granular diagnostics — pinpoint which query/constraint failed from
       // Render logs alone (per engineering rules: no silent/opaque failures).
@@ -292,12 +272,12 @@ module.exports = function(pool, loginLimiter, signupLimiter) {
         Promise.resolve(pool.query(
           `UPDATE users SET login_count = COALESCE(login_count, 0) + 1, last_login_at = NOW(), timezone = $2 WHERE id = $1`,
           [user.id, loginTz]
-        )).catch(() => {});
+        )).catch(logFailure('[Auth]', 'recordLogin', { userId: user.id }));
       } else {
         Promise.resolve(pool.query(
           `UPDATE users SET login_count = COALESCE(login_count, 0) + 1, last_login_at = NOW() WHERE id = $1`,
           [user.id]
-        )).catch(() => {});
+        )).catch(logFailure('[Auth]', 'recordLogin', { userId: user.id }));
       }
 
       const token = generateToken(user);
@@ -311,9 +291,10 @@ module.exports = function(pool, loginLimiter, signupLimiter) {
         user: { id: user.id, email: user.email, name: user.name }
       });
 
-      // Seed defaults for existing users who have no values (fire-and-forget)
+      // Seed defaults for existing users who have no values (fire-and-forget).
+      // The starter routine is seeded at signup only: re-seeding here brought a
+      // routine the user had removed back on every login.
       seedDefaultValues(pool, user.id);
-      seedStarterRoutine(pool, user.id).catch(() => {});
     } catch (err) {
       console.error('[auth/login] ERROR:', err.message, err.stack);
       res.status(500).json({ success: false, message: 'Failed to log in' });
@@ -357,8 +338,14 @@ module.exports = function(pool, loginLimiter, signupLimiter) {
     }
 
     const returnTo = (req.query.return_to === 'signup') ? 'signup' : 'login';
-    const host = req.headers.host || 'focusledger.net';
-    const state = signState(returnTo, host);
+    const host = TRUSTED_REDIRECT_HOSTS.has(req.headers.host) ? req.headers.host : 'focusledger.net';
+    let state;
+    try {
+      state = signState(returnTo, host);
+    } catch (e) {
+      console.error('[auth/google] cannot sign OAuth state:', e.message);
+      return res.status(503).json({ success: false, message: 'Google sign-in is not configured. Please use email and password.' });
+    }
 
     const url = new URL('https://accounts.google.com/o/oauth2/v2/auth');
     url.searchParams.set('client_id',     GOOGLE_CLIENT_ID);
@@ -417,6 +404,7 @@ module.exports = function(pool, loginLimiter, signupLimiter) {
 
       let user;
       let accountLinked = false;
+      let isNewUser = false;
 
       if (existingByEmail.rows.length > 0) {
         const existing = existingByEmail.rows[0];
@@ -438,9 +426,9 @@ module.exports = function(pool, loginLimiter, signupLimiter) {
 
         user = { id: existing.id, email, name };
         accountLinked = !!existing.password_hash;
-        // Seed defaults for returning Google users who have no values (fire-and-forget)
+        // Seed defaults for returning Google users who have no values (fire-and-forget).
+        // No starter routine here: that's for new accounts only.
         seedDefaultValues(pool, user.id);
-      seedStarterRoutine(pool, user.id).catch(() => {});
       } else {
         const result = await pool.query(
           `INSERT INTO users (email, name, google_id, auth_method, avatar_url)
@@ -450,6 +438,7 @@ module.exports = function(pool, loginLimiter, signupLimiter) {
         );
 
         user = result.rows[0];
+        isNewUser = true;
 
         await Promise.all([
           pool.query('INSERT INTO budgets (weekly_amount, is_active, user_id) VALUES (500.00, true, $1)', [user.id]),
@@ -469,7 +458,7 @@ module.exports = function(pool, loginLimiter, signupLimiter) {
 
         // Seed Maslow-based default values for new Google users (fire-and-forget)
         seedDefaultValues(pool, user.id);
-      seedStarterRoutine(pool, user.id).catch(() => {});
+        seedStarterRoutine(pool, user.id).catch(logFailure('[Auth]', 'seedStarterRoutine', { userId: user.id }));
       }
 
       const token = generateToken(user);
@@ -477,7 +466,9 @@ module.exports = function(pool, loginLimiter, signupLimiter) {
       // Phase 2: Establish HttpOnly session cookie alongside JWT
       establishSession(req, user);
 
-      res.redirect(`${base}/${returnTo}?google_token=${encodeURIComponent(token)}&google_email=${encodeURIComponent(email)}${accountLinked ? '&google_linked=1' : ''}`);
+      // google_new=1 tells the page this was a signup (so it saves attribution
+      // and fires the signup conversion), even when it started on /login.
+      res.redirect(`${base}/${returnTo}?google_token=${encodeURIComponent(token)}&google_email=${encodeURIComponent(email)}${accountLinked ? '&google_linked=1' : ''}${isNewUser ? '&google_new=1' : ''}`);
     } catch (err) {
       console.error('[auth/google/callback] Error:', err);
       res.redirect(`${base}/${returnTo}?google_error=server_error`);
@@ -642,7 +633,7 @@ module.exports = function(pool, loginLimiter, signupLimiter) {
         `INSERT INTO analytics_events (visitor_hash, user_id, event_name, event_data, occurred_at)
          VALUES ($1, $2, 'password_reset_completed', '{}', NOW())`,
         [`user-${record.user_id}`, record.user_id]
-      ).catch(() => {});
+      ).catch(logFailure('[Auth]', 'trackPasswordResetCompleted', { userId: record.user_id }));
 
       res.json({ success: true, message: 'Your password has been updated. You can now log in.' });
     } catch (err) {
@@ -709,9 +700,9 @@ module.exports = function(pool, loginLimiter, signupLimiter) {
           [googleId, newAuthMethod, name, existing.id, avatarUrl]
         );
         user = { id: existing.id, email, name: existing.name || name };
-        // Seed defaults for returning One Tap users who have no values (fire-and-forget)
+        // Seed defaults for returning One Tap users who have no values (fire-and-forget).
+        // No starter routine here: that's for new accounts only.
         seedDefaultValues(pool, user.id);
-      seedStarterRoutine(pool, user.id).catch(() => {});
       } else {
         // New user
         isNewUser = true;
@@ -729,7 +720,7 @@ module.exports = function(pool, loginLimiter, signupLimiter) {
           pool.query(`INSERT INTO app_subscription (plan, status, user_id) VALUES ('free', 'active', $1)`, [user.id])
         ]).catch(err => console.error('[auth/google/one-tap] Setup error:', err));
 
-        // Onboarding flag — buddy.html checks /api/onboarding/status and redirects new users
+        // Onboarding flag — clients check /api/onboarding/status and redirect new users
         // to Buddy-led onboarding conversation before showing the main app.
 
         // Welcome email — fire-and-forget
@@ -737,19 +728,24 @@ module.exports = function(pool, loginLimiter, signupLimiter) {
         sendEmail(pool, { to: user.email, subject: ws, html: wh, templateType: 'welcome', userId: user.id })
           .catch(err => console.error('[auth/google/one-tap] Welcome email failed:', err.message));
 
+        // Starter routine, as for every other signup path (fire-and-forget)
+        seedStarterRoutine(pool, user.id).catch(logFailure('[Auth]', 'seedStarterRoutine', { userId: user.id }));
+
         // Save UTM attribution for new users (fire-and-forget)
         if (attribution) {
-          saveAttribution(user.id, attribution).catch(() => {});
+          saveAttribution(user.id, attribution).catch(logFailure('[Auth]', 'saveAttribution', { userId: user.id }));
         }
       }
 
       // Analytics — track which path brought them in (server-side because One Tap
       // may fire from the landing page where the client-side FLA lib isn't guaranteed loaded)
-      pool.query(
-        `INSERT INTO analytics_events (visitor_hash, user_id, event_name, event_data, occurred_at)
-         VALUES ($1, $2, $3, '{}', NOW())`,
-        [`user-${user.id}`, user.id, isNewUser ? 'signup_google_one_tap' : 'login_google_one_tap']
-      ).catch(() => {});
+      const oneTapAttr = isNewUser ? sanitizeAttribution(attribution) : null;
+      insertEvent(pool, {
+        visitorHash: `user-${user.id}`,
+        userId: user.id,
+        eventName: isNewUser ? 'signup_google_one_tap' : 'login_google_one_tap',
+        eventData: oneTapAttr ? { attribution: oneTapAttr } : {},
+      }).catch(logFailure('[Auth]', 'trackGoogleOneTap', { userId: user.id }));
 
       // Phase 2: Establish HttpOnly session cookie alongside JWT
       establishSession(req, user);
@@ -764,10 +760,11 @@ module.exports = function(pool, loginLimiter, signupLimiter) {
   // Called client-side after the OAuth callback delivers a token via query param.
   // UTMs survived the redirect in localStorage; this endpoint writes them to the DB.
   // Idempotent: COALESCE ensures only the first write wins (first-touch attribution).
+  // Only accounts created in the last 24h: attribution describes the signup.
   router.patch('/attribution', authenticateToken, async (req, res) => {
     try {
-      await saveAttribution(req.user.id, req.body);
-      res.json({ success: true });
+      const saved = await saveAttribution(req.user.id, req.body, { maxAgeHours: 24 });
+      res.json({ success: true, saved });
     } catch (err) {
       // Non-critical — log but don't surface to client
       console.error('[auth/attribution] Error:', err.message);
@@ -856,8 +853,8 @@ module.exports = function(pool, loginLimiter, signupLimiter) {
             );
             imported.values.push(cleanVal);
           }
-        } catch (_valErr) {
-          // Non-fatal.
+        } catch (valErr) {
+          console.error('[migrate-demo-session] Value import failed:', valErr.message, '| userId:', userId);
         }
       }
 
@@ -896,7 +893,7 @@ module.exports = function(pool, loginLimiter, signupLimiter) {
         pool.query(
           `UPDATE users SET previous_checkin_summary = $1 WHERE id = $2 AND previous_checkin_summary IS NULL`,
           [session.conversation_summary.slice(0, 1000), userId]
-        ).catch(() => {});
+        ).catch(logFailure('[migrate-demo-session]', 'storeConversationSummary', { userId }));
       }
 
       // ── Mark migrated ──────────────────────────────────────────────────────
@@ -911,7 +908,7 @@ module.exports = function(pool, loginLimiter, signupLimiter) {
           userId,
           JSON.stringify({ task_count: imported.tasks.length, value_count: imported.values.length })
         ]
-      ).catch(() => {});
+      ).catch(logFailure('[migrate-demo-session]', 'trackMigration', { userId }));
 
       res.json({
         success: true,

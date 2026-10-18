@@ -4,6 +4,8 @@
 const express = require('express');
 const { authenticateToken } = require('../middleware/auth');
 const { Resend } = require('resend');
+const { logFailure } = require('../lib/log-failure');
+const { requireAdmin } = require('../lib/admin-access');
 
 const FROM_ADDRESS = 'FocusLedger <hello@focusledger.net>';
 
@@ -52,13 +54,6 @@ module.exports = function(pool) {
 
   // ── Helpers (inside factory so pool is in scope via closure) ───────────
 
-  function isAdminUser(user) {
-    if (user.is_admin) return true;
-    const adminEmails = (process.env.ADMIN_EMAILS || '')
-      .split(',').map(e => e.trim().toLowerCase()).filter(Boolean);
-    return adminEmails.includes((user.email || '').toLowerCase());
-  }
-
   async function sendSupportNotification(submission) {
     const client = getResend();
     if (!client) return;
@@ -91,16 +86,8 @@ module.exports = function(pool) {
     }
   }
 
-  // ── Admin gate helper ──────────────────────────────────────────────────
-
-  async function requireAdmin(req) {
-    const userRow = await pool.query(
-      'SELECT is_admin, email FROM users WHERE id = $1',
-      [req.user.id]
-    );
-    const user = userRow.rows[0] || {};
-    return isAdminUser({ ...user, id: req.user.id, email: user.email });
-  }
+  // ── Admin gate: auth first, then the shared check (DB row, fails closed) ──
+  const admin = [authenticateToken, requireAdmin(pool)];
 
   // ── Public: Submit Contact Form ────────────────────────────────────────
 
@@ -124,7 +111,7 @@ module.exports = function(pool) {
         [name || null, email.trim().toLowerCase(), message.trim(), validCategory]
       );
 
-      sendSupportNotification({ email, name: name || null, message, category: validCategory }).catch(() => {});
+      sendSupportNotification({ email, name: name || null, message, category: validCategory }).catch(logFailure('[contact]', 'sendSupportNotification', { category: validCategory }));
       sendAckEmail({ email: email.trim().toLowerCase(), name, category: validCategory });
 
       res.json({ success: true, id: result.rows[0].id });
@@ -165,7 +152,7 @@ module.exports = function(pool) {
         user_id: userId,
         page_url,
         browser_info,
-      }).catch(() => {});
+      }).catch(logFailure('[contact]', 'sendSupportNotification', { userId, category: 'bug' }));
       if (req.user.email) {
         sendAckEmail({ email: req.user.email, name: req.user.name, category: 'bug' });
       }
@@ -179,12 +166,8 @@ module.exports = function(pool) {
 
   // ── Admin: List contact submissions ─────────────────────────────────────
 
-  router.get('/admin/submissions', authenticateToken, async (req, res) => {
+  router.get('/admin/submissions', admin, async (req, res) => {
     try {
-      if (!(await requireAdmin(req))) {
-        return res.status(403).json({ success: false, message: 'Admin access required.' });
-      }
-
       const { category, status, limit = 50, offset = 0 } = req.query;
 
       let query = `
@@ -225,12 +208,8 @@ module.exports = function(pool) {
 
   // ── Admin: Update submission status ────────────────────────────────────
 
-  router.patch('/admin/submissions/:id/status', authenticateToken, async (req, res) => {
+  router.patch('/admin/submissions/:id/status', admin, async (req, res) => {
     try {
-      if (!(await requireAdmin(req))) {
-        return res.status(403).json({ success: false, message: 'Admin access required.' });
-      }
-
       const { status } = req.body;
       if (!['pending', 'resolved'].includes(status)) {
         return res.status(400).json({ success: false, message: 'Invalid status.' });

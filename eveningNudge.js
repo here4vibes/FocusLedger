@@ -22,6 +22,7 @@ const { getLocalDateParts } = require('./lib/timezone');
 const { sendApnsNotification } = require('./lib/apns-sender');
 const { getPushTokens, deletePushToken } = require('./db/push-tokens');
 const { configureWebPush } = require('./lib/webpush');
+const { logFailure } = require('./lib/log-failure');
 
 async function sendEveningNudges(pool) {
   const { webpush, apnsEnabled, anyConfigured } = configureWebPush('evening-nudge');
@@ -96,7 +97,7 @@ async function sendEveningNudges(pool) {
               if (sendErr.statusCode === 410 || sendErr.statusCode === 404) {
                 await pool.query(
                   'DELETE FROM push_subscriptions WHERE endpoint = $1', [row.endpoint]
-                ).catch(() => {});
+                ).catch(logFailure('[EveningNudge]', 'delete stale push subscription', { userId: user.id }));
               } else {
                 console.warn('[EveningNudge] Web push error for user', user.id, sendErr.message);
               }

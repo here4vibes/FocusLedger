@@ -82,13 +82,9 @@
     { label: 'Life',  href: '/app/life',   icon: SVG('<path d="M12 21s-7-4.5-9.5-9A5.5 5.5 0 0 1 12 6a5.5 5.5 0 0 1 9.5 6c-2.5 4.5-9.5 9-9.5 9z"/>') },
   ];
 
-  // Everything not yet inside a place's sub-tabs. Tasks' pages moved into its
-  // hub (PLACE_TABS); Life → Vault, Journal, Values, Insights is phase 4.
+  // Everything not inside a place's sub-tabs (PLACE_TABS): Tasks, Money and
+  // Life pages live in their hubs now, so "More" is settings-type pages only.
   const MENU_ITEMS = [
-    { label: 'Vault',             href: '/app/vault',         icon: '🗂️' },
-    { label: 'Journal',           href: '/journal',           icon: '📓' },
-    { label: 'Values',            href: '/values',            icon: '🌟' },
-    { label: 'Insights',          href: '/insights',          icon: '📊' },
     { label: 'Email → Tasks',     href: '/email',             icon: '📧' },
     { label: 'Partner Dashboard', href: '/partner-dashboard', icon: '👥' },
     { label: 'Settings',          href: '/settings',          icon: '⚙️' },
@@ -147,6 +143,14 @@
       { label: 'Overview',     href: '/app/money' },
       { label: 'Transactions', href: '/transactions' },
       { label: 'Bills',        href: '/app/money/bills' },
+    ],
+    '/app/life': [
+      { label: 'Overview',  href: '/app/life', also: ['/app/life/score', '/app/life/nudges'] },
+      { label: 'Vault',     href: '/app/vault', also: ['/app/life/vault'] },
+      { label: 'Insurance', href: '/app/life/insurance' },
+      { label: 'Values',    href: '/values' },
+      { label: 'Journal',   href: '/journal' },
+      { label: 'Insights',  href: '/insights' },
     ],
   };
   function tabMatches(tab, path) {

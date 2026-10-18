@@ -41,6 +41,8 @@ const {
 const { isApnsConfigured, sendApnsNotification } = require('../lib/apns-sender');
 const { configureWebPush } = require('../lib/webpush');
 const { getPushTokens, deletePushToken } = require('../db/push-tokens');
+const { logFailure } = require('../lib/log-failure');
+const { singleTaskActions } = require('../lib/push-action-token');
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -64,8 +66,7 @@ async function sendWebPush(webpush, subscriptions, payload, pool) {
       sent++;
     } catch (err) {
       if (err.statusCode === 410 || err.statusCode === 404) {
-        await deleteSubscriptionByEndpoint(pool, row.endpoint).catch(e =>
-          console.error('[cold-start-nudge] stale subscription delete failed:', e.message));
+        await deleteSubscriptionByEndpoint(pool, row.endpoint).catch(logFailure('[cold-start-nudge]', 'deleteSubscriptionByEndpoint'));
       } else {
         console.error('[cold-start-nudge] web push failed | status:', err.statusCode, '|', err.message);
       }
@@ -76,7 +77,7 @@ async function sendWebPush(webpush, subscriptions, payload, pool) {
 
 async function sendApnsPush(userId, payload) {
   if (!isApnsConfigured()) return 0;
-  const tokens = await getPushTokens(pool, userId);
+  const tokens = await getPushTokens(pool, userId).catch(logFailure('[cold-start-nudge]', 'getPushTokens', { userId }, []));
   if (!tokens.length) return 0;
   // sendApnsNotification expects { title, body, url } — NOT a raw aps envelope
   // (it builds the aps alert itself). Passing an aps-shaped object dropped the
@@ -85,10 +86,7 @@ async function sendApnsPush(userId, payload) {
   const { sent } = await sendApnsNotification(
     tokens.map(t => t.token),
     { title: parsed.title, body: parsed.body, url: parsed.url },
-    async (invalidToken) => {
-      await deletePushToken(pool, invalidToken).catch(e =>
-        console.error('[cold-start-nudge] invalid token delete failed:', e.message, '| user:', userId));
-    }
+    async (invalidToken) => { await deletePushToken(pool, invalidToken).catch(logFailure('[cold-start-nudge]', 'deletePushToken', { userId })); }
   );
   return sent;
 }
@@ -159,8 +157,8 @@ async function run() {
         url: `/app/task/${task_id}`,
         tag: `fl-cold-start-${task_id}`,
         renotify: false,
-        actions: [{ action: 'focus', title: 'Start focus ⏱' }, { action: 'view', title: 'View' }],
-        actionUrls: { focus: `/app/focus/${task_id}`, view: `/app/task/${task_id}` },
+        // "Done ✓" for when it already happened; otherwise one tap into focus.
+        ...singleTaskActions(user_id, task_id, { action: 'focus', title: 'Start focus ⏱', url: `/app/focus/${task_id}` }),
       });
 
       // Web push

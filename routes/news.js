@@ -15,6 +15,7 @@ const https = require('https');
 const http = require('http');
 const { URL } = require('url');
 const { authenticateToken } = require('../middleware/auth');
+const { logFailure } = require('../lib/log-failure');
 
 const BIAS_WEIGHTS = {
   center: 1.0,
@@ -204,7 +205,7 @@ function extractDomain(url) {
   try {
     const u = new URL(url);
     return u.hostname.replace(/^www\./, '');
-  } catch {
+  } catch { // silent-ok: a feed item without a valid URL just has no domain
     return '';
   }
 }
@@ -223,12 +224,16 @@ async function fetchAllFeeds(pool) {
     SET is_active = FALSE
     WHERE source_domain IN ('reuters.com', 'apnews.com')
       AND is_active = TRUE
-  `).catch(() => { /* ignore — table may not exist on fresh deploy before migration runs */ });
+  `).catch(logFailure('[News]', 'deactivate known-failing feeds'));
 
   let feedsResult;
   try {
     feedsResult = await pool.query(
-      'SELECT id, name, url, source_domain FROM rss_feeds WHERE is_active = TRUE'
+      // A feed that failed last time is retried every 6 hours, not every run:
+      // a source that's down for days shouldn't log an error every 20 minutes.
+      `SELECT id, name, url, source_domain FROM rss_feeds
+       WHERE is_active = TRUE
+         AND (last_error IS NULL OR last_fetched_at IS NULL OR last_fetched_at < NOW() - INTERVAL '6 hours')`
     );
   } catch (err) {
     console.error('[News] DB error loading feeds:', err.message);
@@ -290,13 +295,18 @@ async function fetchAllFeeds(pool) {
       );
       console.log(`[News] Fetched ${articles.length} articles from ${feed.name}`);
     } catch (err) {
-      console.error(`[News] Failed to fetch ${feed.name}: ${err.message}`);
+      // A third-party feed being down (HTTP 5xx/4xx, DNS, timeout) isn't ours to
+      // fix: warn, record it, and back off. Anything else is a real error.
+      const upstream = /^HTTP \d{3}|ENOTFOUND|ECONNRESET|ETIMEDOUT|EAI_AGAIN|timeout|aborted/i.test(err.message || '');
+      (upstream ? console.warn : console.error)(`[News] Failed to fetch ${feed.name}: ${err.message}`);
       try {
         await pool.query(
           'UPDATE rss_feeds SET last_error = $1, last_fetched_at = NOW() WHERE id = $2',
           [err.message.slice(0, 500), feed.id]
         );
-      } catch { /* ignore */ }
+      } catch (e) {
+        console.error('[News] recording last_error failed:', e.message, '| feedId:', feed.id);
+      }
     }
 
     // Brief pause between feeds to avoid overwhelming sources
@@ -528,7 +538,8 @@ module.exports = function(pool) {
         'SELECT id, name, source_domain, category, is_active, last_fetched_at, last_error FROM rss_feeds ORDER BY name'
       );
       res.json({ success: true, feeds: result.rows });
-    } catch {
+    } catch (err) {
+      console.error('[news] GET /feeds error:', err.message);
       res.status(500).json({ success: false, message: 'Failed to load feeds' });
     }
   });

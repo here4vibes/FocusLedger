@@ -60,7 +60,9 @@ function decryptPlaidToken(ciphertext) {
     const decipher = crypto.createDecipheriv('aes-256-gcm', _plaidEncKey, iv);
     decipher.setAuthTag(tag);
     return Buffer.concat([decipher.update(enc), decipher.final()]).toString('utf8');
-  } catch {
+  } catch (e) {
+    // A key mismatch or tampering also lands here, not just legacy plaintext tokens.
+    console.warn('[Plaid] token decrypt failed, using it as a legacy plaintext token:', e.message);
     return ciphertext;
   }
 }
@@ -107,6 +109,7 @@ const { runBillGuardian, detectStreams, bucketFor, FREQUENCIES } = require('../l
 const { cancelLinkFor } = require('../lib/cancel-links');
 const { cancelHelp } = require('../lib/cancel-help');
 const billsDb = require('../db/bills');
+const { logFailure } = require('../lib/log-failure');
 
 
 
@@ -651,6 +654,7 @@ module.exports = function(pool) {
           );
           itemResult.in_db = dbStats[0];
         } catch (e) {
+          console.warn('[Plaid] diagnostic item check failed | userId:', userId, '| item:', item.id, '|', e.response?.data?.error_code || e.message);
           itemResult.success = false;
           itemResult.plaid_error_code = e.response?.data?.error_code || null;
           itemResult.plaid_error_type = e.response?.data?.error_type || null;
@@ -826,7 +830,7 @@ module.exports = function(pool) {
   router.post('/create-link-token', async (req, res) => {
     try {
       const userId = req.user.id;
-      const isPro = await checkProStatus(pool, userId).catch(() => false);
+      const isPro = await checkProStatus(pool, userId).catch(logFailure('[Plaid]', 'checkProStatus', { userId }, false));
       if (!isPro) return res.status(403).json({ success: false, message: 'Bank sync is an Autopilot feature.' });
       const plaid = getPlaidClient();
       if (!plaid) {
@@ -894,7 +898,7 @@ module.exports = function(pool) {
       const userId = req.user.id;
       const { public_token, institution_name, institution_id } = req.body;
       if (!public_token) return res.status(400).json({ success: false, message: 'public_token required' });
-      const isPro = await checkProStatus(pool, userId).catch(() => false);
+      const isPro = await checkProStatus(pool, userId).catch(logFailure('[Plaid]', 'checkProStatus', { userId }, false));
       if (!isPro) return res.status(403).json({ success: false, message: 'Bank sync is an Autopilot feature.' });
       const plaid = getPlaidClient();
       if (!plaid) return res.status(503).json({ success: false, message: 'Bank sync is being set up.' });

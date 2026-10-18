@@ -47,6 +47,7 @@
 
 const express = require('express');
 const crypto = require('crypto');
+const { logFailure } = require('../lib/log-failure');
 
 // ─────────────────────────────────────────────
 // CALCULATOR CONFIG — edit here to tune values
@@ -300,7 +301,7 @@ module.exports = function adhdTaxRoutes(pool) {
           pool.query(
             'UPDATE adhd_tax_leads SET email_sent_at = NOW() WHERE share_hash = $1',
             [shareHash]
-          ).catch(() => {}); // best-effort update
+          ).catch(logFailure('[adhd-tax]', 'markEmailSent'));
         }
       });
 

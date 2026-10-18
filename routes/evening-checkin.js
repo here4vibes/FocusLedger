@@ -25,41 +25,39 @@ module.exports = function(pool) {
       const [tasksResult, routinesResult, explicitRoutinesResult, docsResult, moneyTasksResult, openResult] = await Promise.all([
         pool.query(`
           SELECT COUNT(*) as count FROM tasks
-          WHERE user_id = $1 AND is_completed = true AND completed_at::date = $2::date
-        `, [userId, today]),
+          WHERE user_id = $1 AND is_completed = true AND (completed_at AT TIME ZONE $3)::date = $2::date
+        `, [userId, today, tz]),
         pool.query(`
           SELECT COUNT(DISTINCT r.id) as count
           FROM routines r
           JOIN routine_nudge_events rne ON rne.routine_id = r.id AND rne.nudge_date = $2
           JOIN routine_task_links rtl ON rtl.routine_id = r.id
-          JOIN tasks t ON t.id = rtl.task_id AND t.is_completed = true AND t.completed_at::date = $2::date
+          JOIN tasks t ON t.id = rtl.task_id AND t.is_completed = true AND (t.completed_at AT TIME ZONE $3)::date = $2::date
           WHERE r.user_id = $1 AND r.is_active = true
-        `, [userId, today]),
+        `, [userId, today, tz]),
         pool.query(`
           SELECT COUNT(*) as count FROM routine_streaks
           WHERE user_id = $1 AND last_completed_date = $2
         `, [userId, today]),
         pool.query(`
           SELECT COUNT(*) as count FROM documents
-          WHERE user_id = $1 AND updated_at::date = $2::date
-        `, [userId, today]),
+          WHERE user_id = $1 AND (uploaded_at AT TIME ZONE $3)::date = $2::date
+        `, [userId, today, tz]),
         pool.query(`
           SELECT COUNT(*) as count FROM tasks
           WHERE user_id = $1
             AND is_completed = true
-            AND completed_at::date = $2::date
+            AND (completed_at AT TIME ZONE $3)::date = $2::date
             AND (
-              categorytag ILIKE '%money%' OR
-              categorytag ILIKE '%budget%' OR
-              categorytag ILIKE '%spending%' OR
-              categorytag ILIKE '%expense%' OR
-              categorytag ILIKE '%bill%' OR
+              bill_merchant_key IS NOT NULL OR
+              bill_type IS NOT NULL OR
+              title ILIKE '%spending%' OR
               title ILIKE '%budget%' OR
               title ILIKE '%bill%' OR
               title ILIKE '%money%' OR
               title ILIKE '%expense%'
             )
-        `, [userId, today]),
+        `, [userId, today, tz]),
         pool.query(`
           SELECT COUNT(*) as count FROM tasks WHERE user_id = $1 AND is_completed = false
         `, [userId])
@@ -100,8 +98,8 @@ module.exports = function(pool) {
 
       const completedResult = await pool.query(`
         SELECT COUNT(*) as count FROM tasks
-        WHERE user_id = $1 AND is_completed = true AND completed_at::date = $2::date
-      `, [userId, today]);
+        WHERE user_id = $1 AND is_completed = true AND (completed_at AT TIME ZONE $3)::date = $2::date
+      `, [userId, today, tz]);
 
       const openResult = await pool.query(`
         SELECT COUNT(*) as count FROM tasks WHERE user_id = $1 AND is_completed = false

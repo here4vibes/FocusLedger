@@ -756,13 +756,13 @@
 
     // ── Mode switch ──────────────────────────────────────────────────────────
     document.getElementById('modeSwitchBtn').addEventListener('click', function() {
-        // User wants form mode — record manual override and redirect to buddy
+        // User wants form mode — record manual override and go to the form check-in
         apiFetch('/api/buddy/mode-preference', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ manual_override: 'form' })
         }).catch(function() {});
-        window.location.href = '/app/buddy?mode=form';
+        window.location.href = '/app/checkin/form';
     });
 
     // ── Boot: check session status + mode preference ──────────────────────────
@@ -788,9 +788,8 @@
         }
 
         // If preference says form mode and we are not being forced here, redirect to form flow
-        // The form flow is embedded in buddy.html — redirect with ?mode=form signal
         if (modePref.mode === 'form' && !window.location.search.includes('force=conversation')) {
-            window.location.href = '/app/buddy?mode=form';
+            window.location.href = '/app/checkin/form';
             return;
         }
 

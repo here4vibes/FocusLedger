@@ -56,6 +56,9 @@ const {
 } = require('../lib/routineNudgeEngine');
 const { getSessionSuggestion } = require('../lib/patternDetection');
 const { getAdhdProfile, updateAdhdProfile, buildProfilePromptAddition, bootstrapAdhdProfile } = require('../lib/adhd-profile');
+const { logFailure } = require('../lib/log-failure');
+const { parseAiJson } = require('../lib/ai-json');
+const { onTasksCompleted, refreshRoutineTasks } = require('../lib/routine-capture');
 
 // ── Scoring weights ─────────────────────────────────────────────────────────
 // Deadline urgency (40%), values alignment (25%), avoidance detection (20%),
@@ -257,7 +260,9 @@ module.exports = function(pool) {
       let greetingInsights = [];
       try {
         greetingInsights = await buildGreetingContext(pool, userId, sessionCount, tz);
-      } catch (_) { /* non-blocking */ }
+      } catch (e) {
+        console.error('[buddy] buildGreetingContext failed:', e.message, '| userId:', userId);
+      }
 
       // Routine nudges — generate any missed-routine events, then fetch pending.
       // Best-effort — Buddy session works fine even if this fails.
@@ -267,7 +272,9 @@ module.exports = function(pool) {
         const localTime = getLocalTimeString(tz);
         await checkAndGenerateNudges(pool, userId, localDate, tz);
         routineNudges = await getSessionNudges(pool, userId, localDate, localTime);
-      } catch (_) { /* non-blocking */ }
+      } catch (e) {
+        console.error('[buddy] routine nudges failed:', e.message, '| userId:', userId);
+      }
 
       // Auto-routines suggestion — passive pattern detection surfaced at session start.
       // Max 1 suggestion per session; ephemeral (expires after 3 ignored sessions).
@@ -275,7 +282,9 @@ module.exports = function(pool) {
       let autoRoutineSuggestion = null;
       try {
         autoRoutineSuggestion = await getSessionSuggestion(pool, userId);
-      } catch (_) { /* non-blocking */ }
+      } catch (e) {
+        console.error('[buddy] getSessionSuggestion failed:', e.message, '| userId:', userId);
+      }
 
       // Starter routine suggestion — shown to users with no morning routine.
       // Surfaces the Morning Essentials hygiene template for one-tap adoption.
@@ -300,7 +309,9 @@ module.exports = function(pool) {
             };
           }
         }
-      } catch (_) { /* non-blocking */ }
+      } catch (e) {
+        console.error('[buddy] starter routine suggestion failed:', e.message, '| userId:', userId);
+      }
 
       let planSummary = null;
       if (!dueToday) {
@@ -398,7 +409,7 @@ module.exports = function(pool) {
           [userId, today]
         ),
         // Only fetch partner context on first turn to avoid repeated DB queries per turn
-        buildPartnerContext(pool, userId, today).catch(() => null),
+        buildPartnerContext(pool, userId, today, tz).catch(logFailure('[buddy]', 'buildPartnerContext', { userId }, null)),
       ]);
       const history = histResult.rows;
       const activeTasks = activeTasksResult.rows;
@@ -441,18 +452,25 @@ module.exports = function(pool) {
               [userId, (t.title || '').slice(0, 200), priority, t.value_id || null]
             );
             if (ins.rows[0]) created.push({ ...ins.rows[0], category: t.category });
-          } catch (_) { /* skip individual task errors */ }
+          } catch (e) {
+            console.error('[buddy] brain-dump task insert failed, skipping it:', e.message, '| userId:', userId);
+          }
         }
 
         const doToday  = created.filter(t => t.category === 'do_today');
         const doSoon   = created.filter(t => t.category === 'do_soon');
         const parked   = created.filter(t => t.category === 'parked');
 
-        let buddyReply = dumpSummary + '\n\n';
-        if (doToday.length)  buddyReply += `✅ **Do Today (${doToday.length}):** ${doToday.map(t => t.title).join(', ')}\n`;
-        if (doSoon.length)   buddyReply += `📋 **Do Soon (${doSoon.length}):** ${doSoon.map(t => t.title).join(', ')}\n`;
-        if (parked.length)   buddyReply += `🗂 **Parked (${parked.length}):** ${parked.map(t => t.title).join(', ')}\n`;
-        buddyReply += '\nAll added to your task list. Want to start on anything from the Do Today pile?';
+        let buddyReply;
+        if (!created.length) {
+          buddyReply = "I couldn't sort that into tasks just now, so nothing was added. Try again in a moment, or send them to me one at a time.";
+        } else {
+          buddyReply = (dumpSummary || 'Got your brain dump.') + '\n\n';
+          if (doToday.length)  buddyReply += `✅ **Do Today (${doToday.length}):** ${doToday.map(t => t.title).join(', ')}\n`;
+          if (doSoon.length)   buddyReply += `📋 **Do Soon (${doSoon.length}):** ${doSoon.map(t => t.title).join(', ')}\n`;
+          if (parked.length)   buddyReply += `🗂 **Parked (${parked.length}):** ${parked.map(t => t.title).join(', ')}\n`;
+          buddyReply += '\nAll added to your task list. Want to start on anything from the Do Today pile?';
+        }
 
         const buddyTurn = nextTurn + 1;
         await pool.query(
@@ -486,18 +504,20 @@ module.exports = function(pool) {
       if (contextForPrompt.length === 0 && sessionCount >= 3 && sessionCount <= 8 && userTurns <= 1) {
         try {
           enrichedContext = await buildGreetingContext(pool, userId, sessionCount, tz);
-        } catch (_) { /* non-blocking */ }
+        } catch (e) {
+          console.error('[buddy] buildGreetingContext (chat) failed:', e.message, '| userId:', userId);
+        }
       }
 
       // Partner context injected only on first 2 turns — Buddy uses it to set coaching tone,
       // not to repeatedly surface partner info throughout the conversation.
       const partnerContextForPrompt = userTurns <= 2 ? partnerCtx : null;
-      const adhdProfile = await getAdhdProfile(pool, userId).catch(() => ({}));
+      const adhdProfile = await getAdhdProfile(pool, userId).catch(logFailure('[buddy]', 'getAdhdProfile', { userId }, {}));
 
       // Existing users land here with adhd_profile = {} until bootstrapped.
       // Fire-and-forget: synthesize from history so the NEXT session has a profile.
       if (Object.keys(adhdProfile).length === 0) {
-        setImmediate(() => bootstrapAdhdProfile(pool, userId).catch(() => {}));
+        setImmediate(() => bootstrapAdhdProfile(pool, userId).catch(logFailure('[buddy]', 'bootstrapAdhdProfile', { userId })));
       }
 
       const systemPrompt = buildConversationSystemPrompt(userTurns, enrichedContext, partnerContextForPrompt, sessionCount, hookRestartCount, adhdProfile);
@@ -521,7 +541,7 @@ module.exports = function(pool) {
           }
         })(),
         detectCompletions(message.trim(), activeTasks),
-        extractPassiveCapture(message.trim()).catch(() => ({ tasks: [], expenses: [] })),
+        extractPassiveCapture(message.trim()).catch(logFailure('[buddy]', 'extractPassiveCapture', { userId }, { tasks: [], expenses: [] })),
       ]);
 
       let buddyReply = aiResult.reply;
@@ -557,6 +577,8 @@ module.exports = function(pool) {
               [match.task_id, userId]
             );
             if (result.rows.length > 0) {
+              onTasksCompleted(pool, userId, match.task_id)
+                .catch(logFailure('[buddy]', 'onTasksCompleted', { userId, taskId: match.task_id }, []));
               autoCompleted.push({
                 task_id: match.task_id,
                 title: result.rows[0].title,
@@ -588,7 +610,7 @@ module.exports = function(pool) {
 
         // Archive conversation to Journal as a readable entry.
         // Non-blocking — journal archiving never fails the check-in response.
-        archiveBuddyConversationToJournal(pool, userId, today, allUserMsgs, detectedMood, buddyReply).catch(archErr => {
+        archiveBuddyConversationToJournal(pool, userId, today, tz, allUserMsgs, detectedMood, buddyReply).catch(archErr => {
           console.error('[buddy] journal archive error:', archErr.message);
         });
       }
@@ -747,7 +769,9 @@ module.exports = function(pool) {
           if (convResult.rows.length > 0) {
             await updateAdhdProfile(pool, userId, convResult.rows);
           }
-        } catch { /* non-blocking */ }
+        } catch (e) {
+          console.error('[buddy] updateAdhdProfile failed:', e.message, '| userId:', userId);
+        }
       });
     } catch (err) {
       console.error('[buddy] POST /login-checkin-done error:', err.message);
@@ -760,6 +784,8 @@ module.exports = function(pool) {
   router.get('/status', async (req, res) => {
     try {
       const userId = req.user.id;
+      // Reopen yesterday's routine tasks before reading the task list.
+      await refreshRoutineTasks(pool, userId).catch(logFailure('[buddy]', 'refreshRoutineTasks', { userId }, 0));
       const tz = await fetchUserTimezone(pool, userId);
       const today = req.query.date || getUserLocalDate(tz);
 
@@ -783,8 +809,8 @@ module.exports = function(pool) {
         FROM tasks
         WHERE user_id = $1
           AND is_completed = true
-          AND completed_at::date = $2::date
-      `, [userId, today]);
+          AND (completed_at AT TIME ZONE $3)::date = $2::date
+      `, [userId, today, tz]);
 
       // Fetch both check-ins for today
       const checkinsResult = await pool.query(`
@@ -1050,8 +1076,8 @@ module.exports = function(pool) {
       // Tasks completed today
       const tasksResult = await pool.query(`
         SELECT COUNT(*) as count FROM tasks
-        WHERE user_id = $1 AND is_completed = true AND completed_at::date = $2::date
-      `, [userId, today]);
+        WHERE user_id = $1 AND is_completed = true AND (completed_at AT TIME ZONE $3)::date = $2::date
+      `, [userId, today, tz]);
 
       // Routines kept today — routines that have a streak event for today
       // We count routine_task_links where the linked task was completed today
@@ -1061,9 +1087,9 @@ module.exports = function(pool) {
         FROM routines r
         JOIN routine_nudge_events rne ON rne.routine_id = r.id AND rne.nudge_date = $2
         JOIN routine_task_links rtl ON rtl.routine_id = r.id
-        JOIN tasks t ON t.id = rtl.task_id AND t.is_completed = true AND t.completed_at::date = $2::date
+        JOIN tasks t ON t.id = rtl.task_id AND t.is_completed = true AND (t.completed_at AT TIME ZONE $3)::date = $2::date
         WHERE r.user_id = $1 AND r.is_active = true
-      `, [userId, today]);
+      `, [userId, today, tz]);
 
       // Also count routines that were explicitly completed via routine_streaks today
       const explicitRoutinesResult = await pool.query(`
@@ -1076,30 +1102,28 @@ module.exports = function(pool) {
         parseInt(explicitRoutinesResult.rows[0].count, 10)
       );
 
-      // Documents handled — documents with updated_at today
+      // Documents handled — documents uploaded today (prod has no documents.updated_at)
       const docsResult = await pool.query(`
         SELECT COUNT(*) as count FROM documents
-        WHERE user_id = $1 AND updated_at::date = $2::date
-      `, [userId, today]);
+        WHERE user_id = $1 AND (uploaded_at AT TIME ZONE $3)::date = $2::date
+      `, [userId, today, tz]);
 
-      // Money tasks done — tasks with a money-related categorytag or title keyword
+      // Money tasks done — bill tasks or a money keyword in the title (tasks has no categorytag)
       const moneyTasksResult = await pool.query(`
         SELECT COUNT(*) as count FROM tasks
         WHERE user_id = $1
           AND is_completed = true
-          AND completed_at::date = $2::date
+          AND (completed_at AT TIME ZONE $3)::date = $2::date
           AND (
-            categorytag ILIKE '%money%' OR
-            categorytag ILIKE '%budget%' OR
-            categorytag ILIKE '%spending%' OR
-            categorytag ILIKE '%expense%' OR
-            categorytag ILIKE '%bill%' OR
+            bill_merchant_key IS NOT NULL OR
+            bill_type IS NOT NULL OR
+            title ILIKE '%spending%' OR
             title ILIKE '%budget%' OR
             title ILIKE '%bill%' OR
             title ILIKE '%money%' OR
             title ILIKE '%expense%'
           )
-      `, [userId, today]);
+      `, [userId, today, tz]);
 
       // Total open tasks
       const openResult = await pool.query(`
@@ -1135,8 +1159,8 @@ module.exports = function(pool) {
 
       const completedResult = await pool.query(`
         SELECT COUNT(*) as count FROM tasks
-        WHERE user_id = $1 AND is_completed = true AND completed_at::date = $2::date
-      `, [userId, today]);
+        WHERE user_id = $1 AND is_completed = true AND (completed_at AT TIME ZONE $3)::date = $2::date
+      `, [userId, today, tz]);
 
       const openResult = await pool.query(`
         SELECT COUNT(*) as count FROM tasks WHERE user_id = $1 AND is_completed = false
@@ -1496,6 +1520,8 @@ module.exports = function(pool) {
               [match.task_id, userId]
             );
             if (result.rows.length > 0) {
+              onTasksCompleted(pool, userId, match.task_id)
+                .catch(logFailure('[buddy]', 'onTasksCompleted', { userId, taskId: match.task_id }, []));
               autoCompleted.push({
                 task_id: match.task_id,
                 title: result.rows[0].title,
@@ -1661,6 +1687,10 @@ Example output: ["Walk to the kitchen","Pick up one item from the counter","Put 
             [updated.task_id, userId]
           );
           parentCompleted = taskUpdate.rows.length > 0;
+          if (parentCompleted) {
+            onTasksCompleted(pool, userId, updated.task_id)
+              .catch(logFailure('[buddy]', 'onTasksCompleted', { userId, taskId: updated.task_id }, []));
+          }
         }
       }
 
@@ -1752,7 +1782,7 @@ Example output: ["Walk to the kitchen","Pick up one item from the counter","Put 
   // body: { text: string }
   router.post('/brain-dump-triage', async (req, res) => {
     try {
-      const userId = req.user.id; // eslint-disable-line no-unused-vars
+      const userId = req.user.id;
       const { text } = req.body;
       if (!text || !text.trim()) {
         return res.status(400).json({ success: false, message: 'text required' });
@@ -1785,9 +1815,9 @@ Rules:
 
       let triage;
       try {
-        const cleaned = raw.trim().replace(/^```json\s*/,'').replace(/^```\s*/,'').replace(/\s*```$/,'');
-        triage = JSON.parse(cleaned);
-      } catch {
+        triage = parseAiJson(raw);
+      } catch (parseErr) {
+        console.error('[buddy] brain-dump-triage reply was not JSON:', parseErr.message, '| userId:', userId);
         return res.status(500).json({ success: false, message: 'AI returned unexpected format' });
       }
 
@@ -1862,9 +1892,9 @@ Rules:
 
       let menu;
       try {
-        const cleaned = raw.trim().replace(/^```json\s*/,'').replace(/^```\s*/,'').replace(/\s*```$/,'');
-        menu = JSON.parse(cleaned);
-      } catch {
+        menu = parseAiJson(raw);
+      } catch (parseErr) {
+        console.error('[buddy] dopamine-menu reply was not JSON:', parseErr.message, '| userId:', userId);
         return res.status(500).json({ success: false, message: 'AI returned unexpected format' });
       }
 
@@ -2095,15 +2125,16 @@ Return ONLY valid JSON in this exact format:
 // Saves a clean narrative summary of a completed check-in to journal_entries.
 // Entry is readable on its own — written for humans, not machines.
 // Skips silently if a journal entry already exists for this user+date to avoid dupes.
-async function archiveBuddyConversationToJournal(pool, userId, dateStr, userMessages, mood, buddyLastReply) {
-  // Don't create a second archive if one was already made today
+async function archiveBuddyConversationToJournal(pool, userId, dateStr, tz, userMessages, mood, buddyLastReply) {
+  // Don't create a second archive if one was already made today (the user's
+  // local day: created_at::date is UTC, so an evening check-in looked like tomorrow's)
   const existing = await pool.query(
     `SELECT id FROM journal_entries
      WHERE user_id = $1
        AND entry_type = 'buddy_checkin'
-       AND created_at::date = $2::date
+       AND (created_at AT TIME ZONE $3)::date = $2::date
      LIMIT 1`,
-    [userId, dateStr]
+    [userId, dateStr, tz]
   );
   if (existing.rows.length > 0) return;
 
@@ -2147,7 +2178,7 @@ async function archiveBuddyConversationToJournal(pool, userId, dateStr, userMess
 //
 // Returns: { partnerName, sharedOverdue, sharedDoneToday, concernTopics }
 // or null if Tandem not applicable for this user.
-async function buildPartnerContext(pool, userId, today) {
+async function buildPartnerContext(pool, userId, today, tz) {
   try {
     // Check Tandem access — only inject partner context if access is active
     const access = await checkTandemAccess(pool, userId);
@@ -2175,9 +2206,9 @@ async function buildPartnerContext(pool, userId, today) {
         SELECT COUNT(*) AS count FROM tasks
         WHERE user_id = $1
           AND is_completed = true
-          AND completed_at::date = $2::date
+          AND (completed_at AT TIME ZONE $3)::date = $2::date
           AND (is_household = true OR is_shared_with_partner = true)
-      `, [partnerId, today]),
+      `, [partnerId, today, tz]),
 
       pool.query(`
         SELECT COUNT(*) AS count FROM tasks
@@ -2195,8 +2226,9 @@ async function buildPartnerContext(pool, userId, today) {
     const concernTopics = concernsResult.map(c => c.topic_area).filter(Boolean);
 
     return { partnerName, sharedOverdue, sharedDoneToday, concernTopics };
-  } catch (_) {
+  } catch (err) {
     // Non-blocking — Buddy works fine without partner context
+    console.warn('[buddy] buildPartnerContext failed:', err.message, '| userId:', userId);
     return null;
   }
 }

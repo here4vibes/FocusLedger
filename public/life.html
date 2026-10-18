@@ -42,33 +42,6 @@
     }
     h1, h2, h3 { font-family: 'Space Grotesk', sans-serif; }
 
-    /* NAV */
-    .portal-nav {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 0 1.25rem; height: 56px; background: var(--navy);
-      position: sticky; top: 0; z-index: 200; width: 100%;
-    }
-    .portal-logo {
-      font-family: system-ui, sans-serif; font-size: 1.25rem; font-weight: 700;
-      color: white; display: flex; align-items: center; gap: 0.5rem; text-decoration: none;
-    }
-    .logo-dot { width: 10px; height: 10px; background: var(--orange); border-radius: 2px; transform: rotate(45deg); }
-    .nav-links { display: flex; gap: 0.15rem; flex-wrap: wrap; }
-    .nav-link {
-      padding: 0.4rem 0.75rem; font-size: 0.875rem; font-weight: 500;
-      color: rgba(255,255,255,0.75); transition: all 0.15s; white-space: nowrap; text-decoration: none;
-    }
-    .nav-link:hover { background: rgba(255,255,255,0.1); color: white; }
-    .nav-link.active { color: white; border-bottom: 2px solid var(--orange); }
-    .nav-right { display: flex; align-items: center; gap: 0.5rem; }
-    .logout-btn {
-      font-size: 0.8rem; color: rgba(255,255,255,0.65); background: none;
-      border: none; cursor: pointer; padding: 0.35rem 0.6rem; border-radius: 4px;
-      transition: all 0.15s; font-family: system-ui, sans-serif;
-    }
-    .logout-btn:hover { color: var(--orange); background: rgba(255,255,255,0.08); }
-    @media (max-width: 900px) { .nav-links { display: none; } }
-
     /* PAGE */
     .page-wrap { max-width: 900px; margin: 0 auto; padding: 2rem 1.25rem; }
 
@@ -195,25 +168,6 @@
 </head>
 <body>
 
-<!-- NAV -->
-<nav class="portal-nav">
-  <a href="/weightless" class="portal-logo"><span class="logo-dot"></span>FocusLedger</a>
-  <div class="nav-links">
-    <a href="/weightless" class="nav-link">Home</a>
-    <a href="/app/tasks" class="nav-link">Tasks</a>
-    <a href="/app/money" class="nav-link">Money</a>
-    <a href="/app/life" class="nav-link active">Life</a>
-    <a href="/news" class="nav-link">News</a>
-    <a href="/app/vault" class="nav-link">Vault</a>
-    <a href="/ideas" class="nav-link">Ideas</a>
-    <a href="/journal" class="nav-link">Journal</a>
-    <a href="/settings" class="nav-link">Settings</a>
-  </div>
-  <div class="nav-right">
-    <button class="logout-btn" id="logoutBtn">Logout</button>
-  </div>
-</nav>
-
 <!-- PAGE -->
 <div class="page-wrap">
 
@@ -253,36 +207,44 @@
       <div class="qc-icon">🔒</div>
       <div class="qc-title">Document Vault</div>
       <div class="qc-desc">Store and search your insurance policies, contracts, IDs, and important files. AI extracts key details automatically.</div>
-      <span class="qc-badge">Ready</span>
     </a>
 
     <a href="/app/life/insurance" class="quick-card">
       <div class="qc-icon">🏥</div>
       <div class="qc-title">Insurance Coverage</div>
       <div class="qc-desc">Track your health, auto, home, and life policies. See coverage gaps and upcoming renewals at a glance.</div>
-      <span class="qc-badge">Ready</span>
     </a>
 
     <a href="/app/life/nudges" class="quick-card">
       <div class="qc-icon">🔔</div>
       <div class="qc-title">Nudges</div>
       <div class="qc-desc">Proactive alerts for expiring documents, coverage gaps, and score drops. Your ADHD-friendly heads-up feed.</div>
-      <span class="qc-badge" id="nudgesCardBadge">Ready</span>
+      <span class="qc-badge" id="nudgesCardBadge" style="display:none"></span>
     </a>
 
-    <div class="quick-card" style="opacity:0.65;cursor:default;">
+    <a href="/values" class="quick-card">
+      <div class="qc-icon">🌟</div>
+      <div class="qc-title">Values</div>
+      <div class="qc-desc">What matters to you, and how this week's time and money lined up with it.</div>
+    </a>
+
+    <a href="/journal" class="quick-card">
+      <div class="qc-icon">📓</div>
+      <div class="qc-title">Journal</div>
+      <div class="qc-desc">A quick daily note and mood. Buddy uses it to spot what helps on hard days.</div>
+    </a>
+
+    <a href="/insights" class="quick-card">
+      <div class="qc-icon">📊</div>
+      <div class="qc-title">Insights</div>
+      <div class="qc-desc">Patterns across your tasks, money and check-ins, unlocked as you use the app.</div>
+    </a>
+
+    <a href="/app/money/bills" class="quick-card">
       <div class="qc-icon">📋</div>
       <div class="qc-title">Subscriptions</div>
-      <div class="qc-desc">Track all your recurring subscriptions in one place. See what's costing you and when renewals hit.</div>
-      <span class="qc-badge coming">Coming soon</span>
-    </div>
-
-    <div class="quick-card" style="opacity:0.65;cursor:default;">
-      <div class="qc-icon">📅</div>
-      <div class="qc-title">Important Dates</div>
-      <div class="qc-desc">Never miss a renewal, deadline, or appointment. Smart reminders based on your documents and life events.</div>
-      <span class="qc-badge coming">Coming soon</span>
-    </div>
+      <div class="qc-desc">Every bill and subscription from your bank, with what each costs a month and a year. Lives in Money.</div>
+    </a>
   </div>
 
 </div>
@@ -295,11 +257,6 @@
 (function() {
   var token = localStorage.getItem('fl_token');
   if (!token) { window.location.href = '/login'; return; }
-
-  document.getElementById('logoutBtn').addEventListener('click', function() {
-    localStorage.removeItem('fl_token');
-    window.location.href = '/login';
-  });
 
   // ── Health Score ring ──────────────────────────────────────────────────────
   fetch('/api/health-score/today', { headers: authHdr })
@@ -392,6 +349,7 @@
       var cardBadge = document.getElementById('nudgesCardBadge');
       if (cardBadge) {
         cardBadge.textContent = count + ' pending';
+        cardBadge.style.display = '';
         cardBadge.style.background = '#FEF3C7';
         cardBadge.style.color = '#92400E';
       }

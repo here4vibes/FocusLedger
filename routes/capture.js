@@ -14,6 +14,8 @@ const { createMessage } = require('../lib/claude-client');
 const { isQuotaError } = require('../lib/ai-budget');
 const { authenticateToken } = require('../middleware/auth');
 const rateLimit = require('express-rate-limit');
+const { parseAiJson } = require('../lib/ai-json');
+const { fetchUserLocalDate } = require('../lib/timezone');
 
 const captureLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
@@ -47,7 +49,9 @@ Rules:
 - items is an array of purchased items (max 5, empty array if unclear)
 - If you cannot read something clearly, use null`;
 
-const NOTE_PROMPT = `You are a task extractor. Parse this handwritten note image and extract actionable tasks.
+// A function, not a constant: the constant froze the date at server boot and
+// used UTC. `today` is the user's local date.
+const notePrompt = (today) => `You are a task extractor. Parse this handwritten note image and extract actionable tasks.
 
 Return ONLY valid JSON in this exact shape:
 {
@@ -65,7 +69,7 @@ Rules:
 - Each task must start with a verb (Call, Buy, Email, Schedule, etc.)
 - Title max 100 characters
 - due_date must be YYYY-MM-DD or null — infer from relative dates like "tomorrow", "Friday", "June 10"
-- Today's date for reference: ${new Date().toISOString().slice(0, 10)}
+- Today's date for reference: ${today}
 - If text is not task-like, still extract what you can
 - raw_text is your full transcription of everything visible`;
 
@@ -77,7 +81,7 @@ function detectMode(base64Image, hint) {
   return 'note';
 }
 
-module.exports = function() {
+module.exports = function(pool) {
   router.use(authenticateToken);
   router.use(captureLimiter);
 
@@ -95,7 +99,8 @@ module.exports = function() {
       }
 
       const resolvedMode = detectMode(image, mode);
-      const prompt = resolvedMode === 'receipt' ? RECEIPT_PROMPT : NOTE_PROMPT;
+      const today = await fetchUserLocalDate(pool, req.user.id);
+      const prompt = resolvedMode === 'receipt' ? RECEIPT_PROMPT : notePrompt(today);
 
       const response = await createMessage({
         model: 'claude-haiku-4-5',
@@ -115,8 +120,9 @@ module.exports = function() {
       const raw = response.content[0].text;
       let parsed;
       try {
-        parsed = JSON.parse(raw);
-      } catch {
+        parsed = parseAiJson(raw);
+      } catch (e) {
+        console.error('[capture] could not parse AI reply:', e.message, '| mode:', resolvedMode);
         return res.status(422).json({ success: false, message: 'Could not read the image clearly. Try better lighting or a closer shot.' });
       }
 
@@ -130,7 +136,7 @@ module.exports = function() {
           data: {
             merchant:  parsed.merchant  || null,
             amount:    isNaN(amount) ? null : Math.round(amount * 100) / 100,
-            date:      parsed.date      || new Date().toISOString().slice(0, 10),
+            date:      parsed.date      || today,
             category,
             items:     Array.isArray(parsed.items) ? parsed.items.slice(0, 5) : [],
             notes:     parsed.notes     || null

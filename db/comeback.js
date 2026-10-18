@@ -12,7 +12,8 @@ const { queryWithRetry } = require('../lib/queryWithRetry');
  *   - canShow: hasn't seen the modal in the last 7 days
  *   - daysSinceLapse: how long the current lapse has been active
  */
-async function getComebackStatus(pool, userId) {
+// localDate: the user's YYYY-MM-DD (CURRENT_DATE is UTC on Neon).
+async function getComebackStatus(pool, userId, localDate) {
   const [engResult, taskResult] = await Promise.all([
     pool.query(`
       SELECT
@@ -28,12 +29,12 @@ async function getComebackStatus(pool, userId) {
       SELECT COUNT(*)::int AS count
       FROM tasks
       WHERE user_id = $1
-        AND is_done = false
+        AND is_completed IS NOT TRUE
         AND (
-          (due_date IS NOT NULL AND due_date <= CURRENT_DATE + 1)
+          (due_date IS NOT NULL AND due_date <= $2::date + 1)
           OR due_date IS NULL
         )
-    `, [userId]),
+    `, [userId, localDate]),
   ]);
 
   const eng = engResult.rows[0] || {};

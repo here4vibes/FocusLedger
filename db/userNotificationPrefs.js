@@ -7,6 +7,8 @@
  *       Generic nudge prefs (push, email, banner) live in nudge_preferences table.
  */
 
+const DEFAULT_PREFS = { evening_enabled: true, evening_time: '20:00' };
+
 /**
  * Get notification preferences for a user.
  * Returns { evening_enabled, evening_time } with safe defaults if no row exists.
@@ -19,7 +21,7 @@ async function getPreferences(pool, userId) {
     [userId]
   );
   if (result.rows.length === 0) {
-    return { evening_enabled: true, evening_time: '20:00' };
+    return { ...DEFAULT_PREFS };
   }
   return result.rows[0];
 }
@@ -32,28 +34,24 @@ async function getPreferences(pool, userId) {
  * @param {{ evening_enabled?: boolean, evening_time?: string }} prefs
  */
 async function upsertPreferences(pool, userId, prefs) {
-  const fields = [];
-  const values = [];
-  let idx = 1;
+  const updates = [];
+  if (prefs.evening_enabled !== undefined) updates.push('evening_enabled = EXCLUDED.evening_enabled');
+  if (prefs.evening_time !== undefined)    updates.push('evening_time = EXCLUDED.evening_time');
+  if (updates.length === 0) return; // nothing to update
 
-  if (prefs.evening_enabled !== undefined) {
-    fields.push(`evening_enabled = $${idx++}`);
-    values.push(prefs.evening_enabled);
-  }
-  if (prefs.evening_time !== undefined) {
-    fields.push(`evening_time = $${idx++}`);
-    values.push(prefs.evening_time);
-  }
-
-  if (fields.length === 0) return; // nothing to update
-
-  values.push(userId);
-
+  // The column list once held "col = $n" fragments, so every save was a
+  // syntax error and the evening-reminder settings never stuck. A new row
+  // takes the read defaults for the field not given (the columns have no
+  // DEFAULT, and a NULL evening_enabled reads as "off").
   await pool.query(
-    `INSERT INTO user_notification_prefs (user_id, ${fields.join(', ')}, updated_at)
-     VALUES ($${idx}, ${fields.map((_, i) => `$${i + 1}`).join(', ')}, NOW())
-     ON CONFLICT (user_id) DO UPDATE SET ${fields.join(', ')}, updated_at = NOW()`,
-    values
+    `INSERT INTO user_notification_prefs (user_id, evening_enabled, evening_time, updated_at)
+     VALUES ($1, $2, $3, NOW())
+     ON CONFLICT (user_id) DO UPDATE SET ${updates.join(', ')}, updated_at = NOW()`,
+    [
+      userId,
+      prefs.evening_enabled !== undefined ? prefs.evening_enabled : DEFAULT_PREFS.evening_enabled,
+      prefs.evening_time !== undefined ? prefs.evening_time : DEFAULT_PREFS.evening_time,
+    ]
   );
 }
 

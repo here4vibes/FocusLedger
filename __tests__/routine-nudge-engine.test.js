@@ -17,5 +17,7 @@ test('query is gated on the user-local hour, weekday, active flag, completion an
   expect(sql).toMatch(/is_active/);
   expect(sql).toMatch(/routine_streaks/);
   expect(sql).toMatch(/routine_nudge_prefs/);
-  expect(params).toEqual([5, 7, '4', 'thu', '2026-10-08']);
+  // routines.day_of_week is INTEGER 0-6 (Sunday = 0) since the counter-columns migration.
+  expect(sql).toMatch(/day_of_week IS NULL OR r\.day_of_week = \$3/);
+  expect(params).toEqual([5, 7, 4, '2026-10-08']);
 });

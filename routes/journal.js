@@ -20,8 +20,10 @@
  */
 
 const express = require('express');
+const { fetchUserLocalDate } = require('../lib/timezone');
 const { complete } = require('../lib/claude-client');
 const { authenticateToken } = require('../middleware/auth');
+const { logFailure } = require('../lib/log-failure');
 
 const _CONFIDENCE_HIGH = 0.85;   // Suggest auto-complete (comment reference only; threshold enforced in AI prompt)
 const CONFIDENCE_MED  = 0.60;    // "Did you mean?" suggestion
@@ -591,8 +593,9 @@ Analyze the journal and return the JSON response.`;
           taskDueDate = `${due_date}T${due_time}:00`;
         }
       } else if (due_time) {
-        // Time without date → assume today
-        const today = new Date().toISOString().split('T')[0];
+        // Time without date → assume the user's today (not UTC's: an 8pm EDT
+        // "call mom at 9" landed on tomorrow)
+        const today = await fetchUserLocalDate(pool, userId);
         taskDueDate = `${today}T${due_time}:00`;
       }
 
@@ -609,9 +612,11 @@ Analyze the journal and return the JSON response.`;
       try {
         const autoTagger = require('../lib/auto-tagger');
         if (autoTagger && autoTagger.matchTaskToValue) {
-          autoTagger.matchTaskToValue(pool, userId, task.title).catch(() => {});
+          autoTagger.matchTaskToValue(pool, userId, task.title).catch(logFailure('[journal]', 'matchTaskToValue', { userId, taskId: task.id }));
         }
-      } catch (_) { /* auto-tagger not available, skip */ }
+      } catch (e) {
+        console.error('[journal] auto-tagger unavailable:', e.message);
+      }
 
       res.json({
         success: true,

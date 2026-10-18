@@ -26,7 +26,7 @@ const express = require('express');
 const router = express.Router();
 const { authenticateToken } = require('../middleware/auth');
 const { checkProStatus } = require('../middleware/proUtils');
-const { fetchUserLocalDate } = require('../lib/timezone');
+const { fetchUserTimezone, getUserLocalDate } = require('../lib/timezone');
 
 module.exports = function(pool) {
   router.use(authenticateToken);
@@ -71,12 +71,13 @@ module.exports = function(pool) {
       const dismissed = new Set(dismissedResult.rows.map(r => `${r.nudge_type}:${r.pattern_key}`));
 
       // WHY: CURRENT_DATE is UTC on Neon — use user's local date for daily nudge cap
-      const localDate = await fetchUserLocalDate(pool, userId);
+      const tz = await fetchUserTimezone(pool, userId);
+      const localDate = getUserLocalDate(tz);
 
       const todayDismissedResult = await pool.query(
         `SELECT COUNT(*) as count FROM nudge_dismissals
-         WHERE user_id = $1 AND dismissed_at::date = $2::date`,
-        [userId, localDate]
+         WHERE user_id = $1 AND (dismissed_at AT TIME ZONE $3)::date = $2::date`,
+        [userId, localDate, tz]
       );
       const shownToday = parseInt(todayDismissedResult.rows[0].count) || 0;
       const quota = Math.max(0, 3 - shownToday);
@@ -179,15 +180,20 @@ module.exports = function(pool) {
           // Plaid transactions this week
           let plaidRows = [];
           try {
+            // Only bank outflows not yet confirmed into expenses (confirmed ones
+            // are already counted in expResult above) and not still pending.
             const plaidResult = await pool.query(
               `SELECT category_id, SUM(amount) as total
                FROM plaid_transactions
-               WHERE user_id = $1 AND date >= $2 AND is_dismissed = false
+               WHERE user_id = $1 AND transaction_date >= $2
+                 AND is_confirmed = false AND is_pending = false AND amount > 0
                GROUP BY category_id`,
               [userId, weekStart.toISOString().slice(0, 10)]
             );
             plaidRows = plaidResult.rows;
-          } catch { /* Plaid might not be set up */ }
+          } catch (e) {
+            console.error('[AlignmentNudges] Plaid spend query failed:', e.message, '| userId:', userId);
+          }
 
           // Merge spend
           const spendByCat = {};
@@ -260,7 +266,7 @@ module.exports = function(pool) {
         const blocksResult = await pool.query(
           `SELECT value_id,
              SUM(
-               EXTRACT(EPOCH FROM (end_time - start_time)) / 3600
+               EXTRACT(EPOCH FROM (end_time::time - start_time::time)) / 3600
              ) as hours
            FROM time_blocks
            WHERE user_id = $1 AND block_date >= $2

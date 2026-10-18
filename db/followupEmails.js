@@ -98,10 +98,18 @@ async function getActiveStreakRoutines(pool, userId, minStreak = 3) {
   return rows;
 }
 
+/**
+ * Last week's numbers for the Monday summary: tasks that were due in the seven
+ * days before `weekMonday`, and how many of those are done. Computed from
+ * tasks directly; weekly_stats has no tasks_due column and is never populated.
+ */
 async function getWeeklyStats(pool, userId, weekMonday) {
   const { rows } = await pool.query(
-    `SELECT tasks_due::text, tasks_completed::text
-     FROM weekly_stats WHERE user_id = $1 AND week_start = $2::date LIMIT 1`,
+    `SELECT COUNT(*)::text AS tasks_due,
+            COUNT(*) FILTER (WHERE is_completed = true)::text AS tasks_completed
+     FROM tasks
+     WHERE user_id = $1
+       AND due_date >= $2::date - 7 AND due_date < $2::date`,
     [userId, weekMonday]
   );
   return rows[0] || { tasks_due: '0', tasks_completed: '0' };

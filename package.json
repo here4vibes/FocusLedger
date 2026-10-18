@@ -18,6 +18,8 @@
     "monitor:post-deploy": "node scripts/post-deploy-monitor.js",
     "smoke": "node scripts/smoke.js",
     "test:boot": "node scripts/ci-boot-smoke.js",
+    "test:sweep": "node scripts/ci-api-sweep.js",
+    "test:flows": "node scripts/ci-write-flows.js",
     "lint": "eslint --config eslint.config.mjs server.js routes/*.js middleware/*.js lib/*.js",
     "lint:fix": "eslint --config eslint.config.mjs --fix server.js routes/*.js middleware/*.js lib/*.js",
     "typecheck": "tsc --noEmit"

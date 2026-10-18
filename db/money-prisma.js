@@ -280,10 +280,12 @@ async function getPendingTransactions(pool, userId) {
   return rows;
 }
 
-// Confirm a Plaid transaction → create expense
+// Confirm a Plaid transaction → create expense.
+// `pool` may be a client inside a transaction (the spending check-in does that);
+// FOR UPDATE then makes a second, concurrent confirm wait and find nothing.
 async function confirmTransaction(pool, plaidTxId, userId) {
   const { rows: txRows } = await pool.query(
-    'SELECT * FROM plaid_transactions WHERE id = $1 AND user_id = $2 AND is_confirmed = false',
+    'SELECT * FROM plaid_transactions WHERE id = $1 AND user_id = $2 AND is_confirmed = false FOR UPDATE',
     [plaidTxId, userId]
   );
   if (!txRows.length) return null;

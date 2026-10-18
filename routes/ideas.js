@@ -1,13 +1,7 @@
 const express = require('express');
 const { authenticateToken } = require('../middleware/auth');
-
-// Admin emails from env var (comma-separated)
-// Example: ADMIN_EMAILS=founder@example.com,admin@example.com
-function isAdminUser(user) {
-  if (user.is_admin) return true;
-  const adminEmails = (process.env.ADMIN_EMAILS || '').split(',').map(e => e.trim().toLowerCase()).filter(Boolean);
-  return adminEmails.includes((user.email || '').toLowerCase());
-}
+const { isAdminUser, requireAdmin } = require('../lib/admin-access');
+const { getUserAdminInfo } = require('../db/users');
 
 // Calculate 3-day credit based on billing cycle
 function calculateRewardCents(billingCycle) {
@@ -26,9 +20,7 @@ module.exports = function(pool) {
   router.get('/', authenticateToken, async (req, res) => {
     try {
       const userId = req.user.id;
-      const userRow = await pool.query('SELECT is_admin, email FROM users WHERE id = $1', [userId]);
-      const user = userRow.rows[0] || {};
-      const adminCheck = isAdminUser({ ...user, id: userId });
+      const adminCheck = isAdminUser(await getUserAdminInfo(pool, userId));
 
       const result = await pool.query(`
         SELECT
@@ -108,9 +100,7 @@ module.exports = function(pool) {
         return res.status(404).json({ success: false, message: 'Idea not found' });
       }
       // Admins can delete any idea; users can only delete their own
-      const userRow = await pool.query('SELECT is_admin, email FROM users WHERE id = $1', [userId]);
-      const user = userRow.rows[0] || {};
-      if (check.rows[0].user_id !== userId && !isAdminUser({ ...user, id: userId })) {
+      if (check.rows[0].user_id !== userId && !isAdminUser(await getUserAdminInfo(pool, userId))) {
         return res.status(403).json({ success: false, message: 'Not your idea' });
       }
 
@@ -123,22 +113,14 @@ module.exports = function(pool) {
   });
 
   // PATCH status (admin only)
-  router.patch('/:id/status', authenticateToken, async (req, res) => {
+  router.patch('/:id/status', authenticateToken, requireAdmin(pool), async (req, res) => {
     try {
-      const userId = req.user.id;
       const ideaId = parseInt(req.params.id);
       const { status } = req.body;
 
       const validStatuses = ['submitted', 'under_review', 'selected', 'shipped'];
       if (!validStatuses.includes(status)) {
         return res.status(400).json({ success: false, message: 'Invalid status' });
-      }
-
-      // Admin check
-      const userRow = await pool.query('SELECT is_admin, email FROM users WHERE id = $1', [userId]);
-      const user = userRow.rows[0] || {};
-      if (!isAdminUser({ ...user, id: userId })) {
-        return res.status(403).json({ success: false, message: 'Admin access required' });
       }
 
       // Fetch idea
@@ -222,7 +204,8 @@ module.exports = function(pool) {
       const result = await pool.query(
         `SELECT id, title, status, reward_amount_cents, reward_applied
          FROM feature_suggestions
-         WHERE user_id = $1 AND status IN ('selected', 'shipped') AND reward_notified = FALSE`,
+         WHERE user_id = $1 AND status IN ('selected', 'shipped')
+           AND reward_notified IS NOT TRUE`,
         [userId]
       );
 

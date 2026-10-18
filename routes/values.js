@@ -11,6 +11,7 @@
 
 const express = require('express');
 const { authenticateToken } = require('../middleware/auth');
+const { fetchUserLocalDate } = require('../lib/timezone');
 
 module.exports = function(pool) {
   const router = express.Router();
@@ -195,20 +196,20 @@ module.exports = function(pool) {
         [userId]
       );
 
-      // Calculate week start (Monday)
-      const now = new Date();
-      const dayOfWeek = now.getDay();
+      // Calculate week start (Monday) from the user's local date, not the
+      // server clock (UTC rolled the week over on Sunday evening in the US)
+      const now = new Date(await fetchUserLocalDate(pool, userId) + 'T12:00:00Z');
+      const dayOfWeek = now.getUTCDay();
       const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
       const weekStart = new Date(now);
-      weekStart.setDate(now.getDate() + mondayOffset);
-      weekStart.setHours(0, 0, 0, 0);
+      weekStart.setUTCDate(now.getUTCDate() + mondayOffset);
 
       // Get time blocks for this week
       const hoursMap = {};
       try {
         const timeResult = await pool.query(
           `SELECT value_id,
-                  SUM(EXTRACT(EPOCH FROM (end_time - start_time)) / 3600) as total_hours
+                  SUM(EXTRACT(EPOCH FROM (end_time::time - start_time::time)) / 3600) as total_hours
            FROM time_blocks
            WHERE user_id = $1 AND block_date >= $2 AND value_id IS NOT NULL
            GROUP BY value_id`,
@@ -217,27 +218,26 @@ module.exports = function(pool) {
         timeResult.rows.forEach(r => {
           hoursMap[r.value_id] = parseFloat(r.total_hours) || 0;
         });
-      } catch (_e) {
-        // time_blocks table might not exist yet — that's fine
+      } catch (e) {
+        console.error('[values] snapshot hours query failed, returning zeros:', e.message, '| userId:', userId);
       }
 
       // Get expenses for this week tagged to values
       const spendMap = {};
       try {
         const spendResult = await pool.query(
-          `SELECT t.value_id,
+          `SELECT e.value_id,
                   SUM(e.amount) as total_spend
            FROM expenses e
-           JOIN tasks t ON e.task_id = t.id
-           WHERE e.user_id = $1 AND e.created_at >= $2 AND t.value_id IS NOT NULL
-           GROUP BY t.value_id`,
-          [userId, weekStart.toISOString()]
+           WHERE e.user_id = $1 AND e.expense_date >= $2::date AND e.value_id IS NOT NULL
+           GROUP BY e.value_id`,
+          [userId, weekStart.toISOString().split('T')[0]]
         );
         spendResult.rows.forEach(r => {
           spendMap[r.value_id] = parseFloat(r.total_spend) || 0;
         });
-      } catch (_e) {
-        // expenses might not have task_id — that's fine, return zeros
+      } catch (e) {
+        console.error('[values] snapshot spend query failed, returning zeros:', e.message, '| userId:', userId);
       }
 
       const snapshot = valuesResult.rows.map(v => ({

@@ -30,9 +30,11 @@ async function upsertEstimation(pool, { userId, taskId, estimatedMinutes }) {
 async function recordCompletion(pool, { taskId, userId, actualMinutes }) {
   const result = await queryWithRetry(pool, `
     UPDATE task_time_estimations
-    SET actual_minutes = $1,
+    SET actual_minutes = $1::int,
         completed_at = now(),
-        calibration_score = ROUND(($1::float / NULLIF(estimated_minutes, 0)), 2)
+        -- numeric, not float: ROUND(double precision, int) doesn't exist, so
+        -- recording the actual time always failed.
+        calibration_score = ROUND($1::int::numeric / NULLIF(estimated_minutes, 0), 2)
     WHERE task_id = $2 AND user_id = $3
     RETURNING id, estimated_minutes, actual_minutes, calibration_score
   `, [actualMinutes, taskId, userId]);

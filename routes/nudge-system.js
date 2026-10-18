@@ -13,6 +13,7 @@
 const express = require('express');
 const { authenticateToken } = require('../middleware/auth');
 const { generateNudgesForUser, getPendingNudgesForUser } = require('../lib/nudgeGenerator');
+const { logFailure } = require('../lib/log-failure');
 
 module.exports = function(pool) {
   const router = express.Router();
@@ -33,7 +34,7 @@ module.exports = function(pool) {
           UPDATE nudges
           SET status = 'delivered', delivered_at = NOW()
           WHERE id = ANY($1) AND status = 'pending'
-        `, [ids]).catch(() => {});
+        `, [ids]).catch(logFailure('[nudge-system]', 'markDelivered', { userId, count: ids.length }));
       }
 
       // Send push notifications if user has push enabled
@@ -47,7 +48,7 @@ module.exports = function(pool) {
 
       if (pushEnabled && nudges.length > 0) {
         // Fire-and-forget push — don't block the response
-        sendPushForNudges(pool, userId, nudges).catch(() => {});
+        sendPushForNudges(pool, userId, nudges).catch(logFailure('[nudge-system]', 'sendPushForNudges', { userId }));
       }
 
       res.json({ success: true, nudges });
@@ -241,7 +242,8 @@ async function sendPushForNudges(pool, userId, nudges) {
       process.env.VAPID_PUBLIC_KEY,
       process.env.VAPID_PRIVATE_KEY
     );
-  } catch {
+  } catch (err) {
+    console.warn('[nudge-system] web push disabled: web-push failed to load or VAPID keys are missing/invalid:', err.message);
     return;
   }
 
@@ -279,7 +281,7 @@ async function sendPushForNudges(pool, userId, nudges) {
         sentCount++;
       } catch (sendErr) {
         if (sendErr.statusCode === 410 || sendErr.statusCode === 404) {
-          await deleteSubscriptionByEndpoint(pool, row.endpoint).catch(() => {});
+          await deleteSubscriptionByEndpoint(pool, row.endpoint).catch(logFailure('[nudge-system]', 'deleteSubscriptionByEndpoint', { userId }));
         }
       }
     }
