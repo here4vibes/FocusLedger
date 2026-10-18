@@ -128,35 +128,6 @@ a{color:inherit;text-decoration:none}
 .headline-source{display:block;margin-bottom:0.1rem}
 
 /* ZONE 3 */
-.zone3{margin-bottom:1rem}
-.balanced-bar{display:flex;gap:0.5rem;align-items:center;margin-bottom:1rem;padding:0.6rem 0.75rem;background:var(--cream-dark);border-radius:8px}
-.balanced-label{font-size:0.75rem;font-weight:600;color:var(--text-muted);white-space:nowrap}
-.bias-pills{display:flex;gap:0.35rem;flex:1;flex-wrap:wrap;justify-content:center}
-.bias-pill{font-size:0.65rem;font-weight:600;padding:0.2rem 0.55rem;border-radius:50px;white-space:nowrap}
-.bp-left{background:rgba(74,144,217,0.12);color:var(--bias-left)}
-.bp-lean-left{background:rgba(127,179,232,0.15);color:var(--bias-lean-left)}
-.bp-center{background:rgba(122,122,122,0.12);color:var(--bias-center)}
-.bp-lean-right{background:rgba(224,122,122,0.12);color:var(--bias-lean-right)}
-.bp-right{background:rgba(192,57,43,0.1);color:var(--bias-right)}
-
-/* GLOBAL NEWS */
-.news-grid{display:grid;grid-template-columns:1fr 1fr;gap:0.75rem}
-.news-card{background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:0.85rem;display:flex;flex-direction:column;gap:0.5rem;cursor:pointer;transition:border-color 0.15s,box-shadow 0.15s;min-height:44px;justify-content:space-between}
-.news-card:hover{border-color:var(--navy);box-shadow:0 2px 8px rgba(0,0,0,0.07);transform:none}
-.news-headline{font-size:0.875rem;font-weight:500;color:var(--navy);line-height:1.4}
-.news-footer{display:flex;justify-content:space-between;align-items:center}
-.news-source{font-size:0.72rem;color:var(--text-muted)}
-.news-meta{display:flex;align-items:center;gap:0.4rem}
-
-/* BIAS BADGE */
-.bias-badge{font-size:0.62rem;font-weight:700;padding:0.18rem 0.5rem;border-radius:50px;white-space:nowrap;letter-spacing:0.02em}
-.bb-left{background:rgba(74,144,217,0.15);color:var(--bias-left)}
-.bb-lean-left{background:rgba(127,179,232,0.2);color:#5A8FD4}
-.bb-center{background:rgba(122,122,122,0.15);color:#666}
-.bb-lean-right{background:rgba(224,122,122,0.15);color:#C0392B}
-.bb-right{background:rgba(192,57,43,0.12);color:#B03020}
-.bb-unrated{background:rgba(107,107,107,0.1);color:#888}
-.news-loading{padding:1rem;text-align:center;color:var(--text-muted);font-size:0.85rem}
 
 
 /* EMPTY / LOADING STATES */
@@ -178,7 +149,6 @@ a{color:inherit;text-decoration:none}
 .zone1{grid-template-columns:1fr}
 .zone1-tasks{grid-column:1}
 .zone2{grid-template-columns:1fr}
-.news-grid{grid-template-columns:1fr}
 body{padding-bottom:calc(80px + env(safe-area-inset-bottom))}
 .portal-wrap{padding:1rem 0.75rem 1.5rem}
 .nav-links{display:none}
@@ -186,7 +156,6 @@ body{padding-bottom:calc(80px + env(safe-area-inset-bottom))}
 }
 @media(max-width:600px){
 .zone1{grid-template-columns:1fr}
-.news-grid{grid-template-columns:1fr}
 .finance-grid{grid-template-columns:1fr 1fr}
 }
 
@@ -273,7 +242,6 @@ body{padding-bottom:calc(80px + env(safe-area-inset-bottom))}
 <a href=/app class=nav-link id=navTasks>Tasks</a>
 <a href=/money class=nav-link id=navMoney>Money</a>
 <a href=/app/life class=nav-link id=navLife>Life</a>
-<a href=/news class=nav-link id=navNews>News</a>
 <a href=/vault class=nav-link id=navVault>Vault</a>
 <a href=/ideas class=nav-link id=navIdeas>Ideas</a>
 <a href=/journal class=nav-link id=navJournal>Journal</a>
@@ -414,41 +382,10 @@ No events today — <a href=/calendar style=color:var(--orange)>set up calendar<
 <div id=greetingText style='font-size:1.05rem;font-weight:600;color:var(--navy);margin-bottom:0.15rem'></div>
 <div id=greetingLocation style='font-size:0.75rem;color:var(--text-muted)'></div>
 </div>
-<div style='text-align:center;padding:0.75rem 0'>
-<div style='font-size:1.5rem;margin-bottom:0.4rem'>📰</div>
-<div style='font-size:0.875rem;font-weight:500;color:var(--navy);margin-bottom:0.2rem'>Local news coming soon</div>
-<div style='font-size:0.75rem;color:var(--text-muted)'>Pulling in stories from your area</div>
-</div>
-<div class=card-footer>
-<a href=/news class=card-link>See all news →</a>
-</div>
 </div>
 
 </section>
 
-<!-- ZONE 3: GLOBAL NEWS -->
-<div class=zone-label>Global Headlines</div>
-<section class=zone3>
-
-<!-- Balanced View Indicator -->
-<div class=balanced-bar>
-<span class=balanced-label>Balanced View</span>
-<div class=bias-pills id=balancePills>
-<span class='bias-pill bp-left' id=bpLeft style=display:none></span>
-<span class='bias-pill bp-lean-left' id=bpLeanLeft style=display:none></span>
-<span class='bias-pill bp-center' id=bpCenter style=display:none></span>
-<span class='bias-pill bp-lean-right' id=bpLeanRight style=display:none></span>
-<span class='bias-pill bp-right' id=bpRight style=display:none></span>
-</div>
-</div>
-
-<!-- News Grid (populated by loadNews()) -->
-<div class=news-grid id=newsGrid><div class=news-loading style='grid-column:1/-1;padding:2rem;text-align:center;color:var(--text-muted)'>Loading headlines…</div></div>
-
-<div class=card-footer style='margin-top:1rem'>
-<a href=/news class=card-link>See all headlines →</a>
-</div>
-</section>
 
 </div><!-- /portal-wrap -->
 
@@ -530,8 +467,6 @@ No events today — <a href=/calendar style=color:var(--orange)>set up calendar<
 <script src="/buddy-widget.js"></script>
 <script>
 (function() {
-  // News card clicks are bound dynamically in loadNews() after cards are rendered
-
   // ── CSP-SAFE: Logout (nav is outside portal-wrap, always in DOM) ──
   var logoutEl = document.getElementById('logoutBtn');
   if (logoutEl) {
@@ -555,7 +490,6 @@ No events today — <a href=/calendar style=color:var(--orange)>set up calendar<
   loadStreak();
   loadFinance();
   loadCalendar();
-  loadNews();
   loadWeather();
   loadJournalCard();
 
@@ -718,59 +652,6 @@ No events today — <a href=/calendar style=color:var(--orange)>set up calendar<
     return hour + ':' + String(m).padStart(2, '0') + ' ' + ampm;
   }
 
-  function loadNews() {
-    // Load global headlines for Zone 3 (de-polarized)
-    fetch('/api/news/headlines?limit=12')
-      .then(function(r) { return r.ok ? r.json() : null; })
-      .then(function(data) {
-        var grid = document.getElementById('newsGrid');
-        if (!data || !data.articles || data.articles.length === 0) {
-          grid.innerHTML = '<div style="grid-column:1/-1;padding:2rem;text-align:center;color:var(--text-muted);font-size:0.9rem">News is warming up — check back in a moment. <a href=/news style=color:var(--orange)>Full news page →</a></div>';
-          return;
-        }
-        var html = '';
-        data.articles.forEach(function(a) {
-          html += '<div class="news-card" data-url="' + escHtml(a.url) + '">' +
-            '<div class=news-headline>' + escHtml(a.headline) + '</div>' +
-            '<div class=news-footer>' +
-            '<span class=news-source>' + escHtml(a.source || '') + '</span>' +
-            '<div class=news-meta>' +
-            '<span class=card-meta>' + escHtml(a.age || '') + '</span>' +
-            '<span class="bias-badge ' + escHtml(a.bias_class || 'bb-unrated') + '">' + escHtml(a.bias_label || 'Unrated') + '</span>' +
-            '</div></div></div>';
-        });
-        grid.innerHTML = html;
-        // Re-bind news card clicks
-        grid.querySelectorAll('.news-card[data-url]').forEach(function(card) {
-          card.addEventListener('click', function() { window.open(this.dataset.url, '_blank', 'noopener'); });
-        });
-        // Update balance bar
-        if (data.balance) {
-          var b = data.balance;
-          var bpMap = {
-            'bpLeft': ['left', 'Left'],
-            'bpLeanLeft': ['lean_left', 'Lean Left'],
-            'bpCenter': ['center', 'Center'],
-            'bpLeanRight': ['lean_right', 'Lean Right'],
-            'bpRight': ['right', 'Right']
-          };
-          Object.keys(bpMap).forEach(function(id) {
-            var info = bpMap[id];
-            var el = document.getElementById(id);
-            var count = b[info[0]] || 0;
-            if (el && count > 0) {
-              el.textContent = count + ' ' + info[1];
-              el.style.display = 'inline-flex';
-            }
-          });
-        }
-      })
-      .catch(function() {
-        var grid = document.getElementById('newsGrid');
-        if (grid) grid.innerHTML = '<div style="grid-column:1/-1;padding:1rem;text-align:center;color:var(--text-muted);font-size:0.85rem">Could not load headlines</div>';
-      });
-
-  }
 
   // ── WEATHER & HYPERLOCAL ────────────────────────────────────────────────
   var WEATHER_CACHE_KEY = 'fl_weather_v1';
@@ -888,55 +769,6 @@ No events today — <a href=/calendar style=color:var(--orange)>set up calendar<
       .catch(function() { showWeatherDenied(); });
   }
 
-  // Geocode a city/zip via Open-Meteo geocoding API, then fetch weather
-  function fetchWeatherByLocation(loc) {
-    // Build search query: prefer city name, fall back to zip code
-    var query = '';
-    if (loc.city) {
-      query = loc.city + (loc.state_region ? ' ' + loc.state_region : '');
-    } else if (loc.zip_code) {
-      query = loc.zip_code;
-    }
-    if (!query) { fetchWeatherByIP(); return; }
-
-    var geoUrl = 'https://geocoding-api.open-meteo.com/v1/search?name=' +
-      encodeURIComponent(query) + '&count=1&language=en&format=json';
-
-    fetch(geoUrl)
-      .then(function(r) { return r.ok ? r.json() : null; })
-      .then(function(d) {
-        if (d && d.results && d.results.length > 0) {
-          var place = d.results[0];
-          doFetchWeather(
-            place.latitude,
-            place.longitude,
-            place.name || loc.city || '',
-            place.admin1 || loc.state_region || ''
-          );
-        } else {
-          // Geocoding found nothing — fall back to IP
-          fetchWeatherByIP();
-        }
-      })
-      .catch(function() { fetchWeatherByIP(); });
-  }
-
-  // Try user's saved location from Settings (DB) as a fallback
-  function fetchWeatherBySavedLocation() {
-    var h = getHeaders();
-    fetch('/api/news/location', { headers: h })
-      .then(function(r) { return r.ok ? r.json() : null; })
-      .then(function(d) {
-        if (d && d.location && (d.location.city || d.location.zip_code)) {
-          fetchWeatherByLocation(d.location);
-        } else {
-          // No saved location — fall back to IP
-          fetchWeatherByIP();
-        }
-      })
-      .catch(function() { fetchWeatherByIP(); });
-  }
-
   function loadWeather() {
     updateGreeting();
     // Check cache
@@ -950,15 +782,15 @@ No events today — <a href=/calendar style=color:var(--orange)>set up calendar<
         }
       }
     } catch(e) {}
-    // Fallback chain: geolocation → saved location from Settings → IP lookup
+    // Fallback chain: geolocation → IP lookup
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         function(pos) { doFetchWeather(pos.coords.latitude, pos.coords.longitude); },
-        function() { fetchWeatherBySavedLocation(); },
+        function() { fetchWeatherByIP(); },
         { timeout: 8000, maximumAge: 600000 }
       );
     } else {
-      fetchWeatherBySavedLocation();
+      fetchWeatherByIP();
     }
   }
 

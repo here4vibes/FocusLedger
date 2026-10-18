@@ -1,10 +1,10 @@
 # FocusLedger
 
-> FocusLedger is an ADHD-native personal command center: tasks, money tracking, impulse spending detection, and news — all in one tab. Built by a CPA with ADHD.
+> FocusLedger is an ADHD-native personal command center: tasks, money tracking, and impulse spending detection — all in one tab. Built by a CPA with ADHD.
 
 ## What is FocusLedger?
 
-FocusLedger is a productivity and personal finance app designed specifically for people with ADHD. It combines task management, expense tracking, impulse spending detection, bank account sync, daily journaling, a focus calendar, and local/global news — all in a single, low-friction interface.
+FocusLedger is a productivity and personal finance app designed specifically for people with ADHD. It combines task management, expense tracking, impulse spending detection, bank account sync, daily journaling, and a focus calendar — all in a single, low-friction interface.
 
 The app was built by a CPA with ADHD who needed something that worked with how ADHD brains actually function: forgiving of time blindness, low-click, and forgiving of perfectionism paralysis.
 
@@ -29,11 +29,10 @@ The app was built by a CPA with ADHD who needed something that worked with how A
 - **Daily journal** — mood tracking and reflection
 - **Values alignment** — daily check-ins tied to personal values
 - **Focus mode** — deep-work sessions with body-double ambience and movement-break reminders
-- **News tab** — local and global news without switching apps
 
 ## Pricing
 
-- **Free** — task management, Buddy check-ins, expense tracking, ideas, journal, values alignment, news
+- **Free** — task management, Buddy check-ins, expense tracking, ideas, journal, values alignment
 - **Autopilot ($9.99/month)** — adds bank sync via Plaid, impulse spending detection, AI-powered features, and advanced analytics
 
 ## Science

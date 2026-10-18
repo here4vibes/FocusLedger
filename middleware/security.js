@@ -27,7 +27,8 @@ const helmetMiddleware = helmet({
         "https://js.stripe.com",
         "https://checkout.stripe.com",
         "https://accounts.google.com",
-        // Meta Pixel. Only public marketing/auth pages include its script.
+        // Meta Pixel (landing, pricing, signup…). Without this the browser
+        // refused fbevents.js on every page, so ad conversions never fired.
         "https://connect.facebook.net"
       ],
       styleSrc: [
@@ -35,7 +36,9 @@ const helmetMiddleware = helmet({
         "'unsafe-inline'",
         "https://fonts.googleapis.com",
         "https://cdn.jsdelivr.net",
-        "https://api.fontshare.com"
+        "https://api.fontshare.com",
+        // Google Sign-In button styles (accounts.google.com/gsi/style)
+        "https://accounts.google.com"
       ],
       fontSrc: [
         "'self'",
@@ -60,11 +63,8 @@ const helmetMiddleware = helmet({
         "https://login.microsoftonline.com",
         "https://api.login.yahoo.com",
         "https://api.open-meteo.com",
-        "https://geocoding-api.open-meteo.com",
         "https://ipapi.co",
-        "https://gnews.io",
-        "https://api.gnews.io",
-        // Meta Pixel event beacons (public pages only)
+        // Meta Pixel event beacons
         "https://www.facebook.com",
         "https://connect.facebook.net"
       ],

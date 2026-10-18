@@ -119,7 +119,7 @@ The user asked to finish the big bug classes in about 4 sessions:
 4. **Retire legacy pages:** `app.html`, `home.html` and `landing-old` are gone (#251), and `buddy.html` in #256: the form check-in is `public/checkin-form.html` at `/app/checkin/form`. **Still to do:** `portal.html`, after #218 merges (it changes `/home` and `/portal`).
 
 **Smaller items:**
-- **News sync** uses an in-process `setInterval` (`routes/news.js`). Move it to the commented-out `rss-sync` cron in `render.yaml`, or drop the feature.
+- **News feed removed:** the `rss_feeds`, `news_cache` and `news_source_bias` tables (and `users.city`/`state_region`/`zip_code`/`country`) are now unused. Drop them later only with the founder's OK.
 - **Capture, still to do:** bank-charge suggestions, i.e. a known recurring charge such as a gym or pharmacy suggests ticking the related task.
 - **Ideas discussed, not agreed:** show renewals and Bills in hours of work at the user's income rate; a risky-time spending nudge. The user noted purchases don't happen in the app, so these are reflection and planning views, not in-the-moment ones.
 
@@ -152,6 +152,7 @@ Four places plus a Settings gear. One small PR per phase; old URLs keep working 
 - **Live Stripe purchase test.** Expected: Settings shows Autopilot $9.95 with a renewal date; after cancelling, "Cancelled — you won't be charged again" and a "Keep Autopilot" button.
 - **Render `DATABASE_URL`:** change `sslmode=require` → `verify-full` in both the `focusledger` env group and the web service (NODE-EXPRESS-4).
 - **`SENTRY_DSN`** must be in the `focusledger` env group so cron errors reach Sentry.
+- **`beta-reengagement-blast` cron:** removed from `render.yaml`; if Render Blueprint sync is off, delete it in the Render dashboard (it would email every user that Autopilot is "free during beta" on Feb 29, 2028).
 - **Neon and Stripe MCP connectors** fail to connect in cloud sessions, and Neon drops out mid-session too. Stripe needs re-authorizing. Reconnect both at claude.ai/customize/connectors.
 - **`renewal-heads-up` cron (#237):** if Render Blueprint sync is off, create it in the dashboard with the `focusledger` env group.
 - **Plaid:** the MCP shows zero production usage on team `69e2d08b7146d5000d5a94d1`. Confirm `PLAID_ENV`, and whether Liabilities and Recurring Transactions are enabled. If so, layer them onto the bill guardian.
@@ -174,7 +175,6 @@ Four places plus a Settings gear. One small PR per phase; old URLs keep working 
   - Agentic **type 2** (Buddy acts: bills, subscriptions, start-it-for-me) and **type 3** (shareable outcomes, e.g. "cancelled Netflix, $186/yr back") come first.
   - The MCP server for Claude/ChatGPT/Meta Muse is deferred.
   - Positioning: ADHD-native; the "ADHD tax" from a CPA founder; privacy; partner accountability.
-- **News sync runs on an in-process `setInterval`** (`routes/news.js` `startRssCron`), which breaks the no-in-process-schedulers rule. The `rss-sync` cron in `render.yaml` is commented out. Either move it to that cron or drop the feature.
 - **AI JSON:** parse model replies with `parseAiJson` from `lib/ai-json.js` (it handles code fences and surrounding prose). Never call `JSON.parse` on a raw model reply.
 - **Plaid v1 `connect`** stores the institution *id* as the bank name (`services/PlaidService.js`). The legacy path isn't used by the frontend.
 - **`weekly_stats` is never populated** (0 rows in prod; the "P2 cron" was never built). Its columns are integers since #241, so it's ready if a rollup job is ever added.
@@ -198,7 +198,7 @@ Four places plus a Settings gear. One small PR per phase; old URLs keep working 
 - **Silent failures:** many routes catch DB errors, log them and return 200. Sentry captures every `console.error`. The CI boot smoke fails on any logged "column/relation … does not exist".
 - **Migrations run on every deploy** (`npm start` = `node migrate.js && node server.js`). A failed migration aborts the deploy and the old version keeps serving. Test risky migrations on a Neon branch.
 - **Key user IDs:** Sean = 2, **QA user = 25 (never touch)**, Miles = 35.
-- **Free plan cap:** free users are capped at **10 active tasks**. `POST /api/tasks` returns 402 `TASK_LIMIT_REACHED`.
+- **Free plan cap:** free users are capped at **10 active tasks**, not counting tasks linked to an active routine (the starter routine included). `POST /api/tasks` returns 402 `TASK_LIMIT_REACHED`. The count lives only in `db/task-cap.js` (`countCappedOpenTasks`, `isAtFreeTaskCap`); every cap check and `/api/subscription/status` use it.
 
 ### Where things live (Oct 2026 additions)
 - **Errors and health:**
@@ -294,9 +294,9 @@ Four places plus a Settings gear. One small PR per phase; old URLs keep working 
 
 Before any shared CSS change ships, verify all of the following:
 
-1. **Buddy bubble tap test (mobile)** — Open the Buddy panel via the floating bubble on a phone. Verify the panel opens, displays messages, and the send button works. Buddy bubble uses `#bw-bubble` in `public/buddy-widget.css` — ensure no CSS change breaks it.
-2. **Mobile viewport check (< 900px)** — Open `/app` at 375px, 428px, and 768px widths. Verify the bottom nav bar renders, task cards display without overflow, and the Chevron (›) buttons are tappable.
-3. **Desktop viewport check (≥ 900px)** — Open `/app` at 1280px and 1440px. Verify the left sidebar renders, task cards use the warm-white background, and no new horizontal scrollbar appears.
+1. **Buddy tap test (mobile)** — Buddy entry points: Home (`/weightless`) is the Buddy chat itself; every other signed-in app page gets the floating `#fl-buddy-btn` (`initBuddyButton` in `public/shared-nav.js`, styles in `shared-nav.css`), which lazy-loads `public/buddy-widget.js` and calls `window.openBuddyPanel()` (`#bw-panel`). Flow screens (check-in, `/app/done`, focus, onboarding) have none. On a phone, tap the button: the panel opens, shows messages, send works, Esc/✕ closes it.
+2. **Mobile viewport check (< 900px)** — Open `/weightless` and `/app/tasks` at 375px, 428px, and 768px widths. Verify the bottom nav bar renders, task cards display without overflow, and the Chevron (›) buttons are tappable.
+3. **Desktop viewport check (≥ 900px)** — Open `/weightless` and `/app/tasks` at 1280px and 1440px. Verify the left sidebar renders, task cards use the warm-white background, and no new horizontal scrollbar appears.
 4. **No new horizontal overflow** — Check `overflow-x: hidden` on body and `max-width` constraints on `.page-content-wrapper`. A removed `border` can change element width calculations — verify no layout reflows.
 5. **Sidebar/nav renders correctly** — Verify the 200px left sidebar (desktop) and 60px bottom bar (mobile) both function. Check `shared-nav.css` and `public/shared-nav.js` — these are shared across all 17 app pages.
 6. **Update changelog.html** — Every feature, improvement, or fix that ships must get a dated entry in `public/changelog.html`. Format: `<div class="entry">` with day/month + title + 1–2 sentence description + badge (new/improvement/fix/design). If the feature is ADHD-relevant, end the description with a science tie-in: "This maps to [concept] from the [science page](/science) — [1-sentence explanation]." Use the June 2026 section as a template for new month sections.

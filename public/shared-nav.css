@@ -1078,3 +1078,51 @@ body.shared-nav-active {
 .shared-nav-subitem:hover { color: #fff; background: rgba(255, 255, 255, 0.06); }
 .shared-nav-subitem.active { color: #f0c96a; font-weight: 600; }
 .shared-nav-subitem:focus-visible { outline: 2px solid #c9a84c; outline-offset: -2px; }
+
+/* ── Floating Buddy button (shared-nav.js initBuddyButton) ──────────
+   Opens the buddy-widget.js panel on every signed-in app page except Home
+   and flow screens. Phones: bottom-right, above the 58px pill + 16px gap +
+   safe area. JS lifts it above a page .fab if they'd overlap. */
+#fl-buddy-btn {
+  position: fixed;
+  right: calc(16px + env(safe-area-inset-right, 0px));
+  bottom: calc(86px + env(safe-area-inset-bottom, 0px));
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: var(--navy);
+  color: var(--nav-text-active);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  cursor: pointer;
+  z-index: calc(var(--nav-z) - 10);
+  box-shadow: 0 6px 20px rgba(1, 30, 92, 0.28), 0 2px 6px rgba(0, 0, 0, 0.12);
+  transition: transform var(--transition-speed) var(--spring), opacity var(--transition-speed) ease;
+  -webkit-tap-highlight-color: transparent;
+}
+#fl-buddy-btn svg { width: 22px; height: 22px; }
+#fl-buddy-btn:hover { transform: scale(1.06); }
+#fl-buddy-btn:active { transform: scale(0.94); }
+#fl-buddy-btn:focus-visible { outline: 2px solid var(--orange); outline-offset: 3px; }
+#fl-buddy-btn.loading { opacity: 0.7; cursor: progress; }
+#fl-buddy-btn.panel-open,
+body.fl-overlay-open #fl-buddy-btn {
+  opacity: 0;
+  pointer-events: none;
+  transform: scale(0.8);
+}
+@media (max-width: 899px) {
+  /* Room to scroll the last row out from under the button. */
+  body.shared-nav-active.fl-has-buddy-btn {
+    padding-bottom: calc(146px + env(safe-area-inset-bottom, 0px));
+  }
+}
+@media (min-width: 900px) {
+  #fl-buddy-btn { right: 24px; bottom: 24px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #fl-buddy-btn { transition: none; }
+}

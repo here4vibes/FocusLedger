@@ -2,6 +2,7 @@
 // Owns: task CRUD, steps CRUD, summary, nudges, suggest-steps, suggest-duration.
 // Does NOT own: auth middleware, pro status check, recurring task spawning.
 const { checkProStatus } = require('../middleware/proUtils');
+const { isAtFreeTaskCap } = require('../db/task-cap');
 const { fetchUserTimezone, getUserLocalDate } = require('../lib/timezone');
 const { complete } = require('../lib/claude-client');
 const { logFailure } = require('../lib/log-failure');
@@ -332,23 +333,15 @@ async function createTask(req, res) {
     try {
       const isPro = await checkProStatus(pool, userId);
       if (!isPro) {
-        const { rows: countRows } = await pool.query(
-          'SELECT COUNT(*)::int AS c FROM tasks WHERE user_id = $1 AND is_completed = false',
-          [userId]
-        );
-        if (countRows[0].c >= 10) {
-          return res.status(402).json({ success: false, message: 'You have 10 active tasks — the free plan cap. Finish a few, or open it up with Autopilot.', code: 'TASK_LIMIT_REACHED', upgrade_required: true });
+        if (await isAtFreeTaskCap(pool, userId)) {
+          return res.status(402).json({ success: false, message: 'You have 10 active tasks of your own — the free plan cap (routine tasks don’t count). Finish a few, or open it up with Autopilot.', code: 'TASK_LIMIT_REACHED', upgrade_required: true });
         }
       }
     } catch (subErr) {
       console.error('[tasks] subscription check failed, treating as free:', subErr.message);
       try {
-        const { rows: countRows } = await pool.query(
-          'SELECT COUNT(*)::int AS c FROM tasks WHERE user_id = $1 AND is_completed = false',
-          [userId]
-        );
-        if (countRows[0].c >= 10) {
-          return res.status(402).json({ success: false, message: 'You have 10 active tasks — the free plan cap. Finish a few, or open it up with Autopilot.', code: 'TASK_LIMIT_REACHED', upgrade_required: true });
+        if (await isAtFreeTaskCap(pool, userId)) {
+          return res.status(402).json({ success: false, message: 'You have 10 active tasks of your own — the free plan cap (routine tasks don’t count). Finish a few, or open it up with Autopilot.', code: 'TASK_LIMIT_REACHED', upgrade_required: true });
         }
       } catch (e) {
         // Full DB outage: let the creation attempt proceed (and fail on its own).

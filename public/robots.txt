@@ -10,11 +10,20 @@ Disallow: /calendar
 Disallow: /journal
 Disallow: /ideas
 Disallow: /values
-Disallow: /news
 Disallow: /portal
 Disallow: /email
 Disallow: /admin
 Disallow: /share
+Disallow: /weightless
+Disallow: /home
+Disallow: /transactions
+Disallow: /routines
+Disallow: /insights
+Disallow: /recap
+Disallow: /checkin
+Disallow: /check-in
+Disallow: /partner-dashboard
+Disallow: /link-email
 
 # Block auth flow pages
 Disallow: /reset-password

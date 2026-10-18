@@ -616,7 +616,6 @@
             <a href="/app/tasks" class="nav-link">Tasks</a>
             <a href="/app/money" class="nav-link">Money</a>
             <a href="/app/life" class="nav-link">Life</a>
-            <a href="/news" class="nav-link">News</a>
             <a href="/app/vault" class="nav-link">Vault</a>
             <a href="/ideas" class="nav-link">Ideas</a>
             <a href="/journal" class="nav-link">Journal</a>
@@ -650,7 +649,7 @@
         <div class="onboarding-banner" id="onboardingBanner" role="status" aria-live="polite">
             <div class="onboarding-banner-icon">💡</div>
             <div class="onboarding-banner-body">
-                <div class="onboarding-banner-text">These 8 values shape how Buddy prioritizes your tasks. Edit anytime — they stay personal.</div>
+                <div class="onboarding-banner-text">Your values shape how Buddy prioritizes your tasks. Edit anytime — they stay personal.</div>
                 <div class="onboarding-banner-actions">
                     <button class="btn-got-it" id="gotItBtn" type="button">Got it</button>
                 </div>
@@ -902,10 +901,18 @@
                 api('GET', '/values'),
                 api('GET', '/values/week-snapshot')
             ]).then(function(results) {
-                state.values = (results[0] && results[0].values) || [];
+                // Starter values seeded at signup have no icon or color; give
+                // them defaults so hexToRgba(null) doesn't throw and leave a
+                // brand-new user on "Could not load values".
+                state.values = ((results[0] && results[0].values) || []).map(function(v, i) {
+                    if (!v.color) v.color = DEFAULT_COLORS[i % DEFAULT_COLORS.length];
+                    if (!v.icon) v.icon = DEFAULT_ICONS[i % DEFAULT_ICONS.length];
+                    return v;
+                });
                 state.snapshot = (results[1] && results[1].snapshot) || [];
                 renderValues();
-            }).catch(function() {
+            }).catch(function(e) {
+                console.error('[values] load failed:', e && e.message);
                 document.getElementById('mainContent').innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-title">Could not load values</div><div class="empty-sub">Please refresh the page</div></div>';
             });
         }

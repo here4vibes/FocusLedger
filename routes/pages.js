@@ -65,7 +65,7 @@ router.get('/recap',     (_, res) => res.sendFile(pub('recap.html')));   // link
 router.get('/email',     (_, res) => res.sendFile(pub('email.html')));
 router.get('/journal',   (_, res) => res.sendFile(pub('journal.html')));
 router.get('/share',     (_, res) => res.sendFile(pub('share.html')));
-router.get('/news',      (_, res) => res.sendFile(pub('news.html')));
+router.get('/news',      (_, res) => res.redirect(301, '/weightless'));   // news feed removed
 router.get('/transactions', (_, res) => res.sendFile(pub('transactions.html')));
 // /documents, /vault, /money, /buddy → redirected to /app/* canonical routes below
 router.get('/checkin',           (_, res) => res.sendFile(pub('checkin-spending.html')));
@@ -158,5 +158,14 @@ router.get('/home',   (_, res) => res.sendFile(pub('portal.html')));
 // Weightless — conversation-first surface (coexists with the classic app).
 // New users will default here; existing users opt in. See CLAUDE.md "Recent changes".
 router.get('/weightless', (_, res) => res.sendFile(pub('weightless.html')));
+
+// Unknown URL: a real 404 status with a branded page (Express's default was a
+// bare "Cannot GET" page). Must stay the last route in this router.
+router.use((req, res) => {
+  if ((req.method === 'GET' || req.method === 'HEAD') && req.accepts('html')) {
+    return res.status(404).sendFile(pub('404.html'));
+  }
+  res.status(404).json({ success: false, message: 'Not found' });
+});
 
 module.exports = router;
