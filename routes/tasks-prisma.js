@@ -5,6 +5,7 @@ const { checkProStatus } = require('../middleware/proUtils');
 const { fetchUserTimezone, getUserLocalDate } = require('../lib/timezone');
 const { complete } = require('../lib/claude-client');
 const { logFailure } = require('../lib/log-failure');
+const { parseAiJson } = require('../lib/ai-json');
 const { onTasksCompleted, refreshRoutineTasks } = require('../lib/routine-capture');
 
 // ── Helpers: time string normalization ───────────────────────────────────────
@@ -444,7 +445,7 @@ async function createTask(req, res) {
             }),
             new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 5000)),
           ]);
-          const parsed = JSON.parse(raw);
+          const parsed = parseAiJson(raw);
           if (parsed && typeof parsed.minutes === 'number' && parsed.minutes > 0) {
             await pool.query(
               'UPDATE tasks SET duration_minutes = $1, duration_source = $2 WHERE id = $3',

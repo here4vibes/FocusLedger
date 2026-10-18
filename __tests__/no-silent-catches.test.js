@@ -28,7 +28,7 @@ function walk(dir, out) {
 }
 
 const EMPTY_CATCH = /catch\s*(\([^)]*\))?\s*\{((?:\s|\/\/[^\n]*\n|\/\*[\s\S]*?\*\/)*)\}/g;
-const SWALLOW = /\.catch\(\s*\(\s*\w*\s*\)\s*=>\s*(\{\s*\}|null|undefined|\[\]|\{\}|false|0)\s*\)/g;
+const SWALLOW = /\.catch\(\s*\(?\s*\w*\s*\)?\s*=>\s*(\{(?:\s|\/\/[^\n]*\n|\/\*[\s\S]*?\*\/)*\}|null|undefined|\[\]|\{\}|false|0)\s*\)/g;
 
 test('server code has no silent catch blocks', () => {
   const files = [
