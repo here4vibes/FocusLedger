@@ -20,6 +20,7 @@
  */
 
 const express = require('express');
+const { fetchUserLocalDate } = require('../lib/timezone');
 const { complete } = require('../lib/claude-client');
 const { authenticateToken } = require('../middleware/auth');
 const { logFailure } = require('../lib/log-failure');
@@ -592,8 +593,9 @@ Analyze the journal and return the JSON response.`;
           taskDueDate = `${due_date}T${due_time}:00`;
         }
       } else if (due_time) {
-        // Time without date → assume today
-        const today = new Date().toISOString().split('T')[0];
+        // Time without date → assume the user's today (not UTC's: an 8pm EDT
+        // "call mom at 9" landed on tomorrow)
+        const today = await fetchUserLocalDate(pool, userId);
         taskDueDate = `${today}T${due_time}:00`;
       }
 

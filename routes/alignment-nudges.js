@@ -26,7 +26,7 @@ const express = require('express');
 const router = express.Router();
 const { authenticateToken } = require('../middleware/auth');
 const { checkProStatus } = require('../middleware/proUtils');
-const { fetchUserLocalDate } = require('../lib/timezone');
+const { fetchUserTimezone, getUserLocalDate } = require('../lib/timezone');
 
 module.exports = function(pool) {
   router.use(authenticateToken);
@@ -71,12 +71,13 @@ module.exports = function(pool) {
       const dismissed = new Set(dismissedResult.rows.map(r => `${r.nudge_type}:${r.pattern_key}`));
 
       // WHY: CURRENT_DATE is UTC on Neon — use user's local date for daily nudge cap
-      const localDate = await fetchUserLocalDate(pool, userId);
+      const tz = await fetchUserTimezone(pool, userId);
+      const localDate = getUserLocalDate(tz);
 
       const todayDismissedResult = await pool.query(
         `SELECT COUNT(*) as count FROM nudge_dismissals
-         WHERE user_id = $1 AND dismissed_at::date = $2::date`,
-        [userId, localDate]
+         WHERE user_id = $1 AND (dismissed_at AT TIME ZONE $3)::date = $2::date`,
+        [userId, localDate, tz]
       );
       const shownToday = parseInt(todayDismissedResult.rows[0].count) || 0;
       const quota = Math.max(0, 3 - shownToday);
