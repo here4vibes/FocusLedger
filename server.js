@@ -189,7 +189,7 @@ app.use('/api/ai-suggestions',  require('./routes/ai-suggestions')(pool));
 app.use('/api/ai',               require('./routes/ai')(pool));
 app.use('/api/capture',          require('./routes/capture')());
 app.use('/api/notifications',   require('./routes/notifications')(pool));
-app.use('/api/v1/notifications', require('./routes/notifications-v1'));
+app.use('/api/v1/notifications', require('./routes/notifications-v1')(pool));
 app.use('/api/v1/spending-sessions', require('./routes/spending-sessions')(pool));
 app.use('/api/adhd-tax',        require('./routes/adhd-tax')(pool));
 app.use('/api/analytics',       require('./routes/analytics')(pool));

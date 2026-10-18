@@ -127,7 +127,6 @@ module.exports = function(pool) {
         FROM tasks
         WHERE user_id = $1
           AND is_completed = false
-          AND archived = false
           AND (due_date IS NULL OR due_date <= CURRENT_DATE + INTERVAL '7 days')
         ORDER BY
           CASE WHEN due_date < CURRENT_DATE THEN 0 ELSE 1 END ASC,

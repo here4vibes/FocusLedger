@@ -118,6 +118,21 @@ module.exports = function(pool) {
     }
   });
 
+  // ── GET /api/v1/transactions/aggregate ──────────────────────────────────────
+  // Registered before /transactions/:id, which would otherwise capture "aggregate".
+  router.get('/transactions/aggregate', async (req, res) => {
+    try {
+      const { from, to } = req.query;
+
+      const aggregate = await getAggregate(pool, req.user.id, { from, to });
+
+      res.json(aggregate);
+    } catch (err) {
+      console.error('[v1/transactions/aggregate]', err.message);
+      res.status(500).json({ success: false, message: 'Failed to compute aggregate' });
+    }
+  });
+
   // ── GET /api/v1/transactions/:id ─────────────────────────────────────────────
   router.get('/transactions/:id', async (req, res) => {
     try {
@@ -186,20 +201,6 @@ module.exports = function(pool) {
     } catch (err) {
       console.error('[v1/transactions/:id/triage POST]', err.message);
       res.status(500).json({ success: false, message: 'Failed to classify transaction' });
-    }
-  });
-
-  // ── GET /api/v1/transactions/aggregate ──────────────────────────────────────
-  router.get('/transactions/aggregate', async (req, res) => {
-    try {
-      const { from, to } = req.query;
-
-      const aggregate = await getAggregate(pool, req.user.id, { from, to });
-
-      res.json(aggregate);
-    } catch (err) {
-      console.error('[v1/transactions/aggregate]', err.message);
-      res.status(500).json({ success: false, message: 'Failed to compute aggregate' });
     }
   });
 

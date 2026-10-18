@@ -41,7 +41,7 @@ module.exports = function(pool) {
         `, [userId, today]),
         pool.query(`
           SELECT COUNT(*) as count FROM documents
-          WHERE user_id = $1 AND updated_at::date = $2::date
+          WHERE user_id = $1 AND uploaded_at::date = $2::date
         `, [userId, today]),
         pool.query(`
           SELECT COUNT(*) as count FROM tasks
@@ -49,11 +49,9 @@ module.exports = function(pool) {
             AND is_completed = true
             AND completed_at::date = $2::date
             AND (
-              categorytag ILIKE '%money%' OR
-              categorytag ILIKE '%budget%' OR
-              categorytag ILIKE '%spending%' OR
-              categorytag ILIKE '%expense%' OR
-              categorytag ILIKE '%bill%' OR
+              bill_merchant_key IS NOT NULL OR
+              bill_type IS NOT NULL OR
+              title ILIKE '%spending%' OR
               title ILIKE '%budget%' OR
               title ILIKE '%bill%' OR
               title ILIKE '%money%' OR

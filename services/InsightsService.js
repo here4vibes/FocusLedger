@@ -91,12 +91,12 @@ async function computeLiveWeeklyStats(pool, userId) {
       AND t.date <= $3
   `, [userId, weekStart, weekEnd]);
 
-  // Evening sessions completed this week (buddy_checkins type='evening' + complete=true)
+  // Evening sessions completed this week (an evening buddy_checkins row is only
+  // written when the wrap-up is submitted; prod has checkin_type, no completed flag)
   const eveningSessionsResult = await pool.query(`
     SELECT COUNT(*) as cnt FROM buddy_checkins
     WHERE user_id = $1
-      AND type = 'evening'
-      AND completed = true
+      AND checkin_type = 'evening'
       AND checkin_date >= $2
       AND checkin_date <= $3
   `, [userId, weekStart, weekEnd]);
@@ -189,7 +189,7 @@ async function check_and_unlock_insights(pool, userId) {
   // Condition 4: evening_session_streak — ≥2 completed evening sessions
   const eveningCountResult = await pool.query(`
     SELECT COUNT(*) as cnt FROM buddy_checkins
-    WHERE user_id = $1 AND type = 'evening' AND completed = true
+    WHERE user_id = $1 AND checkin_type = 'evening'
   `, [userId]);
   const eveningCount = parseInt(eveningCountResult.rows[0]?.cnt || 0, 10);
 
@@ -247,7 +247,7 @@ async function get_insight_unlock_status(pool, userId) {
   const taskDaysResult = await pool.query(`SELECT COUNT(DISTINCT completed_at::date) as days FROM tasks WHERE user_id = $1 AND completed_at IS NOT NULL`, [userId]);
   const distinctTaskDays = parseInt(taskDaysResult.rows[0]?.days || 0, 10);
 
-  const eveningCountResult = await pool.query(`SELECT COUNT(*) as cnt FROM buddy_checkins WHERE user_id = $1 AND type = 'evening' AND completed = true`, [userId]);
+  const eveningCountResult = await pool.query(`SELECT COUNT(*) as cnt FROM buddy_checkins WHERE user_id = $1 AND checkin_type = 'evening'`, [userId]);
   const eveningCount = parseInt(eveningCountResult.rows[0]?.cnt || 0, 10);
 
   const TIER_CONFIG = {
