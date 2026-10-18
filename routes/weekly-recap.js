@@ -3,6 +3,7 @@
 const express = require('express');
 const { authenticateToken } = require('../middleware/auth');
 const { getUserLocalDate } = require('../lib/timezone');
+const { logFailure } = require('../lib/log-failure');
 
 module.exports = function (pool) {
   const router = express.Router();
@@ -34,9 +35,9 @@ module.exports = function (pool) {
         pool.query(
           'SELECT 1 FROM expenses WHERE user_id = $1 AND expense_date >= $2 AND is_impulse IS NOT NULL LIMIT 1',
           [userId, ws]
-        ).catch(() => ({ rows: [] })),
+        ).catch(logFailure('[weekly-recap]', 'expenses query', { userId }, { rows: [] })),
         pool.query('SELECT 1 FROM expenses WHERE user_id = $1 LIMIT 1', [userId])
-          .catch(() => ({ rows: [] })),
+          .catch(logFailure('[weekly-recap]', 'expenses query', { userId }, { rows: [] })),
       ]);
 
       if (anyExpenseRow.rows.length > 0 && classifiedRow.rows.length === 0) {
@@ -53,27 +54,27 @@ module.exports = function (pool) {
         pool.query(
           "SELECT COUNT(*) AS n FROM tasks WHERE user_id = $1 AND is_completed = true AND (updated_at AT TIME ZONE $2)::date BETWEEN $3::date AND $4::date",
           [userId, tz, ws, we]
-        ).catch(() => ({ rows: [{ n: 0 }] })),
+        ).catch(logFailure('[weekly-recap]', 'tasks query', { userId }, { rows: [{ n: 0 }] })),
         pool.query(
           'SELECT c.name AS category, SUM(e.amount) AS total FROM expenses e LEFT JOIN categories c ON c.id = e.category_id WHERE e.user_id = $1 AND e.expense_date BETWEEN $2 AND $3 GROUP BY c.name ORDER BY total DESC',
           [userId, ws, we]
-        ).catch(() => ({ rows: [] })),
+        ).catch(logFailure('[weekly-recap]', 'expenses query', { userId }, { rows: [] })),
         pool.query(
           'SELECT rs.current_streak, rs.best_streak, r.name FROM routine_streaks rs JOIN routines r ON r.id = rs.routine_id WHERE r.user_id = $1 ORDER BY rs.current_streak DESC LIMIT 1',
           [userId]
-        ).catch(() => ({ rows: [] })),
+        ).catch(logFailure('[weekly-recap]', 'routine_streaks query', { userId }, { rows: [] })),
         pool.query(
           "SELECT COUNT(*) AS n FROM buddy_checkins WHERE user_id = $1 AND (created_at AT TIME ZONE $2)::date BETWEEN $3::date AND $4::date",
           [userId, tz, ws, we]
-        ).catch(() => ({ rows: [{ n: 0 }] })),
+        ).catch(logFailure('[weekly-recap]', 'buddy_checkins query', { userId }, { rows: [{ n: 0 }] })),
         pool.query(
           'SELECT COUNT(*) AS n FROM expenses WHERE user_id = $1 AND expense_date BETWEEN $2 AND $3 AND is_impulse = true',
           [userId, ws, we]
-        ).catch(() => ({ rows: [{ n: 0 }] })),
+        ).catch(logFailure('[weekly-recap]', 'expenses query', { userId }, { rows: [{ n: 0 }] })),
         pool.query(
           "SELECT COUNT(*) AS sessions, COALESCE(SUM(actual_duration_seconds), 0) AS total_seconds FROM focus_sessions WHERE user_id = $1 AND started_at::date BETWEEN $2::date AND $3::date AND completed = true",
           [userId, ws, we]
-        ).catch(() => ({ rows: [{ sessions: 0, total_seconds: 0 }] })),
+        ).catch(logFailure('[weekly-recap]', 'focus_sessions query', { userId }, { rows: [{ sessions: 0, total_seconds: 0 }] })),
       ]);
 
       const tasksCompleted = parseInt(tasksRes.rows[0]?.n || 0, 10);

@@ -39,7 +39,9 @@ function decryptToken(ciphertext) {
     const decipher = crypto.createDecipheriv('aes-256-gcm', _encKey, iv);
     decipher.setAuthTag(tag);
     return Buffer.concat([decipher.update(enc), decipher.final()]).toString('utf8');
-  } catch {
+  } catch (e) {
+    // A key mismatch or tampering also lands here, not just legacy plaintext tokens.
+    console.warn('[PlaidService] token decrypt failed, using it as a legacy plaintext token:', e.message);
     return ciphertext;
   }
 }

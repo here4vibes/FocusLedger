@@ -617,7 +617,8 @@ async function updateDuration(req, res) {
     );
     if (!rows.length) return res.status(404).json({ success: false, message: 'Task not found' });
     res.json({ success: true, task: normTask(rows[0]) });
-  } catch {
+  } catch (err) {
+    console.error('[tasks] update duration failed:', err.message, '| taskId:', req.params.id);
     res.status(500).json({ success: false, message: 'Failed to update duration' });
   }
 }
@@ -859,11 +860,11 @@ async function getReentryBrief(req, res) {
       pool.query(
         'SELECT started_at, actual_duration_seconds FROM focus_sessions WHERE task_id = $1 ORDER BY started_at DESC LIMIT 1',
         [taskId]
-      ).catch(() => ({ rows: [] })),
+      ).catch(logFailure('[tasks]', 'focus_sessions query', { taskId }, { rows: [] })),
       pool.query(
         'SELECT step_text AS title FROM task_substeps WHERE task_id = $1 AND completed = false ORDER BY step_order ASC LIMIT 1',
         [taskId]
-      ).catch(() => ({ rows: [] })),
+      ).catch(logFailure('[tasks]', 'task_substeps query', { taskId }, { rows: [] })),
     ]);
 
     const lastSession = sessionResult.rows[0] || null;
