@@ -24,12 +24,13 @@
  * sessions + prefs, time estimates, insurance, settings prefs (notifications,
  * nudges, follow-up emails, routine nudges), routine from template, Tandem
  * invite → accept → share → feed → dissolve (second user), promo redemption
- * error paths, the push "Done ✓" action, account-deletion request.
+ * error paths, the push "Done ✓" action, account-deletion request, the free
+ * 10-task cap with the starter routine excluded (third user).
  * Not covered (no endpoint, or needs admin / an external service): values
  * alignment check-in (no write endpoint), promo redemption success (codes are
  * admin-created), Plaid itself (bank rows are seeded with SQL), Stripe, AI chat and AI breakdowns, documents upload.
  *
- * ~140 requests, two signups: under the global (300/15min) and signup (5/h)
+ * ~160 requests, three signups: under the global (300/15min) and signup (5/h)
  * limiters, which reset with each server process.
  *
  * Prereqs: DATABASE_URL points at a migrated DB, JWT_SECRET set.
@@ -595,6 +596,25 @@ async function main() {
     const got = routines.find(x => x.id === id);
     expect(got && got.tasks.length > 0, 'template routine missing from GET /api/routines or has no tasks');
     await call('DELETE', `/api/routines/${id}`, 200, { token });
+  });
+
+  // 13 ── Free task cap ───────────────────────────────────────────────────────
+  // A fresh free user's starter routine tasks must not use up the 10 free
+  // slots (db/task-cap.js): 10 own tasks fit, the 11th is refused with 402.
+  await flow('free cap: starter routine tasks don\'t count → 10 own tasks, 11th is 402', async () => {
+    const C = await signup('c');
+    await sleep(1500); // starter routine seeding is fire-and-forget
+    const routines = (await call('GET', '/api/routines', 200, { token: C.token })).routines || [];
+    const openRoutineTasks = routines.flatMap(r => (r.tasks || []).filter(t => !t.is_completed));
+    expect(openRoutineTasks.length > 0, 'new user has no open starter routine tasks to exclude from the cap');
+    for (let i = 1; i <= 10; i++) {
+      await call('POST', '/api/tasks', 201, { token: C.token, body: { title: `CI cap task ${i}` } });
+    }
+    const over = await call('POST', '/api/tasks', 402, { token: C.token, body: { title: 'CI cap task 11' } });
+    expect(over.code === 'TASK_LIMIT_REACHED', `11th task code=${over.code}, expected TASK_LIMIT_REACHED`);
+    const limits = (await call('GET', '/api/subscription/status', 200, { token: C.token })).limits || {};
+    expect(limits.active_tasks === 10 && limits.max_tasks === 10 && limits.can_create_task === false,
+      `subscription limits should count only own tasks: ${JSON.stringify(limits)}`);
   });
 
   await flow('logged-out writes are refused', async () => {

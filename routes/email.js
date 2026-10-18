@@ -4,6 +4,7 @@ const crypto = require('crypto');
 const { signUserState, verifyUserState } = require('../lib/oauth-state');
 const { authenticateToken } = require('../middleware/auth');
 const { checkProStatus } = require('../middleware/proUtils');
+const { isAtFreeTaskCap } = require('../db/task-cap');
 
 // ============================================================
 // Gmail OAuth Configuration
@@ -779,14 +780,10 @@ module.exports = function(pool) {
       // Enforce 10-task limit for free users (Pro users skip this, but email tasks are Pro-only)
       // For Pro users, no limit — but we still check for completeness / future downgrades
       if (!isPro) {
-        const activeCount = await pool.query(
-          'SELECT COUNT(*) as count FROM tasks WHERE is_completed = false AND user_id = $1',
-          [req.user.id]
-        );
-        if (parseInt(activeCount.rows[0].count) >= 10) {
+        if (await isAtFreeTaskCap(pool, req.user.id)) {
           return res.status(402).json({
             success: false,
-            message: 'You have 10 active tasks — the free plan cap. Finish a few, or open it up with Pro.',
+            message: 'You have 10 active tasks of your own — the free plan cap (routine tasks don’t count). Finish a few, or open it up with Pro.',
             code: 'TASK_LIMIT_REACHED',
             upgrade_required: true
           });

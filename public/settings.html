@@ -1473,7 +1473,7 @@
     <div class="modal-overlay" id="cancelModal">
         <div class="modal-card">
             <h3>Cancel Autopilot subscription?</h3>
-            <p>You'll keep Autopilot features until the end of your current billing period. After that, you'll move to the Free plan (10 active tasks).</p>
+            <p>You'll keep Autopilot features until the end of your current billing period. After that, you'll move to the Free plan (10 active tasks; routine tasks don’t count).</p>
             <div class="modal-actions">
                 <button class="btn-keep" id="keepProBtn">Keep Autopilot</button>
                 <button class="btn-confirm-cancel" id="confirmCancelBtn">Cancel Autopilot</button>
@@ -1588,7 +1588,7 @@
                 html += '<div class="plan-info"><span class="plan-badge free">FREE</span><span class="plan-name-label">Free Plan</span></div>';
                 html += '</div>';
                 html += '<div class="plan-details">';
-                html += '<div class="detail-row"><span class="detail-label">Active tasks</span><span class="detail-value">' + limits.active_tasks + ' / ' + limits.max_tasks + '</span></div>';
+                html += '<div class="detail-row"><span class="detail-label">Active tasks <small>(routines don&rsquo;t count)</small></span><span class="detail-value">' + limits.active_tasks + ' / ' + limits.max_tasks + '</span></div>';
                 html += '<div class="detail-row"><span class="detail-label">Price</span><span class="detail-value">Free forever</span></div>';
                 html += '</div>';
                 html += '<button class="btn-upgrade" onclick="openUpgradeModal()">Switch to Autopilot &mdash; from $8.33/mo</button>';
@@ -1610,7 +1610,7 @@
             if (sub.is_pro) {
                 html += '<span class="usage-count">' + limits.active_tasks + ' (unlimited)</span>';
             } else {
-                html += '<span class="usage-count">' + limits.active_tasks + ' / ' + limits.max_tasks + '</span>';
+                html += '<span class="usage-count">' + limits.active_tasks + ' / ' + limits.max_tasks + ' <small>(routines don&rsquo;t count)</small></span>';
             }
 
             html += '</div>';
