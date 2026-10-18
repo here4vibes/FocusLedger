@@ -209,7 +209,8 @@ Four places plus a Settings gear. One small PR per phase; old URLs keep working 
   - `refreshRoutineTasks` reopens routine tasks finished on an earlier local day (weekly routines after 7 days). It runs when `/api/tasks`, `/api/buddy/status`, `/api/routines` and `/api/today/timeline` load, so there's no cron to set up.
   - **"Done ✓" on pushes (#245):** single-task pushes (deadline reminder, cold-start nudge) carry a signed one-task token (`lib/push-action-token.js`, HMAC with `JWT_SECRET`, 72h). The service worker posts it to `POST /api/push-actions/done` (`routes/push-actions.js`, `db/task-completion.js`), which completes the task and runs `onTasksCompleted`. A process without `JWT_SECRET` just omits the button. iOS web push shows no action buttons.
   - Buddy already auto-completes tasks it hears about in chat (`completionMatches` in `routes/buddy.js`), so with `onTasksCompleted` that now also counts toward routines.
-  - **Capture plan, still to do:** a one-list evening round-up, and bank-charge suggestions.
+  - **Evening round-up:** after 5pm local, Home (`roundupCard` in `public/weightless.html`) lists today's open routine items that aren't already on the radar, with one tap each. "Not today" hides it per device per day.
+  - **Capture plan, still to do:** bank-charge suggestions.
 - **Tandem recap:** `lib/tandem-recap.js` and `db/tandem-recap.js`.
 - **Insights cron:** `jobs/crossDomainInsightsJob.js` (exports helpers; runs only when executed directly).
 - **Claude Code helpers (`.claude/`, committed):** agents `silent-failure-hunter`, `database-reviewer` and `security-reviewer`, plus the skill `postgres-patterns`.
