@@ -367,24 +367,7 @@
     (function() {
         'use strict';
 
-        // ── UTM attribution capture ────────────────────────────────────────────
-        // Persist UTMs from URL on direct /signup landings (covers campaigns that
-        // link directly here rather than via the landing page).
-        (function captureUtm() {
-            try {
-                var params = new URLSearchParams(window.location.search);
-                var keys = ['utm_source','utm_medium','utm_campaign','utm_content','utm_term'];
-                var hasUtm = keys.some(function(k) { return params.get(k); });
-                if (hasUtm) {
-                    var data = {};
-                    keys.forEach(function(k) { if (params.get(k)) data[k] = params.get(k); });
-                    data.signup_referrer = document.referrer || '';
-                    localStorage.setItem('fl_attribution', JSON.stringify(data));
-                } else if (!localStorage.getItem('fl_attribution') && document.referrer) {
-                    localStorage.setItem('fl_attribution', JSON.stringify({ signup_referrer: document.referrer }));
-                }
-            } catch(e) {}
-        })();
+        // First-touch attribution (fl_attribution) is captured by /js/analytics.js.
 
         // Determine post-auth destination (support share redirect)
         // New signups go through the check-in flow (handles once-per-day gating itself).
@@ -401,27 +384,33 @@
         if (googleToken) {
             // Capture google_email BEFORE replaceState wipes the query string
             var googleEmail = new URLSearchParams(window.location.search).get('google_email');
+            // google_new=1: the callback created this account (absent = existing
+            // account signing in through the signup button: not a conversion).
+            var googleNew = new URLSearchParams(window.location.search).get('google_new') === '1';
             // Clean URL immediately (remove token from history)
             history.replaceState(null, '', '/signup');
             localStorage.setItem('fl_token', googleToken);
             localStorage.setItem('fl_user', JSON.stringify({ email: googleEmail }));
             localStorage.setItem('fl_just_signed_up', '1');
-            if (typeof fbq === 'function') fbq('track', 'Lead');
+            if (googleNew && typeof fbq === 'function') fbq('track', 'Lead');
             // FLA loads at end of page — defer funnel event if not yet available
-            if (typeof FLA !== 'undefined') {
-                FLA.trackEvent('funnel_signup_start');
-                FLA.trackEvent('funnel_signup_complete');
-                FLA.trackEvent('signup_google');
-            } else {
-                window._flDeferSignupComplete = true;
+            if (googleNew) {
+                if (typeof FLA !== 'undefined') {
+                    FLA.trackEvent('funnel_signup_start');
+                    FLA.trackEvent('funnel_signup_complete');
+                    FLA.trackEvent('signup_google');
+                } else {
+                    window._flDeferSignupComplete = true;
+                }
             }
             // Flush UTM attribution to server now that we have the token
             // (UTMs survived the OAuth full-page redirect in localStorage)
             try {
                 var attr = JSON.parse(localStorage.getItem('fl_attribution') || 'null');
-                if (attr) {
+                if (attr && googleNew) {
                     fetch('/api/auth/attribution', {
                         method: 'PATCH',
+                        keepalive: true,
                         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + googleToken },
                         body: JSON.stringify(attr)
                     }).then(function() { localStorage.removeItem('fl_attribution'); }).catch(function() {});
@@ -432,7 +421,8 @@
             migrateDemoSession(googleToken);
             // Straight into the app: the home-screen tip now comes after the
             // first check-in (checkin.html), once there's a reason to come back.
-            window.location.href = postAuthDest;
+            // New signups wait a beat so the pixel's Lead request isn't cancelled.
+            setTimeout(function() { window.location.href = postAuthDest; }, googleNew ? 400 : 0);
             return;
         }
 
@@ -547,6 +537,8 @@
             .then(function(r) { return r.json(); })
             .then(function(data) {
                 if (data.success && data.token) {
+                    // Signup event first, so it still carries the attribution.
+                    if (typeof FLA !== 'undefined') FLA.trackEvent('funnel_signup_complete');
                     localStorage.removeItem('fl_attribution');
                     localStorage.setItem('fl_token', data.token);
                     if (data.user) {
@@ -556,10 +548,10 @@
                     localStorage.setItem('fl_just_signed_up', '1');
                     // Fire Meta Pixel Lead event + analytics funnel completion
                     if (typeof fbq === 'function') fbq('track', 'Lead');
-                    if (typeof FLA !== 'undefined') FLA.trackEvent('funnel_signup_complete');
                     // Migrate demo session (fire-and-forget — never blocks signup)
                     migrateDemoSession(data.token);
-                    window.location.href = postAuthDest;
+                    // A beat for the pixel's Lead request before navigating away.
+                    setTimeout(function() { window.location.href = postAuthDest; }, 400);
                 } else {
                     showError(data.message || 'Couldn\'t create your account. Try again?');
                     submitBtn.disabled = false;

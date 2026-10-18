@@ -5,7 +5,8 @@ const { queryWithRetry } = require('../lib/queryWithRetry');
 const { getActivationFunnel } = require('../db/activation');
 const { sendEmail } = require('../lib/emailService');
 const { v2LaunchTemplate } = require('../lib/emailTemplates');
-const { isAdminUser } = require('../lib/admin-access');
+const { isAdminUser, requireAdmin: requireAdminFor } = require('../lib/admin-access');
+const { getAttributionReport } = require('../db/analytics');
 
 // ============================================
 // Admin Access Control
@@ -54,6 +55,31 @@ module.exports = function(pool) {
     } catch (err) {
       console.error('[admin/activation] failed:', err.message, '| user:', req.user && req.user.id);
       res.status(500).json({ success: false, message: 'Failed to load activation' });
+    }
+  });
+
+  // GET /api/admin/attribution?from=YYYY-MM-DD&to=YYYY-MM-DD (UTC, inclusive;
+  // default the last 30 days, max 366) — real visitors, signup-page visitors,
+  // signups and signups by source/campaign (db/analytics.js). Bot/CI traffic is
+  // filtered at write time; `filtered` shows how much.
+  const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+  router.get('/attribution', authenticateToken, requireAdminFor(pool), async (req, res) => {
+    const today = new Date().toISOString().slice(0, 10);
+    const to = req.query.to || today;
+    const from = req.query.from || new Date(Date.parse(to) - 29 * 86400000).toISOString().slice(0, 10);
+    if (!DATE_RE.test(from) || !DATE_RE.test(to) || Number.isNaN(Date.parse(from)) || Number.isNaN(Date.parse(to))) {
+      return res.status(400).json({ success: false, message: 'from and to must be YYYY-MM-DD' });
+    }
+    const spanDays = (Date.parse(to) - Date.parse(from)) / 86400000;
+    if (spanDays < 0 || spanDays > 365) {
+      return res.status(400).json({ success: false, message: 'Range must be 1 to 366 days, from <= to' });
+    }
+    try {
+      const report = await getAttributionReport(pool, { from, to });
+      res.json({ success: true, ...report });
+    } catch (err) {
+      console.error('[admin/attribution] failed:', err.message, '| user:', req.user && req.user.id, '| from:', from, '| to:', to);
+      res.status(500).json({ success: false, message: 'Failed to load attribution' });
     }
   });
 

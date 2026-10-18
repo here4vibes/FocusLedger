@@ -33,6 +33,8 @@ async function req(method, path, body, token) {
     headers: {
       'Content-Type': 'application/json',
       'User-Agent': 'FocusLedger-signup-monitor (+https://github.com/here4vibes/focusledger)',
+      // Our own automation: production analytics drops it (lib/analytics-filter.js).
+      'X-FL-Automation': 'signup-monitor',
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
     body: body ? JSON.stringify(body) : undefined,

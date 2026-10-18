@@ -3286,28 +3286,6 @@ if ('serviceWorker' in navigator) {
 }
 </script>
 
-<script>
-/* UTM attribution capture — runs on every landing page load.
-   Persists UTM params + document.referrer in localStorage so they survive
-   the Google OAuth full-page redirect. Only written once (first touch). */
-(function() {
-    try {
-        var params = new URLSearchParams(window.location.search);
-        var utmKeys = ['utm_source','utm_medium','utm_campaign','utm_content','utm_term'];
-        var hasUtm = utmKeys.some(function(k) { return params.get(k); });
-        // Only overwrite stored UTMs if new UTM params are present on this load
-        if (hasUtm) {
-            var data = {};
-            utmKeys.forEach(function(k) { if (params.get(k)) data[k] = params.get(k); });
-            data.signup_referrer = document.referrer || '';
-            localStorage.setItem('fl_attribution', JSON.stringify(data));
-        } else if (!localStorage.getItem('fl_attribution') && document.referrer) {
-            // No UTMs but first visit with a referrer — record it for organic attribution
-            localStorage.setItem('fl_attribution', JSON.stringify({ signup_referrer: document.referrer }));
-        }
-    } catch(e) {}
-})();
-</script>
 
 <script>
 /* Google Sign-In: render button + One Tap */
@@ -3343,13 +3321,14 @@ if ('serviceWorker' in navigator) {
                       if (data.success && data.token) {
                           localStorage.setItem('fl_token', data.token);
                           if (data.isNewUser) {
+                              if (typeof FLA !== 'undefined') FLA.trackEvent('funnel_signup_complete');
                               localStorage.removeItem('fl_attribution');
                               localStorage.setItem('fl_just_signed_up', '1');
-                              if (typeof FLA !== 'undefined') FLA.trackEvent('funnel_signup_complete');
                               if (typeof fbq === 'function') fbq('track', 'Lead');
                           }
-                          // Route through check-in flow; it self-gates (skips if already done today)
-                          window.location.href = '/app/checkin';
+                          // Route through check-in flow; it self-gates (skips if already done today).
+                          // New signups wait a beat so the pixel's Lead request isn't cancelled.
+                          setTimeout(function() { window.location.href = '/app/checkin'; }, data.isNewUser ? 400 : 0);
                       }
                   }).catch(function() {});
             }
@@ -3395,13 +3374,14 @@ if ('serviceWorker' in navigator) {
               if (data.success && data.token) {
                   localStorage.setItem('fl_token', data.token);
                   if (data.isNewUser) {
+                      if (typeof FLA !== 'undefined') FLA.trackEvent('funnel_signup_complete');
                       localStorage.removeItem('fl_attribution');
                       localStorage.setItem('fl_just_signed_up', '1');
-                      if (typeof FLA !== 'undefined') FLA.trackEvent('funnel_signup_complete');
                       if (typeof fbq === 'function') fbq('track', 'Lead');
                   }
-                  // Route through check-in flow; it self-gates (skips if already done today)
-                  window.location.href = '/app/checkin';
+                  // Route through check-in flow; it self-gates (skips if already done today).
+                  // New signups wait a beat so the pixel's Lead request isn't cancelled.
+                  setTimeout(function() { window.location.href = '/app/checkin'; }, data.isNewUser ? 400 : 0);
               }
           }).catch(function() {});
     };

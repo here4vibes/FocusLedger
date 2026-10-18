@@ -8,10 +8,15 @@
  *   FLA.trackEvent(name, data)  — record a named event
  *   FLA.setUser(userId)         — set logged-in user ID for events
  *   FLA.getVisitorId()          — get the anonymous visitor UUID
+ *   FLA.getAttribution()        — first-touch attribution (or null)
  *
  * Auto-fires:
  *   - Session duration on page unload (via visibilitychange + beforeunload)
  *   - UTM param capture on every page
+ *   - First-touch attribution (utm_*, fbclid, gclid, referrer domain) saved in
+ *     localStorage fl_attribution on the first landing that has any; attached
+ *     to funnel_* / cta_* events and sent with signup (signup.html, index.html
+ *     One Tap, the Google OAuth return). Cleared after signup.
  *
  * Privacy: no PII, no third-party calls, no cookies. Anonymous UUID in
  * localStorage only. Daily-salted on the server so cross-day tracking is not
@@ -36,9 +41,13 @@
       localStorage.setItem(STORAGE_KEY, newId);
       return newId;
     } catch (e) {
-      // localStorage blocked (private mode etc.) — use session-only ID
+      // localStorage blocked (private mode etc.) — use a page-lifetime ID.
+      // Hex only: the server rejects anything else (a 'session-' prefix used
+      // to make every private-mode visitor silently unrecorded).
       if (!window._flVidSession) {
-        window._flVidSession = 'session-' + Math.random().toString(36).slice(2);
+        window._flVidSession = Array.from({ length: 32 }, function () {
+          return (Math.random() * 16 | 0).toString(16);
+        }).join('');
       }
       return window._flVidSession;
     }
@@ -60,6 +69,51 @@
       return { utm_source: null, utm_medium: null, utm_campaign: null };
     }
   }
+
+  // ── First-touch attribution ───────────────────────────────────────────────
+  // Captured once (first landing with a UTM, ad click id or outside referrer),
+  // kept 90 days. Referrer is reduced to its domain: no path or query.
+  var ATTR_KEY = 'fl_attribution';
+  var ATTR_TTL_MS = 90 * 24 * 3600 * 1000;
+  var UTM_KEYS = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term'];
+
+  function referrerDomain() {
+    try {
+      if (!document.referrer) return null;
+      var host = new URL(document.referrer).hostname.toLowerCase().replace(/^www\./, '');
+      if (!host || host === location.hostname.toLowerCase().replace(/^www\./, '')) return null;
+      if (/(^|\.)(focusledger\.net|onrender\.com)$/.test(host)) return null;
+      return host;
+    } catch (e) { return null; }
+  }
+
+  function readAttribution() {
+    try {
+      var a = JSON.parse(localStorage.getItem(ATTR_KEY) || 'null');
+      if (!a || typeof a !== 'object') return null;
+      if (a.first_seen && Date.now() - Date.parse(a.first_seen) > ATTR_TTL_MS) return null;
+      return a;
+    } catch (e) { return null; }
+  }
+
+  function captureAttribution() {
+    try {
+      if (localStorage.getItem('fl_token')) return; // signed in: nothing to attribute
+      if (readAttribution()) return;                // first touch wins
+      var params = new URLSearchParams(location.search);
+      var a = {};
+      UTM_KEYS.forEach(function (k) { var v = params.get(k); if (v) a[k] = v.slice(0, 60); });
+      var fb = params.get('fbclid'); if (fb) a.fbclid = fb.slice(0, 64);
+      var g = params.get('gclid'); if (g) a.gclid = g.slice(0, 64);
+      var ref = referrerDomain(); if (ref) a.referrer_domain = ref.slice(0, 100);
+      if (!Object.keys(a).length) return;           // direct visit: keep looking
+      a.landing_page = (location.pathname || '/').slice(0, 60);
+      a.first_seen = new Date().toISOString();
+      localStorage.setItem(ATTR_KEY, JSON.stringify(a));
+    } catch (e) { /* storage blocked: attribution unavailable */ }
+  }
+
+  captureAttribution();
 
   // ── Automated browsers send nothing ───────────────────────────────────────
   // Playwright/Selenium/Puppeteer set navigator.webdriver. Our own CI smoke
@@ -131,7 +185,7 @@
         var utm = getUtmParams();
         post(ENDPOINT_VISIT, {
           page: page,
-          referrer: document.referrer || null,
+          referrer: referrerDomain(), // domain only, never the path/query
           utm_source:   utm.utm_source,
           utm_medium:   utm.utm_medium,
           utm_campaign: utm.utm_campaign
@@ -146,9 +200,14 @@
      */
     trackEvent: function (name, data) {
       try {
+        var payload = Object.assign({}, data || {});
+        if (/^(funnel_|cta_)/.test(name) && !payload.attribution) {
+          var attr = readAttribution();
+          if (attr) payload.attribution = attr;
+        }
         post(ENDPOINT_EVENT, {
           event_name: name,
-          event_data: data || {},
+          event_data: payload,
           user_id: _userId
         });
       } catch (e) {}
@@ -169,6 +228,11 @@
      */
     getVisitorId: function () {
       return getOrCreateVisitorId();
+    },
+
+    /** First-touch attribution object, or null. */
+    getAttribution: function () {
+      return readAttribution();
     }
   };
 
