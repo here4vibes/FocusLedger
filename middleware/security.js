@@ -26,7 +26,9 @@ const helmetMiddleware = helmet({
         "https://cdn.jsdelivr.net",
         "https://js.stripe.com",
         "https://checkout.stripe.com",
-        "https://accounts.google.com"
+        "https://accounts.google.com",
+        // Meta Pixel. Only public marketing/auth pages include its script.
+        "https://connect.facebook.net"
       ],
       styleSrc: [
         "'self'",
@@ -61,7 +63,10 @@ const helmetMiddleware = helmet({
         "https://geocoding-api.open-meteo.com",
         "https://ipapi.co",
         "https://gnews.io",
-        "https://api.gnews.io"
+        "https://api.gnews.io",
+        // Meta Pixel event beacons (public pages only)
+        "https://www.facebook.com",
+        "https://connect.facebook.net"
       ],
       frameSrc: ["https://cdn.plaid.com", "https://accounts.google.com"],
       frameAncestors: ["'none'"],

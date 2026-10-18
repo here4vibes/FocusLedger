@@ -16,18 +16,6 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/buddy-widget.css">
-    <!-- Meta Pixel base + PageView -->
-    <script>
-    !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-    n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
-    n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
-    t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,
-    document,'script','https://connect.facebook.net/en_US/fbevents.js');
-    fbq('init','1597499061553078');
-    fbq('track','PageView');
-    </script>
-    <noscript><img height="1" width="1" style="display:none"
-    src="https://www.facebook.com/tr?id=1597499061553078&ev=PageView&noscript=1"/></noscript>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -1880,23 +1868,7 @@
                     toast.classList.add('visible');
                     setTimeout(function() { toast.classList.remove('visible'); }, 6000);
                 }
-                // Meta Pixel Purchase. Checkout returns here, but the event only
-                // ever fired on the legacy app.html, so ad conversions went
-                // unreported. Value is the real price, set server-side from
-                // config/pricing.js; eventID = checkout session, so Meta drops
-                // duplicates (e.g. a back-button revisit).
-                var value = parseFloat(params.get('value'));
-                if (typeof fbq === 'function' && value > 0) {
-                    var planName = params.get('plan') === 'tandem' ? 'Tandem' : 'Autopilot';
-                    var cycleName = params.get('billing_cycle') === 'annual' ? 'Annual' : 'Monthly';
-                    var ref = params.get('ref');
-                    try {
-                        fbq('track', 'Purchase',
-                            { value: value, currency: 'USD', content_name: planName + ' ' + cycleName },
-                            ref ? { eventID: 'purchase_' + ref } : undefined);
-                    } catch (e) { console.error('[settings] Pixel Purchase failed:', e.message); }
-                }
-                // Clean URL (also stops a refresh from re-firing the Purchase)
+                // Clean URL (also stops a refresh from re-showing the toast)
                 try { history.replaceState({}, '', window.location.pathname); } catch(e) {}
             }
         })();
