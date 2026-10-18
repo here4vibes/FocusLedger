@@ -35,6 +35,10 @@ module.exports = defineConfig({
   use: {
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
+    // Marks every request as our own automation so production analytics drops
+    // it (lib/analytics-filter.js). The client also stays silent when
+    // navigator.webdriver is set; this header is the server-side backstop.
+    extraHTTPHeaders: { 'X-FL-Automation': 'smoke' },
   },
 
   projects: [

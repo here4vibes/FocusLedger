@@ -10,7 +10,8 @@
  *   - No PII stored in analytics tables
  *   - visitor_hash is a daily-salted SHA256 of an anonymous client UUID
  *   - user_id stored only for logged-in events (FK to users table)
- *   - Referrers truncated + stripped of query params to prevent PII leakage
+ *   - Referrers reduced to a bare domain (no path/query) to prevent PII leakage
+ *   - Bots and our own CI are filtered server-side (lib/analytics-filter.js)
  *   - UTM params captured as-is (set by marketer, not user-generated)
  *   - All endpoints return 204/200 silently on bot detection or validation failure
  */
@@ -21,28 +22,12 @@ const crypto = require('crypto');
 const { isAdminUser } = require('../lib/admin-access');
 const { authenticateToken } = require('../middleware/auth');
 
-// ── Bot UA patterns to reject ──────────────────────────────────────────────
-const BOT_PATTERNS = [
-  /bot/i, /crawl/i, /spider/i, /slurp/i, /fetch/i, /scan/i,
-  /headless/i, /phantom/i, /puppeteer/i, /playwright/i, /selenium/i,
-  /python-requests/i, /go-http/i, /curl/i, /wget/i, /libwww/i,
-  /googlebot/i, /bingbot/i, /yandex/i, /duckduck/i, /baidu/i,
-  /semrush/i, /ahrefs/i, /mj12bot/i, /rogerbot/i, /dotbot/i,
-  /ia_archiver/i, /facebookexternalhit/i, /twitterbot/i, /linkedinbot/i,
-  /whatsapp/i, /telegrambot/i, /applebot/i, /dataprovider/i,
-  /screaming.frog/i, /sistrix/i, /archive.org/i,
-  // HTTP clients + uptime monitors + AI crawlers (UA-declared)
-  /axios/i, /node-fetch/i, /okhttp/i, /scrapy/i, /java\//i, /httpclient/i,
-  /pingdom/i, /uptimerobot/i, /statuscake/i, /site24x7/i,
-  /lighthouse/i, /pagespeed/i, /gtmetrix/i,
-  /gptbot/i, /claudebot/i, /ccbot/i, /bytespider/i, /petalbot/i, /amazonbot/i,
-  /anthropic/i, /perplexity/i,
-];
-
-function isBot(userAgent) {
-  if (!userAgent) return true;
-  return BOT_PATTERNS.some(p => p.test(userAgent));
-}
+// Bot/CI detection lives in lib/analytics-filter.js; filtered requests are
+// counted (analytics_filtered_daily), not stored.
+const { classifyTraffic } = require('../lib/analytics-filter');
+const { sanitizeAttribution, referrerDomain } = require('../lib/attribution');
+const { insertVisit, insertEvent, countFiltered } = require('../db/analytics');
+const { logFailure } = require('../lib/log-failure');
 
 // ── Daily-salted hash: same visitor_id, different day → different hash ─────
 function dailyHash(visitorId) {
@@ -90,6 +75,9 @@ const ALLOWED_EVENTS = new Set([
   'cta_go_pro',                // "Go Pro" click
   'cta_pricing_free',          // free plan selected on pricing
   'cta_pricing_pro',           // pro plan selected on pricing
+  'cta_pricing_tandem',        // tandem plan selected on pricing
+  'signup_google',             // signup completed via the Google OAuth redirect
+  'login_google',              // login via the Google OAuth redirect
 
   // Feature activation signals
   'feature_first_task',        // user created their first task
@@ -182,19 +170,6 @@ function computeHeroAb(rows) {
   return { variants: [A, B], leader, lift_pct, z, significant: significant && enough_data, enough_data };
 }
 
-// ── Sanitize referrer (strip query params, limit length, no PII) ───────────
-function sanitizeReferrer(ref) {
-  if (!ref || typeof ref !== 'string') return null;
-  try {
-    const url = new URL(ref);
-    // Keep only origin + pathname (strip query + hash to avoid PII in referrers)
-    const clean = `${url.origin}${url.pathname}`.slice(0, 500);
-    return clean;
-  } catch { // silent-ok: client-supplied referrer that isn't a URL is dropped
-    return null;
-  }
-}
-
 // ── Sanitize UTM params ────────────────────────────────────────────────────
 function sanitizeUtm(val) {
   if (!val || typeof val !== 'string') return null;
@@ -220,26 +195,25 @@ module.exports = function(pool) {
 
     try {
       const ua = req.headers['user-agent'] || '';
-      if (isBot(ua)) return;
+      const filteredAs = classifyTraffic(req.headers);
+      if (filteredAs) {
+        countFiltered(pool, filteredAs, 'visit').catch(logFailure('[Analytics]', 'countFiltered', { reason: filteredAs }));
+        return;
+      }
 
       const { visitor_id, page, referrer, utm_source, utm_medium, utm_campaign } = req.body || {};
 
       if (!isValidVisitorId(visitor_id)) return;
 
-      const hash        = dailyHash(visitor_id);
-      const cleanPage   = sanitizePage(page);
-      const cleanRef    = sanitizeReferrer(referrer);
-      const cleanSource = sanitizeUtm(utm_source);
-      const cleanMedium = sanitizeUtm(utm_medium);
-      const cleanCampaign = sanitizeUtm(utm_campaign);
-      const device      = detectDevice(ua);
-
-      await pool.query(
-        `INSERT INTO visitor_sessions
-           (visitor_hash, page, visited_at, referrer, utm_source, utm_medium, utm_campaign, device_type)
-         VALUES ($1, $2, NOW(), $3, $4, $5, $6, $7)`,
-        [hash, cleanPage, cleanRef, cleanSource, cleanMedium, cleanCampaign, device]
-      );
+      await insertVisit(pool, {
+        visitorHash: dailyHash(visitor_id),
+        page: sanitizePage(page),
+        referrer: referrerDomain(referrer),
+        utmSource: sanitizeUtm(utm_source),
+        utmMedium: sanitizeUtm(utm_medium),
+        utmCampaign: sanitizeUtm(utm_campaign),
+        device: detectDevice(ua),
+      });
     } catch (err) {
       console.error('[Analytics] Visit recording error:', err.message);
     }
@@ -252,8 +226,11 @@ module.exports = function(pool) {
     res.status(204).end();
 
     try {
-      const ua = req.headers['user-agent'] || '';
-      if (isBot(ua)) return;
+      const filteredAs = classifyTraffic(req.headers);
+      if (filteredAs) {
+        countFiltered(pool, filteredAs, 'event').catch(logFailure('[Analytics]', 'countFiltered', { reason: filteredAs }));
+        return;
+      }
 
       const { visitor_id, event_name, event_data, user_id } = req.body || {};
 
@@ -262,14 +239,18 @@ module.exports = function(pool) {
       const cleanEvent = sanitizeEventName(event_name);
       if (!cleanEvent) return;
 
-      const hash = dailyHash(visitor_id);
-
-      // Sanitize event_data: must be a plain object, max 1KB
+      // Sanitize event_data: must be a plain object, max 1KB. Attribution
+      // (first-touch, from public/js/analytics.js) is re-sanitized to known keys.
       let safeData = {};
       if (event_data && typeof event_data === 'object' && !Array.isArray(event_data)) {
         const serialized = JSON.stringify(event_data);
         if (serialized.length <= 1024) {
-          safeData = event_data;
+          safeData = { ...event_data };
+          if ('attribution' in safeData) {
+            const attr = sanitizeAttribution(safeData.attribution);
+            if (attr) safeData.attribution = attr;
+            else delete safeData.attribution;
+          }
         }
       }
 
@@ -277,12 +258,12 @@ module.exports = function(pool) {
       const safeUserId = (user_id && Number.isInteger(Number(user_id)) && Number(user_id) > 0)
         ? Number(user_id) : null;
 
-      await pool.query(
-        `INSERT INTO analytics_events
-           (visitor_hash, user_id, event_name, event_data, occurred_at)
-         VALUES ($1, $2, $3, $4, NOW())`,
-        [hash, safeUserId, cleanEvent, JSON.stringify(safeData)]
-      );
+      await insertEvent(pool, {
+        visitorHash: dailyHash(visitor_id),
+        userId: safeUserId,
+        eventName: cleanEvent,
+        eventData: safeData,
+      });
     } catch (err) {
       console.error('[Analytics] Event recording error:', err.message);
     }
