@@ -694,6 +694,8 @@
 
     setupMenuLogic(hamburgerBtn, overlay, menu, closeBtn);
 
+    initBuddyButton();
+
     // Sections: a sticky strip on phones; on desktop they're sub-items under the
     // active place in the sidebar (see buildDesktopSidebar), so nothing can
     // collide with a page's own header.
@@ -766,6 +768,125 @@
     });
   }
 
+  // ── Floating Buddy button ────────────────────────────────────────
+  // One way into Buddy from every signed-in app page. Home (/weightless) IS
+  // the Buddy chat and doesn't load this file; flow screens are skipped so the
+  // button never sits on top of their own input. The panel code
+  // (buddy-widget.js) is loaded on first tap if the page didn't include it.
+  var NO_BUDDY_BTN_PATHS = ['/weightless', '/buddy', '/app/buddy', '/checkin', '/app/checkin',
+    '/check-in', '/app/done', '/app/focus', '/onboarding'];
+
+  function buddyBtnExcluded() {
+    var path = window.location.pathname;
+    return NO_BUDDY_BTN_PATHS.some(function (p) {
+      return path === p || path === p + '/' || path.indexOf(p + '/') === 0;
+    });
+  }
+
+  function hasSession() {
+    try { return !!localStorage.getItem('fl_token'); }
+    catch (e) { console.warn('[shared-nav] localStorage unavailable:', e.message); return false; }
+  }
+
+  var _buddyLoading = null;
+  function loadBuddyWidget() {
+    if (typeof window.openBuddyPanel === 'function') return Promise.resolve();
+    if (_buddyLoading) return _buddyLoading;
+    _buddyLoading = new Promise(function (resolve, reject) {
+      var pending = 2;
+      function done() { if (--pending === 0) resolve(); }
+      // Stylesheet first so the panel never flashes unstyled (the widget
+      // skips its own <link> when this id exists).
+      var css = document.getElementById('buddy-widget-styles');
+      if (css) { done(); } else {
+        css = document.createElement('link');
+        css.id = 'buddy-widget-styles';
+        css.rel = 'stylesheet';
+        css.href = '/buddy-widget.css';
+        css.onload = done;
+        css.onerror = done; // the panel still works, just plainer
+        document.head.appendChild(css);
+      }
+      var s = document.createElement('script');
+      s.src = '/buddy-widget.js';
+      s.onload = done;
+      s.onerror = function () { reject(new Error('buddy-widget.js failed to load')); };
+      document.head.appendChild(s);
+    });
+    _buddyLoading.catch(function () { _buddyLoading = null; }); // silent-ok: caller logs; this only allows a retry
+    return _buddyLoading;
+  }
+
+  // Sit above any page FAB in the bottom-right corner instead of covering it.
+  function placeBuddyBtn(btn) {
+    btn.style.bottom = '';
+    var mine = btn.getBoundingClientRect();
+    var lift = 0;
+    document.querySelectorAll('.fab, [data-fab]').forEach(function (f) {
+      var r = f.getBoundingClientRect();
+      if (!r.width || !r.height || getComputedStyle(f).position !== 'fixed') return;
+      var overlapX = r.left < mine.right && r.right > mine.left;
+      var overlapY = r.top < mine.bottom + 12 && r.bottom > mine.top - 12;
+      if (overlapX && overlapY) lift = Math.max(lift, mine.bottom - r.top + 12);
+    });
+    if (lift) btn.style.bottom = (parseFloat(getComputedStyle(btn).bottom) + lift) + 'px';
+  }
+
+  function buildBuddyButton() {
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.id = 'fl-buddy-btn';
+    btn.setAttribute('aria-label', 'Open Buddy');
+    btn.setAttribute('aria-haspopup', 'dialog');
+    btn.setAttribute('aria-expanded', 'false');
+    btn.title = 'Talk to Buddy';
+    btn.innerHTML = SVG('<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>');
+    btn.firstChild.setAttribute('aria-hidden', 'true');
+
+    btn.addEventListener('click', function () {
+      if (btn.classList.contains('loading')) return;
+      btn.classList.add('loading');
+      loadBuddyWidget().then(function () {
+        btn.classList.remove('loading');
+        if (typeof window.openBuddyPanel === 'function') { window.openBuddyPanel(); return; }
+        // The widget declined this page (e.g. not signed in): Home is Buddy.
+        console.warn('[shared-nav] Buddy panel unavailable:', window.__buddySkip || window.__buddyError || 'unknown');
+        window.location.href = '/weightless';
+      }, function (err) {
+        btn.classList.remove('loading');
+        console.error('[shared-nav] Buddy load failed:', err.message, '| path:', window.location.pathname);
+        window.location.href = '/weightless';
+      });
+    });
+
+    // buddy-widget.js announces open/close so the button can step aside and
+    // take focus back when the panel closes.
+    document.addEventListener('fl:buddy-panel', function (e) {
+      var open = !!(e.detail && e.detail.open);
+      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+      btn.classList.toggle('panel-open', open);
+      if (!open) {
+        var a = document.activeElement;
+        if (!a || a === document.body || (a.closest && a.closest('#bw-panel'))) btn.focus();
+      }
+    });
+    return btn;
+  }
+
+  function initBuddyButton() {
+    if (buddyBtnExcluded() || !hasSession() || document.getElementById('fl-buddy-btn')) return;
+    var btn = buildBuddyButton();
+    document.body.appendChild(btn);
+    document.body.classList.add('fl-has-buddy-btn');
+    placeBuddyBtn(btn);
+    var t = null;
+    window.addEventListener('resize', function () {
+      clearTimeout(t);
+      t = setTimeout(function () { placeBuddyBtn(btn); }, 150);
+    });
+    window.addEventListener('load', function () { placeBuddyBtn(btn); });
+  }
+
   // ── FLNav public API ─────────────────────────────────────────────
   // window.FLNav.collapse() — shrink nav to dot and move to top-bar corner.
   // window.FLNav.restore()  — expand back to full pill at bottom.
@@ -777,6 +898,7 @@
   window.FLNav = {
     collapse: function () {
       _overlayDepth++;
+      document.body.classList.add('fl-overlay-open');
       var nav = document.getElementById('shared-bottom-nav');
       if (!nav) return;
       nav.classList.add('nav-collapsed', 'nav-overlay-mode');
@@ -784,12 +906,14 @@
     restore: function () {
       _overlayDepth = Math.max(0, _overlayDepth - 1);
       if (_overlayDepth > 0) return;
+      document.body.classList.remove('fl-overlay-open');
       var nav = document.getElementById('shared-bottom-nav');
       if (!nav) return;
       nav.classList.remove('nav-collapsed', 'nav-overlay-mode');
     },
     forceRestore: function () {
       _overlayDepth = 0;
+      document.body.classList.remove('fl-overlay-open');
       var nav = document.getElementById('shared-bottom-nav');
       if (nav) nav.classList.remove('nav-collapsed', 'nav-overlay-mode');
     }
