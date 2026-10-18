@@ -107,7 +107,6 @@ Node.js + Express · PostgreSQL (Neon) · Render deployment · Vanilla HTML/CSS/
   - **On deploy:**
     - Re-engagement emails resume; only Miles (user 35) is eligible. 22 users are paused via `user_email_preferences.re_engagement='false'`; flip them back at relaunch.
     - `render.yaml` moves `cold-start-nudge` and `evening-checkin` to hourly. Confirm in Render if Blueprint sync is off.
-- **#266** `claude/privacy-update-wAcNr`: privacy policy rewrite (cookies/analytics/ads, AI processing, processors, retention) and the Meta Pixel on public pages only. **Held until the founder has read the policy.** Stripe checkout then returns via a public `/thanks` page that fires the Pixel `Purchase` (deduped on the checkout session) and continues to Settings.
 
 ### Launch decisions (the user, 2026-10-18)
 - **Re-engagement:** resume the 22 paused users on launch day (when the user says "launched"), not before.
@@ -115,7 +114,7 @@ Node.js + Express · PostgreSQL (Neon) · Render deployment · Vanilla HTML/CSS/
 - **News:** dropped (#268).
 - **Meta Pixel:** public pages only (landing, pricing, signup, login, story, science, changelog, `/thanks`), never after sign-in. Purchases are reported from `/thanks`.
 - **Free cap:** routine-linked tasks don't count (#265). **Buddy:** floating button on every app page (#267).
-- **Privacy policy:** Claude drafts, the founder approves before it merges.
+- **Privacy policy:** Claude drafts, the founder approves before it merges. #266 (merged) rewrote it; Stripe checkout now returns via the public `/thanks` page, which fires the Pixel `Purchase`. Its retention lines state Render logs 7 days and Neon's 6-hour restore window, so update them if either plan changes.
 - **Next focus after launch:** polish the first session.
 
 ### Next up: the bug-hunt plan (agreed with the user, 2026-10-18)
