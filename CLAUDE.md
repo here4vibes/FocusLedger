@@ -87,7 +87,7 @@ Node.js + Express · PostgreSQL (Neon) · Render deployment · Vanilla HTML/CSS/
 - **Polsia Analytics** — first-party beacon pixel
 - **APNs** — iOS push via `apn` npm package; env vars: APNS_KEY_ID, APNS_TEAM_ID, APNS_KEY_P8, APNS_BUNDLE_ID
 
-## Current state & handoff (updated 2026-10-11, end of session)
+## Current state & handoff (updated 2026-10-18)
 
 **Read this section first.** It's the only context a new session gets.
 - **Every reply ends with a "Summary" section** (the user's standing request).
@@ -95,7 +95,9 @@ Node.js + Express · PostgreSQL (Neon) · Render deployment · Vanilla HTML/CSS/
 - **Keep this section current:** update it in the PR that changes the state, or in a small `docs(claude-md)` PR at the end of a work chunk. Keep it short and delete what's done.
 
 ### Open PRs (each needs the user's explicit "merge N")
-- **#218** `claude/test-coverage-analysis-wAcNr`: billing portal, nudge-quality pass, "one home", security upgrades. **CI is green and it's up to date with `main` (as of #228–#230). It waits only on the user's live Stripe purchase test.**
+**When several PRs are open,** they usually all edit this file and `public/changelog.html`. After each merge, merge `main` into the next PR. Resolve `changelog.html` by taking `main`'s file and re-inserting the branch's entry at the top. Resolve CLAUDE.md by keeping both sides' lines. Check CI goes green, then merge with the full head SHA.
+
+- **#218** `claude/test-coverage-analysis-wAcNr`: billing portal, nudge-quality pass, "one home", security upgrades. **It waits only on the user's live Stripe purchase test.** It's stale against `main`, so merge `main` in before merging; expect conflicts in `changelog.html`, CLAUDE.md and maybe the nudge jobs.
   - **Contents:**
     - `POST /api/subscription/portal`.
     - Nudge fixes: lifecycle emails, Buddy lapse timing, deadline quiet hours 08:00–21:59 local, routine gating, cold-start nudge at 10am local, evening check-in at `evening_time`.
@@ -105,7 +107,21 @@ Node.js + Express · PostgreSQL (Neon) · Render deployment · Vanilla HTML/CSS/
   - **On deploy:**
     - Re-engagement emails resume; only Miles (user 35) is eligible. 22 users are paused via `user_email_preferences.re_engagement='false'`; flip them back at relaunch.
     - `render.yaml` moves `cold-start-nudge` and `evening-checkin` to hourly. Confirm in Render if Blueprint sync is off.
-  - **Before merging:** merge `main` in again. Resolve `public/changelog.html` conflicts by keeping all entries.
+
+### Next up: the bug-hunt plan (agreed with the user, 2026-10-18)
+The user asked to finish the big bug classes in about 4 sessions:
+1. **Schema audit:** compare every column the code uses with prod (`information_schema` through the Neon MCP), then fix the mismatches with migrations. Start with the GET-sweep hits below.
+2. **Silent failures, part 3:** catches that return a fallback without logging. A scan found 105: 39 HIGH, 31 MEDIUM, 35 intentional. The biggest group is 26 `.catch(() => ({ rows: [] }))` in `routes/daily-brief.js`, `home-context.js`, `momentum-score.js` and `weekly-recap.js`, which show zeros on a DB error. Then extend the guard with an AST pass (acorn), `// silent-ok: <reason>` markers, and the root cron files.
+3. **Main paths end to end in CI:** extend `scripts/ci-boot-smoke.js`, or add a sweep that GETs every parameterless API route as a new user and fails on any 5xx or logged error.
+   - The first local run on a from-scratch DB flagged 20 routes: `buddy-widget/recent`, `comeback/status`, `daily-brief`, `weekly-recap`, `buddy` and `evening` `/evening-data`, `ideas/my-notifications`, `money/spending-sessions/today`, `time-blocks/weekly-summary`, `v1/focus-sessions/next`, `v1/insights/stats` and `unlocks`, `v1/notifications/preferences` (`pool` undefined), and `v1/transactions/aggregate` (route order).
+   - Some of these are from-scratch-only drift, so check each against prod.
+4. **Retire legacy pages:** `buddy.html` (move the form check-in first), `app.html`, `home.html`, `portal.html`, `landing-old`.
+
+**Smaller items:**
+- **Admin SQL in routes:** `routes/promo-codes.js` and `routes/inbound-email.js` run their own admin lookup SQL. Switch them to `requireAdmin(pool)` from `lib/admin-access.js`.
+- **News sync** uses an in-process `setInterval` (`routes/news.js`). Move it to the commented-out `rss-sync` cron in `render.yaml`, or drop the feature.
+- **Capture, still to do:** bank-charge suggestions, i.e. a known recurring charge such as a gym or pharmacy suggests ticking the related task.
+- **Ideas discussed, not agreed:** show renewals and Bills in hours of work at the user's income rate; a risky-time spending nudge. The user noted purchases don't happen in the app, so these are reflection and planning views, not in-the-moment ones.
 
 ### UI consolidation plan (agreed with the user, 2026-10-11)
 Four places plus a Settings gear. One small PR per phase; old URLs keep working through redirects.
@@ -129,14 +145,15 @@ Four places plus a Settings gear. One small PR per phase; old URLs keep working 
    - `/app/done` is a flow screen, not a section.
    - For phases 3 and 4, add the Money and Life entries to `PLACE_TABS` and drop them from "More".
 3. **Phase 3, Money hub (#236):** Overview (`/app/money`) · Transactions (`/transactions`) · Bills (`/app/money/bills`, the full recurring list with monthly and yearly totals, statuses and the "unsure" question). The spending check-in is a flow, not a section.
-4. **Phase 4, Life hub (#243):** Overview (`/app/life`, also Score and Nudges) · Vault · Insurance · Values · Journal · Insights; "More" now holds only Email → Tasks, Partner, Settings and Help. **Still to do:** retire `buddy.html` (after moving the form check-in), `app.html`, `home.html`, `portal.html` and `landing-old`.
+4. **Phase 4, Life hub (#243, merged):** Overview (`/app/life`, also Score and Nudges) · Vault · Insurance · Values · Journal · Insights; "More" now holds only Email → Tasks, Partner, Settings and Help. **Still to do:** retire `buddy.html` (after moving the form check-in), `app.html`, `home.html`, `portal.html` and `landing-old`.
 5. **Phase 5, visual pass:** Weightless tokens on every page.
 
 ### Waiting on the user
 - **Live Stripe purchase test.** Expected: Settings shows Autopilot $9.95 with a renewal date; after cancelling, "Cancelled — you won't be charged again" and a "Keep Autopilot" button.
 - **Render `DATABASE_URL`:** change `sslmode=require` → `verify-full` in both the `focusledger` env group and the web service (NODE-EXPRESS-4).
 - **`SENTRY_DSN`** must be in the `focusledger` env group so cron errors reach Sentry.
-- **Neon and Stripe MCP connectors** fail to connect in cloud sessions. Reconnect them at claude.ai/customize/connectors.
+- **Neon and Stripe MCP connectors** fail to connect in cloud sessions, and Neon drops out mid-session too. Stripe needs re-authorizing. Reconnect both at claude.ai/customize/connectors.
+- **`renewal-heads-up` cron (#237):** if Render Blueprint sync is off, create it in the dashboard with the `focusledger` env group.
 - **Plaid:** the MCP shows zero production usage on team `69e2d08b7146d5000d5a94d1`. Confirm `PLAID_ENV`, and whether Liabilities and Recurring Transactions are enabled. If so, layer them onto the bill guardian.
 - **Phone check of the live Weightless page:** tap a radar box, open a subscription review, and confirm the Buddy bubble still opens.
 
@@ -239,6 +256,15 @@ Four places plus a Settings gear. One small PR per phase; old URLs keep working 
 - **Shell:** never `pkill -f` a pattern that matches your own shell. Find the server by `/proc/<pid>/environ` containing `PORT=3999`.
 
 ## Recent changes
+- **2026-10-18:** #245 "Done ✓" on task pushes · #246 evening round-up · #247 AI JSON parsing (`parseAiJson`) and news-feed backoff · #248 a single `isAdminUser` · #249 this handoff.
+- **2026-10-12 to 10-17:**
+  - #238 Claude Code helper agents (silent-failure, database, security reviewers) plus the `postgres-patterns` skill.
+  - #239 and #240 silent-catch sweep and its CI guard; 3 dead queries fixed.
+  - #241 counter columns to INTEGER (Sentry A, B, 8); the weekly summary counts from tasks.
+  - #242 the starter routine is seeded once, at signup only; routines default to active; `routine_task_links` unique key.
+  - #243 UI phase 4, Life hub.
+  - #244 routine capture: ticking a routine's last task completes the routine, and routine tasks reopen daily (`lib/routine-capture.js`).
+  - **Sentry status:** D is fixed and C is quieted in #247. 4 and 5 clear with #218 plus the user's `sslmode` change.
 - **2026-10-11 (later):**
   - #233 cancel steps inside the card, no duplicate tasks.
   - #234 UI phase 1, one front door.
