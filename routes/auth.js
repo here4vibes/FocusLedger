@@ -731,7 +731,7 @@ module.exports = function(pool, loginLimiter, signupLimiter) {
           pool.query(`INSERT INTO app_subscription (plan, status, user_id) VALUES ('free', 'active', $1)`, [user.id])
         ]).catch(err => console.error('[auth/google/one-tap] Setup error:', err));
 
-        // Onboarding flag — buddy.html checks /api/onboarding/status and redirects new users
+        // Onboarding flag — clients check /api/onboarding/status and redirect new users
         // to Buddy-led onboarding conversation before showing the main app.
 
         // Welcome email — fire-and-forget

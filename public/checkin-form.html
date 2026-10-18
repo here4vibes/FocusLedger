@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#011e5c">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="FocusLedger">
+    <link rel="icon" type="image/svg+xml" href="/icons/fl-icon.svg">
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/fl-icon.png">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="color-scheme" content="light">
+    <title>Morning Check-in — FocusLedger</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared-nav.css">
+    <style>
+        /* Form-mode morning check-in (formerly an overlay inside buddy.html).
+           Reached from /app/checkin when the user prefers the form. */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --orange: #c9a84c;
+            --navy: #011e5c;
+        }
+
+        html, body {
+            min-height: 100%;
+            font-family: 'DM Sans', sans-serif;
+            background: var(--navy);
+            color: white;
+            overflow-x: hidden;
+        }
+
+        /* Focused flow, like /app/checkin: no shared top bar, nav pill top-right */
+        #shared-top-bar { display: none !important; }
+        #shared-bottom-nav.nav-collapsed {
+            top: max(env(safe-area-inset-top, 0px), 0.5rem);
+            bottom: auto !important;
+            left: auto !important;
+            right: 0.75rem;
+            transform: none !important;
+        }
+
+        .form-checkin-page {
+            display: flex;
+            justify-content: center;
+            padding: env(safe-area-inset-top, 0) 0 env(safe-area-inset-bottom, 0);
+        }
+
+        .form-checkin-shell {
+            width: 100%;
+            max-width: 440px;
+            padding: 1.25rem 1.25rem calc(2rem + 70px);
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+        }
+        .form-checkin-topbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .form-checkin-logo {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: rgba(255,255,255,0.5);
+        }
+        .form-checkin-topright {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        .form-conv-link {
+            background: none;
+            border: none;
+            color: rgba(255,255,255,0.3);
+            font-size: 0.78rem;
+            font-family: 'DM Sans', sans-serif;
+            cursor: pointer;
+            text-decoration: underline;
+            transition: color 0.15s;
+        }
+        .form-conv-link:hover { color: rgba(255,255,255,0.65); }
+        .form-skip-link {
+            background: none;
+            border: none;
+            color: rgba(255,255,255,0.35);
+            font-size: 0.82rem;
+            font-family: 'DM Sans', sans-serif;
+            cursor: pointer;
+            transition: color 0.15s;
+        }
+        .form-skip-link:hover { color: rgba(255,255,255,0.65); }
+
+        .form-checkin-heading {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.45rem;
+            font-weight: 700;
+            color: white;
+            line-height: 1.2;
+        }
+
+        .form-section-label {
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.07em;
+            color: rgba(255,255,255,0.4);
+            margin-bottom: 0.6rem;
+        }
+
+        /* Mood picker */
+        .form-mood-row {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+        .form-mood-btn {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            background: rgba(255,255,255,0.07);
+            border: 1.5px solid rgba(255,255,255,0.12);
+            border-radius: 10px;
+            padding: 0.55rem 0.8rem;
+            cursor: pointer;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.85rem;
+            color: rgba(255,255,255,0.75);
+            transition: background 0.15s, border-color 0.15s;
+            touch-action: manipulation;
+        }
+        .form-mood-btn:hover { background: rgba(255,255,255,0.12); }
+        .form-mood-btn.selected {
+            border-color: var(--orange);
+            background: rgba(201,168,76,0.15);
+            color: white;
+        }
+
+        /* Energy slider */
+        .form-slider-wrap {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        .form-slider {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: rgba(255,255,255,0.15);
+            outline: none;
+        }
+        .form-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 22px; height: 22px;
+            border-radius: 50%;
+            background: var(--orange);
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        }
+        .form-slider::-moz-range-thumb {
+            width: 22px; height: 22px;
+            border-radius: 50%;
+            background: var(--orange);
+            cursor: pointer;
+            border: none;
+        }
+        .form-slider-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.75rem;
+            color: rgba(255,255,255,0.35);
+        }
+
+        /* Values checkboxes */
+        .form-values-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+            max-height: 180px;
+            overflow-y: auto;
+        }
+        .form-value-item {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            padding: 0.55rem 0.75rem;
+            background: rgba(255,255,255,0.05);
+            border: 1.5px solid rgba(255,255,255,0.08);
+            border-radius: 10px;
+            cursor: pointer;
+            transition: background 0.15s, border-color 0.15s;
+        }
+        .form-value-item.checked {
+            border-color: var(--orange);
+            background: rgba(201,168,76,0.12);
+        }
+        .form-value-check {
+            width: 20px; height: 20px;
+            border-radius: 5px;
+            border: 2px solid rgba(255,255,255,0.25);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.7rem;
+            flex-shrink: 0;
+            transition: background 0.15s, border-color 0.15s;
+        }
+        .form-value-item.checked .form-value-check {
+            background: var(--orange);
+            border-color: var(--orange);
+        }
+        .form-value-label {
+            font-size: 0.88rem;
+            color: rgba(255,255,255,0.8);
+        }
+        .form-values-empty {
+            font-size: 0.85rem;
+            color: rgba(255,255,255,0.35);
+            text-align: center;
+            padding: 0.75rem 0;
+        }
+
+        /* Intention field */
+        .form-intention-input {
+            width: 100%;
+            background: rgba(255,255,255,0.07);
+            border: 1.5px solid rgba(255,255,255,0.12);
+            border-radius: 12px;
+            padding: 0.75rem 1rem;
+            font-size: 0.92rem;
+            font-family: 'DM Sans', sans-serif;
+            color: white;
+            outline: none;
+            resize: none;
+            min-height: 60px;
+            max-height: 120px;
+            line-height: 1.4;
+            transition: border-color 0.15s;
+        }
+        .form-intention-input::placeholder { color: rgba(255,255,255,0.3); }
+        .form-intention-input:focus { border-color: rgba(201,168,76,0.5); }
+
+        /* Submit button */
+        .form-submit-btn {
+            width: 100%;
+            padding: 1rem 1.5rem;
+            background: var(--orange);
+            color: white;
+            border: none;
+            border-radius: 14px;
+            font-size: 1rem;
+            font-weight: 700;
+            font-family: 'DM Sans', sans-serif;
+            cursor: pointer;
+            transition: background 0.15s, opacity 0.15s;
+        }
+        .form-submit-btn:hover { background: #d4b56a; }
+        .form-submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+    </style>
+</head>
+<body>
+<noscript><p style="padding:2rem;text-align:center;font-family:'DM Sans',sans-serif;color:#fff">FocusLedger requires JavaScript.</p></noscript>
+<main class="form-checkin-page">
+    <div class="form-checkin-shell">
+        <div class="form-checkin-topbar">
+            <span class="form-checkin-logo">FocusLedger</span>
+            <div class="form-checkin-topright">
+                <button class="form-conv-link" id="formConvLink" type="button">Use conversation instead</button>
+                <button class="form-skip-link" id="formSkipLink" type="button">Skip →</button>
+            </div>
+        </div>
+        <div class="form-checkin-heading" id="formCheckinHeading">Morning check-in</div>
+
+        <!-- Mood -->
+        <div>
+            <div class="form-section-label">How are you feeling?</div>
+            <div class="form-mood-row" id="formMoodRow">
+                <button class="form-mood-btn" data-mood="struggling" type="button">😮‍💨 Rough</button>
+                <button class="form-mood-btn" data-mood="foggy" type="button">🌫️ Foggy</button>
+                <button class="form-mood-btn" data-mood="okay" type="button">😐 Okay</button>
+                <button class="form-mood-btn" data-mood="good" type="button">😊 Good</button>
+                <button class="form-mood-btn" data-mood="energized" type="button">⚡ Let's go</button>
+            </div>
+        </div>
+
+        <!-- Energy -->
+        <div>
+            <div class="form-section-label">Energy level</div>
+            <div class="form-slider-wrap">
+                <input type="range" class="form-slider" id="formEnergySlider" min="1" max="5" value="3">
+                <div class="form-slider-labels"><span>Low</span><span>Medium</span><span>High</span></div>
+            </div>
+        </div>
+
+        <!-- Values alignment -->
+        <div>
+            <div class="form-section-label">Which values feel alive today?</div>
+            <div class="form-values-list" id="formValuesList">
+                <div class="form-values-empty">Loading your values…</div>
+            </div>
+        </div>
+
+        <!-- Intention -->
+        <div>
+            <div class="form-section-label">One thing you want to protect today</div>
+            <textarea class="form-intention-input" id="formIntention" placeholder="Optional — e.g. deep work before noon" maxlength="200" rows="2"></textarea>
+        </div>
+
+        <button class="form-submit-btn" id="formSubmitBtn" type="button">Start my day →</button>
+    </div>
+</main>
+
+<script src="/js/analytics.js"></script>
+<script src="/shared-nav.js"></script>
+<script>
+(function() {
+    'use strict';
+
+    if (!localStorage.getItem('fl_token')) { window.location.href = '/login'; return; }
+
+    var TODAY = new Date().toLocaleDateString('en-CA', {
+        year: 'numeric', month: '2-digit', day: '2-digit',
+        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
+    });
+
+    var selectedMood = null;
+    var checkedValues = new Set();
+
+    function postJson(url, body) {
+        return apiFetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        });
+    }
+
+    function warn(op) {
+        return function(e) { console.warn('[checkin-form] ' + op + ' failed', e); };
+    }
+
+    var h = new Date().getHours();
+    el('formCheckinHeading').textContent =
+        h < 12 ? 'Morning check-in' : h < 17 ? 'Afternoon check-in' : 'Daily check-in';
+
+    // Values list
+    apiFetch('/api/values')
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            var list = el('formValuesList');
+            var values = (data.values || []).slice(0, 8);
+            if (!values.length) {
+                list.innerHTML = '<div class="form-values-empty">No values set yet — <a href="/values" style="color:var(--orange);">add them here</a></div>';
+                return;
+            }
+            list.innerHTML = '';
+            values.forEach(function(v) {
+                var item = document.createElement('div');
+                item.className = 'form-value-item';
+                item.dataset.id = v.id;
+                item.innerHTML = '<div class="form-value-check"></div><span class="form-value-label">' + escHtml(v.value_name) + '</span>';
+                item.addEventListener('click', function() {
+                    var id = this.dataset.id;
+                    var on = !checkedValues.has(id);
+                    if (on) checkedValues.add(id); else checkedValues.delete(id);
+                    this.classList.toggle('checked', on);
+                    this.querySelector('.form-value-check').textContent = on ? '✓' : '';
+                });
+                list.appendChild(item);
+            });
+        })
+        .catch(function(e) {
+            console.warn('[checkin-form] load values failed', e);
+            el('formValuesList').innerHTML = '<div class="form-values-empty">Could not load values</div>';
+        });
+
+    // Mood
+    document.querySelectorAll('#formMoodRow .form-mood-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            document.querySelectorAll('#formMoodRow .form-mood-btn').forEach(function(b) { b.classList.remove('selected'); });
+            this.classList.add('selected');
+            selectedMood = this.dataset.mood;
+        });
+    });
+
+    // Switch to the conversation check-in
+    el('formConvLink').addEventListener('click', function() {
+        postJson('/api/buddy/mode-preference', { manual_override: 'conversation' })
+            .catch(warn('mode-preference override'))
+            .then(function() { window.location.href = '/app/checkin?force=conversation'; });
+    });
+
+    // Skip
+    el('formSkipLink').addEventListener('click', function() {
+        this.disabled = true;
+        Promise.all([
+            postJson('/api/buddy/mode-preference', { mode: 'form', completed: false, skipped: true })
+                .catch(warn('mode-preference skip')),
+            postJson('/api/buddy/login-checkin-done', { mood: null, intention: null })
+                .catch(warn('login-checkin-done (skip)'))
+        ]).then(function() { window.location.href = '/weightless'; });
+    });
+
+    // Submit
+    el('formSubmitBtn').addEventListener('click', function() {
+        this.disabled = true;
+        this.textContent = 'Saving…';
+
+        var mood = selectedMood || 'okay';
+        var intention = (el('formIntention').value || '').trim();
+
+        var pref = postJson('/api/buddy/mode-preference', { mode: 'form', completed: true, skipped: false })
+            .catch(warn('mode-preference complete'));
+
+        var plan = postJson('/api/buddy/login-checkin-done', { mood: mood, intention: intention || null })
+            .then(function() {
+                return apiFetch('/api/buddy/daily-plan?mood=' + encodeURIComponent(mood) + '&date=' + TODAY);
+            })
+            .then(function(r) { return r.json(); })
+            .then(function() { return postJson('/api/buddy/daily-plan/accept', { date: TODAY }); })
+            .catch(warn('submit check-in'));
+
+        Promise.all([pref, plan]).then(function() { window.location.href = '/weightless'; });
+    });
+})();
+</script>
+</body>
+</html>

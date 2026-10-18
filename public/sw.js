@@ -22,7 +22,7 @@ const PRECACHE_URLS = [
   '/weightless', // PWA start_url — conversation-first home
   '/app',
   '/home',       // Morning nudge notification tap target
-  '/app/buddy',  // Accountabilibuddy check-in page
+  '/app/buddy',  // legacy link; redirects to /weightless
   '/money',      // Money page — was missing, caused stale cache on offline fallback
   '/buddy',      // Buddy direct route
   '/portal',

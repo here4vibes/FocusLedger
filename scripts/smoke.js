@@ -1165,7 +1165,7 @@ function testVisualVerification() {
   // 30-B: Bottom nav item count on app pages
   // Every app page that includes the bottom nav must have exactly 6 nav items.
   const APP_PAGES_WITH_NAV = [
-    'app.html', 'buddy.html', 'calendar.html', 'ideas.html',
+    'app.html', 'calendar.html', 'ideas.html',
     'journal.html', 'settings.html', 'news.html', 'values.html',
     'score.html', 'vault.html', 'insurance.html', 'nudges.html',
     'life.html',
@@ -1217,7 +1217,6 @@ function testVisualVerification() {
   const DATA_CONTAINERS = [
     { page: 'app.html',      containerId: 'taskList',         label: 'task list' },
     { page: 'app.html',      containerId: 'expenseList',      label: 'expense list' },
-    { page: 'buddy.html',    containerId: 'planArea',         label: 'buddy plan area' },
     { page: 'calendar.html', containerId: 'calGrid',          label: 'calendar grid' },
     { page: 'ideas.html',    containerId: 'ideasList',        label: 'ideas list' },
     { page: 'journal.html',  containerId: 'historyBody',      label: 'journal entry list' },
@@ -1253,7 +1252,6 @@ function testVisualVerification() {
   const EMPTY_STATE_CHECKS = [
     { page: 'app.html',      emptyPattern: /empty.state|no.tasks|no tasks yet|add.your.first/i,    label: 'tasks empty state' },
     { page: 'app.html',      emptyPattern: /no.expenses|no spending|empty.expense/i,               label: 'expenses empty state' },
-    { page: 'buddy.html',    emptyPattern: /no plan|no tasks|empty.*plan|start.*day/i,             label: 'buddy plan empty state' },
     { page: 'ideas.html',    emptyPattern: /no ideas|capture.*idea|empty.*idea/i,                  label: 'ideas empty state' },
     { page: 'journal.html',  emptyPattern: /no entries|start.*journal|empty.*journal/i,            label: 'journal empty state' },
     { page: 'vault.html',    emptyPattern: /no documents|upload.*first|empty.*vault/i,             label: 'vault empty state' },
@@ -1797,7 +1795,6 @@ function testJSFailureDegradation() {
 
   const CRITICAL_PAGES = [
     'app.html',
-    'buddy.html',
     'settings.html',
     'login.html',
     'signup.html',

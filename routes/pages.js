@@ -107,10 +107,9 @@ router.get('/app/done',     (_, res) => res.sendFile(pub('app/done.html')));
 router.get('/app/money',    (_, res) => res.sendFile(pub('money.html')));
 router.get('/app/money/bills', (_, res) => res.sendFile(pub('money-bills.html')));
 router.get('/app/vault',    (_, res) => res.sendFile(pub('vault.html')));
-// One front door (UI consolidation phase 1): Buddy lives on Weightless. The
-// form check-in (?mode=form, linked from the first-session check-in) still
-// uses the Buddy page until it moves.
-router.get('/app/buddy',    (req, res) => req.query.mode ? res.sendFile(pub('buddy.html')) : res.redirect(302, '/weightless'));
+// One front door (UI consolidation phase 1): Buddy lives on Weightless. The old
+// form check-in link (?mode=form) now goes to its own page.
+router.get('/app/buddy',    (req, res) => res.redirect(302, req.query.mode === 'form' ? '/app/checkin/form' : '/weightless'));
 
 // WHY: /app/settings must be explicit — the /app/* catch-all below would
 // otherwise serve app.html (Tasks), silently breaking Stripe redirects,
@@ -129,6 +128,7 @@ router.get('/buddy',        (_, res) => res.redirect(301, '/app/buddy'));
 
 router.get('/app/onboarding', (_, res) => res.sendFile(pub('onboarding.html')));
 router.get('/app/checkin',  (_, res) => res.sendFile(pub('checkin.html')));
+router.get('/app/checkin/form', (_, res) => res.sendFile(pub('checkin-form.html')));
 router.get('/app/checkin/evening', (_, res) => res.sendFile(pub('checkin-evening.html')));
 // /app/focus (no taskId) → task picker mode, handled client-side
 router.get('/app/focus', (_, res) => res.sendFile(pub('app/focus.html')));
