@@ -58,10 +58,7 @@ const helmetMiddleware = helmet({
         "https://login.microsoftonline.com",
         "https://api.login.yahoo.com",
         "https://api.open-meteo.com",
-        "https://geocoding-api.open-meteo.com",
-        "https://ipapi.co",
-        "https://gnews.io",
-        "https://api.gnews.io"
+        "https://ipapi.co"
       ],
       frameSrc: ["https://cdn.plaid.com", "https://accounts.google.com"],
       frameAncestors: ["'none'"],

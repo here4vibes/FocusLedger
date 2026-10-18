@@ -119,7 +119,7 @@ The user asked to finish the big bug classes in about 4 sessions:
 4. **Retire legacy pages:** `app.html`, `home.html` and `landing-old` are gone (#251), and `buddy.html` in #256: the form check-in is `public/checkin-form.html` at `/app/checkin/form`. **Still to do:** `portal.html`, after #218 merges (it changes `/home` and `/portal`).
 
 **Smaller items:**
-- **News sync** uses an in-process `setInterval` (`routes/news.js`). Move it to the commented-out `rss-sync` cron in `render.yaml`, or drop the feature.
+- **News feed removed:** the `rss_feeds`, `news_cache` and `news_source_bias` tables (and `users.city`/`state_region`/`zip_code`/`country`) are now unused. Drop them later only with the founder's OK.
 - **Capture, still to do:** bank-charge suggestions, i.e. a known recurring charge such as a gym or pharmacy suggests ticking the related task.
 - **Ideas discussed, not agreed:** show renewals and Bills in hours of work at the user's income rate; a risky-time spending nudge. The user noted purchases don't happen in the app, so these are reflection and planning views, not in-the-moment ones.
 
@@ -174,7 +174,6 @@ Four places plus a Settings gear. One small PR per phase; old URLs keep working 
   - Agentic **type 2** (Buddy acts: bills, subscriptions, start-it-for-me) and **type 3** (shareable outcomes, e.g. "cancelled Netflix, $186/yr back") come first.
   - The MCP server for Claude/ChatGPT/Meta Muse is deferred.
   - Positioning: ADHD-native; the "ADHD tax" from a CPA founder; privacy; partner accountability.
-- **News sync runs on an in-process `setInterval`** (`routes/news.js` `startRssCron`), which breaks the no-in-process-schedulers rule. The `rss-sync` cron in `render.yaml` is commented out. Either move it to that cron or drop the feature.
 - **AI JSON:** parse model replies with `parseAiJson` from `lib/ai-json.js` (it handles code fences and surrounding prose). Never call `JSON.parse` on a raw model reply.
 - **Plaid v1 `connect`** stores the institution *id* as the bank name (`services/PlaidService.js`). The legacy path isn't used by the frontend.
 - **`weekly_stats` is never populated** (0 rows in prod; the "P2 cron" was never built). Its columns are integers since #241, so it's ready if a rollup job is ever added.

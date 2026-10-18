@@ -78,7 +78,6 @@ const WHITELISTED_ROUTES = new Set([
 const KNOWN_API_DOMAINS = [
   'api.open-meteo.com',
   'ipapi.co',
-  'gnews.io',
   'cdn.plaid.com',
   'js.stripe.com',
   'checkout.stripe.com',
@@ -1166,7 +1165,7 @@ function testVisualVerification() {
   // Every app page that includes the bottom nav must have exactly 6 nav items.
   const APP_PAGES_WITH_NAV = [
     'app.html', 'calendar.html', 'ideas.html',
-    'journal.html', 'settings.html', 'news.html', 'values.html',
+    'journal.html', 'settings.html', 'values.html',
     'score.html', 'vault.html', 'insurance.html', 'nudges.html',
     'life.html',
   ];

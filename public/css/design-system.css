@@ -391,13 +391,11 @@ select:focus-visible {
 .diff-card,
 .hero-card,
 .pricing-pill,
-.news-card,
 .cal-event {
   border-radius: var(--card-radius) !important;
 }
 .card { box-shadow: var(--card-shadow) !important; }
 /* Disable transform-based hover — too much motion for ADHD users */
-.news-card:hover,
 .diff-card:hover { transform: none !important; }
 
 /* ── 13. Buttons ──────────────────────────────────────────────────────── */

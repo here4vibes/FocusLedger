@@ -112,15 +112,6 @@ services:
   #     - fromGroup: focusledger
   #
   # - type: cron
-  #   name: rss-sync                  # news feed sync (non-essential feature)
-  #   runtime: node
-  #   schedule: "*/20 * * * *"
-  #   buildCommand: npm install
-  #   startCommand: node jobs/rss-sync.js
-  #   envVars:
-  #     - fromGroup: focusledger
-  #
-  # - type: cron
   #   name: pattern-detection         # dormant: buddy_patterns feature is not wired
   #   runtime: node
   #   schedule: "0 3 * * 0"
