@@ -257,6 +257,9 @@
 (function() {
   var token = localStorage.getItem('fl_token');
   if (!token) { window.location.href = '/login'; return; }
+  // Defined before the first fetch: it used to be declared further down, so
+  // the score request went out with no Authorization header and got a 401.
+  var authHdr = { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' };
 
   // ── Health Score ring ──────────────────────────────────────────────────────
   fetch('/api/health-score/today', { headers: authHdr })
@@ -283,11 +286,10 @@
         else p.textContent = 'A few areas need attention. Tap for the full breakdown.';
       }
     })
-    .catch(function() {});
+    .catch(function(e) { console.warn('[life] health score load failed:', e && e.message); });
 
   // ── Nudge banner — only shown when banner_enabled preference is true ──────
   // Fetch preferences first to avoid showing banner to users who opted out.
-  var authHdr = { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' };
 
   fetch('/api/nudge-system/preferences', { headers: authHdr })
     .then(function(r) { return r.json(); })

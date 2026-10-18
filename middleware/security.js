@@ -26,14 +26,19 @@ const helmetMiddleware = helmet({
         "https://cdn.jsdelivr.net",
         "https://js.stripe.com",
         "https://checkout.stripe.com",
-        "https://accounts.google.com"
+        "https://accounts.google.com",
+        // Meta Pixel (landing, pricing, signup…). Without this the browser
+        // refused fbevents.js on every page, so ad conversions never fired.
+        "https://connect.facebook.net"
       ],
       styleSrc: [
         "'self'",
         "'unsafe-inline'",
         "https://fonts.googleapis.com",
         "https://cdn.jsdelivr.net",
-        "https://api.fontshare.com"
+        "https://api.fontshare.com",
+        // Google Sign-In button styles (accounts.google.com/gsi/style)
+        "https://accounts.google.com"
       ],
       fontSrc: [
         "'self'",
@@ -61,7 +66,10 @@ const helmetMiddleware = helmet({
         "https://geocoding-api.open-meteo.com",
         "https://ipapi.co",
         "https://gnews.io",
-        "https://api.gnews.io"
+        "https://api.gnews.io",
+        // Meta Pixel event beacons
+        "https://www.facebook.com",
+        "https://connect.facebook.net"
       ],
       frameSrc: ["https://cdn.plaid.com", "https://accounts.google.com"],
       frameAncestors: ["'none'"],
