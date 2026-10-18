@@ -1904,7 +1904,10 @@
         // Init
         loadSubscriptionData();
         loadConnectedAccounts();
-        loadBankSync();
+        // Bank sync status loads on window 'load' via PlaidService (above). The
+        // old loadBankSync() call here no longer existed and threw, which
+        // stopped the rest of this script: the name/email fields stayed empty
+        // and Save name / Set password did nothing.
 
         // Handle ?focus=bank — scroll to bank section
         (function() {
