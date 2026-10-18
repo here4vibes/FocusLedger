@@ -199,7 +199,7 @@ Four places plus a Settings gear. One small PR per phase; old URLs keep working 
 - **Silent failures:** many routes catch DB errors, log them and return 200. Sentry captures every `console.error`. The CI boot smoke fails on any logged "column/relation … does not exist".
 - **Migrations run on every deploy** (`npm start` = `node migrate.js && node server.js`). A failed migration aborts the deploy and the old version keeps serving. Test risky migrations on a Neon branch.
 - **Key user IDs:** Sean = 2, **QA user = 25 (never touch)**, Miles = 35.
-- **Free plan cap:** free users are capped at **10 active tasks**. `POST /api/tasks` returns 402 `TASK_LIMIT_REACHED`.
+- **Free plan cap:** free users are capped at **10 active tasks**, not counting tasks linked to an active routine (the starter routine included). `POST /api/tasks` returns 402 `TASK_LIMIT_REACHED`. The count lives only in `db/task-cap.js` (`countCappedOpenTasks`, `isAtFreeTaskCap`); every cap check and `/api/subscription/status` use it.
 
 ### Where things live (Oct 2026 additions)
 - **Errors and health:**

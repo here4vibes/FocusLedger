@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { authenticateToken } = require('../middleware/auth');
 const { checkProStatus } = require('../middleware/proUtils');
+const { isAtFreeTaskCap } = require('../db/task-cap');
 const { fetchUserLocalDate } = require('../lib/timezone');
 
 module.exports = function(pool) {
@@ -139,13 +140,9 @@ module.exports = function(pool) {
         let canCreate = true;
         let limitMessage = null;
         if (!userIsPro) {
-          const activeCount = await client.query(
-            'SELECT COUNT(*) as count FROM tasks WHERE is_completed = false AND user_id = $1',
-            [userId]
-          );
-          if (parseInt(activeCount.rows[0].count) >= 10) {
+          if (await isAtFreeTaskCap(client, userId)) {
             canCreate = false;
-            limitMessage = 'Free plan is limited to 10 active tasks. Upgrade to Pro for unlimited tasks!';
+            limitMessage = 'Free plan is limited to 10 active tasks of your own (routine tasks don’t count). Upgrade to Autopilot for unlimited tasks!';
           }
         }
 
@@ -505,11 +502,7 @@ module.exports = function(pool) {
 
           // Check free-tier task limit
           if (!userIsPro) {
-            const activeCount = await client.query(
-              'SELECT COUNT(*) as count FROM tasks WHERE is_completed = false AND user_id = $1',
-              [userId]
-            );
-            if (parseInt(activeCount.rows[0].count) >= 10) {
+            if (await isAtFreeTaskCap(client, userId)) {
               // Don't generate — limit reached; advance date so we try again next time
               const nextDate = calculateNextDate(rt.next_due_date, rt.frequency);
               await client.query(
