@@ -809,8 +809,8 @@ module.exports = function(pool) {
         FROM tasks
         WHERE user_id = $1
           AND is_completed = true
-          AND completed_at::date = $2::date
-      `, [userId, today]);
+          AND (completed_at AT TIME ZONE $3)::date = $2::date
+      `, [userId, today, tz]);
 
       // Fetch both check-ins for today
       const checkinsResult = await pool.query(`
@@ -1076,8 +1076,8 @@ module.exports = function(pool) {
       // Tasks completed today
       const tasksResult = await pool.query(`
         SELECT COUNT(*) as count FROM tasks
-        WHERE user_id = $1 AND is_completed = true AND completed_at::date = $2::date
-      `, [userId, today]);
+        WHERE user_id = $1 AND is_completed = true AND (completed_at AT TIME ZONE $3)::date = $2::date
+      `, [userId, today, tz]);
 
       // Routines kept today — routines that have a streak event for today
       // We count routine_task_links where the linked task was completed today
@@ -1087,9 +1087,9 @@ module.exports = function(pool) {
         FROM routines r
         JOIN routine_nudge_events rne ON rne.routine_id = r.id AND rne.nudge_date = $2
         JOIN routine_task_links rtl ON rtl.routine_id = r.id
-        JOIN tasks t ON t.id = rtl.task_id AND t.is_completed = true AND t.completed_at::date = $2::date
+        JOIN tasks t ON t.id = rtl.task_id AND t.is_completed = true AND (t.completed_at AT TIME ZONE $3)::date = $2::date
         WHERE r.user_id = $1 AND r.is_active = true
-      `, [userId, today]);
+      `, [userId, today, tz]);
 
       // Also count routines that were explicitly completed via routine_streaks today
       const explicitRoutinesResult = await pool.query(`
@@ -1105,15 +1105,15 @@ module.exports = function(pool) {
       // Documents handled — documents uploaded today (prod has no documents.updated_at)
       const docsResult = await pool.query(`
         SELECT COUNT(*) as count FROM documents
-        WHERE user_id = $1 AND uploaded_at::date = $2::date
-      `, [userId, today]);
+        WHERE user_id = $1 AND (uploaded_at AT TIME ZONE $3)::date = $2::date
+      `, [userId, today, tz]);
 
       // Money tasks done — bill tasks or a money keyword in the title (tasks has no categorytag)
       const moneyTasksResult = await pool.query(`
         SELECT COUNT(*) as count FROM tasks
         WHERE user_id = $1
           AND is_completed = true
-          AND completed_at::date = $2::date
+          AND (completed_at AT TIME ZONE $3)::date = $2::date
           AND (
             bill_merchant_key IS NOT NULL OR
             bill_type IS NOT NULL OR
@@ -1123,7 +1123,7 @@ module.exports = function(pool) {
             title ILIKE '%money%' OR
             title ILIKE '%expense%'
           )
-      `, [userId, today]);
+      `, [userId, today, tz]);
 
       // Total open tasks
       const openResult = await pool.query(`
@@ -1159,8 +1159,8 @@ module.exports = function(pool) {
 
       const completedResult = await pool.query(`
         SELECT COUNT(*) as count FROM tasks
-        WHERE user_id = $1 AND is_completed = true AND completed_at::date = $2::date
-      `, [userId, today]);
+        WHERE user_id = $1 AND is_completed = true AND (completed_at AT TIME ZONE $3)::date = $2::date
+      `, [userId, today, tz]);
 
       const openResult = await pool.query(`
         SELECT COUNT(*) as count FROM tasks WHERE user_id = $1 AND is_completed = false

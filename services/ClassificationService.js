@@ -111,7 +111,7 @@ const ClassificationService = {
 
   /**
    * Start a new (or return existing) spending session for today.
-   * Loads unclassified transaction count from TransactionService.
+   * Loads the unclassified transaction count from db/transactions.
    * @param {object} pool
    * @param {number} userId
    * @returns {Promise<object>} { session_id, session_date, transaction_count }
@@ -120,8 +120,9 @@ const ClassificationService = {
     const tz = await fetchUserTimezone(pool, userId);
     const sessionDate = getUserLocalDate(tz);
 
-    const TransactionService = require('./TransactionService');
-    const count = await TransactionService.count_unclassified(pool, userId, sessionDate);
+    // Was `require('./TransactionService').count_unclassified`, but that module
+    // exports { TransactionService }, so starting a check-in threw a TypeError.
+    const count = await txDB.countUnclassified(pool, userId, sessionDate);
 
     const session = await spendingDB.upsertSession(pool, userId, sessionDate, count);
 
