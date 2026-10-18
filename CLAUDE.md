@@ -159,6 +159,7 @@ Four places plus a Settings gear. One small PR per phase; old URLs keep working 
 
 ### Waiting on the user
 - **Live Stripe purchase test.** Expected: Settings shows Autopilot $9.95 with a renewal date; after cancelling, "Cancelled — you won't be charged again" and a "Keep Autopilot" button.
+- **`STRIPE_WEBHOOK_SECRET` is missing in Render** (found 2026-10-18 after the first live purchase): every Stripe webhook gets a 503, so renewals, cancellations made in Stripe and failed payments never reach the app. The first purchase (user 67) activated through the checkout redirect instead. Stripe retries for up to 3 days, so adding the secret now recovers those events.
 - **Render `DATABASE_URL`:** change `sslmode=require` → `verify-full` in both the `focusledger` env group and the web service (NODE-EXPRESS-4).
 - **`SENTRY_DSN`** must be in the `focusledger` env group so cron errors reach Sentry.
 - **`beta-reengagement-blast` cron:** removed from `render.yaml`; if Render Blueprint sync is off, delete it in the Render dashboard (it would email every user that Autopilot is "free during beta" on Feb 29, 2028).
@@ -204,6 +205,7 @@ Four places plus a Settings gear. One small PR per phase; old URLs keep working 
   - Missing defaults: `routines.is_active` and `created_at` had none, so every routine was saved inactive (fixed in #242). #253 added about 30 more (tasks, plaid_transactions, partnerships, nudges…). **When you add an INSERT that omits a column, check that column has a default in prod.**
   - Counters stored as text, boolean or timestamp: `routine_streaks.current_streak`/`best_streak`, `routine_suggestions.presented_count`, `routines.day_of_week`, `task_substeps.step_order` and the `weekly_stats` counters (all fixed in #241). If you suspect another one, find it with a prod `information_schema.columns` query.
 - **Traffic:** real traffic is about 50–80 visitors a month (Jun–Oct 2026). Visitor counts before the bot/CI filter (Oct 18) were inflated by bots and our own Playwright smoke runs (~1,900/month in Jun–Jul, mostly one landing + pricing hit with no scroll or duration); for old ranges, trust `engaged_visitors`.
+- **CSP and inline handlers:** Helmet defaults `script-src-attr` to `'none'`, which silently blocked every inline `onclick=` (fixed in `middleware/security.js`, guarded by `__tests__/csp-inline-handlers.test.js`). When adding a CSP directive, check the browser console for "Refused to execute inline event handler".
 - **Silent failures:** many routes catch DB errors, log them and return 200. Sentry captures every `console.error`. The CI boot smoke fails on any logged "column/relation … does not exist".
 - **Migrations run on every deploy** (`npm start` = `node migrate.js && node server.js`). A failed migration aborts the deploy and the old version keeps serving. Test risky migrations on a Neon branch.
 - **Key user IDs:** Sean = 2, **QA user = 25 (never touch)**, Miles = 35.
