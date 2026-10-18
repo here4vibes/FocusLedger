@@ -41,6 +41,7 @@ router.get('/security',  (_, res) => res.sendFile(pub('security.html')));
 router.get('/adhd-tax',  (_, res) => res.sendFile(pub('adhd-tax.html')));
 router.get('/contact',   (_, res) => res.sendFile(pub('contact.html')));
 router.get('/story',     (_, res) => res.sendFile(pub('story.html')));
+router.get('/thanks',    (_, res) => res.sendFile(pub('thanks.html')));   // post-checkout Pixel Purchase
 router.get('/changelog', (_, res) => res.sendFile(pub('changelog.html')));
 // WHY no-store: science.html has 78KB of inline CSS. Previous deploys proved
 // that browser HTTP cache + service worker can serve stale versions indefinitely,

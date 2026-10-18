@@ -154,15 +154,16 @@ module.exports = function(pool) {
       .catch(err => console.error('[billing] welcome email failed:', err.message, '| user:', userId));
   }
 
-  // Success redirect after checkout. Carries what was bought so Settings can
-  // report the Meta Pixel Purchase with the REAL price (from config/pricing.js)
-  // and dedupe it on the checkout session id (ref).
+  // Success redirect after checkout. Goes through the public /thanks page,
+  // which reports the Meta Pixel Purchase with the REAL price (from
+  // config/pricing.js), deduped on the checkout session id (ref), then
+  // continues to Settings. The Pixel never loads inside the signed-in app.
   function upgradedRedirect(res, sessionId, summary) {
     const plan = summary && summary.tandem ? 'tandem' : 'autopilot';
     const cycle = summary && summary.billing_cycle === 'annual' ? 'annual' : 'monthly';
     const value = cycle === 'annual' ? PLANS[plan].price_annual : PLANS[plan].price_monthly;
     const qs = new URLSearchParams({ upgraded: 'true', plan, billing_cycle: cycle, value: String(value), ref: sessionId });
-    return res.redirect('/app/settings?' + qs.toString());
+    return res.redirect('/thanks?' + qs.toString());
   }
 
   // GET /activate — where Stripe sends the browser after checkout.
