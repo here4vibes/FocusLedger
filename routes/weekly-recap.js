@@ -72,8 +72,8 @@ module.exports = function (pool) {
           [userId, ws, we]
         ).catch(logFailure('[weekly-recap]', 'expenses query', { userId }, { rows: [{ n: 0 }] })),
         pool.query(
-          "SELECT COUNT(*) AS sessions, COALESCE(SUM(actual_duration_seconds), 0) AS total_seconds FROM focus_sessions WHERE user_id = $1 AND started_at::date BETWEEN $2::date AND $3::date AND completed = true",
-          [userId, ws, we]
+          "SELECT COUNT(*) AS sessions, COALESCE(SUM(actual_duration_seconds), 0) AS total_seconds FROM focus_sessions WHERE user_id = $1 AND (started_at AT TIME ZONE $4)::date BETWEEN $2::date AND $3::date AND completed = true",
+          [userId, ws, we, tz]
         ).catch(logFailure('[weekly-recap]', 'focus_sessions query', { userId }, { rows: [{ sessions: 0, total_seconds: 0 }] })),
       ]);
 

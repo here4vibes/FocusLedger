@@ -39,9 +39,8 @@ module.exports = function(pool) {
       `SELECT COUNT(*) as cnt
        FROM ai_task_suggestions
        WHERE user_id = $1
-         AND generated_at::date >= $2::date
-         AND generated_at::date < $2::date + INTERVAL '1 day'`,
-      [userId, localToday]
+         AND (generated_at AT TIME ZONE $3)::date = $2::date`,
+      [userId, localToday, tz]
     );
     return parseInt(result.rows[0].cnt) || 0;
   }
@@ -271,9 +270,9 @@ Generate ${batchSize} personalized, highly specific task suggestions tied to the
          LEFT JOIN user_values uv ON uv.id = s.value_id
          WHERE s.user_id = $1
            AND s.status = 'pending'
-           AND s.generated_at >= CURRENT_DATE
+           AND (s.generated_at AT TIME ZONE $3)::date = $2::date
          ORDER BY s.generated_at DESC`,
-        [userId]
+        [userId, getUserLocalDate(tz), tz]
       );
 
       if (pending.rows.length > 0) {

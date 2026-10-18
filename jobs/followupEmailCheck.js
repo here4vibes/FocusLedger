@@ -62,25 +62,26 @@ function formatDate(dateVal) {
   return d.toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
 }
 
-function getWeekMondayStr(date) {
+// All three take the user's local YYYY-MM-DD. They used the server clock
+// (UTC), so a reminder sent at 8pm EDT said "tomorrow" about the day after.
+function shiftDays(localDate, n) {
+  const d = new Date(localDate + 'T12:00:00Z');
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
+}
+
+function getWeekMondayStr(localDate) {
   // ISO week: Monday as the start
-  const d = new Date(date);
-  const day = d.getDay();
-  const diff = (day === 0) ? -6 : 1 - day; // adjust Sunday to Monday
-  d.setDate(d.getDate() + diff);
-  return d.toISOString().split('T')[0];
+  const day = new Date(localDate + 'T12:00:00Z').getUTCDay();
+  return shiftDays(localDate, day === 0 ? -6 : 1 - day);
 }
 
-function getTomorrowStr() {
-  const d = new Date();
-  d.setDate(d.getDate() + 1);
-  return d.toISOString().split('T')[0];
+function getTomorrowStr(localDate) {
+  return shiftDays(localDate, 1);
 }
 
-function getYesterdayStr() {
-  const d = new Date();
-  d.setDate(d.getDate() - 1);
-  return d.toISOString().split('T')[0];
+function getYesterdayStr(localDate) {
+  return shiftDays(localDate, -1);
 }
 
 // ── Per-user evaluation ───────────────────────────────────────────────────────
@@ -91,7 +92,7 @@ async function evaluateUser(pool, user, now) {
 
   // ── Task Reminder: due today or tomorrow ─────────────────────────────────────
   if (user.task_reminder && hour === user.task_reminder_hour) {
-    const tomorrow = getTomorrowStr();
+    const tomorrow = getTomorrowStr(localDate);
     const today = localDate;
 
     for (const dueStr of [tomorrow, today]) {
@@ -142,7 +143,7 @@ async function evaluateUser(pool, user, now) {
 
   // ── Weekly Summary: Monday only, once per week ───────────────────────────────
   if (user.weekly_summary && hour === user.weekly_summary_hour && weekday === 'Mon') {
-    const weekMonday = getWeekMondayStr(now);
+    const weekMonday = getWeekMondayStr(localDate);
     const stats = await getWeeklyStats(pool, userId, weekMonday);
     const { subject, html } = weeklySummaryTemplate({
       name,
@@ -167,7 +168,7 @@ async function evaluateUser(pool, user, now) {
 
   // ── Follow-Through: 1 day past due, still incomplete ──────────────────────────
   if (user.follow_through && hour === user.follow_through_hour) {
-    const yesterday = getYesterdayStr();
+    const yesterday = getYesterdayStr(localDate);
     const pastDueTasks = await getPastDueTasks(pool, userId, yesterday);
     for (const task of pastDueTasks.slice(0, 3)) { // cap at 3 per run
       const { subject, html } = followThroughTemplate({

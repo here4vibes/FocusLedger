@@ -39,3 +39,63 @@ describe('signed OAuth state', () => {
     expect(() => signUserState('gcal', 42)).toThrow(/JWT_SECRET/);
   });
 });
+
+describe('verifyUserState without a secret', () => {
+  const saved = process.env.JWT_SECRET;
+  afterAll(() => { process.env.JWT_SECRET = saved; });
+
+  test('rejects instead of throwing (no fallback secret)', () => {
+    process.env.JWT_SECRET = 'test-secret';
+    const state = signUserState('email-gmail', 42);
+    delete process.env.JWT_SECRET;
+    const spy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    expect(verifyUserState('email-gmail', state)).toBeNull();
+    spy.mockRestore();
+  });
+});
+
+describe('email connect purposes are distinct', () => {
+  const saved = process.env.JWT_SECRET;
+  beforeEach(() => { process.env.JWT_SECRET = 'test-secret'; });
+  afterAll(() => { process.env.JWT_SECRET = saved; });
+
+  test('a Gmail state does not open Outlook, Yahoo or Calendar', () => {
+    const state = signUserState('email-gmail', 42);
+    expect(verifyUserState('email-gmail', state)).toBe(42);
+    for (const other of ['email-outlook', 'email-yahoo', 'gcal']) expect(verifyUserState(other, state)).toBeNull();
+  });
+});
+
+describe('signed payload state (Google sign-in)', () => {
+  const { signPayload, verifyPayload } = require('../lib/oauth-state');
+  const saved = process.env.JWT_SECRET;
+  beforeEach(() => { process.env.JWT_SECRET = 'test-secret'; });
+  afterAll(() => { process.env.JWT_SECRET = saved; });
+
+  test('round-trips the object', () => {
+    const d = { returnTo: 'signup', host: 'focusledger.net' };
+    expect(verifyPayload('google-signin', signPayload('google-signin', d))).toEqual(d);
+  });
+
+  test('rejects a tampered body, another purpose, another key or an expired state', () => {
+    const state = signPayload('google-signin', { returnTo: 'login', host: 'focusledger.net' });
+    const [, sig] = state.split('.');
+    const evil = Buffer.from(JSON.stringify({ d: { returnTo: 'login', host: 'evil.example' }, ts: Date.now() })).toString('base64url');
+    expect(verifyPayload('google-signin', `${evil}.${sig}`)).toBeNull();
+    expect(verifyPayload('other', state)).toBeNull();
+    expect(verifyPayload('google-signin', state, Date.now() + MAX_AGE_MS + 1000)).toBeNull();
+    process.env.JWT_SECRET = 'other-secret';
+    expect(verifyPayload('google-signin', state)).toBeNull();
+  });
+
+  test('rejects malformed input', () => {
+    for (const bad of [undefined, '', 'abc', 'a.b.c', '.', 'x.' + 'f'.repeat(64)]) {
+      expect(verifyPayload('google-signin', bad)).toBeNull();
+    }
+  });
+
+  test('refuses to sign without a secret', () => {
+    delete process.env.JWT_SECRET;
+    expect(() => signPayload('google-signin', {})).toThrow(/JWT_SECRET/);
+  });
+});

@@ -534,8 +534,8 @@
         <!-- Empty state: no transactions today -->
         <div class="no-tx-state" id="noTxState" role="status">
             <div class="empty-icon" aria-hidden="true">🌙</div>
-            <div class="empty-heading">All quiet today</div>
-            <div class="empty-sub">No spending to review today — your finances are quiet.</div>
+            <div class="empty-heading">All caught up</div>
+            <div class="empty-sub">No new bank charges from the last two weeks to review.</div>
             <button class="btn-empty-done" id="btnEmptyDone" type="button">Done</button>
         </div>
     </div>
@@ -643,6 +643,12 @@
 
     function formatTime(dateStr) {
         if (!dateStr) return '';
+        // Bank charges carry a posting date only (YYYY-MM-DD): show the day.
+        if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+            var p = dateStr.split('-');
+            var day = new Date(+p[0], +p[1] - 1, +p[2]);
+            return day.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+        }
         var d = new Date(dateStr.replace(' ', 'T'));
         if (isNaN(d)) return dateStr;
         return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
@@ -656,21 +662,27 @@
         el('actionBar').style.display = 'none';
         el('kbHint').style.display = 'none';
 
-        apiFetch('/api/spending-sessions/today')
+        apiFetch('/api/v1/spending-sessions/today')
             .then(function(r) { return r.json(); })
             .then(function(data) {
                 if (!data.success) throw new Error('API error');
                 return data;
             })
             .then(function(data) {
-                if (!data.session) {
-                    return apiFetch('/api/spending-sessions/start', { method: 'POST' })
-                        .then(function(r) { return r.json(); });
-                }
-                return data;
+                // /today answers { session: null } before today's session exists,
+                // and the session's fields (no `session` key) once it does.
+                if (data.session_id) return data;
+                // /start returns only the id, so read today's transactions after it.
+                return apiFetch('/api/v1/spending-sessions/start', { method: 'POST' })
+                    .then(function(r) { return r.json(); })
+                    .then(function() { return apiFetch('/api/v1/spending-sessions/today'); })
+                    .then(function(r) { return r.json(); });
             })
             .then(function(data) {
                 if (data.session_id) sessionId = data.session_id;
+                (data.classifications || []).forEach(function(c) {
+                    classifications[c.transaction_id] = c.classification;
+                });
                 transactions = (data.transactions || []).filter(function(t) {
                     return !classifications[t.id];
                 });
@@ -692,7 +704,7 @@
             el('cardStack').style.display = 'none';
             el('actionBar').style.display = 'none';
             el('kbHint').style.display = 'none';
-            announce('No transactions to review today.');
+            announce('No bank charges to review.');
             return;
         }
 
@@ -960,7 +972,7 @@
 
     function postClassification(txnId, classification) {
         if (!sessionId) return;
-        apiFetch('/api/spending-sessions/' + sessionId + '/classify', {
+        apiFetch('/api/v1/spending-sessions/' + sessionId + '/classify', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ transaction_id: txnId, classification: classification })
@@ -1030,9 +1042,9 @@
 
         // Mark session complete
         if (sessionId) {
-            apiFetch('/api/spending-sessions/' + sessionId + '/complete', {
+            apiFetch('/api/v1/spending-sessions/' + sessionId + '/complete', {
                 method: 'POST'
-            }).catch(function() {});
+            }).catch(function(err) { console.warn('[spending-checkin] complete error:', err); });
         }
 
         // Set localStorage flag so Money Dashboard unlocks Card 4

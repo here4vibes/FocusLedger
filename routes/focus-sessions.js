@@ -6,6 +6,7 @@
  */
 
 const express = require('express');
+const { fetchUserLocalDate } = require('../lib/timezone');
 const { authenticateToken } = require('../middleware/auth');
 const {
   createSession,
@@ -122,19 +123,21 @@ module.exports = function(pool) {
   router.get('/next', async (req, res) => {
     try {
       const userId = req.user.id;
+      // The user's today, not the server's (UTC): "overdue" flipped a day early in the evening.
+      const today = await fetchUserLocalDate(pool, userId);
       const result = await pool.query(`
         SELECT id, title, due_date, due_time, duration_minutes
         FROM tasks
         WHERE user_id = $1
           AND is_completed = false
-          AND (due_date IS NULL OR due_date <= CURRENT_DATE + INTERVAL '7 days')
+          AND (due_date IS NULL OR due_date <= $2::date + INTERVAL '7 days')
         ORDER BY
-          CASE WHEN due_date < CURRENT_DATE THEN 0 ELSE 1 END ASC,
+          CASE WHEN due_date < $2::date THEN 0 ELSE 1 END ASC,
           due_date ASC NULLS LAST,
           due_time ASC NULLS LAST,
           created_at ASC
         LIMIT 1
-      `, [userId]);
+      `, [userId, today]);
 
       if (!result.rows.length) {
         return res.json({ success: true, task: null, message: 'No tasks available for focus' });

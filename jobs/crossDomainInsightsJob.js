@@ -45,17 +45,19 @@ Rules:
 Good example: "Your task completion rate triples on days you log a morning check-in — a 5-minute check-in with me might be your highest-ROI habit this week."
 Bad example: "You've been busy this week! Great work."`;
 
-async function fetchUserData(pool, userId, sinceDate) {
+// tz: the user's IANA zone. Completion dates/hours go into the prompt, so they
+// must be the user's local clock, not UTC (a 9pm EDT finish read as "1am").
+async function fetchUserData(pool, userId, sinceDate, tz = 'America/New_York') {
   const [tasks, expenses, checkins, focus] = await Promise.all([
     pool.query(
-      `SELECT title, is_completed, completed_at::date AS completed_date,
-              EXTRACT(HOUR FROM completed_at AT TIME ZONE 'UTC') AS completed_hour
+      `SELECT title, is_completed, (completed_at AT TIME ZONE $3)::date AS completed_date,
+              EXTRACT(HOUR FROM completed_at AT TIME ZONE $3) AS completed_hour
        FROM tasks
        WHERE user_id = $1
          AND (completed_at >= $2 OR created_at >= $2)
        ORDER BY created_at DESC
        LIMIT 40`,
-      [userId, sinceDate]
+      [userId, sinceDate, tz]
     ),
     pool.query(
       `SELECT e.amount, e.is_impulse, e.expense_date,
@@ -79,12 +81,12 @@ async function fetchUserData(pool, userId, sinceDate) {
     ),
     pool.query(
       `SELECT planned_duration_seconds, actual_duration_seconds,
-              completed, started_at::date AS session_date
+              completed, (started_at AT TIME ZONE $3)::date AS session_date
        FROM focus_sessions
        WHERE user_id = $1 AND started_at >= $2
        ORDER BY started_at DESC
        LIMIT 20`,
-      [userId, sinceDate]
+      [userId, sinceDate, tz]
     ),
   ]);
 
@@ -167,7 +169,7 @@ async function run() {
   try {
     // Active users with no insight yet this week (excludes QA user)
     const { rows: users } = await pool.query(
-      `SELECT DISTINCT u.id
+      `SELECT DISTINCT u.id, COALESCE(NULLIF(u.timezone, ''), 'America/New_York') AS timezone
        FROM users u
        WHERE u.is_qa_user IS NOT TRUE
          AND (
@@ -185,9 +187,9 @@ async function run() {
 
     let ok = 0;
     let skipped = 0;
-    for (const { id: userId } of users) {
+    for (const { id: userId, timezone } of users) {
       try {
-        const data = await fetchUserData(pool, userId, sinceDate);
+        const data = await fetchUserData(pool, userId, sinceDate, timezone);
 
         // Require data from at least 2 different domains for a meaningful cross-domain insight
         const activeDomains = [

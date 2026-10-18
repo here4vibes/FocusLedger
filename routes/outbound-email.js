@@ -14,7 +14,7 @@
 
 const express = require('express');
 const { authenticateToken } = require('../middleware/auth');
-const { isAdminUser } = require('../lib/admin-access');
+const { requireAdmin } = require('../lib/admin-access');
 
 // 1×1 transparent GIF
 const PIXEL_GIF = Buffer.from(
@@ -24,6 +24,8 @@ const PIXEL_GIF = Buffer.from(
 
 module.exports = function(pool) {
   const router = express.Router();
+  // Admin routes: auth first, then the shared gate (DB row, fails closed)
+  const admin = [authenticateToken, requireAdmin(pool)];
 
   // ─── Open Tracking Pixel ────────────────────────────────────────────────────
   // GET /api/outbound-email/track/:logId
@@ -172,14 +174,8 @@ module.exports = function(pool) {
 
   // ─── Admin: Email Log ─────────────────────────────────────────────────────────
   // GET /api/outbound-email/log?page=1&limit=50&template_type=welcome&status=sent&from=&to=
-  router.get('/log', authenticateToken, async (req, res) => {
+  router.get('/log', admin, async (req, res) => {
     try {
-      const userRow = await pool.query('SELECT is_admin, email FROM users WHERE id = $1', [req.user.id]);
-      const user = userRow.rows[0] || {};
-      if (!isAdminUser({ ...user, id: req.user.id })) {
-        return res.status(403).json({ success: false, message: 'Admin access required' });
-      }
-
       const page = Math.max(1, parseInt(req.query.page, 10) || 1);
       const limit = Math.min(100, Math.max(10, parseInt(req.query.limit, 10) || 50));
       const offset = (page - 1) * limit;
@@ -247,14 +243,8 @@ module.exports = function(pool) {
   });
 
   // GET /api/outbound-email/log/stats — summary stats for admin dashboard
-  router.get('/log/stats', authenticateToken, async (req, res) => {
+  router.get('/log/stats', admin, async (req, res) => {
     try {
-      const userRow = await pool.query('SELECT is_admin, email FROM users WHERE id = $1', [req.user.id]);
-      const user = userRow.rows[0] || {};
-      if (!isAdminUser({ ...user, id: req.user.id })) {
-        return res.status(403).json({ success: false, message: 'Admin access required' });
-      }
-
       const stats = await pool.query(`
         SELECT
           COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '30 days') AS sent_30d,
