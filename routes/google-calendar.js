@@ -176,7 +176,7 @@ module.exports = function(pool) {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
       if (!evRes.ok) {
-        const errBody = await evRes.json().catch(() => ({}));
+        const errBody = await evRes.json().catch(() => ({})); // silent-ok: the next line throws with the status
         throw new Error(errBody.error?.message || `GCal API ${evRes.status}`);
       }
       const evData = await evRes.json();

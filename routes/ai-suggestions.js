@@ -75,17 +75,19 @@ module.exports = function(pool) {
   async function getSpendingContext(userId) {
     try {
       const result = await pool.query(
-        `SELECT category, SUM(amount) as total, COUNT(*) as count
-         FROM expenses
-         WHERE user_id = $1
-           AND created_at >= NOW() - INTERVAL '30 days'
-         GROUP BY category
+        `SELECT COALESCE(c.name, 'Uncategorized') AS category, SUM(e.amount) AS total, COUNT(*) AS count
+         FROM expenses e
+         LEFT JOIN categories c ON c.id = e.category_id
+         WHERE e.user_id = $1
+           AND e.created_at >= NOW() - INTERVAL '30 days'
+         GROUP BY 1
          ORDER BY total DESC
          LIMIT 5`,
         [userId]
       );
       return result.rows;
-    } catch (_e) {
+    } catch (err) {
+      console.warn('[AI Suggestions] spending context unavailable:', err.message, '| userId:', userId);
       return [];
     }
   }
@@ -198,7 +200,7 @@ Generate ${batchSize} personalized, highly specific task suggestions tied to the
       if (Array.isArray(arr)) {
         parsed = arr.slice(0, batchSize).filter(s => s && typeof s.title === 'string' && s.title.trim());
       }
-    } catch (_parseErr) {
+    } catch (_parseErr) { // silent-ok: falls back to the first [...] block, which logs if it fails
       // Fallback: try to extract JSON array from response
       const match = raw.match(/\[[\s\S]*\]/);
       if (match) {

@@ -654,6 +654,7 @@ module.exports = function(pool) {
           );
           itemResult.in_db = dbStats[0];
         } catch (e) {
+          console.warn('[Plaid] diagnostic item check failed | userId:', userId, '| item:', item.id, '|', e.response?.data?.error_code || e.message);
           itemResult.success = false;
           itemResult.plaid_error_code = e.response?.data?.error_code || null;
           itemResult.plaid_error_type = e.response?.data?.error_type || null;

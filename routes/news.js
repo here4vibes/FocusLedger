@@ -205,7 +205,7 @@ function extractDomain(url) {
   try {
     const u = new URL(url);
     return u.hostname.replace(/^www\./, '');
-  } catch {
+  } catch { // silent-ok: a feed item without a valid URL just has no domain
     return '';
   }
 }
@@ -538,7 +538,8 @@ module.exports = function(pool) {
         'SELECT id, name, source_domain, category, is_active, last_fetched_at, last_error FROM rss_feeds ORDER BY name'
       );
       res.json({ success: true, feeds: result.rows });
-    } catch {
+    } catch (err) {
+      console.error('[news] GET /feeds error:', err.message);
       res.status(500).json({ success: false, message: 'Failed to load feeds' });
     }
   });

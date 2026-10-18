@@ -230,7 +230,9 @@ async function suggestSteps(req, res) {
         }),
         new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 3000)),
       ]);
-    } catch {
+    } catch (err) {
+      // Budget, API-key and network failures land here too, not just the 3s timeout.
+      console.warn('[tasks] suggest-steps AI call failed:', err.message, '| userId:', userId);
       return res.json({ success: true, suggestions: [], skip: true, reason: 'timeout' });
     }
     let suggestions = [];
@@ -240,7 +242,7 @@ async function suggestSteps(req, res) {
       if (Array.isArray(parsed)) {
         suggestions = parsed.slice(0, 5).map(s => String(s).trim()).filter(s => s.length > 2);
       }
-    } catch {
+    } catch { // silent-ok: heuristic fallback when the reply isn't JSON
       suggestions = content.split('\n').map(line => line.replace(/^[\n\""\/\/\/]+/, '').trim()).filter(line => line.length > 3).slice(0, 5);
     }
 
@@ -268,7 +270,10 @@ async function suggestDuration(req, res) {
         }),
         new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 4000)),
       ]);
-    } catch { return res.json({ success: true, duration_minutes: null }); }
+    } catch (err) {
+      console.warn('[tasks] suggest-duration AI call failed:', err.message, '| userId:', req.user?.id);
+      return res.json({ success: true, duration_minutes: null });
+    }
     let minutes = null;
     try {
       const cleaned = content.replace(/^```(?:json)?\n?|\n?```$/g, '').trim();
@@ -276,13 +281,14 @@ async function suggestDuration(req, res) {
       if (parsed && typeof parsed.minutes === 'number' && parsed.minutes > 0) {
         minutes = Math.min(Math.round(parsed.minutes), 480);
       }
-    } catch {
+    } catch { // silent-ok: heuristic fallback when the reply isn't JSON
       const match = content.match(/\d+/);
       if (match) minutes = Math.min(parseInt(match[0]), 480);
     }
 
     res.json({ success: true, duration_minutes: minutes });
-  } catch (_err) {
+  } catch (err) {
+    console.error('[tasks] suggest-duration error:', err.message, '| userId:', req.user?.id);
     res.json({ success: true, duration_minutes: null });
   }
 }

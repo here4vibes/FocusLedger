@@ -59,7 +59,8 @@ async function calcDocumentsScore(pool, userId, max) {
     }
 
     return { score: Math.min(max, Math.round(raw)), factors };
-  } catch {
+  } catch (err) {
+    console.error('[health-score] documents pillar failed:', err.message, '| userId:', userId);
     return { score: 0, factors: ['Unable to read documents'] };
   }
 }
@@ -84,8 +85,9 @@ async function calcInsuranceScore(pool, userId, max) {
       score: points,
       factors: [`${total} insurance document${total !== 1 ? 's' : ''} on file`, 'Full insurance tracking coming soon']
     };
-  } catch {
-    return { score: 0, factors: ['Insurance tracking coming soon'] };
+  } catch (err) {
+    console.error('[health-score] insurance pillar failed:', err.message, '| userId:', userId);
+    return { score: 0, factors: ['Unable to read insurance'] };
   }
 }
 
@@ -134,7 +136,8 @@ async function calcTasksScore(pool, userId, max) {
     else if (rate >= 1) factors.push('Perfect completion this week');
 
     return { score: Math.round(rate * max), factors };
-  } catch {
+  } catch (err) {
+    console.error('[health-score] tasks pillar failed:', err.message, '| userId:', userId);
     return { score: 0, factors: ['Unable to read tasks'] };
   }
 }
@@ -179,7 +182,8 @@ async function calcBillsScore(pool, userId, max) {
       score: Math.round(rate * max),
       factors: [`${txCount} bank transaction${txCount !== 1 ? 's' : ''} confirmed this month`]
     };
-  } catch {
+  } catch (err) {
+    console.error('[health-score] bills pillar failed:', err.message, '| userId:', userId);
     return { score: Math.round(max * 0.5), factors: ['Bill tracking requires bank connection'] };
   }
 }

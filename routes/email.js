@@ -149,7 +149,7 @@ function verifyState(state) {
       .update(`${userId}:${ts}`).digest('hex').slice(0, 16);
     if (sig !== expected) return null;
     return Number(userId);
-  } catch {
+  } catch { // silent-ok: malformed OAuth state from the query string; caller rejects it
     return null;
   }
 }
@@ -286,7 +286,7 @@ function decodeBase64(str) {
   try {
     const padded = str.replace(/-/g, '+').replace(/_/g, '/');
     return Buffer.from(padded, 'base64').toString('utf-8');
-  } catch {
+  } catch { // silent-ok: undecodable body part renders as empty text
     return '';
   }
 }
@@ -697,7 +697,8 @@ module.exports = function(pool) {
               snippet: msg.snippet || '',
               label_ids: msg.labelIds || []
             };
-          } catch {
+          } catch (err) {
+            console.warn('[email] Gmail message fetch failed:', err.message, '| userId:', req.user.id, '| messageId:', m.id);
             return { id: m.id, thread_id: m.threadId, subject: '(error)', from: '', date: '', snippet: '' };
           }
         })
@@ -1094,7 +1095,10 @@ module.exports = function(pool) {
               date: headers['date'] || '',
               snippet: msg.snippet || ''
             };
-          } catch { return null; }
+          } catch (err) {
+            console.warn('[email] Gmail message fetch failed:', err.message, '| userId:', req.user.id, '| messageId:', m.id);
+            return null;
+          }
         })
       );
 

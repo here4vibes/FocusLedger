@@ -345,7 +345,7 @@ module.exports = function(pool) {
         if (row.utm_source) signupSource = row.utm_source;
         else if (row.signup_referrer) {
           try { signupSource = new URL(row.signup_referrer).hostname.replace(/^www\./, '') || 'direct'; }
-          catch { signupSource = 'direct'; }
+          catch { signupSource = 'direct'; } // silent-ok: referrer isn't a URL
         }
 
         return {
@@ -949,7 +949,7 @@ module.exports = function(pool) {
           try {
             const refDomain = new URL(row.signup_referrer).hostname.replace(/^www\./, '');
             signupSource = refDomain || 'direct';
-          } catch {
+          } catch { // silent-ok: referrer isn't a URL
             signupSource = 'direct';
           }
         } else {

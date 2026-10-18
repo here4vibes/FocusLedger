@@ -57,6 +57,7 @@ const {
 const { getSessionSuggestion } = require('../lib/patternDetection');
 const { getAdhdProfile, updateAdhdProfile, buildProfilePromptAddition, bootstrapAdhdProfile } = require('../lib/adhd-profile');
 const { logFailure } = require('../lib/log-failure');
+const { parseAiJson } = require('../lib/ai-json');
 const { onTasksCompleted, refreshRoutineTasks } = require('../lib/routine-capture');
 
 // ── Scoring weights ─────────────────────────────────────────────────────────
@@ -1781,7 +1782,7 @@ Example output: ["Walk to the kitchen","Pick up one item from the counter","Put 
   // body: { text: string }
   router.post('/brain-dump-triage', async (req, res) => {
     try {
-      const userId = req.user.id; // eslint-disable-line no-unused-vars
+      const userId = req.user.id;
       const { text } = req.body;
       if (!text || !text.trim()) {
         return res.status(400).json({ success: false, message: 'text required' });
@@ -1814,9 +1815,9 @@ Rules:
 
       let triage;
       try {
-        const cleaned = raw.trim().replace(/^```json\s*/,'').replace(/^```\s*/,'').replace(/\s*```$/,'');
-        triage = JSON.parse(cleaned);
-      } catch {
+        triage = parseAiJson(raw);
+      } catch (parseErr) {
+        console.error('[buddy] brain-dump-triage reply was not JSON:', parseErr.message, '| userId:', userId);
         return res.status(500).json({ success: false, message: 'AI returned unexpected format' });
       }
 
@@ -1891,9 +1892,9 @@ Rules:
 
       let menu;
       try {
-        const cleaned = raw.trim().replace(/^```json\s*/,'').replace(/^```\s*/,'').replace(/\s*```$/,'');
-        menu = JSON.parse(cleaned);
-      } catch {
+        menu = parseAiJson(raw);
+      } catch (parseErr) {
+        console.error('[buddy] dopamine-menu reply was not JSON:', parseErr.message, '| userId:', userId);
         return res.status(500).json({ success: false, message: 'AI returned unexpected format' });
       }
 
@@ -2224,8 +2225,9 @@ async function buildPartnerContext(pool, userId, today) {
     const concernTopics = concernsResult.map(c => c.topic_area).filter(Boolean);
 
     return { partnerName, sharedOverdue, sharedDoneToday, concernTopics };
-  } catch (_) {
+  } catch (err) {
     // Non-blocking — Buddy works fine without partner context
+    console.warn('[buddy] buildPartnerContext failed:', err.message, '| userId:', userId);
     return null;
   }
 }

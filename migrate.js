@@ -294,7 +294,7 @@ async function runFolderMigrations(client) {
       await client.query('COMMIT');
       console.log(`Migration complete: ${name}`);
     } catch (err) {
-      try { await client.query('ROLLBACK'); } catch { /* connection may be aborted */ }
+      try { await client.query('ROLLBACK'); } catch { /* silent-ok: connection may be aborted; the next line logs the real error */ }
       // Stop the run and signal failure so the deploy aborts. Do NOT press on to
       // later migrations that may assume this one's schema. Fix it and redeploy.
       console.error(`[migrate] WARNING: migration "${name}" failed and was rolled back: ${err.message}`);
