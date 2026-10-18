@@ -108,6 +108,15 @@ Node.js + Express · PostgreSQL (Neon) · Render deployment · Vanilla HTML/CSS/
     - Re-engagement emails resume; only Miles (user 35) is eligible. 22 users are paused via `user_email_preferences.re_engagement='false'`; flip them back at relaunch.
     - `render.yaml` moves `cold-start-nudge` and `evening-checkin` to hourly. Confirm in Render if Blueprint sync is off.
 
+### Launch decisions (the user, 2026-10-18)
+- **Re-engagement:** resume the 22 paused users on launch day (when the user says "launched"), not before.
+- **Backups:** stay on Neon free's 6-hour point-in-time restore, with no snapshot schedule, until the first paying users.
+- **News:** dropped (#268).
+- **Meta Pixel:** public pages only (landing, pricing, signup, login, story, science, changelog, `/thanks`), never after sign-in. Purchases are reported from `/thanks`.
+- **Free cap:** routine-linked tasks don't count (#265). **Buddy:** floating button on every app page (#267).
+- **Privacy policy:** Claude drafts, the founder approves before it merges. #266 (merged) rewrote it; Stripe checkout now returns via the public `/thanks` page, which fires the Pixel `Purchase`. Its retention lines state Render logs 7 days and Neon's 6-hour restore window, so update them if either plan changes.
+- **Next focus after launch:** polish the first session.
+
 ### Next up: the bug-hunt plan (agreed with the user, 2026-10-18)
 The user asked to finish the big bug classes in about 4 sessions:
 1. **Schema audit (done: #252 code fixes, #253 defaults migration).** The genesis migration was generated from prod's catalog, so a from-scratch DB reproduces prod; a SQL error locally is a prod bug.
@@ -168,7 +177,7 @@ Four places plus a Settings gear. One small PR per phase; old URLs keep working 
 - **Hardening:**
   1. `user_id NOT NULL` and foreign keys on core tables. Check for orphans first; use a Neon branch.
   2. ~~Silent catches~~ done: #239 (one-liners, `lib/log-failure.js`) and #240 (block catches). `__tests__/no-silent-catches.test.js` now fails CI on any new empty or comment-only catch in server code. Since part 3 it also fails on catches that don't log (e.g. `catch { return null; }`).
-  3. Neon point-in-time restore and snapshot schedule.
+  3. Neon point-in-time restore and snapshot schedule: decided to stay on the free 6-hour window until there are paying users.
   4. ~~`routine_task_links` unique key~~ done in #242.
   5. 23 moderate npm advisories.
 - **Strategy (decided):**
