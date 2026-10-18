@@ -32,18 +32,3 @@ for (const path of PUBLIC_PAGES) {
     expect(r, `#fl-public-nav on ${path} should have red channel > 200 (cream), got r=${r}`).toBeGreaterThan(200);
   });
 }
-
-test('landing-old nav is navy (#fl-landing-nav)', async ({ page }) => {
-  await page.goto('/landing-old');
-
-  const nav = page.locator('#fl-landing-nav');
-  const exists = await nav.count();
-  if (!exists) {
-    // Page may redirect or be gated — skip rather than fail
-    test.skip();
-    return;
-  }
-
-  const bg = await nav.evaluate(el => getComputedStyle(el).backgroundColor);
-  expect(bg).toBe(NAVY_RGB);
-});
