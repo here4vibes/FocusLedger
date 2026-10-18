@@ -1,5 +1,6 @@
 const express = require('express');
 const crypto = require('crypto');
+const { signPayload, verifyPayload } = require('../lib/oauth-state');
 const { authenticateToken, generateToken, hashPassword, verifyPassword, establishSession } = require('../middleware/auth');
 const { sendEmail } = require('../lib/emailService');
 const { welcomeTemplate, passwordResetTemplate, passwordResetGoogleOnlyTemplate } = require('../lib/emailTemplates');
@@ -9,7 +10,9 @@ const seedStarterRoutine = require('../lib/seedStarterRoutine');
 const { getSessionData, markSessionMigrated, isSessionMigrated } = require('../db/buddy-demo');
 const { validateTimezone, fetchUserTimezone, getUserLocalDate } = require('../lib/timezone');
 const { isMonitorEmail } = require('../lib/monitor-accounts');
-const { markQaUser } = require('../db/users');
+const { markQaUser, saveSignupAttribution } = require('../db/users');
+const { sanitizeAttribution } = require('../lib/attribution');
+const { insertEvent } = require('../db/analytics');
 const { logFailure } = require('../lib/log-failure');
 
 // ============================================================
@@ -28,7 +31,6 @@ const isGoogleAuthConfigured = () => !!(GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET
 // ============================================================
 // State signing — prevents CSRF on OAuth callback
 // ============================================================
-const STATE_SECRET = process.env.JWT_SECRET || 'focusledger-auth-state';
 
 // Trusted hosts for post-OAuth redirect — prevents open redirect
 const TRUSTED_REDIRECT_HOSTS = new Set([
@@ -42,29 +44,21 @@ if (process.env.ALLOWED_ORIGIN) {
   try { TRUSTED_REDIRECT_HOSTS.add(new URL(process.env.ALLOWED_ORIGIN).host); } catch (e) { console.error('[Auth] ALLOWED_ORIGIN is not a valid URL:', e.message); }
 }
 
-// State format: {returnTo}~{host}~{ts}~{sig}  (~ avoids colon clash with localhost:port)
+// Signed with lib/oauth-state.js (purpose-bound HMAC, constant-time, 10 min,
+// no fallback secret). returnTo is only ever the login or signup page, and the
+// host must be a trusted one, checked on both ends.
+const STATE_PURPOSE = 'google-signin';
+const RETURN_PAGES = new Set(['login', 'signup']);
+
 function signState(returnTo, host) {
-  const ts = Date.now();
-  const data = `${returnTo}~${host}~${ts}`;
-  const sig = crypto.createHmac('sha256', STATE_SECRET).update(data).digest('hex').slice(0, 16);
-  return Buffer.from(`${data}~${sig}`).toString('base64url');
+  return signPayload(STATE_PURPOSE, { returnTo, host });
 }
 
 function verifyState(state) {
-  try {
-    const raw = Buffer.from(state, 'base64url').toString();
-    const parts = raw.split('~');
-    if (parts.length !== 4) return null;
-    const [returnTo, host, ts, sig] = parts;
-    if (Date.now() - Number(ts) > 600000) return null;
-    const expected = crypto.createHmac('sha256', STATE_SECRET)
-      .update(`${returnTo}~${host}~${ts}`).digest('hex').slice(0, 16);
-    if (sig !== expected) return null;
-    const safeHost = TRUSTED_REDIRECT_HOSTS.has(host) ? host : 'focusledger.net';
-    return { returnTo, host: safeHost };
-  } catch { // silent-ok: malformed OAuth state from the query string; caller rejects it
-    return null;
-  }
+  const d = verifyPayload(STATE_PURPOSE, state);
+  if (!d || !RETURN_PAGES.has(d.returnTo)) return null;
+  const safeHost = TRUSTED_REDIRECT_HOSTS.has(d.host) ? d.host : 'focusledger.net';
+  return { returnTo: d.returnTo, host: safeHost };
 }
 
 // ============================================================
@@ -96,29 +90,14 @@ async function getGoogleUserInfo(accessToken) {
 module.exports = function(pool, loginLimiter, signupLimiter) {
   const router = express.Router();
 
-  // ── UTM attribution helper ───────────────────────────────────────────────
-  // Writes first-touch UTM fields to a user row (only once — skips if already set).
-  // attr is a plain object from the frontend; only known keys are written.
-  async function saveAttribution(userId, attr) {
-    if (!attr || typeof attr !== 'object') return;
-    const allowed = ['utm_source','utm_medium','utm_campaign','utm_content','utm_term','signup_referrer'];
-    const sets = [];
-    const vals = [];
-    let idx = 2;
-    for (const key of allowed) {
-      const v = attr[key];
-      if (v && typeof v === 'string') {
-        // Only update if column is still NULL (first-touch attribution only)
-        sets.push(`${key} = COALESCE(${key}, $${idx})`);
-        vals.push(v.slice(0, 500));
-        idx++;
-      }
-    }
-    if (sets.length === 0) return;
-    await pool.query(
-      `UPDATE users SET ${sets.join(', ')} WHERE id = $1`,
-      [userId, ...vals]
-    );
+  // ── First-touch attribution ──────────────────────────────────────────────
+  // attr comes from the browser (localStorage fl_attribution, captured on first
+  // landing by public/js/analytics.js). Sanitized to known keys, referrer as a
+  // bare domain; first write wins (db/users.saveSignupAttribution).
+  async function saveAttribution(userId, attr, opts) {
+    const clean = sanitizeAttribution(attr);
+    if (!clean) return false;
+    return saveSignupAttribution(pool, userId, clean, opts);
   }
 
   // POST /api/auth/signup
@@ -359,8 +338,14 @@ module.exports = function(pool, loginLimiter, signupLimiter) {
     }
 
     const returnTo = (req.query.return_to === 'signup') ? 'signup' : 'login';
-    const host = req.headers.host || 'focusledger.net';
-    const state = signState(returnTo, host);
+    const host = TRUSTED_REDIRECT_HOSTS.has(req.headers.host) ? req.headers.host : 'focusledger.net';
+    let state;
+    try {
+      state = signState(returnTo, host);
+    } catch (e) {
+      console.error('[auth/google] cannot sign OAuth state:', e.message);
+      return res.status(503).json({ success: false, message: 'Google sign-in is not configured. Please use email and password.' });
+    }
 
     const url = new URL('https://accounts.google.com/o/oauth2/v2/auth');
     url.searchParams.set('client_id',     GOOGLE_CLIENT_ID);
@@ -419,6 +404,7 @@ module.exports = function(pool, loginLimiter, signupLimiter) {
 
       let user;
       let accountLinked = false;
+      let isNewUser = false;
 
       if (existingByEmail.rows.length > 0) {
         const existing = existingByEmail.rows[0];
@@ -452,6 +438,7 @@ module.exports = function(pool, loginLimiter, signupLimiter) {
         );
 
         user = result.rows[0];
+        isNewUser = true;
 
         await Promise.all([
           pool.query('INSERT INTO budgets (weekly_amount, is_active, user_id) VALUES (500.00, true, $1)', [user.id]),
@@ -479,7 +466,9 @@ module.exports = function(pool, loginLimiter, signupLimiter) {
       // Phase 2: Establish HttpOnly session cookie alongside JWT
       establishSession(req, user);
 
-      res.redirect(`${base}/${returnTo}?google_token=${encodeURIComponent(token)}&google_email=${encodeURIComponent(email)}${accountLinked ? '&google_linked=1' : ''}`);
+      // google_new=1 tells the page this was a signup (so it saves attribution
+      // and fires the signup conversion), even when it started on /login.
+      res.redirect(`${base}/${returnTo}?google_token=${encodeURIComponent(token)}&google_email=${encodeURIComponent(email)}${accountLinked ? '&google_linked=1' : ''}${isNewUser ? '&google_new=1' : ''}`);
     } catch (err) {
       console.error('[auth/google/callback] Error:', err);
       res.redirect(`${base}/${returnTo}?google_error=server_error`);
@@ -750,11 +739,13 @@ module.exports = function(pool, loginLimiter, signupLimiter) {
 
       // Analytics — track which path brought them in (server-side because One Tap
       // may fire from the landing page where the client-side FLA lib isn't guaranteed loaded)
-      pool.query(
-        `INSERT INTO analytics_events (visitor_hash, user_id, event_name, event_data, occurred_at)
-         VALUES ($1, $2, $3, '{}', NOW())`,
-        [`user-${user.id}`, user.id, isNewUser ? 'signup_google_one_tap' : 'login_google_one_tap']
-      ).catch(logFailure('[Auth]', 'trackGoogleOneTap', { userId: user.id }));
+      const oneTapAttr = isNewUser ? sanitizeAttribution(attribution) : null;
+      insertEvent(pool, {
+        visitorHash: `user-${user.id}`,
+        userId: user.id,
+        eventName: isNewUser ? 'signup_google_one_tap' : 'login_google_one_tap',
+        eventData: oneTapAttr ? { attribution: oneTapAttr } : {},
+      }).catch(logFailure('[Auth]', 'trackGoogleOneTap', { userId: user.id }));
 
       // Phase 2: Establish HttpOnly session cookie alongside JWT
       establishSession(req, user);
@@ -769,10 +760,11 @@ module.exports = function(pool, loginLimiter, signupLimiter) {
   // Called client-side after the OAuth callback delivers a token via query param.
   // UTMs survived the redirect in localStorage; this endpoint writes them to the DB.
   // Idempotent: COALESCE ensures only the first write wins (first-touch attribution).
+  // Only accounts created in the last 24h: attribution describes the signup.
   router.patch('/attribution', authenticateToken, async (req, res) => {
     try {
-      await saveAttribution(req.user.id, req.body);
-      res.json({ success: true });
+      const saved = await saveAttribution(req.user.id, req.body, { maxAgeHours: 24 });
+      res.json({ success: true, saved });
     } catch (err) {
       // Non-critical — log but don't surface to client
       console.error('[auth/attribution] Error:', err.message);

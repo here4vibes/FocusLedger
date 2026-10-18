@@ -20,14 +20,14 @@
  * form check-in (mode preference, login check-in, daily plan, accept), Buddy
  * morning / mid-day / evening + evening-data, ideas, journal, values (add,
  * rename, delete), expenses (manual add + triage), budget, the spending
- * check-in session (and the page's API paths), time blocks, work hours, focus
+ * check-in on seeded bank rows (queue, classify → expenses, money tab agrees), time blocks, work hours, focus
  * sessions + prefs, time estimates, insurance, settings prefs (notifications,
  * nudges, follow-up emails, routine nudges), routine from template, Tandem
  * invite → accept → share → feed → dissolve (second user), promo redemption
  * error paths, the push "Done ✓" action, account-deletion request.
  * Not covered (no endpoint, or needs admin / an external service): values
  * alignment check-in (no write endpoint), promo redemption success (codes are
- * admin-created), Plaid, Stripe, AI chat and AI breakdowns, documents upload.
+ * admin-created), Plaid itself (bank rows are seeded with SQL), Stripe, AI chat and AI breakdowns, documents upload.
  *
  * ~140 requests, two signups: under the global (300/15min) and signup (5/h)
  * limiters, which reset with each server process.
@@ -40,6 +40,7 @@ const fs = require('fs');
 const path = require('path');
 const { ROOT, sleep, requireEnv, startServer, unexplainedErrors } = require('./ci-harness');
 const { createTaskDoneToken } = require('../lib/push-action-token');
+const { Pool } = require('pg');
 
 const PORT = process.env.FLOWS_PORT || 3113;
 const REQUEST_TIMEOUT_MS = 15000;
@@ -59,6 +60,8 @@ class FlowError extends Error {}
 function expect(cond, msg) { if (!cond) throw new FlowError(msg); }
 
 let server;
+// Seeds rows no endpoint can create locally (Plaid). Same DB as the server.
+const db = new Pool({ connectionString: process.env.DATABASE_URL, max: 2 });
 let requestCount = 0;
 const failures = [];
 const results = [];
@@ -292,21 +295,89 @@ async function main() {
     await call('DELETE', `/api/money/expenses/${e.id}`, 200, { token });
   });
 
-  await flow('spending check-in: start → today → complete (public/checkin-spending.html paths)', async () => {
+  await flow('spending check-in: real bank charges → classify → expenses + money tab agree', async () => {
     // The page once called /api/spending-sessions/*, which nothing serves.
     const page = fs.readFileSync(path.join(ROOT, 'public', 'checkin-spending.html'), 'utf8');
     const paths = [...page.matchAll(/['"`](\/api\/[^'"`]*spending-sessions[^'"`]*)/g)].map(m => m[1]);
     expect(paths.length > 0, 'checkin-spending.html no longer calls the spending-sessions API (update this check)');
     for (const p of paths) expect(p.startsWith('/api/v1/spending-sessions'), `checkin-spending.html calls ${p}, which is not mounted`);
 
+    // Seed a bank connection the way Plaid sync leaves it (no Plaid in CI).
+    const userId = A.user.id;
+    expect(userId, 'signup returned no user id');
+    const tag = `ci-${userId}-${Date.now()}`;
+    const item = (await db.query(
+      `INSERT INTO plaid_items (user_id, access_token, item_id, institution_name, institution_id, created_at)
+       VALUES ($1, 'ci-not-a-token', $2, 'CI Bank', $2, now()) RETURNING id`, [userId, `item-${tag}`])).rows[0];
+    const acct = (await db.query(
+      `INSERT INTO plaid_accounts (plaid_item_id, user_id, account_id, name, type, mask, created_at)
+       VALUES ($1, $2, $3, 'CI Checking', 'depository', '0000', now()) RETURNING id`, [item.id, userId, `acct-${tag}`])).rows[0];
+    const pt = async (key, amount, date, pending = false) => (await db.query(
+      `INSERT INTO plaid_transactions (plaid_account_id, user_id, transaction_id, amount, description, merchant_name, transaction_date, is_confirmed, is_pending)
+       VALUES ($1, $2, $3, $4, $5, $5, $6, false, $7) RETURNING id`,
+      [acct.id, userId, `${key}-${tag}`, amount, `CI ${key}`, date, pending])).rows[0].id;
+    const coffee = await pt('coffee', '6.75', localDate(-1));
+    const books = await pt('books', '42.10', localDate(-2));
+    await pt('refund', '-20.00', localDate(-1));        // money in: not a spending decision
+    await pt('hold', '15.00', localDate(0), true);      // pending: wait until it posts
+    await pt('old', '30.00', localDate(-20));           // outside the 14-day window
+    // Sync auto-confirms posted charges into expenses with is_impulse NULL.
+    const synced = (await db.query(
+      `INSERT INTO expenses (user_id, amount, description, expense_date, source, plaid_transaction_id)
+       VALUES ($1, '12.99', 'CI streaming', $2, 'plaid', $3) RETURNING id`, [userId, localDate(-3), `stream-${tag}`])).rows[0].id;
+
     const start = await call('POST', '/api/v1/spending-sessions/start', 200, { token });
     expect(start.session_id, 'start returned no session_id');
+    expect(String(start.session_date).slice(0, 10) === today, `session_date ${start.session_date} is not the user's local today (${today})`);
     const t = await call('GET', '/api/v1/spending-sessions/today', 200, { token });
     expect(t.session_id === start.session_id, `today session ${t.session_id} != started ${start.session_id}`);
-    await call('POST', `/api/v1/spending-sessions/${start.session_id}/classify`, 404, { token, body: { transaction_id: 2147480000, classification: 'impulse' } });
-    await call('POST', `/api/v1/spending-sessions/${start.session_id}/complete`, 200, { token });
+    const ids = (t.transactions || []).map(x => x.id).sort();
+    const want = [`exp:${synced}`, `pt:${books}`, `pt:${coffee}`].sort();
+    expect(JSON.stringify(ids) === JSON.stringify(want), `queue ${JSON.stringify(ids)}, expected ${JSON.stringify(want)}`);
+    const coffeeCard = t.transactions.find(x => x.id === `pt:${coffee}`);
+    expect(coffeeCard.amount === 675 && coffeeCard.date === localDate(-1), `coffee card ${JSON.stringify(coffeeCard)}`);
+
+    const sid = start.session_id;
+    const classify = (id, c, status = 200) =>
+      call('POST', `/api/v1/spending-sessions/${sid}/classify`, status, { token, body: { transaction_id: id, classification: c } });
+    await classify(`pt:${coffee}`, 'impulse');
+    await classify(`pt:${books}`, 'impulse');
+    await classify(`pt:${books}`, 'planned');               // re-swipe updates, no second expense
+    await classify(`exp:${synced}`, 'planned');
+    await classify('pt:2147480000', 'impulse', 404);
+    await classify('legacy-uuid', 'impulse', 404);
+    await call('POST', '/api/v1/spending-sessions/2147480000/classify', 404, { token, body: { transaction_id: `pt:${coffee}`, classification: 'impulse' } });
+
+    const t1 = await call('GET', '/api/v1/spending-sessions/today', 200, { token });
+    expect((t1.transactions || []).length === 0, `queue not empty after classifying: ${JSON.stringify(t1.transactions)}`);
+    expect(t1.impulse_count === 1 && t1.planned_count === 2, `session counts impulse=${t1.impulse_count} planned=${t1.planned_count}`);
+
+    const exp = (await db.query(
+      `SELECT pt.id AS pt_id, pt.is_confirmed, e.id, e.amount::text AS amount, e.is_impulse
+         FROM expenses e LEFT JOIN plaid_transactions pt ON pt.expense_id = e.id
+        WHERE e.user_id = $1 AND e.source = 'plaid' ORDER BY e.id`, [userId])).rows;
+    expect(exp.length === 3, `expected 3 plaid expenses, got ${exp.length}: ${JSON.stringify(exp)}`);
+    const byPt = Object.fromEntries(exp.filter(r => r.pt_id).map(r => [r.pt_id, r]));
+    expect(byPt[coffee] && byPt[coffee].is_impulse === true && byPt[coffee].amount === '6.75' && byPt[coffee].is_confirmed === true, `coffee expense ${JSON.stringify(byPt[coffee])}`);
+    expect(byPt[books] && byPt[books].is_impulse === false, `books expense ${JSON.stringify(byPt[books])}`);
+    expect(exp.find(r => r.id === synced).is_impulse === false, 'synced expense not marked planned');
+
+    // The money tab reads the same rows.
+    const pending = ((await call('GET', '/api/plaid/transactions/pending', 200, { token })).transactions || []).map(x => x.id);
+    expect(!pending.includes(coffee) && !pending.includes(books), `classified charges still in the money tab's review list: ${pending}`);
+    const untriaged = (await call('GET', '/api/money/expenses/untriaged', 200, { token })).expenses || [];
+    expect(untriaged.length === 0, `money tab still lists ${untriaged.length} untriaged expenses`);
+    const stats = await call('GET', '/api/money/spending-sessions/stats', 200, { token });
+    expect(stats.impulse_count === 1 && stats.planned_count === 2, `money stats ${JSON.stringify(stats)}`);
+    const v1stats = await call('GET', '/api/v1/spending-sessions/stats', 200, { token });
+    expect(v1stats.impulse_count === 1 && v1stats.planned_count === 2, `v1 stats ${JSON.stringify(v1stats).slice(0, 200)}`);
+
+    await call('POST', `/api/v1/spending-sessions/${sid}/complete`, 200, { token });
+    await call('POST', '/api/v1/spending-sessions/2147480000/complete', 404, { token });
     const t2 = await call('GET', '/api/v1/spending-sessions/today', 200, { token });
     expect(t2.complete === true, `session complete=${t2.complete} after completing`);
+    const money = await call('GET', '/api/money/spending-sessions/today', 200, { token });
+    expect(money.session && money.session.complete === true, `money tab sees session ${JSON.stringify(money.session)}`);
   });
 
   // 8 ── Time blocks / work hours ─────────────────────────────────────────────
@@ -436,6 +507,14 @@ async function main() {
       expect(ed.tasksCompletedToday >= 1, `${route} tasksCompletedToday=${ed.tasksCompletedToday}`);
     }
     await call('POST', '/api/evening/evening', 200, { token, body: { date: today, energy_level: 3 } });
+    // The Buddy bubble and the insights card read "today"/"this week" in the user's zone too
+    const ctx = await call('GET', '/api/buddy-widget/context', 200, { token });
+    expect(ctx.morningCheckinDone === true && ctx.eveningCheckinDone === true,
+      `/api/buddy-widget/context check-ins: morning=${ctx.morningCheckinDone} evening=${ctx.eveningCheckinDone}`);
+    const badge = await call('GET', '/api/buddy-widget/notification-count', 200, { token });
+    expect(badge.eveningReady === false, `/api/buddy-widget/notification-count eveningReady=${badge.eveningReady}, expected false`);
+    const ins = await call('GET', '/api/v1/insights/stats', 200, { token });
+    expect(ins.weekly && ins.weekly.tasks_completed >= 1, `/api/v1/insights/stats weekly.tasks_completed=${ins.weekly && ins.weekly.tasks_completed}`);
   });
 
   await flow('focus session: start → complete → recent', async () => {
@@ -527,6 +606,7 @@ main()
   .catch((err) => failures.push({ name: '(setup)', errors: [err.stack || err.message] }))
   .finally(async () => {
     if (server) await server.stop();
+    await db.end().catch(err => console.error('[write-flows] db pool close failed:', err.message));
     for (const r of results) console.log(r);
     for (const f of failures) {
       console.log(`\n❌ ${f.name}`);

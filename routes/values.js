@@ -11,6 +11,7 @@
 
 const express = require('express');
 const { authenticateToken } = require('../middleware/auth');
+const { fetchUserLocalDate } = require('../lib/timezone');
 
 module.exports = function(pool) {
   const router = express.Router();
@@ -195,13 +196,13 @@ module.exports = function(pool) {
         [userId]
       );
 
-      // Calculate week start (Monday)
-      const now = new Date();
-      const dayOfWeek = now.getDay();
+      // Calculate week start (Monday) from the user's local date, not the
+      // server clock (UTC rolled the week over on Sunday evening in the US)
+      const now = new Date(await fetchUserLocalDate(pool, userId) + 'T12:00:00Z');
+      const dayOfWeek = now.getUTCDay();
       const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
       const weekStart = new Date(now);
-      weekStart.setDate(now.getDate() + mondayOffset);
-      weekStart.setHours(0, 0, 0, 0);
+      weekStart.setUTCDate(now.getUTCDate() + mondayOffset);
 
       // Get time blocks for this week
       const hoursMap = {};

@@ -15,6 +15,7 @@ const {
   upsertUnlock,
   getUserUnlocks,
 } = require('../db/insights');
+const { fetchUserTimezone, getUserLocalDate } = require('../lib/timezone');
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -30,18 +31,12 @@ function getWeekStart(dateStr) {
 }
 
 /**
- * Get today's date as YYYY-MM-DD UTC.
+ * Get last N weeks of Monday dates (for history queries), counting back from
+ * the user's local date.
  */
-function todayUTC() {
-  return new Date().toISOString().slice(0, 10);
-}
-
-/**
- * Get last N weeks of Monday dates (for history queries).
- */
-function getLastNWeekStarts(n) {
+function getLastNWeekStarts(n, today) {
   const starts = [];
-  const now = new Date();
+  const now = new Date(today + 'T12:00:00Z');
   for (let i = 0; i < n; i++) {
     const d = new Date(now);
     d.setUTCDate(d.getUTCDate() - i * 7);
@@ -56,25 +51,28 @@ function getLastNWeekStarts(n) {
  * Compute current-week stats by querying existing tables directly.
  * This runs in real-time for GET /api/v1/insights/stats — no cron required.
  */
-async function computeLiveWeeklyStats(pool, userId) {
-  const weekStart = getWeekStart(todayUTC());
-  const weekEnd = todayUTC(); // current week up to today
+async function computeLiveWeeklyStats(pool, userId, tz) {
+  // The user's week, not UTC's: from 8pm EDT on Sunday the UTC week had
+  // already rolled over and the card showed zeros.
+  if (!tz) tz = await fetchUserTimezone(pool, userId);
+  const weekEnd = getUserLocalDate(tz); // current week up to today
+  const weekStart = getWeekStart(weekEnd);
 
-  // Tasks completed this week (completed_at within the week)
+  // Tasks completed this week (completed_at within the user's local week)
   const tasksCompletedResult = await pool.query(`
     SELECT COUNT(*) as cnt FROM tasks
     WHERE user_id = $1
-      AND completed_at::date >= $2
-      AND completed_at::date <= $3
-  `, [userId, weekStart, weekEnd]);
+      AND (completed_at AT TIME ZONE $4)::date >= $2
+      AND (completed_at AT TIME ZONE $4)::date <= $3
+  `, [userId, weekStart, weekEnd, tz]);
 
   // Tasks created this week
   const tasksCreatedResult = await pool.query(`
     SELECT COUNT(*) as cnt FROM tasks
     WHERE user_id = $1
-      AND created_at::date >= $2
-      AND created_at::date <= $3
-  `, [userId, weekStart, weekEnd]);
+      AND (created_at AT TIME ZONE $4)::date >= $2
+      AND (created_at AT TIME ZONE $4)::date <= $3
+  `, [userId, weekStart, weekEnd, tz]);
 
   // Spending: total_spend_cents, impulse_count, planned_count
   // Pulls from transactions + transaction_classifications linked via spending_sessions
@@ -140,10 +138,11 @@ async function computeLiveWeeklyStats(pool, userId) {
  * @returns {{ weekly: object, history: object[] }}
  */
 async function get_weekly_stats(pool, userId, opts = {}) {
-  const currentWeek = await computeLiveWeeklyStats(pool, userId);
+  const tz = await fetchUserTimezone(pool, userId);
+  const currentWeek = await computeLiveWeeklyStats(pool, userId, tz);
 
   // Build history from past weekly_stats rows (populated by cron in P2)
-  const last4Weeks = getLastNWeekStarts(4);
+  const last4Weeks = getLastNWeekStarts(4, getUserLocalDate(tz));
   const oldestWeek = last4Weeks[last4Weeks.length - 1];
 
   const historyRows = await getWeeklyStatsRange(pool, userId, oldestWeek, last4Weeks[0]);
@@ -164,7 +163,7 @@ async function get_weekly_stats(pool, userId, opts = {}) {
  */
 async function check_and_unlock_insights(pool, userId) {
   // Collect all data needed to evaluate conditions
-  const weekStart = getWeekStart(todayUTC());
+  const tz = await fetchUserTimezone(pool, userId);
 
   // Condition 1: spending_this_week — ≥1 transaction
   const txnCountResult = await pool.query(`
@@ -181,9 +180,9 @@ async function check_and_unlock_insights(pool, userId) {
 
   // Condition 3: task_completion_rate — ≥3 days with completed tasks
   const taskDaysResult = await pool.query(`
-    SELECT COUNT(DISTINCT completed_at::date) as days FROM tasks
+    SELECT COUNT(DISTINCT (completed_at AT TIME ZONE $2)::date) as days FROM tasks
     WHERE user_id = $1 AND completed_at IS NOT NULL
-  `, [userId]);
+  `, [userId, tz]);
   const distinctTaskDays = parseInt(taskDaysResult.rows[0]?.days || 0, 10);
 
   // Condition 4: evening_session_streak — ≥2 completed evening sessions
@@ -236,7 +235,7 @@ async function get_insight_unlock_status(pool, userId) {
 
   // Compute days_left for NOT-yet-unlocked insights
   // We estimate based on minimum data requirements not yet met.
-  const weekStart = getWeekStart(todayUTC());
+  const tz = await fetchUserTimezone(pool, userId);
 
   const txnCountResult = await pool.query(`SELECT COUNT(*) as cnt FROM transactions WHERE user_id = $1`, [userId]);
   const txnCount = parseInt(txnCountResult.rows[0]?.cnt || 0, 10);
@@ -244,7 +243,7 @@ async function get_insight_unlock_status(pool, userId) {
   const distinctDaysResult = await pool.query(`SELECT COUNT(DISTINCT date) as days FROM transactions WHERE user_id = $1`, [userId]);
   const distinctTxDays = parseInt(distinctDaysResult.rows[0]?.days || 0, 10);
 
-  const taskDaysResult = await pool.query(`SELECT COUNT(DISTINCT completed_at::date) as days FROM tasks WHERE user_id = $1 AND completed_at IS NOT NULL`, [userId]);
+  const taskDaysResult = await pool.query(`SELECT COUNT(DISTINCT (completed_at AT TIME ZONE $2)::date) as days FROM tasks WHERE user_id = $1 AND completed_at IS NOT NULL`, [userId, tz]);
   const distinctTaskDays = parseInt(taskDaysResult.rows[0]?.days || 0, 10);
 
   const eveningCountResult = await pool.query(`SELECT COUNT(*) as cnt FROM buddy_checkins WHERE user_id = $1 AND checkin_type = 'evening'`, [userId]);

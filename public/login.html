@@ -345,9 +345,28 @@
         var googleLinked = new URLSearchParams(window.location.search).get('google_linked');
         var googleEmail  = new URLSearchParams(window.location.search).get('google_email');
         var googleError  = new URLSearchParams(window.location.search).get('google_error');
+        // google_new=1: the OAuth callback created this account (a new person who
+        // tapped "Continue with Google" on the login page). Count it as a signup.
+        var googleNew    = new URLSearchParams(window.location.search).get('google_new') === '1';
 
         if (googleToken) {
             history.replaceState(null, '', '/login');
+            if (googleNew) {
+                localStorage.setItem('fl_just_signed_up', '1');
+                if (typeof fbq === 'function') fbq('track', 'Lead');
+                window._flDeferSignupComplete = true; // FLA loads at the end of the page
+                try {
+                    var attr = JSON.parse(localStorage.getItem('fl_attribution') || 'null');
+                    if (attr) {
+                        fetch('/api/auth/attribution', {
+                            method: 'PATCH',
+                            keepalive: true,
+                            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + googleToken },
+                            body: JSON.stringify(attr)
+                        }).then(function() { localStorage.removeItem('fl_attribution'); }).catch(function() {});
+                    }
+                } catch (e) {}
+            }
             localStorage.setItem('fl_token', googleToken);
             if (googleEmail) {
                 localStorage.setItem('fl_user', JSON.stringify({ email: googleEmail }));
@@ -614,6 +633,13 @@
     </script>
     <!-- Analytics -->
     <script src='/js/analytics.js'></script>
-    <script>FLA.trackPage('login'); FLA.trackEvent('funnel_login_visit');</script>
+    <script>
+    FLA.trackPage('login'); FLA.trackEvent('funnel_login_visit');
+    if (window._flDeferSignupComplete) {
+        FLA.trackEvent('funnel_signup_complete');
+        FLA.trackEvent('signup_google');
+        window._flDeferSignupComplete = false;
+    }
+    </script>
 </body>
 </html>

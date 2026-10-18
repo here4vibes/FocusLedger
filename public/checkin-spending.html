@@ -534,8 +534,8 @@
         <!-- Empty state: no transactions today -->
         <div class="no-tx-state" id="noTxState" role="status">
             <div class="empty-icon" aria-hidden="true">🌙</div>
-            <div class="empty-heading">All quiet today</div>
-            <div class="empty-sub">No spending to review today — your finances are quiet.</div>
+            <div class="empty-heading">All caught up</div>
+            <div class="empty-sub">No new bank charges from the last two weeks to review.</div>
             <button class="btn-empty-done" id="btnEmptyDone" type="button">Done</button>
         </div>
     </div>
@@ -643,6 +643,12 @@
 
     function formatTime(dateStr) {
         if (!dateStr) return '';
+        // Bank charges carry a posting date only (YYYY-MM-DD): show the day.
+        if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+            var p = dateStr.split('-');
+            var day = new Date(+p[0], +p[1] - 1, +p[2]);
+            return day.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+        }
         var d = new Date(dateStr.replace(' ', 'T'));
         if (isNaN(d)) return dateStr;
         return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
@@ -698,7 +704,7 @@
             el('cardStack').style.display = 'none';
             el('actionBar').style.display = 'none';
             el('kbHint').style.display = 'none';
-            announce('No transactions to review today.');
+            announce('No bank charges to review.');
             return;
         }
 
@@ -1038,7 +1044,7 @@
         if (sessionId) {
             apiFetch('/api/v1/spending-sessions/' + sessionId + '/complete', {
                 method: 'POST'
-            }).catch(function() {});
+            }).catch(function(err) { console.warn('[spending-checkin] complete error:', err); });
         }
 
         // Set localStorage flag so Money Dashboard unlocks Card 4
