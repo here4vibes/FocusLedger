@@ -1,184 +1,196 @@
 'use strict';
 /**
- * services/ClassificationService.js — Core classification logic for spending sessions.
+ * services/ClassificationService.js — the spending check-in (planned vs impulse).
  *
- * Owns: transaction classification (planned vs impulse), session lifecycle,
- *       event emission. Does NOT own: Plaid sync, expense creation, budget logic.
+ * Reviews the user's real bank charges: untriaged plaid_transactions and Plaid
+ * expenses (queue defined in db/spendingSessions.js getCheckinQueue, the last
+ * QUEUE_DAYS local days). A classification goes through the money tab's own db
+ * functions, in one DB transaction:
+ *   'pt:<id>'  → confirmTransaction (writes the expense, marks the bank row
+ *                confirmed) → triageExpense (sets expenses.is_impulse)
+ *   'exp:<id>' → triageExpense
+ * so the money tab and the check-in always agree. expenses.is_impulse is the
+ * record; the legacy transaction_classifications table is no longer written.
+ * Session bookkeeping (spending_sessions) is keyed by the user's local date.
  *
- * Events emitted:
- *   - 'transaction.classified': { user_id, transaction_id, classification,
- *       merchant_name, amount, category }
- *   - 'spending_session.complete': { user_id, session_id, impulse_count,
- *       planned_count, total_spend_cents }
+ * Events: each classification inserts a 'transaction.classified' row in
+ * `events` (payload.source = 'spending_checkin', session_id, expense_id) and
+ * emits it on the EventBus; complete_session emits 'spending_session.complete'.
  */
 
 const spendingDB = require('../db/spendingSessions');
-const txDB = require('../db/transactions');
+const { confirmTransaction, triageExpense } = require('../db/money-prisma');
 const { eventBus } = require('./EventBus');
 const { fetchUserTimezone, getUserLocalDate } = require('../lib/timezone');
 
 const VALID_CLASSIFICATIONS = new Set(['planned', 'impulse']);
+const QUEUE_DAYS = 14;
+
+class NotFoundError extends Error {}
+
+/** YYYY-MM-DD minus n calendar days (pure date math, no clock). */
+function minusDays(dateStr, n) {
+  const d = new Date(`${dateStr}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() - n);
+  return d.toISOString().slice(0, 10);
+}
+
+/** 'pt:12' → { kind: 'pt', id: 12 }; anything else → null. */
+function parseItemId(raw) {
+  const m = /^(pt|exp):(\d{1,10})$/.exec(String(raw || ''));
+  if (!m) return null;
+  const id = Number(m[2]);
+  return id > 0 && id <= 2147483647 ? { kind: m[1], id } : null;
+}
+
+async function localToday(pool, userId) {
+  return getUserLocalDate(await fetchUserTimezone(pool, userId));
+}
+
+function queueFor(pool, userId, today) {
+  return spendingDB.getCheckinQueue(pool, userId, minusDays(today, QUEUE_DAYS - 1));
+}
 
 const ClassificationService = {
+  QUEUE_DAYS,
+  NotFoundError,
+
   /**
-   * Upsert a classification for a transaction.
-   * Re-swiping updates the existing record (no duplicates).
-   * Emits 'transaction.classified' event on every upsert.
-   *
+   * Classify one queue item. Re-classifying an answered item updates its
+   * expense; no duplicate expense (confirm locks the bank row FOR UPDATE, and
+   * expenses.plaid_transaction_id is unique).
    * @param {object} pool
    * @param {number} userId
-   * @param {string} transactionId  - UUID of the transaction
+   * @param {string} itemId          - 'pt:<id>' | 'exp:<id>'
    * @param {string} classification  - 'planned' | 'impulse'
-   * @param {string} sessionId      - UUID of the owning session
-   * @returns {Promise<object>} upserted classification row
+   * @param {number} sessionId       - must be the user's session
+   * @returns {Promise<object>} the triaged expense row
+   * @throws {NotFoundError} unknown session or item (or a dismissed bank row)
    */
-  async classify(pool, userId, transactionId, classification, sessionId) {
+  async classify(pool, userId, itemId, classification, sessionId) {
     if (!VALID_CLASSIFICATIONS.has(classification)) {
       throw new Error(`Invalid classification: ${classification}. Must be 'planned' or 'impulse'.`);
     }
-
-    // Load transaction details for event payload
-    const tx = await txDB.getById(pool, transactionId, userId);
-    if (!tx) {
-      throw new Error(`Transaction ${transactionId} not found for user ${userId}`);
+    const item = parseItemId(itemId);
+    if (!item) throw new NotFoundError(`Transaction ${itemId} not found`);
+    if (!(await spendingDB.getSessionById(pool, sessionId, userId))) {
+      throw new NotFoundError(`Session ${sessionId} not found for user ${userId}`);
     }
 
-    // Upsert classification (ON CONFLICT updates existing row)
-    const result = await spendingDB.upsertClassification(pool, {
-      sessionId,
-      userId,
-      transactionId,
-      classification,
-    });
+    const client = await pool.connect();
+    let expense = null;
+    try {
+      await client.query('BEGIN');
+      if (!(await spendingDB.isCheckinEligible(client, item.kind, item.id, userId))) {
+        throw new NotFoundError(`Transaction ${itemId} is not a reviewable bank charge for user ${userId}`);
+      }
+      let expenseId = item.kind === 'exp' ? item.id : null;
+      if (item.kind === 'pt') {
+        const confirmed = await confirmTransaction(client, item.id, userId);
+        expenseId = confirmed
+          ? confirmed.expenseId
+          : await spendingDB.getConfirmedExpenseId(client, item.id, userId); // re-swipe
+      }
+      if (expenseId) {
+        expense = await triageExpense(client, expenseId, userId, classification === 'impulse', null);
+      }
+      if (!expense) throw new NotFoundError(`Transaction ${itemId} not found for user ${userId}`);
+      await spendingDB.insertEvent(client, 'transaction.classified', {
+        source: 'spending_checkin',
+        session_id: String(sessionId),
+        item_id: itemId,
+        expense_id: expense.id,
+        classification,
+      }, userId);
+      await client.query('COMMIT');
+    } catch (err) {
+      await client.query('ROLLBACK').catch(rbErr =>
+        console.error('[ClassificationService] rollback failed:', rbErr.message, '| userId:', userId));
+      throw err;
+    } finally {
+      client.release();
+    }
 
-    // Emit event with full transaction context
     eventBus.emit('transaction.classified', {
       user_id: userId,
-      transaction_id: transactionId,
+      transaction_id: itemId,
+      expense_id: expense.id,
       classification,
-      merchant_name: tx.merchant_name,
-      amount: tx.amount,  // cents
-      category: tx.category,
+      merchant_name: expense.description,
+      amount: expense.amount, // NUMERIC dollars, as pg returns it (string)
+      category: expense.category_name || null,
     });
-
-    return result;
+    return expense;
   },
 
   /**
-   * Get a spending session with its classifications and transaction list.
-   * @param {object} pool
-   * @param {number} userId
-   * @param {string} sessionDate  - YYYY-MM-DD
-   * @returns {Promise<object>} session + classifications + transaction count
+   * The user's session for `sessionDate` (their local date) and the current queue.
+   * @returns {Promise<object|null>} null before the session is started
    */
   async get_session(pool, userId, sessionDate) {
     const session = await spendingDB.getSession(pool, userId, sessionDate);
-    if (!session) {
-      return null;
-    }
+    if (!session) return null;
 
-    const [classifications, transactions] = await Promise.all([
-      spendingDB.getClassificationsForSession(pool, session.id),
-      txDB.getByDate(pool, userId, sessionDate),
+    const [counts, transactions] = await Promise.all([
+      spendingDB.getSessionCounts(pool, userId, session.id),
+      queueFor(pool, userId, sessionDate),
     ]);
 
     return {
       session_id: session.id,
       date: session.session_date,
-      classifications: classifications.map(c => ({
-        transaction_id: c.transaction_id,
-        classification: c.classification,
-        merchant_name: c.merchant_name,
-        amount: c.amount,
-        category: c.category,
-        swiped_at: c.swiped_at,
-      })),
-      complete: session.complete,
+      // Answered items leave the queue, so the page needs no per-item list.
+      classifications: [],
+      impulse_count: counts.impulse_count,
+      planned_count: counts.planned_count,
+      complete: session.complete === true,
       transaction_count: transactions.length,
-      transactions: transactions.map(t => ({
-        id: t.id,
-        merchant_name: t.merchant_name,
-        amount: t.amount,
-        category: t.category,
-        category_icon: t.category_icon,
-        date: t.date,
-        logo_url: t.logo_url,
-        classification: t.classification || null,
-        swiped_at: t.swiped_at || null,
-      })),
+      transactions,
     };
   },
 
-  /**
-   * Start a new (or return existing) spending session for today.
-   * Loads the unclassified transaction count from db/transactions.
-   * @param {object} pool
-   * @param {number} userId
-   * @returns {Promise<object>} { session_id, session_date, transaction_count }
-   */
+  /** Create or refresh today's session (user's local date) with the queue size. */
   async start_session(pool, userId) {
-    const tz = await fetchUserTimezone(pool, userId);
-    const sessionDate = getUserLocalDate(tz);
-
-    // Was `require('./TransactionService').count_unclassified`, but that module
-    // exports { TransactionService }, so starting a check-in threw a TypeError.
-    const count = await txDB.countUnclassified(pool, userId, sessionDate);
-
-    const session = await spendingDB.upsertSession(pool, userId, sessionDate, count);
-
+    const sessionDate = await localToday(pool, userId);
+    const queue = await queueFor(pool, userId, sessionDate);
+    const session = await spendingDB.upsertSession(pool, userId, sessionDate, queue.length);
     return {
       session_id: session.id,
       session_date: session.session_date,
-      transaction_count: count,
+      transaction_count: queue.length,
     };
   },
 
   /**
-   * Mark a spending session as complete.
-   * Emits 'spending_session.complete' event with classification counts.
-   * @param {object} pool
-   * @param {number} userId
-   * @param {string} sessionId  - UUID
-   * @returns {Promise<void>}
+   * Mark the user's session complete; emits 'spending_session.complete'.
+   * @throws {NotFoundError} when the session isn't the user's
    */
   async complete_session(pool, userId, sessionId) {
-    // Count classifications for event payload
-    const classifications = await spendingDB.getClassificationsForSession(pool, sessionId);
-    const impulseCount = classifications.filter(c => c.classification === 'impulse').length;
-    const plannedCount = classifications.filter(c => c.classification === 'planned').length;
-    const totalSpendCents = classifications.reduce((sum, c) => sum + (parseInt(c.amount, 10) || 0), 0);
-
-    await spendingDB.completeSession(pool, sessionId);
-
+    const done = await spendingDB.completeSession(pool, sessionId, userId);
+    if (!done) throw new NotFoundError(`Session ${sessionId} not found for user ${userId}`);
+    const counts = await spendingDB.getSessionCounts(pool, userId, sessionId);
     eventBus.emit('spending_session.complete', {
       user_id: userId,
       session_id: sessionId,
-      impulse_count: impulseCount,
-      planned_count: plannedCount,
-      total_spend_cents: totalSpendCents,
+      impulse_count: counts.impulse_count,
+      planned_count: counts.planned_count,
+      total_spend_cents: counts.total_spend_cents,
     });
   },
 
-  /**
-   * Get classification stats for a user within a date range.
-   * @param {object} pool
-   * @param {number} userId
-   * @param {object} opts  - { from: YYYY-MM-DD, to: YYYY-MM-DD }
-   * @returns {Promise<object>} stats
-   */
+  /** Planned / impulse stats over classified expenses in a date range. */
   async get_stats(pool, userId, opts) {
     return spendingDB.getClassificationStats(pool, userId, opts.from, opts.to);
   },
 
-  /**
-   * Get top 3 recent insights for the dashboard.
-   * @param {object} pool
-   * @param {number} userId
-   * @returns {Promise<object[]>}
-   */
+  /** Top 3 impulse categories over the user's last 7 local days. */
   async get_recent_insights(pool, userId) {
-    return spendingDB.getRecentInsights(pool, userId, 3);
+    const today = await localToday(pool, userId);
+    return spendingDB.getRecentInsights(pool, userId, minusDays(today, 6), 3);
   },
+
+  localToday,
+  minusDays,
 };
 
 module.exports = { ClassificationService };
