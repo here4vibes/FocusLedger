@@ -87,7 +87,7 @@ Node.js + Express · PostgreSQL (Neon) · Render deployment · Vanilla HTML/CSS/
 - **Polsia Analytics** — first-party beacon pixel
 - **APNs** — iOS push via `apn` npm package; env vars: APNS_KEY_ID, APNS_TEAM_ID, APNS_KEY_P8, APNS_BUNDLE_ID
 
-## Current state & handoff (updated 2026-10-17)
+## Current state & handoff (updated 2026-10-18)
 
 **Read this section first.** It's the only context a new session gets.
 - **Every reply ends with a "Summary" section** (the user's standing request).
@@ -95,14 +95,8 @@ Node.js + Express · PostgreSQL (Neon) · Render deployment · Vanilla HTML/CSS/
 - **Keep this section current:** update it in the PR that changes the state, or in a small `docs(claude-md)` PR at the end of a work chunk. Keep it short and delete what's done.
 
 ### Open PRs (each needs the user's explicit "merge N")
-**Merge order and conflicts:** #245–#248 all edit this file, and #245–#247 also add a top entry to `public/changelog.html`. After each merge, merge `main` into the next PR. Resolve `changelog.html` by taking `main`'s file and re-inserting the branch's entry at the top. Resolve CLAUDE.md by keeping both sides' lines. Check CI goes green, then merge with the full head SHA.
+**When several PRs are open,** they usually all edit this file and `public/changelog.html`. After each merge, merge `main` into the next PR. Resolve `changelog.html` by taking `main`'s file and re-inserting the branch's entry at the top. Resolve CLAUDE.md by keeping both sides' lines. Check CI goes green, then merge with the full head SHA.
 
-- **#245** `claude/push-done-action-wAcNr`: "Done ✓" on single-task pushes (deadline reminder, cold-start nudge). CI green.
-  - `lib/push-action-token.js` (HMAC with `JWT_SECRET`, 72h, one task), `routes/push-actions.js` (`POST /api/push-actions/done`), `db/task-completion.js`, `public/sw.js`.
-  - Completing a task this way runs `onTasksCompleted`, so it counts toward routines.
-- **#246** `claude/evening-roundup-wAcNr`: evening round-up card on Home after 5pm (`roundupCard` in `public/weightless.html`). CI green.
-- **#247** `claude/sentry-noise-wAcNr`: `lib/ai-json.js` `parseAiJson` (fenced AI JSON broke duration estimates and receipt capture), a 6h news-feed backoff, and a stricter silent-catch guard regex. CI green.
-- **#248** `claude/admin-access-cleanup-wAcNr`: all nine route copies of `isAdminUser` now import `lib/admin-access.js`. No behavior change; `is_admin` is boolean in prod. CI was pending at handoff.
 - **#218** `claude/test-coverage-analysis-wAcNr`: billing portal, nudge-quality pass, "one home", security upgrades. **It waits only on the user's live Stripe purchase test.** It's stale against `main`, so merge `main` in before merging; expect conflicts in `changelog.html`, CLAUDE.md and maybe the nudge jobs.
   - **Contents:**
     - `POST /api/subscription/portal`.
@@ -114,13 +108,20 @@ Node.js + Express · PostgreSQL (Neon) · Render deployment · Vanilla HTML/CSS/
     - Re-engagement emails resume; only Miles (user 35) is eligible. 22 users are paused via `user_email_preferences.re_engagement='false'`; flip them back at relaunch.
     - `render.yaml` moves `cold-start-nudge` and `evening-checkin` to hourly. Confirm in Render if Blueprint sync is off.
 
-### Next up (in order, after the open PRs)
-1. **Silent catches in root cron files:** after #218 and #245 merge, fix the remaining `.catch(() => {})` in the root cron modules and add them to `FILES` in `__tests__/no-silent-catches.test.js`. #247's CLAUDE.md note has the details.
-2. **Admin SQL in routes:** `routes/promo-codes.js` and `routes/inbound-email.js` run their own admin lookup SQL. Switch them to `requireAdmin(pool)` from `lib/admin-access.js`.
-3. **News sync** uses an in-process `setInterval` (`routes/news.js`). Move it to the commented-out `rss-sync` cron in `render.yaml`, or drop the feature.
-4. **Capture, still to do:** bank-charge suggestions, i.e. a known recurring charge such as a gym or pharmacy suggests ticking the related task.
-5. **Retire legacy pages:** `buddy.html` (move the form check-in first), `app.html`, `home.html`, `portal.html`, `landing-old`.
-6. **Ideas discussed, not agreed:** show renewals and Bills in hours of work at the user's income rate; a risky-time spending nudge. The user noted purchases don't happen in the app, so these are reflection and planning views, not in-the-moment ones.
+### Next up: the bug-hunt plan (agreed with the user, 2026-10-18)
+The user asked to finish the big bug classes in about 4 sessions:
+1. **Schema audit:** compare every column the code uses with prod (`information_schema` through the Neon MCP), then fix the mismatches with migrations. Start with the GET-sweep hits below.
+2. **Silent failures, part 3:** catches that return a fallback without logging. A scan found 105: 39 HIGH, 31 MEDIUM, 35 intentional. The biggest group is 26 `.catch(() => ({ rows: [] }))` in `routes/daily-brief.js`, `home-context.js`, `momentum-score.js` and `weekly-recap.js`, which show zeros on a DB error. Then extend the guard with an AST pass (acorn), `// silent-ok: <reason>` markers, and the root cron files.
+3. **Main paths end to end in CI:** extend `scripts/ci-boot-smoke.js`, or add a sweep that GETs every parameterless API route as a new user and fails on any 5xx or logged error.
+   - The first local run on a from-scratch DB flagged 20 routes: `buddy-widget/recent`, `comeback/status`, `daily-brief`, `weekly-recap`, `buddy` and `evening` `/evening-data`, `ideas/my-notifications`, `money/spending-sessions/today`, `time-blocks/weekly-summary`, `v1/focus-sessions/next`, `v1/insights/stats` and `unlocks`, `v1/notifications/preferences` (`pool` undefined), and `v1/transactions/aggregate` (route order).
+   - Some of these are from-scratch-only drift, so check each against prod.
+4. **Retire legacy pages:** `buddy.html` (move the form check-in first), `app.html`, `home.html`, `portal.html`, `landing-old`.
+
+**Smaller items:**
+- **Admin SQL in routes:** `routes/promo-codes.js` and `routes/inbound-email.js` run their own admin lookup SQL. Switch them to `requireAdmin(pool)` from `lib/admin-access.js`.
+- **News sync** uses an in-process `setInterval` (`routes/news.js`). Move it to the commented-out `rss-sync` cron in `render.yaml`, or drop the feature.
+- **Capture, still to do:** bank-charge suggestions, i.e. a known recurring charge such as a gym or pharmacy suggests ticking the related task.
+- **Ideas discussed, not agreed:** show renewals and Bills in hours of work at the user's income rate; a risky-time spending nudge. The user noted purchases don't happen in the app, so these are reflection and planning views, not in-the-moment ones.
 
 ### UI consolidation plan (agreed with the user, 2026-10-11)
 Four places plus a Settings gear. One small PR per phase; old URLs keep working through redirects.
@@ -256,6 +257,7 @@ Four places plus a Settings gear. One small PR per phase; old URLs keep working 
 - **Shell:** never `pkill -f` a pattern that matches your own shell. Find the server by `/proc/<pid>/environ` containing `PORT=3999`.
 
 ## Recent changes
+- **2026-10-18:** #245 "Done ✓" on task pushes · #246 evening round-up · #247 AI JSON parsing (`parseAiJson`) and news-feed backoff · #248 a single `isAdminUser` · #249 this handoff.
 - **2026-10-12 to 10-17:**
   - #238 Claude Code helper agents (silent-failure, database, security reviewers) plus the `postgres-patterns` skill.
   - #239 and #240 silent-catch sweep and its CI guard; 3 dead queries fixed.
