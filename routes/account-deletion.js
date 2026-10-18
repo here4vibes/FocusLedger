@@ -12,14 +12,13 @@ const { sendEmail } = require('../lib/emailService');
 const { accountDeletionTemplate } = require('../lib/emailTemplates');
 const { getStripe } = require('../lib/stripe-client');
 const { cancelAllStripeSubscriptions } = require('../lib/billing');
-const { isAdminUser } = require('../lib/admin-access');
+const { requireAdmin } = require('../lib/admin-access');
 const {
   createDeletionToken,
   findValidToken,
   markTokenUsed,
   deleteUserCascade,
   getUserById,
-  getUserAdminInfo,
   cancelActiveSubscription
 } = require('../db/account-deletion');
 
@@ -30,19 +29,13 @@ module.exports = function(pool) {
   // ADMIN: DELETE /api/account-deletion/admin/:id
   // Hard-deletes a user and all their data. No email confirmation — admin is trusted.
   // =========================================================================
-  router.delete('/admin/:id', authenticateToken, async (req, res) => {
+  router.delete('/admin/:id', authenticateToken, requireAdmin(pool), async (req, res) => {
     try {
       const adminId = req.user.id;
       const targetId = parseInt(req.params.id, 10);
 
       if (isNaN(targetId)) {
         return res.status(400).json({ success: false, message: 'Invalid user ID' });
-      }
-
-      // Admin gate
-      const admin = await getUserAdminInfo(pool, adminId);
-      if (!admin || !isAdminUser(admin)) {
-        return res.status(403).json({ success: false, message: 'Admin access required' });
       }
 
       // Prevent admin deleting themselves
@@ -56,7 +49,7 @@ module.exports = function(pool) {
         return res.status(404).json({ success: false, message: 'User not found' });
       }
 
-      console.log(`[account-deletion] Admin ${admin.email} deleting user ${target.email} (id=${targetId})`);
+      console.log(`[account-deletion] Admin ${req.admin.email} deleting user ${target.email} (id=${targetId})`);
 
       await cancelActiveSubscription(pool, targetId);
       await deleteUserCascade(pool, targetId);

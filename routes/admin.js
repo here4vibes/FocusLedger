@@ -5,7 +5,7 @@ const { queryWithRetry } = require('../lib/queryWithRetry');
 const { getActivationFunnel } = require('../db/activation');
 const { sendEmail } = require('../lib/emailService');
 const { v2LaunchTemplate } = require('../lib/emailTemplates');
-const { isAdminUser } = require('../lib/admin-access');
+const { requireAdmin } = require('../lib/admin-access');
 
 // ============================================
 // Admin Access Control
@@ -19,8 +19,8 @@ const { isAdminUser } = require('../lib/admin-access');
 //           Parsed at startup; requires service restart after changes.
 //
 // A user is considered admin if EITHER layer matches.
-// All admin endpoints verify the requesting user through authenticateToken
-// (JWT) first, then check isAdminUser(). Non-admins receive 403.
+// All admin endpoints run authenticateToken (JWT) first, then
+// requireAdmin(pool) from lib/admin-access.js. Non-admins receive 403.
 //
 // The /admin/stats HTML page is served to anyone (static file), but all
 // API data endpoints return 403 for non-admins, rendering the page empty.
@@ -32,22 +32,13 @@ module.exports = function(pool) {
   // Shorthand: resilient query with retry + timeout for Neon wake cycles
   const q = (sql, params) => queryWithRetry(pool, sql, params);
 
-  // Shared admin gate for new routes (older routes inline the same check)
-  async function requireAdmin(req, res) {
-    const row = await q('SELECT is_admin, email FROM users WHERE id = $1', [req.user.id]);
-    const user = row.rows[0] || {};
-    if (!isAdminUser({ ...user, id: req.user.id })) {
-      res.status(403).json({ success: false, message: 'Admin access required' });
-      return null;
-    }
-    return { id: req.user.id, email: user.email };
-  }
+  // Every route: auth first, then the shared admin gate (DB row, fails closed).
+  const admin = [authenticateToken, requireAdmin(pool)];
 
   // GET /api/admin/activation — how far each new account gets (db/activation.js)
   // ?days=N limits to accounts created in the last N days (default: all).
-  router.get('/activation', authenticateToken, async (req, res) => {
+  router.get('/activation', admin, async (req, res) => {
     try {
-      if (!(await requireAdmin(req, res))) return;
       const days = req.query.days ? Math.min(Math.max(parseInt(req.query.days, 10) || 0, 1), 3650) : null;
       const funnel = await getActivationFunnel(pool, { days });
       res.json({ success: true, days, ...funnel });
@@ -58,24 +49,8 @@ module.exports = function(pool) {
   });
 
   // GET /api/admin/stats — aggregate user + subscription metrics
-  router.get('/stats', authenticateToken, async (req, res) => {
+  router.get('/stats', admin, async (req, res) => {
     try {
-      const userId = req.user.id;
-
-      // Admin gate
-      const userRow = await q('SELECT is_admin, email FROM users WHERE id = $1', [userId]);
-      const user = userRow.rows[0] || {};
-      const adminCheck = isAdminUser({ ...user, id: userId });
-      console.log('[Admin] Gate check:', {
-        userId,
-        isAdminFlag: user.is_admin,
-        result: adminCheck
-        // Note: ADMIN_EMAILS env var intentionally omitted from logs
-      });
-      if (!adminCheck) {
-        return res.status(403).json({ success: false, message: 'Admin access required' });
-      }
-
       // Run all metric queries in parallel
       const [
         totalUsersResult,
@@ -266,16 +241,10 @@ module.exports = function(pool) {
   });
 
   // GET /api/admin/users — list all users with subscription, admin, task, and login data
-  router.get('/users', authenticateToken, async (req, res) => {
+  router.get('/users', admin, async (req, res) => {
     try {
       const userId = req.user.id;
 
-      // Admin gate (same as stats)
-      const userRow = await q('SELECT is_admin, email FROM users WHERE id = $1', [userId]);
-      const user = userRow.rows[0] || {};
-      if (!isAdminUser({ ...user, id: userId })) {
-        return res.status(403).json({ success: false, message: 'Admin access required' });
-      }
 
       const result = await q(`
         SELECT
@@ -382,7 +351,7 @@ module.exports = function(pool) {
   });
 
   // PATCH /api/admin/users/:id/pro — grant or revoke admin Pro override
-  router.patch('/users/:id/pro', authenticateToken, async (req, res) => {
+  router.patch('/users/:id/pro', admin, async (req, res) => {
     try {
       const adminId = req.user.id;
       const { id } = req.params;
@@ -392,12 +361,6 @@ module.exports = function(pool) {
         return res.status(400).json({ success: false, message: '"grant" must be a boolean' });
       }
 
-      // Admin gate
-      const adminRow = await q('SELECT is_admin, email FROM users WHERE id = $1', [adminId]);
-      const admin = adminRow.rows[0] || {};
-      if (!isAdminUser({ ...admin, id: adminId })) {
-        return res.status(403).json({ success: false, message: 'Admin access required' });
-      }
 
       // Prevent admin from modifying themselves
       if (parseInt(id) === adminId) {
@@ -418,7 +381,7 @@ module.exports = function(pool) {
       const newOverride = grant;
       const target = targetRow.rows[0];
 
-      console.log(`[Admin] Pro override ${grant ? 'granted' : 'revoked'} for user ${target.email} (id=${id}) by admin ${admin.email}`);
+      console.log(`[Admin] Pro override ${grant ? 'granted' : 'revoked'} for user ${target.email} (id=${id}) by admin ${req.admin.email}`);
 
       res.json({
         success: true,
@@ -436,17 +399,10 @@ module.exports = function(pool) {
   });
 
   // GET /api/admin/users/:id/detail — tasks and expenses for a specific user
-  router.get('/users/:id/detail', authenticateToken, async (req, res) => {
+  router.get('/users/:id/detail', admin, async (req, res) => {
     try {
-      const adminId = req.user.id;
       const { id } = req.params;
 
-      // Admin gate
-      const adminRow = await q('SELECT is_admin, email FROM users WHERE id = $1', [adminId]);
-      const admin = adminRow.rows[0] || {};
-      if (!isAdminUser({ ...admin, id: adminId })) {
-        return res.status(403).json({ success: false, message: 'Admin access required' });
-      }
 
       // Verify target user exists
       const userRow = await q('SELECT id, email, created_at, COALESCE(timezone, $1) AS timezone FROM users WHERE id = $2', ['America/New_York', id]);
@@ -500,16 +456,9 @@ module.exports = function(pool) {
   });
 
   // POST /api/admin/query — run a read-only SELECT query
-  router.post('/query', authenticateToken, async (req, res) => {
+  router.post('/query', admin, async (req, res) => {
     try {
-      const adminId = req.user.id;
 
-      // Admin gate
-      const adminRow = await q('SELECT is_admin, email FROM users WHERE id = $1', [adminId]);
-      const admin = adminRow.rows[0] || {};
-      if (!isAdminUser({ ...admin, id: adminId })) {
-        return res.status(403).json({ success: false, message: 'Admin access required' });
-      }
 
       const { sql: rawSql } = req.body;
       if (!rawSql || typeof rawSql !== 'string') {
@@ -552,7 +501,7 @@ module.exports = function(pool) {
       const rows = result.rows;
       const columns = result.fields ? result.fields.map(f => f.name) : (rows.length > 0 ? Object.keys(rows[0]) : []);
 
-      console.log(`[Admin] Data Explorer query by ${admin.email}: ${normalized.slice(0, 120)}`);
+      console.log(`[Admin] Data Explorer query by ${req.admin.email}: ${normalized.slice(0, 120)}`);
 
       res.json({
         success: true,
@@ -569,7 +518,7 @@ module.exports = function(pool) {
   });
 
   // PATCH /api/admin/users/:id/role — grant or revoke admin access
-  router.patch('/users/:id/role', authenticateToken, async (req, res) => {
+  router.patch('/users/:id/role', admin, async (req, res) => {
     try {
       const adminId = req.user.id;
       const { id } = req.params;
@@ -579,12 +528,6 @@ module.exports = function(pool) {
         return res.status(400).json({ success: false, message: '"is_admin" must be a boolean' });
       }
 
-      // Admin gate
-      const adminRow = await q('SELECT is_admin, email FROM users WHERE id = $1', [adminId]);
-      const admin = adminRow.rows[0] || {};
-      if (!isAdminUser({ ...admin, id: adminId })) {
-        return res.status(403).json({ success: false, message: 'Admin access required' });
-      }
 
       // Prevent admin from revoking their own admin access (lockout protection)
       if (parseInt(id) === adminId && !grantAdmin) {
@@ -604,7 +547,7 @@ module.exports = function(pool) {
         [grantAdmin, id]
       );
 
-      console.log(`[Admin] Admin access ${grantAdmin ? 'granted to' : 'revoked from'} ${target.email} (id=${id}) by admin ${admin.email}`);
+      console.log(`[Admin] Admin access ${grantAdmin ? 'granted to' : 'revoked from'} ${target.email} (id=${id}) by admin ${req.admin.email}`);
 
       res.json({
         success: true,
@@ -624,16 +567,9 @@ module.exports = function(pool) {
   // POST /api/admin/send-v2-launch — one-shot v2 launch email to all real (non-QA) users.
   // Idempotent: skips users who already have a 'v2_launch' entry in email_log.
   // Admin-gated, async sequential with 300ms delay between sends to respect Resend limits.
-  router.post('/send-v2-launch', authenticateToken, async (req, res) => {
+  router.post('/send-v2-launch', admin, async (req, res) => {
     try {
-      const adminId = req.user.id;
 
-      // Admin gate
-      const adminRow = await q('SELECT is_admin, email FROM users WHERE id = $1', [adminId]);
-      const admin = adminRow.rows[0] || {};
-      if (!isAdminUser({ ...admin, id: adminId })) {
-        return res.status(403).json({ success: false, message: 'Admin access required' });
-      }
 
       // Fetch all non-QA users who haven't received the v2 launch email yet
       const usersResult = await q(`
@@ -695,9 +631,8 @@ module.exports = function(pool) {
   // ══════════════════════════════════════════════════════════════════════════
 
   // GET /api/admin/campaigns — list, newest first
-  router.get('/campaigns', authenticateToken, async (req, res) => {
+  router.get('/campaigns', admin, async (req, res) => {
     try {
-      if (!(await requireAdmin(req, res))) return;
       const { rows } = await q(
         `SELECT id, subject, body, audience, status, recipient_count,
                 sent_count, failed_count, created_at, sent_at
@@ -711,10 +646,8 @@ module.exports = function(pool) {
   });
 
   // POST /api/admin/campaigns — create or update a draft
-  router.post('/campaigns', authenticateToken, async (req, res) => {
+  router.post('/campaigns', admin, async (req, res) => {
     try {
-      const admin = await requireAdmin(req, res);
-      if (!admin) return;
       const { id, subject, body, audience } = req.body || {};
       if (!subject || !body) {
         return res.status(400).json({ success: false, message: 'subject and body are required' });
@@ -736,7 +669,7 @@ module.exports = function(pool) {
         const { rows } = await q(
           `INSERT INTO email_campaigns (subject, body, audience, created_by)
            VALUES ($1, $2, $3, $4) RETURNING *`,
-          [subject, body, aud, admin.id]
+          [subject, body, aud, req.admin.id]
         );
         row = rows[0];
       }
@@ -748,25 +681,23 @@ module.exports = function(pool) {
   });
 
   // POST /api/admin/campaigns/:id/test — send the draft to the ADMIN only
-  router.post('/campaigns/:id/test', authenticateToken, async (req, res) => {
+  router.post('/campaigns/:id/test', admin, async (req, res) => {
     try {
-      const admin = await requireAdmin(req, res);
-      if (!admin) return;
       const { rows } = await q('SELECT * FROM email_campaigns WHERE id = $1', [parseInt(req.params.id, 10)]);
       if (!rows.length) return res.status(404).json({ success: false, message: 'Campaign not found' });
       const c = rows[0];
 
       const { renderCampaign } = require('../lib/campaignEmail');
-      const nameRow = await q('SELECT name FROM users WHERE id = $1', [admin.id]);
+      const nameRow = await q('SELECT name FROM users WHERE id = $1', [req.admin.id]);
       const { subject, html, text } = renderCampaign({
         firstName: nameRow.rows[0]?.name, subject: `[TEST] ${c.subject}`, body: c.body,
       });
       const result = await sendEmail(pool, {
-        to: admin.email, subject, html, text,
-        templateType: `campaign_${c.id}_test`, userId: admin.id,
+        to: req.admin.email, subject, html, text,
+        templateType: `campaign_${c.id}_test`, userId: req.admin.id,
       });
       if (!result.success) return res.status(502).json({ success: false, message: `Send failed: ${result.error}` });
-      res.json({ success: true, message: `Test sent to ${admin.email}` });
+      res.json({ success: true, message: `Test sent to ${req.admin.email}` });
     } catch (err) {
       console.error('[Admin] campaign test error:', err.message);
       res.status(500).json({ success: false, message: 'Failed to send test' });
@@ -774,9 +705,8 @@ module.exports = function(pool) {
   });
 
   // GET /api/admin/campaigns/:id/recipients — count who WOULD receive it
-  router.get('/campaigns/:id/recipients', authenticateToken, async (req, res) => {
+  router.get('/campaigns/:id/recipients', admin, async (req, res) => {
     try {
-      if (!(await requireAdmin(req, res))) return;
       const cid = parseInt(req.params.id, 10);
       const { rows } = await q('SELECT audience FROM email_campaigns WHERE id = $1', [cid]);
       if (!rows.length) return res.status(404).json({ success: false, message: 'Campaign not found' });
@@ -804,9 +734,8 @@ module.exports = function(pool) {
   });
 
   // POST /api/admin/campaigns/:id/send — fire the campaign (background, throttled)
-  router.post('/campaigns/:id/send', authenticateToken, async (req, res) => {
+  router.post('/campaigns/:id/send', admin, async (req, res) => {
     try {
-      if (!(await requireAdmin(req, res))) return;
       const cid = parseInt(req.params.id, 10);
       const { rows } = await q('SELECT * FROM email_campaigns WHERE id = $1', [cid]);
       if (!rows.length) return res.status(404).json({ success: false, message: 'Campaign not found' });
@@ -866,16 +795,9 @@ module.exports = function(pool) {
 
   // GET /api/admin/subscriptions — all users with subscription data for Subscriptions tab
   // Read-only. Pulls from users + app_subscription; no Stripe API calls.
-  router.get('/subscriptions', authenticateToken, async (req, res) => {
+  router.get('/subscriptions', admin, async (req, res) => {
     try {
-      const adminId = req.user.id;
 
-      // Admin gate
-      const adminRow = await q('SELECT is_admin, email FROM users WHERE id = $1', [adminId]);
-      const admin = adminRow.rows[0] || {};
-      if (!isAdminUser({ ...admin, id: adminId })) {
-        return res.status(403).json({ success: false, message: 'Admin access required' });
-      }
 
       const result = await q(`
         SELECT
@@ -984,9 +906,8 @@ module.exports = function(pool) {
 
   // PATCH /api/admin/users/:id/qa — mark or unmark user as QA/test account
   // QA-flagged users are excluded from all automated retention emails.
-  router.patch('/users/:id/qa', authenticateToken, async (req, res) => {
+  router.patch('/users/:id/qa', admin, async (req, res) => {
     try {
-      const adminId = req.user.id;
       const { id } = req.params;
       const { is_qa } = req.body; // true = mark as QA, false = unmark
 
@@ -994,12 +915,6 @@ module.exports = function(pool) {
         return res.status(400).json({ success: false, message: '"is_qa" must be a boolean' });
       }
 
-      // Admin gate
-      const adminRow = await q('SELECT is_admin, email FROM users WHERE id = $1', [adminId]);
-      const admin = adminRow.rows[0] || {};
-      if (!isAdminUser({ ...admin, id: adminId })) {
-        return res.status(403).json({ success: false, message: 'Admin access required' });
-      }
 
       // Verify target user exists
       const targetRow = await q('SELECT id, email, is_qa_user FROM users WHERE id = $1', [id]);
@@ -1014,7 +929,7 @@ module.exports = function(pool) {
         [is_qa, id]
       );
 
-      console.log(`[Admin] QA flag ${is_qa ? 'set on' : 'cleared from'} user ${target.email} (id=${id}) by admin ${admin.email}`);
+      console.log(`[Admin] QA flag ${is_qa ? 'set on' : 'cleared from'} user ${target.email} (id=${id}) by admin ${req.admin.email}`);
 
       res.json({
         success: true,
@@ -1033,13 +948,8 @@ module.exports = function(pool) {
 
   // POST /api/admin/stripe-rename-product — one-shot: rename Stripe products from Pro → Autopilot
   // Admin-only. Uses STRIPE_SECRET_KEY from env. Safe to call multiple times (idempotent label update).
-  router.post('/stripe-rename-product', authenticateToken, async (req, res) => {
+  router.post('/stripe-rename-product', admin, async (req, res) => {
     try {
-      const adminRow = await q('SELECT is_admin, email FROM users WHERE id = $1', [req.user.id]);
-      const admin = adminRow.rows[0] || {};
-      if (!isAdminUser({ ...admin, id: req.user.id })) {
-        return res.status(403).json({ success: false, message: 'Admin access required' });
-      }
 
       const stripeKey = process.env.STRIPE_SECRET_KEY;
       if (!stripeKey) {

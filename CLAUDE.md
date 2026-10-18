@@ -119,7 +119,6 @@ The user asked to finish the big bug classes in about 4 sessions:
 4. **Retire legacy pages:** `app.html`, `home.html` and `landing-old` are gone (#251), and `buddy.html` in #256: the form check-in is `public/checkin-form.html` at `/app/checkin/form`. **Still to do:** `portal.html`, after #218 merges (it changes `/home` and `/portal`).
 
 **Smaller items:**
-- **Admin SQL in routes:** `routes/promo-codes.js` and `routes/inbound-email.js` run their own admin lookup SQL. Switch them to `requireAdmin(pool)` from `lib/admin-access.js`.
 - **News sync** uses an in-process `setInterval` (`routes/news.js`). Move it to the commented-out `rss-sync` cron in `render.yaml`, or drop the feature.
 - **Capture, still to do:** bank-charge suggestions, i.e. a known recurring charge such as a gym or pharmacy suggests ticking the related task.
 - **Ideas discussed, not agreed:** show renewals and Bills in hours of work at the user's income rate; a risky-time spending nudge. The user noted purchases don't happen in the app, so these are reflection and planning views, not in-the-moment ones.
@@ -207,7 +206,7 @@ Four places plus a Settings gear. One small PR per phase; old URLs keep working 
 - **Billing and admin:**
   - Billing: `lib/billing.js`, `db/billing.js`, `lib/stripe-client.js`.
   - OAuth callbacks: sign `state` with `lib/oauth-state.js` (`signUserState(purpose, userId)`), never put a login token in it. Google Calendar uses it; `routes/email.js` and `routes/auth.js` still have their own signers.
-  - Admin gate: `lib/admin-access.js` (`requireAdmin(pool)` middleware, judged from the DB row). It holds the only `isAdminUser`; import it, don't copy it.
+  - Admin gate: `lib/admin-access.js` (`requireAdmin(pool)` middleware after `authenticateToken`, judged from the DB row; sets `req.admin`). Every admin route uses it (`routes/analytics.js` still has its own lookup). It holds the only `isAdminUser`; import it, don't copy it.
   - Activation: `db/activation.js` and `GET /api/admin/activation`.
 - **Best-effort work:** use `.catch(logFailure('[Module]', 'op', { userId }, fallback))` from `lib/log-failure.js`. Never use `.catch(() => {})`.
 - **AI:** every AI call goes through `lib/claude-client.js` (`createMessage`/`complete`). Per-user daily budget: `lib/ai-budget.js` (Free 100 / Pro 500).
