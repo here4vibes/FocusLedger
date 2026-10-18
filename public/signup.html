@@ -363,6 +363,7 @@
         <p>FocusLedger &mdash; <a href="/terms">Terms of Service</a> &middot; <a href="/privacy">Privacy Policy</a></p>
     </div>
 
+    <script src="/js/pending-checkout.js"></script>
     <script>
     (function() {
         'use strict';
@@ -374,6 +375,15 @@
         var redirectParam = new URLSearchParams(window.location.search).get('redirect');
         var hasPendingShare = !!localStorage.getItem('fl_pending_share');
         var postAuthDest = (redirectParam === 'share' || hasPendingShare) ? '/share' : '/app/checkin';
+
+        // A paid-plan click while signed out lands here as ?plan=&billing=.
+        // Remember it (it survives the Google redirect) and go to checkout
+        // once the account exists; otherwise go to postAuthDest as usual.
+        if (window.PendingCheckout) PendingCheckout.remember(window.location.search);
+        function goNext(token) {
+            if (window.PendingCheckout) PendingCheckout.continueOr(token, postAuthDest);
+            else window.location.href = postAuthDest;
+        }
 
         // ── Handle Google OAuth callback ────────────────────────────────────────
         // After Google redirects back with google_token=..., store token and go to app
@@ -422,7 +432,7 @@
             // Straight into the app: the home-screen tip now comes after the
             // first check-in (checkin.html), once there's a reason to come back.
             // New signups wait a beat so the pixel's Lead request isn't cancelled.
-            setTimeout(function() { window.location.href = postAuthDest; }, googleNew ? 400 : 0);
+            setTimeout(function() { goNext(googleToken); }, googleNew ? 400 : 0);
             return;
         }
 
@@ -451,7 +461,7 @@
 
         // If already logged in, redirect to destination
         if (localStorage.getItem('fl_token')) {
-            window.location.href = postAuthDest;
+            goNext(localStorage.getItem('fl_token'));
             return;
         }
 
@@ -551,7 +561,7 @@
                     // Migrate demo session (fire-and-forget — never blocks signup)
                     migrateDemoSession(data.token);
                     // A beat for the pixel's Lead request before navigating away.
-                    setTimeout(function() { window.location.href = postAuthDest; }, 400);
+                    setTimeout(function() { goNext(data.token); }, 400);
                 } else {
                     showError(data.message || 'Couldn\'t create your account. Try again?');
                     submitBtn.disabled = false;
