@@ -29,6 +29,7 @@ const { isApnsConfigured, sendApnsNotification } = require('../lib/apns-sender')
 const { configureWebPush } = require('../lib/webpush');
 const { getPushTokens, deletePushToken } = require('../db/push-tokens');
 const { logFailure } = require('../lib/log-failure');
+const { singleTaskActions } = require('../lib/push-action-token');
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -129,8 +130,8 @@ async function run() {
         url: `/app/task/${task_id}`,
         tag: `fl-cold-start-${task_id}`,
         renotify: false,
-        actions: [{ action: 'focus', title: 'Start focus ⏱' }, { action: 'view', title: 'View' }],
-        actionUrls: { focus: `/app/focus/${task_id}`, view: `/app/task/${task_id}` },
+        // "Done ✓" for when it already happened; otherwise one tap into focus.
+        ...singleTaskActions(user_id, task_id, { action: 'focus', title: 'Start focus ⏱', url: `/app/focus/${task_id}` }),
       });
 
       // Web push

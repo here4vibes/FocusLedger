@@ -24,6 +24,8 @@ const { getUserLocalDate } = require('./lib/timezone');
 const { sendApnsNotification } = require('./lib/apns-sender');
 const { getPushTokens, deletePushToken } = require('./db/push-tokens');
 const { configureWebPush } = require('./lib/webpush');
+const { singleTaskActions } = require('./lib/push-action-token');
+const { logFailure } = require('./lib/log-failure');
 
 async function sendTaskDeadlineNudges(pool) {
   const { webpush, apnsEnabled, anyConfigured } = configureWebPush('task-deadline-nudge');
@@ -120,12 +122,14 @@ async function sendTaskDeadlineNudges(pool) {
         // stays a deliberate deep-work action into Focus Mode.
         const onlyTask = tasksToNotify.length === 1 ? tasksToNotify[0] : null;
         const notifUrl = onlyTask ? `/weightless?remind=${onlyTask.id}` : '/weightless';
-        const notifActions = onlyTask
-          ? [{ action: 'focus', title: 'Start focus ⏱' }, { action: 'view', title: 'Open' }]
+        // One task: "Done ✓" right on the notification (no app open needed),
+        // plus "Start focus". Tapping the body still opens the calm home.
+        const single = onlyTask
+          ? singleTaskActions(userId, onlyTask.id, { action: 'focus', title: 'Start focus ⏱', url: `/app/focus/${onlyTask.id}` })
           : null;
-        const notifActionUrls = onlyTask
-          ? { focus: `/app/focus/${onlyTask.id}`, view: `/weightless?remind=${onlyTask.id}` }
-          : null;
+        const notifActions = single ? single.actions : null;
+        const notifActionUrls = single ? single.actionUrls : null;
+        const notifActionTokens = single ? single.actionTokens : null;
         let sentCount = 0;
 
         // ── Web Push (VAPID) ──────────────────────────────────────────────
@@ -134,7 +138,7 @@ async function sendTaskDeadlineNudges(pool) {
           const payload = JSON.stringify({
             title: notifTitle, body, url: notifUrl,
             tag: 'fl-task-deadline', renotify: false,
-            ...(notifActions ? { actions: notifActions, actionUrls: notifActionUrls } : {})
+            ...(notifActions ? { actions: notifActions, actionUrls: notifActionUrls, actionTokens: notifActionTokens } : {})
           });
           const subscriptions = await getActiveSubscriptions(pool, userId);
           for (const row of subscriptions) {
@@ -145,7 +149,7 @@ async function sendTaskDeadlineNudges(pool) {
               sentCount++;
             } catch (sendErr) {
               if (sendErr.statusCode === 410 || sendErr.statusCode === 404) {
-                await deleteSubscriptionByEndpoint(pool, row.endpoint).catch(() => {});
+                await deleteSubscriptionByEndpoint(pool, row.endpoint).catch(logFailure('[TaskDeadlineNudge]', 'deleteSubscriptionByEndpoint', { userId }));
               } else {
                 console.warn('[TaskDeadlineNudge] Web push error for user', userId,
                   '| status:', sendErr.statusCode, '|', sendErr.message);
