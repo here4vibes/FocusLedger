@@ -12,6 +12,7 @@
  */
 
 const express = require('express');
+const { signUserState, verifyUserState } = require('../lib/oauth-state');
 const router  = express.Router();
 const { verifyToken } = require('../middleware/auth');
 
@@ -81,10 +82,9 @@ module.exports = function(pool) {
       return res.status(503).json({ success: false, message: 'Google OAuth not configured' });
     }
     const redirectUri = `${getOAuthBase(req)}/api/gcal/callback`;
-    const state = Buffer.from(JSON.stringify({
-      userId: req.userId,
-      token:  req.headers['authorization'].split(' ')[1],
-    })).toString('base64url');
+    // Signed, and never the user's login token: the state travels through
+    // Google and comes back in the callback URL.
+    const state = signUserState('gcal', req.userId);
 
     const url = new URL('https://accounts.google.com/o/oauth2/v2/auth');
     url.searchParams.set('client_id',     process.env.GOOGLE_CLIENT_ID);
@@ -105,12 +105,9 @@ module.exports = function(pool) {
       return res.redirect('/app/calendar?gcal=denied');
     }
 
-    let userId;
-    try {
-      const parsed = JSON.parse(Buffer.from(state, 'base64url').toString());
-      userId = parsed.userId;
-      if (!userId) throw new Error('no userId in state');
-    } catch { // silent-ok: malformed OAuth state from the query string
+    const userId = verifyUserState('gcal', state);
+    if (!userId) {
+      console.warn('[gcal] callback with an invalid or expired state');
       return res.redirect('/app/calendar?gcal=error');
     }
 

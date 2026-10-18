@@ -110,8 +110,9 @@ Node.js + Express · PostgreSQL (Neon) · Render deployment · Vanilla HTML/CSS/
 
 ### Next up: the bug-hunt plan (agreed with the user, 2026-10-18)
 The user asked to finish the big bug classes in about 4 sessions:
-1. **Schema audit:** compare every column the code uses with prod (`information_schema` through the Neon MCP), then fix the mismatches with migrations. Start with the GET-sweep hits below.
-2. ~~**Silent failures, part 3**~~ done: HIGH in #250, MEDIUM in this branch. `__tests__/no-silent-catches.test.js` now checks every catch body (blocks and `.catch()` handlers, root cron modules included): it must log, rethrow, forward or carry `// silent-ok: <reason>`.
+1. **Schema audit (done: #252 code fixes, #253 defaults migration).** The genesis migration was generated from prod's catalog, so a from-scratch DB reproduces prod; a SQL error locally is a prod bug.
+   - The 217 stale pending `plaid_transactions` (never removed because the "removed" webhook only deletes `is_confirmed = false`) are deleted once by migration `stale_pending_plaid` (user-approved 2026-10-18). 683 older posted rows still have `is_confirmed` NULL and stay out of the check-in.
+2. ~~**Silent failures, part 3**~~ done: HIGH in #250, MEDIUM in #255. `__tests__/no-silent-catches.test.js` now checks every catch body (blocks and `.catch()` handlers, root cron modules included): it must log, rethrow, forward or carry `// silent-ok: <reason>`.
 3. **Main paths end to end in CI:** the GET sweep is in CI (`scripts/ci-api-sweep.js`, `npm run test:sweep`, after `test:boot`). It GETs every parameterless `/api` route as a new user and fails on a 5xx (503 is OK) or a logged SQL/TypeError line. Its first run's 20 routes are fixed. The from-scratch schema is prod's, so a hit is a prod bug.
    - **Still to do:** POST/PATCH and `/:id` routes aren't swept. Known write-path drift: `db/spendingSessions.js` sets `spending_sessions.updated_at` (no such column); `feature_suggestions.reward_applied`/`reward_notified` are TEXT used as booleans (`routes/ideas.js` PATCH status); `routine_suggestions.created_routine_id` is a timestamptz.
 4. **Retire legacy pages:** `app.html`, `home.html` and `landing-old` are gone (#251). **Still to do:** `portal.html`, after #218 merges (it changes `/home` and `/portal`), and `buddy.html`, after moving the form check-in (`/app/checkin` → `/app/buddy?mode=form`).
@@ -191,7 +192,7 @@ Four places plus a Settings gear. One small PR per phase; old URLs keep working 
   - JSON columns that code writes text into (`tasks.description`, #225);
   - TEXT columns used as booleans (#218);
   - `buddy_checkins` has no `mood` (#229; check-ins store `energy_level`).
-  - Missing defaults: `routines.is_active` and `created_at` had none, so every routine was saved inactive (fixed in #242).
+  - Missing defaults: `routines.is_active` and `created_at` had none, so every routine was saved inactive (fixed in #242). #253 added about 30 more (tasks, plaid_transactions, partnerships, nudges…). **When you add an INSERT that omits a column, check that column has a default in prod.**
   - Counters stored as text, boolean or timestamp: `routine_streaks.current_streak`/`best_streak`, `routine_suggestions.presented_count`, `routines.day_of_week`, `task_substeps.step_order` and the `weekly_stats` counters (all fixed in #241). If you suspect another one, find it with a prod `information_schema.columns` query.
 - **Silent failures:** many routes catch DB errors, log them and return 200. Sentry captures every `console.error`. The CI boot smoke fails on any logged "column/relation … does not exist".
 - **Migrations run on every deploy** (`npm start` = `node migrate.js && node server.js`). A failed migration aborts the deploy and the old version keeps serving. Test risky migrations on a Neon branch.
@@ -204,6 +205,7 @@ Four places plus a Settings gear. One small PR per phase; old URLs keep working 
   - `/health` migration status: `lib/migration-manifest.js` and `db/migrations-status.js`.
 - **Billing and admin:**
   - Billing: `lib/billing.js`, `db/billing.js`, `lib/stripe-client.js`.
+  - OAuth callbacks: sign `state` with `lib/oauth-state.js` (`signUserState(purpose, userId)`), never put a login token in it. Google Calendar uses it; `routes/email.js` and `routes/auth.js` still have their own signers.
   - Admin gate: `lib/admin-access.js` (`requireAdmin(pool)` middleware, judged from the DB row). It holds the only `isAdminUser`; import it, don't copy it.
   - Activation: `db/activation.js` and `GET /api/admin/activation`.
 - **Best-effort work:** use `.catch(logFailure('[Module]', 'op', { userId }, fallback))` from `lib/log-failure.js`. Never use `.catch(() => {})`.
