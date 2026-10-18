@@ -157,7 +157,7 @@ describe('legacy POST /webhook', () => {
   });
 });
 
-describe('GET /activate → Settings redirect carries the real purchase (Meta Pixel)', () => {
+describe('GET /activate → /thanks redirect carries the real purchase (Meta Pixel)', () => {
   function qsOf(res) { return new URL('http://x' + res.headers.location).searchParams; }
 
   test('fast path (webhook won): Tandem annual → value 149.95, deduped by session', async () => {
@@ -165,6 +165,8 @@ describe('GET /activate → Settings redirect carries the real purchase (Meta Pi
     billingDb.getActivationSummary.mockResolvedValue({ billing_cycle: 'annual', tandem: true });
     const res = await request(app()).get('/api/subscription/activate?session_id=cs_live_abc');
     expect(res.status).toBe(302);
+    // Public page fires the Purchase; the Pixel never loads in the app.
+    expect(res.headers.location.startsWith('/thanks?')).toBe(true);
     const q = qsOf(res);
     expect(q.get('upgraded')).toBe('true');
     expect(q.get('plan')).toBe('tandem');

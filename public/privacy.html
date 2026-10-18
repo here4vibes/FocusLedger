@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- Draft updated October 18, 2026 by Claude for founder review; not legal advice. -->
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -315,8 +316,9 @@
                 <li><a href="#collect">What We Collect</a></li>
                 <li><a href="#storage">How We Store &amp; Protect Data</a></li>
                 <li><a href="#third-party">Third-Party Integrations</a></li>
+                <li><a href="#ai">AI Processing</a></li>
                 <li><a href="#rights">Your Rights</a></li>
-                <li><a href="#cookies">Cookies &amp; Sessions</a></li>
+                <li><a href="#cookies">Cookies, Analytics &amp; Ads</a></li>
                 <li><a href="#adhd">ADHD Data Sensitivity</a></li>
                 <li><a href="#retention">Data Retention</a></li>
                 <li><a href="#children">Children's Privacy</a></li>
@@ -328,7 +330,7 @@
         <!-- MAIN CONTENT -->
         <article class="legal-content">
             <h1>Privacy Policy</h1>
-            <p class="last-updated">Last updated: April 22, 2026</p>
+            <p class="last-updated">Last updated: October 18, 2026</p>
 
             <h2 id="overview">1. Overview</h2>
             <p>FocusLedger is built for people with ADHD who want to understand their money and manage their tasks in one place. We take your privacy seriously. This policy explains what data we collect, why we need it, how we protect it, and what rights you have.</p>
@@ -367,18 +369,33 @@
                         <td>Automated expense tracking for Autopilot users (via Plaid)</td>
                     </tr>
                     <tr>
+                        <td><strong>Check-ins, Buddy &amp; Journal</strong></td>
+                        <td>Check-in answers (energy, focus, evening recap), messages you send to Buddy and its replies, journal entries, brain dumps and ideas</td>
+                        <td>Daily planning, coaching, and the AI features you use (see <a href="#ai">AI Processing</a>)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Documents &amp; Photos</strong></td>
+                        <td>Files you upload to your Vault (and their details such as name, category, expiry), insurance policy details, and photos of receipts or notes you capture</td>
+                        <td>Life section storage, reminders before things expire, and turning photos into tasks or expenses</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Partner (Tandem) Data</strong></td>
+                        <td>Your partner link, and the tasks you choose to share with your partner</td>
+                        <td>Accountability partner features. Your partner sees only what you share.</td>
+                    </tr>
+                    <tr>
                         <td><strong>Email Data</strong></td>
                         <td>Email subject, sender, date, and body snippets for task detection (via read-only OAuth). We do NOT store full email content long-term.</td>
                         <td>Email-to-task linking (Autopilot feature)</td>
                     </tr>
                     <tr>
                         <td><strong>Usage Data</strong></td>
-                        <td>Pages visited, features used, timestamp (server logs)</td>
-                        <td>Product improvement, debugging, security</td>
+                        <td>Pages visited, features used, timestamps, error reports. How you found us (ad campaign tags, ad click IDs, the referring website's domain), saved to your account when you sign up. See <a href="#cookies">Cookies, Analytics &amp; Ads</a>.</td>
+                        <td>Product improvement, debugging, security, knowing which ads and channels work</td>
                     </tr>
                     <tr>
                         <td><strong>Device Info</strong></td>
-                        <td>Browser type, IP address, PWA install state</td>
+                        <td>Browser and device type, IP address, time zone, PWA install state, push notification tokens (if you turn on notifications)</td>
                         <td>Security, product improvement</td>
                     </tr>
                 </tbody>
@@ -388,8 +405,9 @@
 
             <h2 id="storage">3. How We Store &amp; Protect Data</h2>
             <p>All personal data is stored in a PostgreSQL database hosted on Neon (a fully managed PostgreSQL service by Neon Technologies). Data is encrypted at rest on Neon servers.</p>
-            <p><strong>OAuth tokens</strong> (bank connections via Plaid, email OAuth connections) are encrypted at rest using AES-256-GCM before being stored in our database. These tokens are only accessible to your own account and are never shared between users.</p>
-            <p><strong>Passwords</strong> are hashed using bcrypt with a cost factor of 12. We never store plaintext passwords.</p>
+            <p><strong>Access tokens</strong> for bank connections (Plaid) and email connections are encrypted at rest using AES-256-GCM before being stored in our database. These tokens are only accessible to your own account and are never shared between users.</p>
+            <p><strong>Passwords</strong> are salted and hashed using PBKDF2 (SHA-512, 100,000 iterations). We never store plaintext passwords. If you sign in with Google, we don't have a password for you at all.</p>
+            <p><strong>Uploaded documents</strong> are stored in S3-compatible cloud object storage (Cloudflare R2).</p>
             <p><strong>Data isolation:</strong> Each user can only access their own data. We enforce this at the application layer via authenticated session tokens.</p>
             <p>Data transit is protected by TLS 1.2+. We do not support outdated cipher suites.</p>
 
@@ -405,10 +423,10 @@
             </div>
 
             <h3>Plaid, Inc. (Bank &amp; Financial Data)</h3>
-            <p>FocusLedger uses <strong>Plaid</strong> to connect your bank and credit accounts. When you link a bank account (Autopilot feature), Plaid acts as a secure data intermediary between your financial institution and FocusLedger.</p>
+            <p>FocusLedger uses <strong>Plaid</strong> to connect your bank and credit accounts. When you link a bank account (Autopilot feature), Plaid acts as a secure data intermediary between your financial institution and FocusLedger. Access is <strong>read-only</strong>: we request transaction data only, and FocusLedger cannot move money or make payments.</p>
             <p><strong>What financial data FocusLedger receives via Plaid:</strong></p>
             <ul>
-                <li>Transaction amounts, dates, and merchant names</li>
+                <li>Transaction amounts, dates, and merchant names (up to 24 months of history when you first connect)</li>
                 <li>Account names and account types (checking, savings, credit)</li>
                 <li>Institution names (e.g., "Chase", "Bank of America")</li>
                 <li>Account balances (when available)</li>
@@ -434,7 +452,8 @@
                 <li>Stripe may retain transaction records per their legal obligations</li>
             </ul>
 
-            <h3>Google / Gmail (Email OAuth)</h3>
+            <h3>Google (Sign-in, Gmail and Calendar)</h3>
+            <p>If you sign in with Google, we receive your name, email address and basic profile from Google. If you connect Google Calendar, FocusLedger requests <strong>read-only</strong> access to your calendar to show your events alongside your tasks; you can disconnect it from Settings.</p>
             <p>When you connect Gmail via Google OAuth (Autopilot feature), FocusLedger requests <strong>read-only</strong> access to your inbox. We use this access to surface actionable emails as suggested tasks — we do not send email, modify your inbox, or access your contacts.</p>
             <p><strong>What FocusLedger accesses via Gmail:</strong></p>
             <ul>
@@ -446,7 +465,7 @@
                 <li>We do not store full email body content beyond the immediate session</li>
                 <li>We do not train AI models on your email content</li>
                 <li>We do not share email content with third parties</li>
-                <li>We do not access your Google Contacts or other Google services</li>
+                <li>We do not access your Google Contacts, or any Google service you haven't connected</li>
             </ul>
             <ul>
                 <li>Google's <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Privacy Policy</a> governs their data handling</li>
@@ -461,14 +480,41 @@
                 <li>You can revoke OAuth access from Settings or directly from your Microsoft/Yahoo account security settings</li>
             </ul>
 
-            <h2 id="rights">5. Your Rights</h2>
+            <h3>Anthropic (AI Processing)</h3>
+            <p>Our AI features run on Claude, made by <strong>Anthropic</strong>. See <a href="#ai">AI Processing</a> below for what is sent and why. Anthropic's <a href="https://www.anthropic.com/legal/privacy" target="_blank" rel="noopener">Privacy Policy</a> and commercial terms govern their handling.</p>
+
+            <h3>Meta (Advertising Measurement)</h3>
+            <p>We use the Meta Pixel to measure our Facebook and Instagram ads. See <a href="#cookies">Cookies, Analytics &amp; Ads</a> for exactly what it sends. Meta's <a href="https://www.facebook.com/privacy/policy/" target="_blank" rel="noopener">Privacy Policy</a> governs their handling.</p>
+
+            <h3>Service Providers That Help Run FocusLedger</h3>
+            <p>These companies process data on our behalf, only to run the service:</p>
+            <ul>
+                <li><strong>Render</strong> &mdash; hosts our servers and keeps server logs</li>
+                <li><strong>Neon</strong> &mdash; hosts our PostgreSQL database</li>
+                <li><strong>Cloudflare (R2)</strong> &mdash; stores documents you upload to your Vault</li>
+                <li><strong>Resend</strong> &mdash; sends our emails (your email address and the email content) and receives emails you send to us or forward into FocusLedger</li>
+                <li><strong>Sentry</strong> &mdash; collects error reports so we can fix bugs. Error reports can include technical details such as the page or feature involved and your user ID; we configure it not to send default personal data such as IP addresses or cookies.</li>
+                <li><strong>Push notification services</strong> &mdash; if you turn on notifications, your browser's push service (e.g. Google, Apple, Mozilla) or Apple Push Notification service delivers them</li>
+            </ul>
+
+            <h2 id="ai">5. AI Processing</h2>
+            <p>Several FocusLedger features use AI: Buddy (check-ins and coaching conversations), breaking tasks into steps, the "I'm stuck" flow, brain dumps, journal-to-task matching, photo capture of receipts and notes, document detail extraction, cancellation help for subscriptions, and personalized insights.</p>
+            <p>To provide these features, the relevant content is sent to <strong>Anthropic</strong> (the maker of Claude), our AI provider. Depending on the feature, that can include your task names and steps, check-in answers, Buddy messages, journal text, brain dumps, photos you capture, document details (such as file name and type), merchant names, and summaries of your spending and task activity. We send only what the feature needs, when you use it (or, for insights, on a daily schedule).</p>
+            <ul>
+                <li>Under Anthropic's commercial API terms, inputs are not used to train models.</li>
+                <li>We do not use any other AI provider.</li>
+                <li>We do not sell, share or use this content for advertising.</li>
+            </ul>
+            <p>AI output can be wrong. Treat Buddy's suggestions as suggestions, not financial, medical or legal advice.</p>
+
+            <h2 id="rights">6. Your Rights</h2>
             <p>You have complete control over your data. You can:</p>
 
             <h3>Export Your Data</h3>
             <p>Contact us at <a href="mailto:privacy@focusledger.net">privacy@focusledger.net</a> with "Data Export" in the subject line. We'll provide a full export of your tasks, expenses, and account data in JSON format within 30 days.</p>
 
             <h3>Delete Your Account</h3>
-            <p>Delete your account from the Settings page. This permanently removes all your personal data from FocusLedger within 30 days. Bank connections via Plaid are disconnected automatically.</p>
+            <p>Delete your account yourself from the Settings page. We email you a confirmation link (it expires after 24 hours and works once). When you click it, we cancel any active subscription with Stripe and then immediately and permanently delete your account and the data tied to it &mdash; tasks, expenses, bank connections and transactions, check-ins, journal, documents, and more. Your stored bank access tokens are deleted, so FocusLedger can no longer pull data from your bank. If we can't cancel your billing, we stop and don't delete anything, so you're never charged for an account that no longer exists.</p>
 
             <h3>Disconnect Linked Accounts</h3>
             <p>You can disconnect your bank account or email OAuth connection at any time from Settings. Revoking access through the provider (Google, Plaid, etc.) also severs the connection.</p>
@@ -479,46 +525,64 @@
             <h3>Opt Out of Non-Essential Communications</h3>
             <p>You can unsubscribe from marketing emails via the unsubscribe link in each email. Transactional emails (account security, billing) cannot be opted out of.</p>
 
-            <h3> lodge a Complaint</h3>
+            <h3>Lodge a Complaint</h3>
             <p>If you believe your privacy rights have been violated, you have the right to file a complaint with the relevant data protection authority in your jurisdiction. You can also contact us directly at <a href="mailto:privacy@focusledger.net">privacy@focusledger.net</a>.</p>
 
-            <h2 id="cookies">6. Cookies &amp; Sessions</h2>
-            <p>FocusLedger uses JWT (JSON Web Token) based sessions stored in browser localStorage (not traditional cookies). Here's what that means:</p>
+            <h2 id="cookies">7. Cookies, Analytics &amp; Ads</h2>
+            <h3>Keeping you signed in</h3>
             <ul>
-                <li><strong>Session token:</strong> A JWT stored in localStorage authenticates your requests to the API. It expires after 30 days of inactivity.</li>
-                <li><strong>No tracking cookies:</strong> We do not use tracking cookies, advertising cookies, or third-party analytics cookies.</li>
+                <li><strong>Session:</strong> When you sign in, we set a first-party, HttpOnly session cookie and store a sign-in token (JWT) in your browser's localStorage. Both expire after 30 days.</li>
                 <li><strong>Service Worker:</strong> Our PWA uses a Service Worker to cache app resources for offline functionality. It does not track you.</li>
-                <li><strong>Meta Pixel:</strong> We use Meta Pixel (Facebook) for advertising attribution only. It tracks page views and conversion events &mdash; not personal data beyond what Meta's own policies govern.</li>
             </ul>
-            <p>You can disable localStorage by clearing your browser data, but this will log you out of FocusLedger.</p>
 
-            <h2 id="adhd">7. ADHD Data Sensitivity</h2>
+            <h3>Our own analytics (first-party)</h3>
+            <p>We run our own lightweight analytics. It sends nothing to third parties and sets no cookies:</p>
+            <ul>
+                <li>A random visitor ID is stored in your browser's localStorage. Our server stores it only as a hash that changes every day, so we count daily visitors without following you from day to day.</li>
+                <li>We record which pages you view, the steps of signing up, and the features you use, plus your device type.</li>
+                <li><strong>How you found us:</strong> on your first visit from an ad or another website, we save ad campaign tags (UTM tags), ad click IDs (Facebook's <code>fbclid</code>, Google's <code>gclid</code>) and the referring website's domain only (never the full address) in localStorage for up to 90 days. If you sign up, we save this to your account so we know which ads and channels work.</li>
+            </ul>
+
+            <h3>Meta Pixel (advertising)</h3>
+            <p>We use the Meta (Facebook) Pixel to measure whether our ads work. It loads only on our public pages (home, pricing, sign-up, log-in, our story, science, changelog and the thank-you page shown right after a purchase), never on the pages you use after signing in. It sets Meta's <code>_fbp</code> cookie and sends Meta a <strong>PageView</strong> event when a page loads and a <strong>Lead</strong> event when you create an account, and a <strong>Purchase</strong> event (the plan name and price, nothing else) on the thank-you page after you subscribe. Like any web request, Meta also receives your IP address, browser details and the page address, and may connect this to your Facebook or Instagram account under Meta's own policies.</p>
+            <p>We do <strong>not</strong> send Meta your tasks, spending, bank data, check-ins, journal or any other content you put into FocusLedger, and we don't send your email address or name to Meta.</p>
+
+            <h3>Your choices</h3>
+            <ul>
+                <li>Block or delete cookies, or use an ad or tracker blocker, in your browser. FocusLedger still works without the Meta Pixel and without our analytics.</li>
+                <li>Control ad personalization in your <a href="https://accountscenter.facebook.com/ad_preferences" target="_blank" rel="noopener">Meta ad preferences</a>.</li>
+                <li>Clearing your browser's site data removes the visitor ID and saved attribution. It also logs you out of FocusLedger.</li>
+                <li>We don't currently respond to browser "Do Not Track" signals.</li>
+            </ul>
+
+            <h2 id="adhd">8. ADHD Data Sensitivity</h2>
             <p>We understand that the data in FocusLedger &mdash; your productivity patterns, task completion rates, spending behavior, financial history &mdash; is inherently personal and potentially sensitive, especially for people with ADHD who may have spent years navigating shame around these areas.</p>
             <p><strong>Our commitments:</strong></p>
             <ul>
                 <li><strong>Never sell your data.</strong> Your task data, financial data, or usage patterns will never be sold, licensed, or transferred to any third party for advertising, profiling, or data brokerage purposes.</li>
-                <li><strong>No advertising profiling.</strong> We do not use your productivity data or financial data to build advertising profiles or target you with ads anywhere.</li>
+                <li><strong>No advertising profiling.</strong> We do not use your productivity data or financial data to build advertising profiles or target you with ads anywhere. The Meta Pixel described above measures visits, sign-ups and purchases only; it never receives what you put into FocusLedger.</li>
                 <li><strong>No secondary use.</strong> Data you enter into FocusLedger is used only to provide the FocusLedger service to you.</li>
                 <li><strong>No third-party analytics sold to others.</strong> Our analytics data is for internal product improvement only.</li>
             </ul>
             <p>If this changes in any way, we will notify you by email at least 30 days before the change takes effect.</p>
 
-            <h2 id="retention">8. Data Retention</h2>
+            <h2 id="retention">9. Data Retention</h2>
             <p>We retain your data for as long as your account is active, plus a grace period:</p>
             <ul>
                 <li><strong>Active accounts:</strong> Data retained indefinitely while you use the service.</li>
-                <li><strong>Deleted accounts:</strong> All personal data deleted within 30 days of account deletion request.</li>
-                <li><strong>Bank transactions:</strong> Transaction data retained for 24 months after sync. Older transactions are purged.</li>
-                <li><strong>Server logs:</strong> Retained for 90 days maximum, then purged.</li>
+                <li><strong>Deleted accounts:</strong> Your account data is deleted from our database as soon as you confirm deletion. Our database provider keeps a 6-hour restore window and we keep no other database backups, so deleted data is unrecoverable from our systems after 6 hours. Copies held by other service providers expire on their own schedules.</li>
+                <li><strong>Bank transactions:</strong> Retained while your account is active so we can spot recurring bills and subscriptions, and deleted when you delete your account.</li>
+                <li><strong>Attribution data:</strong> Kept in your browser for up to 90 days if you don't sign up.</li>
+                <li><strong>Server logs:</strong> Kept by our host for 7 days, then purged. Error reports sent to Sentry are kept for up to 90 days.</li>
                 <li><strong>Marketing emails:</strong> If you delete your account, you are unsubscribed from all marketing emails immediately.</li>
             </ul>
             <p>We may retain aggregated, anonymized data indefinitely for product improvement purposes. This data cannot be linked back to you.</p>
 
-            <h2 id="children">9. Children's Privacy</h2>
+            <h2 id="children">10. Children's Privacy</h2>
             <p>FocusLedger is not designed for or directed at children under 13. We do not knowingly collect personal information from anyone under 13 years of age.</p>
             <p>If we learn that we have collected personal information from a child under 13, we will take immediate steps to delete that data. If you are a parent or guardian and believe your child has provided us with personal information, contact us at <a href="mailto:privacy@focusledger.net">privacy@focusledger.net</a> with "Children's Data" in the subject line.</p>
 
-            <h2 id="changes">10. Changes to This Policy</h2>
+            <h2 id="changes">11. Changes to This Policy</h2>
             <p>We may update this Privacy Policy from time to time. When we make changes:</p>
             <ul>
                 <li>We update the "Last updated" date at the top of this page</li>
@@ -527,7 +591,7 @@
             </ul>
             <p>Continued use of FocusLedger after changes constitutes acceptance of the updated policy.</p>
 
-            <h2 id="contact">11. Contact</h2>
+            <h2 id="contact">12. Contact</h2>
             <p>Questions, concerns, or requests about your data? We're here:</p>
             <p><strong>Email:</strong> <a href="mailto:privacy@focusledger.net">privacy@focusledger.net</a><br>
             <strong>Company:</strong> FocusLedger<br>
