@@ -81,3 +81,6 @@ jobs:
 
       - name: GET every parameterless /api route as a signed-in user
         run: npm run test:sweep
+
+      - name: Drive the main write flows as a new user
+        run: npm run test:flows

@@ -656,21 +656,27 @@
         el('actionBar').style.display = 'none';
         el('kbHint').style.display = 'none';
 
-        apiFetch('/api/spending-sessions/today')
+        apiFetch('/api/v1/spending-sessions/today')
             .then(function(r) { return r.json(); })
             .then(function(data) {
                 if (!data.success) throw new Error('API error');
                 return data;
             })
             .then(function(data) {
-                if (!data.session) {
-                    return apiFetch('/api/spending-sessions/start', { method: 'POST' })
-                        .then(function(r) { return r.json(); });
-                }
-                return data;
+                // /today answers { session: null } before today's session exists,
+                // and the session's fields (no `session` key) once it does.
+                if (data.session_id) return data;
+                // /start returns only the id, so read today's transactions after it.
+                return apiFetch('/api/v1/spending-sessions/start', { method: 'POST' })
+                    .then(function(r) { return r.json(); })
+                    .then(function() { return apiFetch('/api/v1/spending-sessions/today'); })
+                    .then(function(r) { return r.json(); });
             })
             .then(function(data) {
                 if (data.session_id) sessionId = data.session_id;
+                (data.classifications || []).forEach(function(c) {
+                    classifications[c.transaction_id] = c.classification;
+                });
                 transactions = (data.transactions || []).filter(function(t) {
                     return !classifications[t.id];
                 });
@@ -960,7 +966,7 @@
 
     function postClassification(txnId, classification) {
         if (!sessionId) return;
-        apiFetch('/api/spending-sessions/' + sessionId + '/classify', {
+        apiFetch('/api/v1/spending-sessions/' + sessionId + '/classify', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ transaction_id: txnId, classification: classification })
@@ -1030,7 +1036,7 @@
 
         // Mark session complete
         if (sessionId) {
-            apiFetch('/api/spending-sessions/' + sessionId + '/complete', {
+            apiFetch('/api/v1/spending-sessions/' + sessionId + '/complete', {
                 method: 'POST'
             }).catch(function() {});
         }
