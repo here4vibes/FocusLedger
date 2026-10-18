@@ -507,6 +507,14 @@ async function main() {
       expect(ed.tasksCompletedToday >= 1, `${route} tasksCompletedToday=${ed.tasksCompletedToday}`);
     }
     await call('POST', '/api/evening/evening', 200, { token, body: { date: today, energy_level: 3 } });
+    // The Buddy bubble and the insights card read "today"/"this week" in the user's zone too
+    const ctx = await call('GET', '/api/buddy-widget/context', 200, { token });
+    expect(ctx.morningCheckinDone === true && ctx.eveningCheckinDone === true,
+      `/api/buddy-widget/context check-ins: morning=${ctx.morningCheckinDone} evening=${ctx.eveningCheckinDone}`);
+    const badge = await call('GET', '/api/buddy-widget/notification-count', 200, { token });
+    expect(badge.eveningReady === false, `/api/buddy-widget/notification-count eveningReady=${badge.eveningReady}, expected false`);
+    const ins = await call('GET', '/api/v1/insights/stats', 200, { token });
+    expect(ins.weekly && ins.weekly.tasks_completed >= 1, `/api/v1/insights/stats weekly.tasks_completed=${ins.weekly && ins.weekly.tasks_completed}`);
   });
 
   await flow('focus session: start → complete → recent', async () => {

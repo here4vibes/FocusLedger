@@ -6,9 +6,12 @@ const express = require('express');
 const rateLimit = require('express-rate-limit');
 const { captureLeadEmail, getLeads, getLeadsCount, getUnconvertedLeads } = require('../db/lead-magnets');
 const { authenticateToken } = require('../middleware/auth');
-const { isAdminUser } = require('../lib/admin-access');
+const { requireAdmin } = require('../lib/admin-access');
 
 module.exports = function (pool) {
+  // Admin routes: auth first, then the shared gate (DB row, fails closed)
+  const admin = [authenticateToken, requireAdmin(pool)];
+
   // ── Public router: /api/leads/* ────────────────────────────────────────────
   const publicRouter = express.Router();
 
@@ -57,19 +60,8 @@ module.exports = function (pool) {
 
   // GET /api/admin/leads — admin-only: retrieve captured leads with optional filtering.
   // Query params: ?type=science_cheat_sheet|daily_three&limit=100&offset=0
-  adminRouter.get('/', authenticateToken, async (req, res) => {
+  adminRouter.get('/', admin, async (req, res) => {
     try {
-      const userId = req.user.id;
-
-      // Admin gate (matches pattern used in routes/admin.js and routes/promo-codes.js)
-      const adminCheck = await pool.query(
-        'SELECT is_admin, email FROM users WHERE id = $1',
-        [userId]
-      );
-      if (!adminCheck.rows[0] || !isAdminUser(adminCheck.rows[0])) {
-        return res.status(403).json({ success: false, message: 'Admin access required.' });
-      }
-
       const validTypes = ['science_cheat_sheet', 'daily_three'];
       const { type, limit = '100', offset = '0' } = req.query;
       const leadMagnetType = type && validTypes.includes(type) ? type : null;
@@ -89,18 +81,8 @@ module.exports = function (pool) {
 
   // GET /api/admin/leads/unconverted — admin-only: leads with no matching user account.
   // Returns summary stats (total/counts/rate) + unconverted rows sorted by most recent.
-  adminRouter.get('/unconverted', authenticateToken, async (req, res) => {
+  adminRouter.get('/unconverted', admin, async (req, res) => {
     try {
-      const userId = req.user.id;
-
-      const adminCheck = await pool.query(
-        'SELECT is_admin, email FROM users WHERE id = $1',
-        [userId]
-      );
-      if (!adminCheck.rows[0] || !isAdminUser(adminCheck.rows[0])) {
-        return res.status(403).json({ success: false, message: 'Admin access required.' });
-      }
-
       const { limit = '200', offset = '0' } = req.query;
       const parsedLimit = Math.min(parseInt(limit, 10) || 200, 500);
       const parsedOffset = parseInt(offset, 10) || 0;

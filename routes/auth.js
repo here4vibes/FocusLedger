@@ -1,5 +1,6 @@
 const express = require('express');
 const crypto = require('crypto');
+const { signPayload, verifyPayload } = require('../lib/oauth-state');
 const { authenticateToken, generateToken, hashPassword, verifyPassword, establishSession } = require('../middleware/auth');
 const { sendEmail } = require('../lib/emailService');
 const { welcomeTemplate, passwordResetTemplate, passwordResetGoogleOnlyTemplate } = require('../lib/emailTemplates');
@@ -28,7 +29,6 @@ const isGoogleAuthConfigured = () => !!(GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET
 // ============================================================
 // State signing — prevents CSRF on OAuth callback
 // ============================================================
-const STATE_SECRET = process.env.JWT_SECRET || 'focusledger-auth-state';
 
 // Trusted hosts for post-OAuth redirect — prevents open redirect
 const TRUSTED_REDIRECT_HOSTS = new Set([
@@ -42,29 +42,21 @@ if (process.env.ALLOWED_ORIGIN) {
   try { TRUSTED_REDIRECT_HOSTS.add(new URL(process.env.ALLOWED_ORIGIN).host); } catch (e) { console.error('[Auth] ALLOWED_ORIGIN is not a valid URL:', e.message); }
 }
 
-// State format: {returnTo}~{host}~{ts}~{sig}  (~ avoids colon clash with localhost:port)
+// Signed with lib/oauth-state.js (purpose-bound HMAC, constant-time, 10 min,
+// no fallback secret). returnTo is only ever the login or signup page, and the
+// host must be a trusted one, checked on both ends.
+const STATE_PURPOSE = 'google-signin';
+const RETURN_PAGES = new Set(['login', 'signup']);
+
 function signState(returnTo, host) {
-  const ts = Date.now();
-  const data = `${returnTo}~${host}~${ts}`;
-  const sig = crypto.createHmac('sha256', STATE_SECRET).update(data).digest('hex').slice(0, 16);
-  return Buffer.from(`${data}~${sig}`).toString('base64url');
+  return signPayload(STATE_PURPOSE, { returnTo, host });
 }
 
 function verifyState(state) {
-  try {
-    const raw = Buffer.from(state, 'base64url').toString();
-    const parts = raw.split('~');
-    if (parts.length !== 4) return null;
-    const [returnTo, host, ts, sig] = parts;
-    if (Date.now() - Number(ts) > 600000) return null;
-    const expected = crypto.createHmac('sha256', STATE_SECRET)
-      .update(`${returnTo}~${host}~${ts}`).digest('hex').slice(0, 16);
-    if (sig !== expected) return null;
-    const safeHost = TRUSTED_REDIRECT_HOSTS.has(host) ? host : 'focusledger.net';
-    return { returnTo, host: safeHost };
-  } catch { // silent-ok: malformed OAuth state from the query string; caller rejects it
-    return null;
-  }
+  const d = verifyPayload(STATE_PURPOSE, state);
+  if (!d || !RETURN_PAGES.has(d.returnTo)) return null;
+  const safeHost = TRUSTED_REDIRECT_HOSTS.has(d.host) ? d.host : 'focusledger.net';
+  return { returnTo: d.returnTo, host: safeHost };
 }
 
 // ============================================================
@@ -359,8 +351,14 @@ module.exports = function(pool, loginLimiter, signupLimiter) {
     }
 
     const returnTo = (req.query.return_to === 'signup') ? 'signup' : 'login';
-    const host = req.headers.host || 'focusledger.net';
-    const state = signState(returnTo, host);
+    const host = TRUSTED_REDIRECT_HOSTS.has(req.headers.host) ? req.headers.host : 'focusledger.net';
+    let state;
+    try {
+      state = signState(returnTo, host);
+    } catch (e) {
+      console.error('[auth/google] cannot sign OAuth state:', e.message);
+      return res.status(503).json({ success: false, message: 'Google sign-in is not configured. Please use email and password.' });
+    }
 
     const url = new URL('https://accounts.google.com/o/oauth2/v2/auth');
     url.searchParams.set('client_id',     GOOGLE_CLIENT_ID);

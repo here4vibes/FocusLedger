@@ -3,6 +3,7 @@
 const express = require('express');
 const { authenticateToken } = require('../middleware/auth');
 const { getComebackStatus, markComebackShown } = require('../db/comeback');
+const { fetchUserLocalDate } = require('../lib/timezone');
 
 module.exports = function(pool) {
   const router = express.Router();
@@ -12,7 +13,7 @@ module.exports = function(pool) {
   // Called on app load to check if a "welcome back" modal should appear.
   router.get('/status', authenticateToken, async (req, res) => {
     try {
-      const status = await getComebackStatus(pool, req.user.id);
+      const status = await getComebackStatus(pool, req.user.id, await fetchUserLocalDate(pool, req.user.id));
       res.json({ success: true, ...status });
     } catch (err) {
       console.error('[comeback/status] Error:', err.message);

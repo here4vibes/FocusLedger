@@ -409,7 +409,7 @@ module.exports = function(pool) {
           [userId, today]
         ),
         // Only fetch partner context on first turn to avoid repeated DB queries per turn
-        buildPartnerContext(pool, userId, today).catch(logFailure('[buddy]', 'buildPartnerContext', { userId }, null)),
+        buildPartnerContext(pool, userId, today, tz).catch(logFailure('[buddy]', 'buildPartnerContext', { userId }, null)),
       ]);
       const history = histResult.rows;
       const activeTasks = activeTasksResult.rows;
@@ -610,7 +610,7 @@ module.exports = function(pool) {
 
         // Archive conversation to Journal as a readable entry.
         // Non-blocking — journal archiving never fails the check-in response.
-        archiveBuddyConversationToJournal(pool, userId, today, allUserMsgs, detectedMood, buddyReply).catch(archErr => {
+        archiveBuddyConversationToJournal(pool, userId, today, tz, allUserMsgs, detectedMood, buddyReply).catch(archErr => {
           console.error('[buddy] journal archive error:', archErr.message);
         });
       }
@@ -2125,15 +2125,16 @@ Return ONLY valid JSON in this exact format:
 // Saves a clean narrative summary of a completed check-in to journal_entries.
 // Entry is readable on its own — written for humans, not machines.
 // Skips silently if a journal entry already exists for this user+date to avoid dupes.
-async function archiveBuddyConversationToJournal(pool, userId, dateStr, userMessages, mood, buddyLastReply) {
-  // Don't create a second archive if one was already made today
+async function archiveBuddyConversationToJournal(pool, userId, dateStr, tz, userMessages, mood, buddyLastReply) {
+  // Don't create a second archive if one was already made today (the user's
+  // local day: created_at::date is UTC, so an evening check-in looked like tomorrow's)
   const existing = await pool.query(
     `SELECT id FROM journal_entries
      WHERE user_id = $1
        AND entry_type = 'buddy_checkin'
-       AND created_at::date = $2::date
+       AND (created_at AT TIME ZONE $3)::date = $2::date
      LIMIT 1`,
-    [userId, dateStr]
+    [userId, dateStr, tz]
   );
   if (existing.rows.length > 0) return;
 
@@ -2177,7 +2178,7 @@ async function archiveBuddyConversationToJournal(pool, userId, dateStr, userMess
 //
 // Returns: { partnerName, sharedOverdue, sharedDoneToday, concernTopics }
 // or null if Tandem not applicable for this user.
-async function buildPartnerContext(pool, userId, today) {
+async function buildPartnerContext(pool, userId, today, tz) {
   try {
     // Check Tandem access — only inject partner context if access is active
     const access = await checkTandemAccess(pool, userId);
@@ -2205,9 +2206,9 @@ async function buildPartnerContext(pool, userId, today) {
         SELECT COUNT(*) AS count FROM tasks
         WHERE user_id = $1
           AND is_completed = true
-          AND completed_at::date = $2::date
+          AND (completed_at AT TIME ZONE $3)::date = $2::date
           AND (is_household = true OR is_shared_with_partner = true)
-      `, [partnerId, today]),
+      `, [partnerId, today, tz]),
 
       pool.query(`
         SELECT COUNT(*) AS count FROM tasks

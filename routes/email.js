@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const crypto = require('crypto');
+const { signUserState, verifyUserState } = require('../lib/oauth-state');
 const { authenticateToken } = require('../middleware/auth');
 const { checkProStatus } = require('../middleware/proUtils');
 
@@ -127,29 +128,18 @@ function decryptToken(ciphertext) {
 }
 
 // ============================================================
-// OAuth state signing — ties callback to the initiating user
+// OAuth state — ties the callback to the initiating user. Purpose-bound HMAC,
+// constant-time check, 10-minute expiry, no fallback secret (lib/oauth-state.js).
 // ============================================================
-const STATE_SECRET = process.env.JWT_SECRET || 'focusledger-email-state';
+const STATE_PURPOSE = { gmail: 'email-gmail', outlook: 'email-outlook', yahoo: 'email-yahoo' };
 
-function signState(userId) {
-  const payload = `${userId}:${Date.now()}`;
-  const sig = crypto.createHmac('sha256', STATE_SECRET).update(payload).digest('hex').slice(0, 16);
-  return Buffer.from(`${payload}:${sig}`).toString('base64url');
-}
-
-function verifyState(state) {
+/** Signs the state, or answers 503 and returns null when it can't (no JWT_SECRET). */
+function startState(provider, userId, res) {
   try {
-    const raw = Buffer.from(state, 'base64url').toString();
-    const parts = raw.split(':');
-    if (parts.length !== 3) return null;
-    const [userId, ts, sig] = parts;
-    // State expires after 10 minutes
-    if (Date.now() - Number(ts) > 600000) return null;
-    const expected = crypto.createHmac('sha256', STATE_SECRET)
-      .update(`${userId}:${ts}`).digest('hex').slice(0, 16);
-    if (sig !== expected) return null;
-    return Number(userId);
-  } catch { // silent-ok: malformed OAuth state from the query string; caller rejects it
+    return signUserState(STATE_PURPOSE[provider], userId);
+  } catch (e) {
+    console.error('[email] cannot sign OAuth state:', e.message, '| provider:', provider, '| userId:', userId);
+    res.status(503).json({ success: false, message: 'Email connect is not configured' });
     return null;
   }
 }
@@ -595,7 +585,8 @@ module.exports = function(pool) {
       return res.status(403).json({ success: false, message: 'Pro required' });
     }
 
-    const state = signState(req.user.id);
+    const state = startState('gmail', req.user.id, res);
+    if (!state) return;
     const url = new URL('https://accounts.google.com/o/oauth2/v2/auth');
     url.searchParams.set('client_id', GOOGLE_CLIENT_ID);
     url.searchParams.set('redirect_uri', GOOGLE_REDIRECT_URI);
@@ -622,7 +613,7 @@ module.exports = function(pool) {
       return res.redirect('/email?error=invalid_callback');
     }
 
-    const userId = verifyState(state);
+    const userId = verifyUserState(STATE_PURPOSE.gmail, state);
     if (!userId) {
       return res.redirect('/email?error=invalid_state');
     }
@@ -1326,7 +1317,8 @@ module.exports = function(pool) {
       return res.status(403).json({ success: false, message: 'Pro required' });
     }
 
-    const state = signState(req.user.id);
+    const state = startState('outlook', req.user.id, res);
+    if (!state) return;
     const url = new URL('https://login.microsoftonline.com/common/oauth2/v2.0/authorize');
     url.searchParams.set('client_id',     MS_CLIENT_ID);
     url.searchParams.set('redirect_uri',  MS_REDIRECT_URI);
@@ -1352,7 +1344,7 @@ module.exports = function(pool) {
       return res.redirect('/email?error=invalid_callback');
     }
 
-    const userId = verifyState(state);
+    const userId = verifyUserState(STATE_PURPOSE.outlook, state);
     if (!userId) {
       return res.redirect('/email?error=invalid_state');
     }
@@ -1488,7 +1480,8 @@ module.exports = function(pool) {
       return res.status(403).json({ success: false, message: 'Pro required' });
     }
 
-    const state = signState(req.user.id);
+    const state = startState('yahoo', req.user.id, res);
+    if (!state) return;
     const url = new URL('https://api.login.yahoo.com/oauth2/request_auth');
     url.searchParams.set('client_id',     YAHOO_CLIENT_ID);
     url.searchParams.set('redirect_uri',  YAHOO_REDIRECT_URI);
@@ -1511,7 +1504,7 @@ module.exports = function(pool) {
       return res.redirect('/email?error=invalid_callback');
     }
 
-    const userId = verifyState(state);
+    const userId = verifyUserState(STATE_PURPOSE.yahoo, state);
     if (!userId) {
       return res.redirect('/email?error=invalid_state');
     }

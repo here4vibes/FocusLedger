@@ -70,8 +70,8 @@ async function sendWeeklyNudges(pool) {
         pool.query(
           `SELECT COUNT(*) FROM tasks
            WHERE user_id = $1 AND is_completed = false
-             AND due_date >= CURRENT_DATE AND due_date < CURRENT_DATE + INTERVAL '7 days'`,
-          [user.id]
+             AND due_date >= $2::date AND due_date < $2::date + INTERVAL '7 days'`,
+          [user.id, localDate]
         ),
         pool.query(
           `SELECT COUNT(*) FROM tasks

@@ -14,6 +14,7 @@ const {
   check_and_unlock_insights,
 } = require('../services/InsightsService');
 const { markViewed, markInteracted } = require('../db/insights');
+const { fetchUserTimezone } = require('../lib/timezone');
 
 module.exports = function InsightsRouter(pool) {
   const router = express.Router();
@@ -48,12 +49,13 @@ module.exports = function InsightsRouter(pool) {
       // Evaluate and upsert any newly-unlocked insights before returning status
       await check_and_unlock_insights(pool, userId);
       const status = await get_insight_unlock_status(pool, userId);
+      const tz = await fetchUserTimezone(pool, userId);
 
       // Compute current_value for each insight (used for progress bar fill on locked cards)
       const [txnResult, daysResult, taskResult, eveningResult] = await Promise.all([
         pool.query('SELECT COUNT(*) as cnt FROM transactions WHERE user_id = $1', [userId]),
         pool.query('SELECT COUNT(DISTINCT date) as days FROM transactions WHERE user_id = $1', [userId]),
-        pool.query('SELECT COUNT(DISTINCT completed_at::date) as days FROM tasks WHERE user_id = $1 AND completed_at IS NOT NULL', [userId]),
+        pool.query('SELECT COUNT(DISTINCT (completed_at AT TIME ZONE $2)::date) as days FROM tasks WHERE user_id = $1 AND completed_at IS NOT NULL', [userId, tz]),
         pool.query('SELECT COUNT(*) as cnt FROM buddy_checkins WHERE user_id = $1 AND checkin_type = $2', [userId, 'evening']),
       ]);
 
