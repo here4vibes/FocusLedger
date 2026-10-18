@@ -41,7 +41,6 @@ These rules keep the app stable, discoverable, and maintainable. They are **auto
 
 **Current Status:** Bottom nav is hardcoded in:
 - `public/app.html` (lines 8629–8661)
-- `public/buddy.html`
 - `public/portal.html`
 - `public/settings.html`
 - `public/ideas.html`

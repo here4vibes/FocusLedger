@@ -114,7 +114,7 @@ The user asked to finish the big bug classes in about 4 sessions:
 2. **Silent failures, part 3:** catches that return a fallback without logging. A scan found 105: 39 HIGH, 31 MEDIUM, 35 intentional. **HIGH is done (#250),** and the guard now also catches `.catch(() => ({ … }))`. **Still to do:** the 31 MEDIUM (AI suggestion fallbacks in `tasks-prisma.js`, `health-score.js` pillars, `lib/timezone.js` DB fallback, push config, `/health` 503), then an AST guard (acorn) with `// silent-ok: <reason>` markers that also scans the root cron files.
 3. **Main paths end to end in CI:** the GET sweep is in CI (`scripts/ci-api-sweep.js`, `npm run test:sweep`, after `test:boot`). It GETs every parameterless `/api` route as a new user and fails on a 5xx (503 is OK) or a logged SQL/TypeError line. Its first run's 20 routes are fixed. The from-scratch schema is prod's, so a hit is a prod bug.
    - **Still to do:** POST/PATCH and `/:id` routes aren't swept. Known write-path drift: `db/spendingSessions.js` sets `spending_sessions.updated_at` (no such column); `feature_suggestions.reward_applied`/`reward_notified` are TEXT used as booleans (`routes/ideas.js` PATCH status); `routine_suggestions.created_routine_id` is a timestamptz.
-4. **Retire legacy pages:** `app.html`, `home.html` and `landing-old` are gone (#251). **Still to do:** `portal.html`, after #218 merges (it changes `/home` and `/portal`), and `buddy.html`, after moving the form check-in (`/app/checkin` → `/app/buddy?mode=form`).
+4. **Retire legacy pages:** `app.html`, `home.html` and `landing-old` are gone (#251). `buddy.html` is retired too: the form check-in is `public/checkin-form.html` at `/app/checkin/form`. **Still to do:** `portal.html`, after #218 merges (it changes `/home` and `/portal`).
 
 **Smaller items:**
 - **Admin SQL in routes:** `routes/promo-codes.js` and `routes/inbound-email.js` run their own admin lookup SQL. Switch them to `requireAdmin(pool)` from `lib/admin-access.js`.
@@ -136,7 +136,7 @@ Four places plus a Settings gear. One small PR per phase; old URLs keep working 
 1. **Phase 1, one front door (#234, merged):**
    - The shared nav (`public/shared-nav.js`) has 4 tabs, and "More" is grouped by future home. Child pages light up their place's tab (`PLACE_CHILDREN`).
    - The Weightless header links to Tasks · Money · Life · ⚙.
-   - `/app`, `/app/buddy` and unknown `/app/*` now go to `/weightless`. `/app/buddy?mode=form` still serves `buddy.html`.
+   - `/app`, `/app/buddy` and unknown `/app/*` now go to `/weightless`. `/app/buddy?mode=form` redirects to the form check-in at `/app/checkin/form`.
    - `/home` and `/portal` are handled by #218.
 2. **Phase 2, Tasks hub (#235, merged):** sections All tasks · Today · Routines · Calendar · Ideas.
    - Defined once in `PLACE_TABS` in `shared-nav.js`: a sticky `.place-tabs` strip on phones, and sub-items under the place in the desktop sidebar.
