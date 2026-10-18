@@ -13,7 +13,7 @@ module.exports = function (pool) {
     try {
       const userId = req.user.id;
       const tzRow = await pool.query(
-        "SELECT COALESCE(timezone, 'UTC') AS tz, given_name FROM users WHERE id = $1",
+        "SELECT COALESCE(timezone, 'UTC') AS tz, NULLIF(SPLIT_PART(TRIM(name), ' ', 1), '') AS given_name FROM users WHERE id = $1",
         [userId]
       );
       const tz = tzRow.rows[0]?.tz || 'UTC';

@@ -1101,24 +1101,22 @@ module.exports = function(pool) {
         parseInt(explicitRoutinesResult.rows[0].count, 10)
       );
 
-      // Documents handled — documents with updated_at today
+      // Documents handled — documents uploaded today (prod has no documents.updated_at)
       const docsResult = await pool.query(`
         SELECT COUNT(*) as count FROM documents
-        WHERE user_id = $1 AND updated_at::date = $2::date
+        WHERE user_id = $1 AND uploaded_at::date = $2::date
       `, [userId, today]);
 
-      // Money tasks done — tasks with a money-related categorytag or title keyword
+      // Money tasks done — bill tasks or a money keyword in the title (tasks has no categorytag)
       const moneyTasksResult = await pool.query(`
         SELECT COUNT(*) as count FROM tasks
         WHERE user_id = $1
           AND is_completed = true
           AND completed_at::date = $2::date
           AND (
-            categorytag ILIKE '%money%' OR
-            categorytag ILIKE '%budget%' OR
-            categorytag ILIKE '%spending%' OR
-            categorytag ILIKE '%expense%' OR
-            categorytag ILIKE '%bill%' OR
+            bill_merchant_key IS NOT NULL OR
+            bill_type IS NOT NULL OR
+            title ILIKE '%spending%' OR
             title ILIKE '%budget%' OR
             title ILIKE '%bill%' OR
             title ILIKE '%money%' OR

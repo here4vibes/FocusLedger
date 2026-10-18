@@ -61,7 +61,7 @@ module.exports = function (pool) {
         // Open tasks (context chip)
         pool.query(
           `SELECT COUNT(*) AS n FROM tasks
-           WHERE user_id = $1 AND completed = false AND archived = false
+           WHERE user_id = $1 AND is_completed IS NOT TRUE
              AND (due_date IS NULL OR due_date >= CURRENT_DATE - INTERVAL '7 days')`,
           [userId]
         ).catch(logFailure('[home-context]', 'tasks query', { userId }, { rows: [{ n: '0' }] })),
