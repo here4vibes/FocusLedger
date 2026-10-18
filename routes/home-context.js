@@ -18,6 +18,7 @@
 const express = require('express');
 const { authenticateToken } = require('../middleware/auth');
 const { getUserLocalDate } = require('../lib/timezone');
+const { logFailure } = require('../lib/log-failure');
 
 module.exports = function (pool) {
   const router = express.Router();
@@ -63,7 +64,7 @@ module.exports = function (pool) {
            WHERE user_id = $1 AND completed = false AND archived = false
              AND (due_date IS NULL OR due_date >= CURRENT_DATE - INTERVAL '7 days')`,
           [userId]
-        ).catch(() => ({ rows: [{ n: '0' }] })),
+        ).catch(logFailure('[home-context]', 'tasks query', { userId }, { rows: [{ n: '0' }] })),
 
         // Tasks completed today (momentum traction pillar)
         pool.query(
@@ -71,7 +72,7 @@ module.exports = function (pool) {
            WHERE user_id = $1 AND is_completed = true
              AND (updated_at AT TIME ZONE $2)::date = $3::date`,
           [userId, tz, today]
-        ).catch(() => ({ rows: [{ n: '0' }] })),
+        ).catch(logFailure('[home-context]', 'tasks query', { userId }, { rows: [{ n: '0' }] })),
 
         // Routines completed today (momentum rhythm pillar)
         pool.query(
@@ -79,7 +80,7 @@ module.exports = function (pool) {
            JOIN routines r ON r.id = rs.routine_id
            WHERE r.user_id = $1 AND rs.last_completed_date = $2`,
           [userId, today]
-        ).catch(() => ({ rows: [{ n: '0' }] })),
+        ).catch(logFailure('[home-context]', 'routine_streaks query', { userId }, { rows: [{ n: '0' }] })),
 
         // Buddy check-ins today — returns each row's type so we can derive
         // morning/evening flags AND connection score from one query
@@ -87,7 +88,7 @@ module.exports = function (pool) {
           `SELECT checkin_type FROM buddy_checkins
            WHERE user_id = $1 AND (created_at AT TIME ZONE $2)::date = $3::date`,
           [userId, tz, today]
-        ).catch(() => ({ rows: [] })),
+        ).catch(logFailure('[home-context]', 'buddy_checkins query', { userId }, { rows: [] })),
 
         // New buddy message in last 5 minutes
         pool.query(
@@ -95,7 +96,7 @@ module.exports = function (pool) {
            WHERE user_id = $1 AND role = 'buddy'
              AND created_at > NOW() - INTERVAL '5 minutes'`,
           [userId]
-        ).catch(() => ({ rows: [{ cnt: '0' }] })),
+        ).catch(logFailure('[home-context]', 'buddy_conversations query', { userId }, { rows: [{ cnt: '0' }] })),
 
         // Missed routine (for context proactive prompt)
         pool.query(
@@ -107,7 +108,7 @@ module.exports = function (pool) {
              AND r.created_at < CURRENT_DATE
            LIMIT 1`,
           [userId, localHour]
-        ).catch(() => ({ rows: [] })),
+        ).catch(logFailure('[home-context]', 'routines query', { userId }, { rows: [] })),
 
         // All expense stats in one table scan (30-day window covers all three uses):
         //   untriaged_30d → stats chip (was /context, 30d window)
@@ -126,7 +127,7 @@ module.exports = function (pool) {
            FROM expenses
            WHERE user_id = $1 AND expense_date >= CURRENT_DATE - INTERVAL '30 days'`,
           [userId, today, weekStartStr]
-        ).catch(() => ({ rows: [{ today_total: 0, today_impulse: 0, today_planned: 0, untriaged_30d: 0, untriaged_7d: 0, reviewed_week: 0 }] })),
+        ).catch(logFailure('[home-context]', 'expenses query', { userId }, { rows: [{ today_total: 0, today_impulse: 0, today_planned: 0, untriaged_30d: 0, untriaged_7d: 0, reviewed_week: 0 }] })),
       ]);
 
       // ── Derive values ────────────────────────────────────────────────────────

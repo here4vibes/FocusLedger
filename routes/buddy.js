@@ -460,11 +460,16 @@ module.exports = function(pool) {
         const doSoon   = created.filter(t => t.category === 'do_soon');
         const parked   = created.filter(t => t.category === 'parked');
 
-        let buddyReply = dumpSummary + '\n\n';
-        if (doToday.length)  buddyReply += `✅ **Do Today (${doToday.length}):** ${doToday.map(t => t.title).join(', ')}\n`;
-        if (doSoon.length)   buddyReply += `📋 **Do Soon (${doSoon.length}):** ${doSoon.map(t => t.title).join(', ')}\n`;
-        if (parked.length)   buddyReply += `🗂 **Parked (${parked.length}):** ${parked.map(t => t.title).join(', ')}\n`;
-        buddyReply += '\nAll added to your task list. Want to start on anything from the Do Today pile?';
+        let buddyReply;
+        if (!created.length) {
+          buddyReply = "I couldn't sort that into tasks just now, so nothing was added. Try again in a moment, or send them to me one at a time.";
+        } else {
+          buddyReply = (dumpSummary || 'Got your brain dump.') + '\n\n';
+          if (doToday.length)  buddyReply += `✅ **Do Today (${doToday.length}):** ${doToday.map(t => t.title).join(', ')}\n`;
+          if (doSoon.length)   buddyReply += `📋 **Do Soon (${doSoon.length}):** ${doSoon.map(t => t.title).join(', ')}\n`;
+          if (parked.length)   buddyReply += `🗂 **Parked (${parked.length}):** ${parked.map(t => t.title).join(', ')}\n`;
+          buddyReply += '\nAll added to your task list. Want to start on anything from the Do Today pile?';
+        }
 
         const buddyTurn = nextTurn + 1;
         await pool.query(
@@ -506,7 +511,7 @@ module.exports = function(pool) {
       // Partner context injected only on first 2 turns — Buddy uses it to set coaching tone,
       // not to repeatedly surface partner info throughout the conversation.
       const partnerContextForPrompt = userTurns <= 2 ? partnerCtx : null;
-      const adhdProfile = await getAdhdProfile(pool, userId).catch(() => ({}));
+      const adhdProfile = await getAdhdProfile(pool, userId).catch(logFailure('[buddy]', 'getAdhdProfile', { userId }, {}));
 
       // Existing users land here with adhd_profile = {} until bootstrapped.
       // Fire-and-forget: synthesize from history so the NEXT session has a profile.
@@ -535,7 +540,7 @@ module.exports = function(pool) {
           }
         })(),
         detectCompletions(message.trim(), activeTasks),
-        extractPassiveCapture(message.trim()).catch(() => ({ tasks: [], expenses: [] })),
+        extractPassiveCapture(message.trim()).catch(logFailure('[buddy]', 'extractPassiveCapture', { userId }, { tasks: [], expenses: [] })),
       ]);
 
       let buddyReply = aiResult.reply;

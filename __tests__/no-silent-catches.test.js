@@ -15,6 +15,8 @@ const ALLOWED = [
   // Invalid or expired token while touching last_active_at: normal traffic,
   // and authenticateToken rejects it downstream. Logging it would flood Sentry.
   { file: 'server.js', contains: 'Invalid token' },
+  // Parsing an error response body; the next line throws with what it found.
+  { file: 'routes/google-calendar.js', contains: 'evRes.json().catch' },
 ];
 
 function walk(dir, out) {
@@ -28,6 +30,8 @@ function walk(dir, out) {
 }
 
 const EMPTY_CATCH = /catch\s*(\([^)]*\))?\s*\{((?:\s|\/\/[^\n]*\n|\/\*[\s\S]*?\*\/)*)\}/g;
+// `.catch(() => ({ rows: [] }))`: a failed query that quietly becomes zeros.
+const OBJ_SWALLOW = /\.catch\(\s*\(\s*\w*\s*\)\s*=>\s*\(\s*\{/g;
 const SWALLOW = /\.catch\(\s*\(?\s*\w*\s*\)?\s*=>\s*(\{(?:\s|\/\/[^\n]*\n|\/\*[\s\S]*?\*\/)*\}|null|undefined|\[\]|\{\}|false|0)\s*\)/g;
 
 test('server code has no silent catch blocks', () => {
@@ -39,12 +43,13 @@ test('server code has no silent catch blocks', () => {
   for (const f of files) {
     const rel = path.relative(ROOT, f);
     const src = fs.readFileSync(f, 'utf8');
-    for (const re of [EMPTY_CATCH, SWALLOW]) {
+    for (const re of [EMPTY_CATCH, SWALLOW, OBJ_SWALLOW]) {
       re.lastIndex = 0;
       let m;
       while ((m = re.exec(src))) {
-        if (ALLOWED.some((a) => a.file === rel && m[0].includes(a.contains))) continue;
         const line = src.slice(0, m.index).split('\n').length;
+        const text = m[0] + src.split('\n')[line - 1];
+        if (ALLOWED.some((a) => a.file === rel && text.includes(a.contains))) continue;
         offenders.push(`${rel}:${line}  ${m[0].replace(/\s+/g, ' ').slice(0, 80)}`);
       }
     }

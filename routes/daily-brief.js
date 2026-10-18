@@ -3,6 +3,7 @@
 const express = require('express');
 const { authenticateToken } = require('../middleware/auth');
 const { getUserLocalDate } = require('../lib/timezone');
+const { logFailure } = require('../lib/log-failure');
 
 module.exports = function (pool) {
   const router = express.Router();
@@ -35,9 +36,9 @@ module.exports = function (pool) {
           `SELECT 1 FROM buddy_checkins WHERE user_id = $1 AND checkin_type = 'evening'
            AND (created_at AT TIME ZONE $2)::date = $3::date LIMIT 1`,
           [userId, tz, yesterdayStr]
-        ).catch(() => ({ rows: [] })),
+        ).catch(logFailure('[daily-brief]', 'buddy_checkins query', { userId }, { rows: [] })),
         pool.query('SELECT created_at FROM users WHERE id = $1', [userId])
-          .catch(() => ({ rows: [] })),
+          .catch(logFailure('[daily-brief]', 'users query', { userId }, { rows: [] })),
       ]);
 
       const hadCheckin = gateRow.rows.length > 0;
@@ -59,26 +60,26 @@ module.exports = function (pool) {
         pool.query(
           'SELECT id, title FROM tasks WHERE user_id = $1 AND is_completed = false AND due_date = $2 ORDER BY created_at ASC LIMIT 5',
           [userId, today]
-        ).catch(() => ({ rows: [] })),
+        ).catch(logFailure('[daily-brief]', 'tasks query', { userId }, { rows: [] })),
         pool.query(
           'SELECT COUNT(*) AS n FROM tasks WHERE user_id = $1 AND is_completed = false AND due_date < $2',
           [userId, today]
-        ).catch(() => ({ rows: [{ n: 0 }] })),
+        ).catch(logFailure('[daily-brief]', 'tasks query', { userId }, { rows: [{ n: 0 }] })),
         pool.query(
           'SELECT COALESCE(SUM(amount), 0) AS total FROM expenses WHERE user_id = $1 AND expense_date >= $2',
           [userId, weekStartStr]
-        ).catch(() => ({ rows: [{ total: 0 }] })),
+        ).catch(logFailure('[daily-brief]', 'expenses query', { userId }, { rows: [{ total: 0 }] })),
         pool.query(
           `SELECT rs.current_streak, r.name FROM routine_streaks rs
            JOIN routines r ON r.id = rs.routine_id
            WHERE r.user_id = $1 AND rs.current_streak > 0
            ORDER BY rs.current_streak DESC LIMIT 1`,
           [userId]
-        ).catch(() => ({ rows: [] })),
+        ).catch(logFailure('[daily-brief]', 'routine_streaks query', { userId }, { rows: [] })),
         pool.query(
           "SELECT COUNT(*) AS n FROM tasks WHERE user_id = $1 AND is_completed = true AND (updated_at AT TIME ZONE $2)::date = $3::date",
           [userId, tz, today]
-        ).catch(() => ({ rows: [{ n: 0 }] })),
+        ).catch(logFailure('[daily-brief]', 'tasks query', { userId }, { rows: [{ n: 0 }] })),
       ]);
 
       const tasksDue = tasksRes.rows;

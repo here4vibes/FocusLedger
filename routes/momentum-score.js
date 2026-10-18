@@ -16,6 +16,7 @@
 const express = require('express');
 const { authenticateToken } = require('../middleware/auth');
 const { getUserLocalDate } = require('../lib/timezone');
+const { logFailure } = require('../lib/log-failure');
 
 module.exports = function (pool) {
   const router = express.Router();
@@ -50,7 +51,7 @@ module.exports = function (pool) {
              AND is_completed = true
              AND (updated_at AT TIME ZONE $2)::date = $3::date`,
           [userId, tz, today]
-        ).catch(() => ({ rows: [{ n: '0' }] })),
+        ).catch(logFailure('[momentum-score]', 'tasks query', { userId }, { rows: [{ n: '0' }] })),
 
         // Rhythm: any routine completed today
         pool.query(
@@ -59,7 +60,7 @@ module.exports = function (pool) {
            WHERE r.user_id = $1
              AND rs.last_completed_date = $2`,
           [userId, today]
-        ).catch(() => ({ rows: [{ n: '0' }] })),
+        ).catch(logFailure('[momentum-score]', 'routine_streaks query', { userId }, { rows: [{ n: '0' }] })),
 
         // Connection: Buddy check-ins today
         pool.query(
@@ -67,7 +68,7 @@ module.exports = function (pool) {
            WHERE user_id = $1
              AND (created_at AT TIME ZONE $2)::date = $3::date`,
           [userId, tz, today]
-        ).catch(() => ({ rows: [] })),
+        ).catch(logFailure('[momentum-score]', 'buddy_checkins query', { userId }, { rows: [] })),
 
         // Awareness: expenses reviewed (triaged) this week
         pool.query(
@@ -76,7 +77,7 @@ module.exports = function (pool) {
              AND is_impulse IS NOT NULL
              AND expense_date >= $2`,
           [userId, weekStartStr]
-        ).catch(() => ({ rows: [{ n: '0' }] })),
+        ).catch(logFailure('[momentum-score]', 'expenses query', { userId }, { rows: [{ n: '0' }] })),
       ]);
 
       // ── Pillar scores (each 0–100) ────────────────────────────────
