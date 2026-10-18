@@ -27,6 +27,7 @@ Disallow: /link-email
 
 # Block auth flow pages
 Disallow: /reset-password
+Disallow: /thanks
 
 # Block API endpoints
 Disallow: /api/
