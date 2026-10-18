@@ -97,7 +97,7 @@ Node.js + Express · PostgreSQL (Neon) · Render deployment · Vanilla HTML/CSS/
 ### Open PRs (each needs the user's explicit "merge N")
 **When several PRs are open,** they usually all edit this file and `public/changelog.html`. After each merge, merge `main` into the next PR. Resolve `changelog.html` by taking `main`'s file and re-inserting the branch's entry at the top. Resolve CLAUDE.md by keeping both sides' lines. Check CI goes green, then merge with the full head SHA.
 
-- **#218** `claude/test-coverage-analysis-wAcNr`: billing portal, nudge-quality pass, "one home", security upgrades. **It waits only on the user's live Stripe purchase test.** It's stale against `main`, so merge `main` in before merging; expect conflicts in `changelog.html`, CLAUDE.md and maybe the nudge jobs.
+- **#218** `claude/test-coverage-analysis-wAcNr`: billing portal, nudge-quality pass, "one home", security upgrades. **It waits only on the user's live Stripe purchase test.** `main` was merged in on 2026-10-18 (through #261); merge it again only if more PRs land first.
   - **Contents:**
     - `POST /api/subscription/portal`.
     - Nudge fixes: lifecycle emails, Buddy lapse timing, deadline quiet hours 08:00–21:59 local, routine gating, cold-start nudge at 10am local, evening check-in at `evening_time`.
