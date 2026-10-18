@@ -14,6 +14,7 @@ const { createMessage } = require('../lib/claude-client');
 const { isQuotaError } = require('../lib/ai-budget');
 const { authenticateToken } = require('../middleware/auth');
 const rateLimit = require('express-rate-limit');
+const { parseAiJson } = require('../lib/ai-json');
 
 const captureLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
@@ -115,8 +116,9 @@ module.exports = function() {
       const raw = response.content[0].text;
       let parsed;
       try {
-        parsed = JSON.parse(raw);
-      } catch {
+        parsed = parseAiJson(raw);
+      } catch (e) {
+        console.error('[capture] could not parse AI reply:', e.message, '| mode:', resolvedMode);
         return res.status(422).json({ success: false, message: 'Could not read the image clearly. Try better lighting or a closer shot.' });
       }
 

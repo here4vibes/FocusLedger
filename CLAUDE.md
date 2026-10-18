@@ -157,6 +157,9 @@ Four places plus a Settings gear. One small PR per phase; old URLs keep working 
   - Agentic **type 2** (Buddy acts: bills, subscriptions, start-it-for-me) and **type 3** (shareable outcomes, e.g. "cancelled Netflix, $186/yr back") come first.
   - The MCP server for Claude/ChatGPT/Meta Muse is deferred.
   - Positioning: ADHD-native; the "ADHD tax" from a CPA founder; privacy; partner accountability.
+- **Silent catches left in root-level cron modules:** `morningNudge.js`, `eveningNudge.js`, `buddyEngagementCron.js` and `taskDeadlineNudge.js` each have a `.catch(() => {})` on push cleanup. #218 rewrites the first three and #245 fixes the fourth. After both merge, fix the rest and add the root cron files to `FILES` in `__tests__/no-silent-catches.test.js`.
+- **News sync runs on an in-process `setInterval`** (`routes/news.js` `startRssCron`), which breaks the no-in-process-schedulers rule. The `rss-sync` cron in `render.yaml` is commented out. Either move it to that cron or drop the feature.
+- **AI JSON:** parse model replies with `parseAiJson` from `lib/ai-json.js` (it handles code fences and surrounding prose). Never call `JSON.parse` on a raw model reply.
 - **Plaid v1 `connect`** stores the institution *id* as the bank name (`services/PlaidService.js`). The legacy path isn't used by the frontend.
 - **`weekly_stats` is never populated** (0 rows in prod; the "P2 cron" was never built). Its columns are integers since #241, so it's ready if a rollup job is ever added.
 - **Product loop:** watch the admin Activation card and the `first_checkin_starter` events (#223).
@@ -206,7 +209,10 @@ Four places plus a Settings gear. One small PR per phase; old URLs keep working 
 - **Routine capture:** `lib/routine-capture.js`.
   - `onTasksCompleted` runs at every task-completion point (Tasks API toggle, update and steps; Buddy; the agent's `mark_task_done`). When a tick finishes a routine's last open task, it records the routine completion and streak.
   - `refreshRoutineTasks` reopens routine tasks finished on an earlier local day (weekly routines after 7 days). It runs when `/api/tasks`, `/api/buddy/status`, `/api/routines` and `/api/today/timeline` load, so there's no cron to set up.
-  - **Capture plan, still to do:** a "Done ✓" action on pushes (needs service-worker auth), Buddy logging things from conversation, a one-list evening round-up, and bank-charge suggestions.
+  - **"Done ✓" on pushes (#245):** single-task pushes (deadline reminder, cold-start nudge) carry a signed one-task token (`lib/push-action-token.js`, HMAC with `JWT_SECRET`, 72h). The service worker posts it to `POST /api/push-actions/done` (`routes/push-actions.js`, `db/task-completion.js`), which completes the task and runs `onTasksCompleted`. A process without `JWT_SECRET` just omits the button. iOS web push shows no action buttons.
+  - Buddy already auto-completes tasks it hears about in chat (`completionMatches` in `routes/buddy.js`), so with `onTasksCompleted` that now also counts toward routines.
+  - **Evening round-up:** after 5pm local, Home (`roundupCard` in `public/weightless.html`) lists today's open routine items that aren't already on the radar, with one tap each. "Not today" hides it per device per day.
+  - **Capture plan, still to do:** bank-charge suggestions.
 - **Tandem recap:** `lib/tandem-recap.js` and `db/tandem-recap.js`.
 - **Insights cron:** `jobs/crossDomainInsightsJob.js` (exports helpers; runs only when executed directly).
 - **Claude Code helpers (`.claude/`, committed):** agents `silent-failure-hunter`, `database-reviewer` and `security-reviewer`, plus the skill `postgres-patterns`.
