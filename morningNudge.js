@@ -22,6 +22,7 @@ const { getPushTokens, deletePushToken } = require('./db/push-tokens');
 const { resolveMorningHour } = require('./lib/energy-timing');
 const { getUnviewedRevealForDate } = require('./db/reveals');
 const { configureWebPush } = require('./lib/webpush');
+const { logFailure } = require('./lib/log-failure');
 
 async function sendMorningNudges(pool) {
   const { webpush, apnsEnabled, anyConfigured } = configureWebPush('morning-nudge');
@@ -126,7 +127,7 @@ async function sendMorningNudges(pool) {
               if (sendErr.statusCode === 410 || sendErr.statusCode === 404) {
                 await pool.query(
                   'DELETE FROM push_subscriptions WHERE endpoint = $1', [row.endpoint]
-                ).catch(() => {});
+                ).catch(logFailure('[MorningNudge]', 'delete stale push subscription', { userId: user.id }));
               } else {
                 // statusCode is the tell: 403 = VAPID key mismatch (the send keys
                 // differ from the ones the browser subscribed with); 400 = bad

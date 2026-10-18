@@ -427,12 +427,4 @@ function getCurrentMonth() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
 }
 
-function extractR2Key(url) {
-  try {
-    const u = new URL(url);
-    return u.pathname.slice(1);
-  } catch {
-    return null;
-  }
-}
 

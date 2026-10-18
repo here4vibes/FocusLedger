@@ -85,7 +85,8 @@ module.exports = function (pool) {
         const jsonLine = raw.slice(completeIdx + '[[ONBOARDING_COMPLETE]]'.length).trim();
         try {
           seedPayload = JSON.parse(jsonLine.match(/\{[\s\S]*\}/)?.[0] || '{}');
-        } catch {
+        } catch (err) {
+          console.warn('[onboarding] completion payload was not JSON:', err.message, '| userId:', req.user.id);
           seedPayload = {};
         }
       }

@@ -110,7 +110,7 @@ module.exports = function(pool) {
       const parsed = JSON.parse(Buffer.from(state, 'base64url').toString());
       userId = parsed.userId;
       if (!userId) throw new Error('no userId in state');
-    } catch {
+    } catch { // silent-ok: malformed OAuth state from the query string
       return res.redirect('/app/calendar?gcal=error');
     }
 
@@ -179,7 +179,7 @@ module.exports = function(pool) {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
       if (!evRes.ok) {
-        const errBody = await evRes.json().catch(() => ({}));
+        const errBody = await evRes.json().catch(() => ({})); // silent-ok: the next line throws with the status
         throw new Error(errBody.error?.message || `GCal API ${evRes.status}`);
       }
       const evData = await evRes.json();
