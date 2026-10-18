@@ -23,6 +23,8 @@ module.exports = defineConfig({
 
   use: {
     baseURL: BASE_URL,
+    // Our own automation: production analytics drops it (lib/analytics-filter.js).
+    extraHTTPHeaders: { 'X-FL-Automation': 'e2e' },
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     video: 'on-first-retry',

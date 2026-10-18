@@ -5,7 +5,7 @@ const express = require('express');
 const { authenticateToken } = require('../middleware/auth');
 const { Resend } = require('resend');
 const { logFailure } = require('../lib/log-failure');
-const { isAdminUser } = require('../lib/admin-access');
+const { requireAdmin } = require('../lib/admin-access');
 
 const FROM_ADDRESS = 'FocusLedger <hello@focusledger.net>';
 
@@ -86,16 +86,8 @@ module.exports = function(pool) {
     }
   }
 
-  // ── Admin gate helper ──────────────────────────────────────────────────
-
-  async function requireAdmin(req) {
-    const userRow = await pool.query(
-      'SELECT is_admin, email FROM users WHERE id = $1',
-      [req.user.id]
-    );
-    const user = userRow.rows[0] || {};
-    return isAdminUser({ ...user, id: req.user.id, email: user.email });
-  }
+  // ── Admin gate: auth first, then the shared check (DB row, fails closed) ──
+  const admin = [authenticateToken, requireAdmin(pool)];
 
   // ── Public: Submit Contact Form ────────────────────────────────────────
 
@@ -174,12 +166,8 @@ module.exports = function(pool) {
 
   // ── Admin: List contact submissions ─────────────────────────────────────
 
-  router.get('/admin/submissions', authenticateToken, async (req, res) => {
+  router.get('/admin/submissions', admin, async (req, res) => {
     try {
-      if (!(await requireAdmin(req))) {
-        return res.status(403).json({ success: false, message: 'Admin access required.' });
-      }
-
       const { category, status, limit = 50, offset = 0 } = req.query;
 
       let query = `
@@ -220,12 +208,8 @@ module.exports = function(pool) {
 
   // ── Admin: Update submission status ────────────────────────────────────
 
-  router.patch('/admin/submissions/:id/status', authenticateToken, async (req, res) => {
+  router.patch('/admin/submissions/:id/status', admin, async (req, res) => {
     try {
-      if (!(await requireAdmin(req))) {
-        return res.status(403).json({ success: false, message: 'Admin access required.' });
-      }
-
       const { status } = req.body;
       if (!['pending', 'resolved'].includes(status)) {
         return res.status(400).json({ success: false, message: 'Invalid status.' });

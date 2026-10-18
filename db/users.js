@@ -20,4 +20,30 @@ async function isQaUser(pool, userId) {
   return !!(rows[0] && rows[0].is_qa_user);
 }
 
-module.exports = { markQaUser, getUserAdminInfo, isQaUser };
+/**
+ * First-touch ad attribution, written once at signup. `attr` is already
+ * sanitized (lib/attribution.sanitizeAttribution). Every column is COALESCEd so
+ * the first write wins. With `maxAgeHours`, only an account created that
+ * recently is updated (the post-OAuth PATCH path), so an old account can't be
+ * re-attributed later. Returns true when a row was updated.
+ */
+async function saveSignupAttribution(pool, userId, attr, { maxAgeHours = null } = {}) {
+  const { rowCount } = await pool.query(
+    `UPDATE users SET
+       utm_source      = COALESCE(utm_source, $2),
+       utm_medium      = COALESCE(utm_medium, $3),
+       utm_campaign    = COALESCE(utm_campaign, $4),
+       utm_content     = COALESCE(utm_content, $5),
+       utm_term        = COALESCE(utm_term, $6),
+       signup_referrer = COALESCE(signup_referrer, $7),
+       first_touch     = COALESCE(first_touch, $8::jsonb)
+     WHERE id = $1
+       AND ($9::int IS NULL OR created_at >= NOW() - make_interval(hours => $9::int))`,
+    [userId, attr.utm_source || null, attr.utm_medium || null, attr.utm_campaign || null,
+      attr.utm_content || null, attr.utm_term || null, attr.referrer_domain || null,
+      JSON.stringify(attr), maxAgeHours]
+  );
+  return rowCount > 0;
+}
+
+module.exports = { markQaUser, getUserAdminInfo, isQaUser, saveSignupAttribution };

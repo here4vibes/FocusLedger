@@ -187,7 +187,7 @@ app.use('/api/admin',           require('./routes/admin')(pool));
 app.use('/api/email',           require('./routes/email')(pool));
 app.use('/api/ai-suggestions',  require('./routes/ai-suggestions')(pool));
 app.use('/api/ai',               require('./routes/ai')(pool));
-app.use('/api/capture',          require('./routes/capture')());
+app.use('/api/capture',          require('./routes/capture')(pool));
 app.use('/api/notifications',   require('./routes/notifications')(pool));
 app.use('/api/v1/notifications', require('./routes/notifications-v1')(pool));
 app.use('/api/v1/spending-sessions', require('./routes/spending-sessions')(pool));

@@ -119,7 +119,6 @@ The user asked to finish the big bug classes in about 4 sessions:
 4. **Retire legacy pages:** `app.html`, `home.html` and `landing-old` are gone (#251), and `buddy.html` in #256: the form check-in is `public/checkin-form.html` at `/app/checkin/form`. **Still to do:** `portal.html`, after #218 merges (it changes `/home` and `/portal`).
 
 **Smaller items:**
-- **Admin SQL in routes:** `routes/promo-codes.js` and `routes/inbound-email.js` run their own admin lookup SQL. Switch them to `requireAdmin(pool)` from `lib/admin-access.js`.
 - **News sync** uses an in-process `setInterval` (`routes/news.js`). Move it to the commented-out `rss-sync` cron in `render.yaml`, or drop the feature.
 - **Capture, still to do:** bank-charge suggestions, i.e. a known recurring charge such as a gym or pharmacy suggests ticking the related task.
 - **Ideas discussed, not agreed:** show renewals and Bills in hours of work at the user's income rate; a risky-time spending nudge. The user noted purchases don't happen in the app, so these are reflection and planning views, not in-the-moment ones.
@@ -195,6 +194,7 @@ Four places plus a Settings gear. One small PR per phase; old URLs keep working 
   - `buddy_checkins` has no `mood` (#229; check-ins store `energy_level`).
   - Missing defaults: `routines.is_active` and `created_at` had none, so every routine was saved inactive (fixed in #242). #253 added about 30 more (tasks, plaid_transactions, partnerships, nudges…). **When you add an INSERT that omits a column, check that column has a default in prod.**
   - Counters stored as text, boolean or timestamp: `routine_streaks.current_streak`/`best_streak`, `routine_suggestions.presented_count`, `routines.day_of_week`, `task_substeps.step_order` and the `weekly_stats` counters (all fixed in #241). If you suspect another one, find it with a prod `information_schema.columns` query.
+- **Traffic:** real traffic is about 50–80 visitors a month (Jun–Oct 2026). Visitor counts before the bot/CI filter (Oct 18) were inflated by bots and our own Playwright smoke runs (~1,900/month in Jun–Jul, mostly one landing + pricing hit with no scroll or duration); for old ranges, trust `engaged_visitors`.
 - **Silent failures:** many routes catch DB errors, log them and return 200. Sentry captures every `console.error`. The CI boot smoke fails on any logged "column/relation … does not exist".
 - **Migrations run on every deploy** (`npm start` = `node migrate.js && node server.js`). A failed migration aborts the deploy and the old version keeps serving. Test risky migrations on a Neon branch.
 - **Key user IDs:** Sean = 2, **QA user = 25 (never touch)**, Miles = 35.
@@ -206,9 +206,10 @@ Four places plus a Settings gear. One small PR per phase; old URLs keep working 
   - `/health` migration status: `lib/migration-manifest.js` and `db/migrations-status.js`.
 - **Billing and admin:**
   - Billing: `lib/billing.js`, `db/billing.js`, `lib/stripe-client.js`.
-  - OAuth callbacks: sign `state` with `lib/oauth-state.js` (`signUserState(purpose, userId)`), never put a login token in it. Google Calendar uses it; `routes/email.js` and `routes/auth.js` still have their own signers.
-  - Admin gate: `lib/admin-access.js` (`requireAdmin(pool)` middleware, judged from the DB row). It holds the only `isAdminUser`; import it, don't copy it.
+  - OAuth callbacks: every flow signs `state` with `lib/oauth-state.js` (purpose-bound HMAC, constant-time, 10 min, no fallback secret): `signUserState(purpose, userId)` for connect flows (Calendar `gcal`, `email-gmail`/`-outlook`/`-yahoo`), `signPayload` for Google sign-in (`returnTo` login|signup, trusted host only). Never put a login token in it.
+  - Admin gate: `lib/admin-access.js` (`requireAdmin(pool)` middleware after `authenticateToken`, judged from the DB row; sets `req.admin`). Every admin route uses it (`routes/analytics.js` still has its own lookup). It holds the only `isAdminUser`; import it, don't copy it.
   - Activation: `db/activation.js` and `GET /api/admin/activation`.
+- **Analytics:** bot/CI filter `lib/analytics-filter.js` (UA patterns, missing UA, `X-FL-Automation` header or `FocusLedger-` UA token from our Playwright configs and `prod-signup-check`); filtered hits are counted in `analytics_filtered_daily`, not stored. First-touch attribution (utm_*, truncated fbclid/gclid, referrer domain only) is captured by `public/js/analytics.js` into `localStorage.fl_attribution`, rides on `funnel_*`/`cta_*` events, and is saved at signup (email, One Tap, OAuth `google_new=1` → `PATCH /api/auth/attribution`, 24h) to `users.utm_*` + `users.first_touch` (sanitizer `lib/attribution.js`). Report: `GET /api/admin/attribution?from&to` (`db/analytics.js`), shown as the admin Acquisition card. The live landing page is `views/index.html`, not `public/index.html`.
 - **Best-effort work:** use `.catch(logFailure('[Module]', 'op', { userId }, fallback))` from `lib/log-failure.js`. Never use `.catch(() => {})`.
 - **AI:** every AI call goes through `lib/claude-client.js` (`createMessage`/`complete`). Per-user daily budget: `lib/ai-budget.js` (Free 100 / Pro 500).
 - **Bills and subscriptions:**

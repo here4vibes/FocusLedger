@@ -13,6 +13,7 @@
  */
 const express = require('express');
 const router = express.Router();
+const { fetchUserTimezone, getUserLocalDate, getUserLocalHour } = require('../lib/timezone');
 
 module.exports = function (pool) {
 
@@ -193,11 +194,14 @@ module.exports = function (pool) {
     }
     if (!userId) return res.status(401).json({ success: false, message: 'Unauthorized' });
 
-    const now = new Date();
-    const localHour = parseInt(req.query.localHour || now.getHours());
-    const isEveningTime = localHour >= 17 && localHour <= 22;
-
     try {
+      // "Today" and the fallback hour are the user's, not the server's (UTC):
+      // from 8pm EDT the check-ins read as not done and windows shifted a day.
+      const tz = await fetchUserTimezone(pool, userId);
+      const today = getUserLocalDate(tz);
+      const localHour = parseInt(req.query.localHour || getUserLocalHour(tz), 10);
+      const isEveningTime = localHour >= 17 && localHour <= 22;
+
       const [taskResult, untriagedResult, checkinsResult, morningResult, routineResult, buddyResult] =
         await Promise.all([
           // Incomplete task count — column is is_completed (there is no
@@ -205,29 +209,29 @@ module.exports = function (pool) {
           pool.query(
             `SELECT COUNT(*) as cnt FROM tasks
              WHERE user_id = $1 AND is_completed = false
-               AND (due_date IS NULL OR due_date >= CURRENT_DATE - INTERVAL '7 days')`,
-            [userId]
+               AND (due_date IS NULL OR due_date >= $2::date - INTERVAL '7 days')`,
+            [userId, today]
           ),
           // Unclassified (Plaid-imported, is_impulse is null)
           pool.query(
             `SELECT COUNT(*) as cnt FROM expenses
              WHERE user_id = $1 AND source = 'plaid' AND is_impulse IS NULL
-               AND expense_date >= CURRENT_DATE - INTERVAL '30 days'`,
-            [userId]
+               AND expense_date >= $2::date - INTERVAL '30 days'`,
+            [userId, today]
           ),
           // Evening check-in done today?
           pool.query(
             `SELECT 1 FROM buddy_checkins
              WHERE user_id = $1 AND checkin_type = 'evening'
-               AND checkin_date = CURRENT_DATE LIMIT 1`,
-            [userId]
+               AND checkin_date = $2 LIMIT 1`,
+            [userId, today]
           ),
           // Morning check-in done today?
           pool.query(
             `SELECT 1 FROM buddy_checkins
              WHERE user_id = $1 AND checkin_type = 'morning'
-               AND checkin_date = CURRENT_DATE LIMIT 1`,
-            [userId]
+               AND checkin_date = $2 LIMIT 1`,
+            [userId, today]
           ),
           // Missed morning routine today (routine exists, streak broken today)
           pool.query(
@@ -236,9 +240,9 @@ module.exports = function (pool) {
              WHERE r.user_id = $1 AND r.is_active = true
                AND r.nudge_after_hour > 0 AND r.nudge_after_hour <= $2
                AND (rs.current_streak = 0 OR rs.current_streak IS NULL)
-               AND r.created_at < CURRENT_DATE
+               AND (r.created_at AT TIME ZONE $4)::date < $3::date
              LIMIT 1`,
-            [userId, localHour]
+            [userId, localHour, today, tz]
           ),
           // New Buddy message in last 5 minutes
           pool.query(
@@ -290,12 +294,13 @@ module.exports = function (pool) {
     if (!userId) return res.status(401).json({ success: false, message: 'Unauthorized' });
 
     try {
+      const today = getUserLocalDate(await fetchUserTimezone(pool, userId));
       const [untriagedResult, buddyResult, checkinResult] = await Promise.all([
         pool.query(
           `SELECT COUNT(*) as cnt FROM expenses
            WHERE user_id = $1 AND source = 'plaid' AND is_impulse IS NULL
-             AND expense_date >= CURRENT_DATE - INTERVAL '7 days'`,
-          [userId]
+             AND expense_date >= $2::date - INTERVAL '7 days'`,
+          [userId, today]
         ),
         pool.query(
           `SELECT COUNT(*) as cnt FROM buddy_conversations
@@ -306,8 +311,8 @@ module.exports = function (pool) {
         pool.query(
           `SELECT 1 FROM buddy_checkins
            WHERE user_id = $1 AND checkin_type = 'evening'
-             AND checkin_date = CURRENT_DATE LIMIT 1`,
-          [userId]
+             AND checkin_date = $2 LIMIT 1`,
+          [userId, today]
         ),
       ]);
 

@@ -17,7 +17,7 @@
  */
 const express = require('express');
 const { authenticateToken } = require('../middleware/auth');
-const { getUserLocalDate } = require('../lib/timezone');
+const { getUserLocalDate, getUserLocalHour } = require('../lib/timezone');
 const { logFailure } = require('../lib/log-failure');
 
 module.exports = function (pool) {
@@ -27,8 +27,6 @@ module.exports = function (pool) {
   router.get('/', async (req, res) => {
     try {
       const userId = req.user.id;
-      const localHour = parseInt(req.query.localHour || new Date().getHours(), 10);
-      const isEveningTime = localHour >= 17 && localHour <= 22;
 
       // Step 1: user row — needed for name + timezone (drives date-sensitive queries)
       const userRow = await pool.query(
@@ -39,6 +37,9 @@ module.exports = function (pool) {
       const user = userRow.rows[0] || {};
       const tz = user.tz || 'America/New_York';
       const today = getUserLocalDate(tz);
+      // Fallback hour is the user's, not the server's (UTC)
+      const localHour = parseInt(req.query.localHour || getUserLocalHour(tz), 10);
+      const isEveningTime = localHour >= 17 && localHour <= 22;
 
       // Compute week start (Monday) for awareness score
       const d = new Date(today + 'T12:00:00Z');
@@ -62,8 +63,8 @@ module.exports = function (pool) {
         pool.query(
           `SELECT COUNT(*) AS n FROM tasks
            WHERE user_id = $1 AND is_completed IS NOT TRUE
-             AND (due_date IS NULL OR due_date >= CURRENT_DATE - INTERVAL '7 days')`,
-          [userId]
+             AND (due_date IS NULL OR due_date >= $2::date - INTERVAL '7 days')`,
+          [userId, today]
         ).catch(logFailure('[home-context]', 'tasks query', { userId }, { rows: [{ n: '0' }] })),
 
         // Tasks completed today (momentum traction pillar)
@@ -105,9 +106,9 @@ module.exports = function (pool) {
            WHERE r.user_id = $1 AND r.is_active = true
              AND r.nudge_after_hour > 0 AND r.nudge_after_hour <= $2
              AND (rs.current_streak = 0 OR rs.current_streak IS NULL)
-             AND r.created_at < CURRENT_DATE
+             AND (r.created_at AT TIME ZONE $4)::date < $3::date
            LIMIT 1`,
-          [userId, localHour]
+          [userId, localHour, today, tz]
         ).catch(logFailure('[home-context]', 'routines query', { userId }, { rows: [] })),
 
         // All expense stats in one table scan (30-day window covers all three uses):
@@ -122,10 +123,10 @@ module.exports = function (pool) {
              COALESCE(SUM(amount) FILTER (WHERE is_impulse = false AND expense_date = $2), 0)        AS today_planned,
              COUNT(*) FILTER (WHERE is_impulse IS NULL AND source = 'plaid')                         AS untriaged_30d,
              COUNT(*) FILTER (WHERE is_impulse IS NULL AND source = 'plaid'
-                                AND expense_date >= CURRENT_DATE - INTERVAL '7 days')                AS untriaged_7d,
+                                AND expense_date >= $2::date - INTERVAL '7 days')                    AS untriaged_7d,
              COUNT(*) FILTER (WHERE is_impulse IS NOT NULL AND expense_date >= $3)                   AS reviewed_week
            FROM expenses
-           WHERE user_id = $1 AND expense_date >= CURRENT_DATE - INTERVAL '30 days'`,
+           WHERE user_id = $1 AND expense_date >= $2::date - INTERVAL '30 days'`,
           [userId, today, weekStartStr]
         ).catch(logFailure('[home-context]', 'expenses query', { userId }, { rows: [{ today_total: 0, today_impulse: 0, today_planned: 0, untriaged_30d: 0, untriaged_7d: 0, reviewed_week: 0 }] })),
       ]);

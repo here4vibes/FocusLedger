@@ -198,7 +198,9 @@ async function fetchInterestCorpus(pool, userId) {
 
 // ── Data gathering ────────────────────────────────────────────────────────────
 
-async function fetchUserWeek(pool, userId, sinceDate) {
+// tz: completion day/hour feed the reveal text ("you finish most on Tuesdays
+// around 9pm"), so read them on the user's clock, not UTC.
+async function fetchUserWeek(pool, userId, sinceDate, tz = 'America/New_York') {
   // Each sub-query degrades to empty rows on failure so one phantom column or
   // schema drift can't nuke the whole reveal — an active user should still get
   // a fallback reveal from whatever data succeeded, never wake to nothing.
@@ -210,13 +212,13 @@ async function fetchUserWeek(pool, userId, sinceDate) {
   });
   const [tasks, expenses, checkins, focus, streaks] = await Promise.all([
     q(
-      `SELECT title, is_completed, completed_at::date AS completed_date,
-              EXTRACT(DOW  FROM completed_at) AS completed_dow,
-              EXTRACT(HOUR FROM completed_at) AS completed_hour
+      `SELECT title, is_completed, (completed_at AT TIME ZONE $3)::date AS completed_date,
+              EXTRACT(DOW  FROM completed_at AT TIME ZONE $3) AS completed_dow,
+              EXTRACT(HOUR FROM completed_at AT TIME ZONE $3) AS completed_hour
        FROM tasks
        WHERE user_id = $1 AND (completed_at >= $2 OR created_at >= $2)
        ORDER BY created_at DESC LIMIT 40`,
-      [userId, sinceDate]
+      [userId, sinceDate, tz]
     ),
     q(
       `SELECT e.amount, e.is_impulse, e.expense_date, c.name AS category_name
@@ -233,11 +235,11 @@ async function fetchUserWeek(pool, userId, sinceDate) {
       [userId, sinceDate]
     ),
     q(
-      `SELECT actual_duration_seconds, completed, started_at::date AS session_date
+      `SELECT actual_duration_seconds, completed, (started_at AT TIME ZONE $3)::date AS session_date
        FROM focus_sessions
        WHERE user_id = $1 AND started_at >= $2
        ORDER BY started_at DESC LIMIT 20`,
-      [userId, sinceDate]
+      [userId, sinceDate, tz]
     ),
     q(
       `SELECT rs.current_streak, rs.best_streak, r.name AS routine_name
@@ -666,7 +668,7 @@ async function run() {
         let reveal = null;
 
         if (slot !== 'fun_fact') {
-          const data = await fetchUserWeek(pool, user.id, sinceDate);
+          const data = await fetchUserWeek(pool, user.id, sinceDate, user.timezone);
           // Belt-and-suspenders: even a total interest-corpus failure yields no
           // interests rather than aborting the whole reveal for this user.
           const interests = deriveInterests(await fetchInterestCorpus(pool, user.id).catch(logFailure('[daily-reveal]', 'fetchInterestCorpus', { userId: user.id }, [])));
