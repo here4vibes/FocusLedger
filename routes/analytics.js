@@ -18,6 +18,7 @@
 const express = require('express');
 const router = express.Router();
 const crypto = require('crypto');
+const { isAdminUser } = require('../lib/admin-access');
 const { authenticateToken } = require('../middleware/auth');
 
 // ── Bot UA patterns to reject ──────────────────────────────────────────────
@@ -206,14 +207,6 @@ function detectDevice(ua) {
   if (/tablet|ipad/i.test(ua)) return 'tablet';
   if (/mobile|android|iphone|ipod|blackberry|windows phone/i.test(ua)) return 'mobile';
   return 'desktop';
-}
-
-// ── Admin gate helper (mirrors admin.js logic) ─────────────────────────────
-function isAdminUser(user) {
-  if (user.is_admin) return true;
-  const adminEmails = (process.env.ADMIN_EMAILS || '').split(',')
-    .map(e => e.trim().toLowerCase()).filter(Boolean);
-  return adminEmails.includes((user.email || '').toLowerCase());
 }
 
 // =============================================================================

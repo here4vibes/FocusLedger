@@ -25,6 +25,7 @@ const {
 } = require('../db/customer-emails');
 const { processEmailToTask } = require('./email-to-tasks');
 const { logFailure } = require('../lib/log-failure');
+const { isAdminUser } = require('../lib/admin-access');
 
 // WHY: emails to tasks@focusledger.net trigger task creation, not inbox storage.
 // All other inbound emails go to the admin inbox as before.
@@ -273,12 +274,6 @@ module.exports = function(pool) {
   // =============================================================================
   // Admin Inbox API — all endpoints require admin auth
   // =============================================================================
-
-  function isAdminUser(user) {
-    if (user.is_admin) return true;
-    const adminEmails = (process.env.ADMIN_EMAILS || '').split(',').map(e => e.trim().toLowerCase()).filter(Boolean);
-    return adminEmails.includes((user.email || '').toLowerCase());
-  }
 
   async function requireAdmin(req, res, pool) {
     const userId = req.user?.id;
