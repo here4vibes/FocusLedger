@@ -32,7 +32,6 @@ router.get('/confirm-delete',  (_, res) => res.sendFile(pub('confirm-delete.html
 router.get('/install',   (_, res) => res.sendFile(pub('install.html')));
 
 // Landing page snapshot (revert point)
-router.get('/landing-old', (_, res) => res.sendFile(pub('landing-old.html')));
 
 // Marketing / informational
 router.get('/pricing',   (_, res) => res.sendFile(pub('pricing.html')));

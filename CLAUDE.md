@@ -11,7 +11,7 @@ Node.js + Express · PostgreSQL (Neon) · Render deployment · Vanilla HTML/CSS/
 - `middleware/security.js` — Helmet CSP, CORS, rate limiters (extracted from server.js)
 - `routes/` — one file per endpoint group using express.Router(); mounts under /api/* or /api/v1/*
 - `db/` — one file per table/table-group; all SQL via pool.query; no raw SQL outside db/
-- `public/` — all static HTML/CSS/JS; app entry: `public/app.html`
+- `public/` — all static HTML/CSS/JS; the home page is `public/weightless.html`
 - `lib/` — shared service utilities: email, AI tagging, nudge generation, queryWithRetry, documentExtraction, ai-service
 - `public/js/services/` — shared frontend service modules (values-service.js, ai-service.js)
 - `services/` — PlaidService, TransactionService, ClassificationService, EventBus, InsightsService, TimeEstimationService
@@ -115,7 +115,7 @@ The user asked to finish the big bug classes in about 4 sessions:
 3. **Main paths end to end in CI:** extend `scripts/ci-boot-smoke.js`, or add a sweep that GETs every parameterless API route as a new user and fails on any 5xx or logged error.
    - The first local run on a from-scratch DB flagged 20 routes: `buddy-widget/recent`, `comeback/status`, `daily-brief`, `weekly-recap`, `buddy` and `evening` `/evening-data`, `ideas/my-notifications`, `money/spending-sessions/today`, `time-blocks/weekly-summary`, `v1/focus-sessions/next`, `v1/insights/stats` and `unlocks`, `v1/notifications/preferences` (`pool` undefined), and `v1/transactions/aggregate` (route order).
    - Some of these are from-scratch-only drift, so check each against prod.
-4. **Retire legacy pages:** `buddy.html` (move the form check-in first), `app.html`, `home.html`, `portal.html`, `landing-old`.
+4. **Retire legacy pages:** `app.html`, `home.html` and `landing-old` are gone (#251). **Still to do:** `portal.html`, after #218 merges (it changes `/home` and `/portal`), and `buddy.html`, after moving the form check-in (`/app/checkin` → `/app/buddy?mode=form`).
 
 **Smaller items:**
 - **Admin SQL in routes:** `routes/promo-codes.js` and `routes/inbound-email.js` run their own admin lookup SQL. Switch them to `requireAdmin(pool)` from `lib/admin-access.js`.
@@ -145,7 +145,7 @@ Four places plus a Settings gear. One small PR per phase; old URLs keep working 
    - `/app/done` is a flow screen, not a section.
    - For phases 3 and 4, add the Money and Life entries to `PLACE_TABS` and drop them from "More".
 3. **Phase 3, Money hub (#236):** Overview (`/app/money`) · Transactions (`/transactions`) · Bills (`/app/money/bills`, the full recurring list with monthly and yearly totals, statuses and the "unsure" question). The spending check-in is a flow, not a section.
-4. **Phase 4, Life hub (#243, merged):** Overview (`/app/life`, also Score and Nudges) · Vault · Insurance · Values · Journal · Insights; "More" now holds only Email → Tasks, Partner, Settings and Help. **Still to do:** retire `buddy.html` (after moving the form check-in), `app.html`, `home.html`, `portal.html` and `landing-old`.
+4. **Phase 4, Life hub (#243, merged):** Overview (`/app/life`, also Score and Nudges) · Vault · Insurance · Values · Journal · Insights; "More" now holds only Email → Tasks, Partner, Settings and Help. Legacy pages: see Next up, item 4.
 5. **Phase 5, visual pass:** Weightless tokens on every page.
 
 ### Waiting on the user
