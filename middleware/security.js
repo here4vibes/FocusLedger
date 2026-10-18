@@ -31,6 +31,12 @@ const helmetMiddleware = helmet({
         // refused fbevents.js on every page, so ad conversions never fired.
         "https://connect.facebook.net"
       ],
+      // Helmet defaults this to 'none', which silently killed every inline
+      // onclick/onchange in the app (Settings "Invite a Partner", the Tandem
+      // and plan buttons, the ADHD Tax Calculator, Transactions, Routines…).
+      // scriptSrc already allows 'unsafe-inline', so this adds no new class
+      // of risk; moving handlers to addEventListener would let it go back.
+      scriptSrcAttr: ["'unsafe-inline'"],
       styleSrc: [
         "'self'",
         "'unsafe-inline'",
