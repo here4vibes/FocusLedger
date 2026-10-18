@@ -6,12 +6,7 @@ const express = require('express');
 const rateLimit = require('express-rate-limit');
 const { captureLeadEmail, getLeads, getLeadsCount, getUnconvertedLeads } = require('../db/lead-magnets');
 const { authenticateToken } = require('../middleware/auth');
-
-function isAdminUser(user) {
-  if (user.is_admin) return true;
-  const adminEmails = (process.env.ADMIN_EMAILS || '').split(',').map(e => e.trim().toLowerCase()).filter(Boolean);
-  return adminEmails.includes((user.email || '').toLowerCase());
-}
+const { isAdminUser } = require('../lib/admin-access');
 
 module.exports = function (pool) {
   // ── Public router: /api/leads/* ────────────────────────────────────────────

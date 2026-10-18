@@ -14,21 +14,13 @@
 
 const express = require('express');
 const { authenticateToken } = require('../middleware/auth');
+const { isAdminUser } = require('../lib/admin-access');
 
 // 1×1 transparent GIF
 const PIXEL_GIF = Buffer.from(
   'R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7',
   'base64'
 );
-
-function isAdminUser(user) {
-  if (user.is_admin) return true;
-  const adminEmails = (process.env.ADMIN_EMAILS || '')
-    .split(',')
-    .map(e => e.trim().toLowerCase())
-    .filter(Boolean);
-  return adminEmails.includes((user.email || '').toLowerCase());
-}
 
 module.exports = function(pool) {
   const router = express.Router();

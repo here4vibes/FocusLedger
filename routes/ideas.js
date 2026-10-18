@@ -1,13 +1,6 @@
 const express = require('express');
 const { authenticateToken } = require('../middleware/auth');
-
-// Admin emails from env var (comma-separated)
-// Example: ADMIN_EMAILS=founder@example.com,admin@example.com
-function isAdminUser(user) {
-  if (user.is_admin) return true;
-  const adminEmails = (process.env.ADMIN_EMAILS || '').split(',').map(e => e.trim().toLowerCase()).filter(Boolean);
-  return adminEmails.includes((user.email || '').toLowerCase());
-}
+const { isAdminUser } = require('../lib/admin-access');
 
 // Calculate 3-day credit based on billing cycle
 function calculateRewardCents(billingCycle) {
