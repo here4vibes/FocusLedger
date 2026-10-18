@@ -242,7 +242,8 @@ async function sendPushForNudges(pool, userId, nudges) {
       process.env.VAPID_PUBLIC_KEY,
       process.env.VAPID_PRIVATE_KEY
     );
-  } catch {
+  } catch (err) {
+    console.warn('[nudge-system] web push disabled: web-push failed to load or VAPID keys are missing/invalid:', err.message);
     return;
   }
 

@@ -112,10 +112,10 @@ Node.js + Express · PostgreSQL (Neon) · Render deployment · Vanilla HTML/CSS/
 The user asked to finish the big bug classes in about 4 sessions:
 1. **Schema audit (done: #252 code fixes, #253 defaults migration).** The genesis migration was generated from prod's catalog, so a from-scratch DB reproduces prod; a SQL error locally is a prod bug.
    - The 217 stale pending `plaid_transactions` (never removed because the "removed" webhook only deletes `is_confirmed = false`) are deleted once by migration `stale_pending_plaid` (user-approved 2026-10-18). 683 older posted rows still have `is_confirmed` NULL and stay out of the check-in.
-2. **Silent failures, part 3:** catches that return a fallback without logging. A scan found 105: 39 HIGH, 31 MEDIUM, 35 intentional. **HIGH is done (#250),** and the guard now also catches `.catch(() => ({ … }))`. **Still to do:** the 31 MEDIUM (AI suggestion fallbacks in `tasks-prisma.js`, `health-score.js` pillars, `lib/timezone.js` DB fallback, push config, `/health` 503), then an AST guard (acorn) with `// silent-ok: <reason>` markers that also scans the root cron files.
+2. ~~**Silent failures, part 3**~~ done: HIGH in #250, MEDIUM in #255. `__tests__/no-silent-catches.test.js` now checks every catch body (blocks and `.catch()` handlers, root cron modules included): it must log, rethrow, forward or carry `// silent-ok: <reason>`.
 3. **Main paths end to end in CI:** the GET sweep is in CI (`scripts/ci-api-sweep.js`, `npm run test:sweep`, after `test:boot`). It GETs every parameterless `/api` route as a new user and fails on a 5xx (503 is OK) or a logged SQL/TypeError line. Its first run's 20 routes are fixed. The from-scratch schema is prod's, so a hit is a prod bug.
-   - **Still to do:** POST/PATCH and `/:id` routes aren't swept. Known write-path drift: `db/spendingSessions.js` sets `spending_sessions.updated_at` (no such column); `feature_suggestions.reward_applied`/`reward_notified` are TEXT used as booleans (`routes/ideas.js` PATCH status); `routine_suggestions.created_routine_id` is a timestamptz.
-4. **Retire legacy pages:** `app.html`, `home.html` and `landing-old` are gone (#251). `buddy.html` is retired too: the form check-in is `public/checkin-form.html` at `/app/checkin/form`. **Still to do:** `portal.html`, after #218 merges (it changes `/home` and `/portal`).
+   - **Still to do:** POST/PATCH and `/:id` routes aren't swept. The known write-path drift is fixed (#253: `created_routine_id`; #254: `spending_sessions.updated_at`, and the text booleans in `insight_unlocks` and `feature_suggestions`).
+4. **Retire legacy pages:** `app.html`, `home.html` and `landing-old` are gone (#251), and `buddy.html` in #256: the form check-in is `public/checkin-form.html` at `/app/checkin/form`. **Still to do:** `portal.html`, after #218 merges (it changes `/home` and `/portal`).
 
 **Smaller items:**
 - **Admin SQL in routes:** `routes/promo-codes.js` and `routes/inbound-email.js` run their own admin lookup SQL. Switch them to `requireAdmin(pool)` from `lib/admin-access.js`.
@@ -166,7 +166,7 @@ Four places plus a Settings gear. One small PR per phase; old URLs keep working 
 - **After #218:** add an "Invite an accountability partner" link to the weekly email for people with no partner (`/app/settings?focus=tandem`, scroll to `#tandemSection`).
 - **Hardening:**
   1. `user_id NOT NULL` and foreign keys on core tables. Check for orphans first; use a Neon branch.
-  2. ~~Silent catches~~ done: #239 (one-liners, `lib/log-failure.js`) and #240 (block catches). `__tests__/no-silent-catches.test.js` now fails CI on any new empty or comment-only catch in server code. Catches that do something but don't log (e.g. `catch { return null; }`) are not covered yet.
+  2. ~~Silent catches~~ done: #239 (one-liners, `lib/log-failure.js`) and #240 (block catches). `__tests__/no-silent-catches.test.js` now fails CI on any new empty or comment-only catch in server code. Since part 3 it also fails on catches that don't log (e.g. `catch { return null; }`).
   3. Neon point-in-time restore and snapshot schedule.
   4. ~~`routine_task_links` unique key~~ done in #242.
   5. 23 moderate npm advisories.
@@ -174,7 +174,6 @@ Four places plus a Settings gear. One small PR per phase; old URLs keep working 
   - Agentic **type 2** (Buddy acts: bills, subscriptions, start-it-for-me) and **type 3** (shareable outcomes, e.g. "cancelled Netflix, $186/yr back") come first.
   - The MCP server for Claude/ChatGPT/Meta Muse is deferred.
   - Positioning: ADHD-native; the "ADHD tax" from a CPA founder; privacy; partner accountability.
-- **Silent catches left in root-level cron modules:** `morningNudge.js`, `eveningNudge.js`, `buddyEngagementCron.js` and `taskDeadlineNudge.js` each have a `.catch(() => {})` on push cleanup. #218 rewrites the first three and #245 fixes the fourth. After both merge, fix the rest and add the root cron files to `FILES` in `__tests__/no-silent-catches.test.js`.
 - **News sync runs on an in-process `setInterval`** (`routes/news.js` `startRssCron`), which breaks the no-in-process-schedulers rule. The `rss-sync` cron in `render.yaml` is commented out. Either move it to that cron or drop the feature.
 - **AI JSON:** parse model replies with `parseAiJson` from `lib/ai-json.js` (it handles code fences and surrounding prose). Never call `JSON.parse` on a raw model reply.
 - **Plaid v1 `connect`** stores the institution *id* as the bank name (`services/PlaidService.js`). The legacy path isn't used by the frontend.

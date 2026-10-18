@@ -116,5 +116,5 @@ async function main() {
 
 main().catch(err => {
   console.error('[evening-checkin] Fatal error:', err.message);
-  pool.end().then(() => flushAndExit(1)).catch(() => flushAndExit(1));
+  pool.end().then(() => flushAndExit(1)).catch(() => flushAndExit(1)); // silent-ok: already exiting on a logged fatal error
 });

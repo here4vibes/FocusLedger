@@ -190,7 +190,7 @@ function sanitizeReferrer(ref) {
     // Keep only origin + pathname (strip query + hash to avoid PII in referrers)
     const clean = `${url.origin}${url.pathname}`.slice(0, 500);
     return clean;
-  } catch {
+  } catch { // silent-ok: client-supplied referrer that isn't a URL is dropped
     return null;
   }
 }

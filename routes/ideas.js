@@ -213,12 +213,10 @@ module.exports = function(pool) {
       const userId = req.user.id;
 
       const result = await pool.query(
-        // reward_applied / reward_notified are TEXT in prod ('true'/'false' from
-        // boolean writes), so compare as text rather than to a boolean.
-        `SELECT id, title, status, reward_amount_cents, (reward_applied = 'true') AS reward_applied
+        `SELECT id, title, status, reward_amount_cents, reward_applied
          FROM feature_suggestions
          WHERE user_id = $1 AND status IN ('selected', 'shipped')
-           AND reward_notified IS DISTINCT FROM 'true'`,
+           AND reward_notified IS NOT TRUE`,
         [userId]
       );
 

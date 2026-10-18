@@ -129,8 +129,7 @@ app.use('/api', (req, res, next) => {
             .catch(logFailure('[server]', 'touchLastActive', { userId }));
         }
       }
-    } catch {
-      // Invalid token — auth middleware handles rejection downstream
+    } catch { // silent-ok: invalid token; authenticateToken rejects it downstream
     }
   }
   next();
@@ -159,6 +158,7 @@ app.get('/health', async (req, res) => {
     }
     res.json({ status: 'ok', db: 'ok', latency_ms: Date.now() - start, commit: process.env.RENDER_GIT_COMMIT || 'unknown', migrations });
   } catch (err) {
+    console.error('[health] DB check failed:', err.message, '| latency_ms:', Date.now() - start);
     res.status(503).json({ status: 'degraded', db: 'error', error: err.message, latency_ms: Date.now() - start });
   }
 });

@@ -62,7 +62,7 @@ function verifyState(state) {
     if (sig !== expected) return null;
     const safeHost = TRUSTED_REDIRECT_HOSTS.has(host) ? host : 'focusledger.net';
     return { returnTo, host: safeHost };
-  } catch {
+  } catch { // silent-ok: malformed OAuth state from the query string; caller rejects it
     return null;
   }
 }
