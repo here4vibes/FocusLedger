@@ -1,6 +1,34 @@
-# Third-Party Notices
+# Third-party notices
 
-FocusLedger's Claude Code helpers (`.claude/agents/`, `.claude/skills/`) include material adapted from the projects below. Each adapted file also carries a NOTICE comment naming its source, commit, license and the changes made. npm dependencies are covered by their own package licenses and are not listed here.
+FocusLedger includes material from the third-party projects below. Packages
+installed through npm carry their own licenses in `node_modules`; this file
+covers code and assets copied into the repository itself.
+
+## Lucide
+
+- **What:** SVG path data for the navigation icons, copied into
+  `public/js/icons.js` (house, square-check-big, wallet, heart, mail, users,
+  settings, circle-help, log-out, x, plus, message-circle).
+- **Source:** https://lucide.dev, npm package `lucide-static` 0.460.0
+- **License:** ISC
+
+```
+ISC License
+
+Copyright (c) for portions of Lucide are held by Cole Bemis 2013-2022 as part of Feather (MIT). All other copyright (c) for Lucide are held by Lucide Contributors 2022.
+
+Permission to use, copy, modify, and/or distribute this software for any
+purpose with or without fee is hereby granted, provided that the above
+copyright notice and this permission notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+```
 
 ## anthropics/skills (Apache License 2.0)
 
