@@ -9,6 +9,7 @@ const { logFailure } = require('../lib/log-failure');
 const { parseAiJson } = require('../lib/ai-json');
 const { onTasksCompleted, refreshRoutineTasks } = require('../lib/routine-capture');
 const { nextTaskOccurrence } = require('../lib/recurrence');
+const { parseDueDate } = require('../lib/nl-due-date');
 
 // ── Helpers: time string normalization ───────────────────────────────────────
 // DB stores time as 'time without time zone'; pg returns it as a string "HH:MM:SS".
@@ -305,14 +306,33 @@ async function getTask(req, res) {
 // ── POST /api/tasks ────────────────────────────────────────────────────────────
 async function createTask(req, res) {
   try {
-    const { title, description, priority, due_date, due_time, steps, source, merchant_hint,
+    const { title: rawTitle, description, priority, steps, source, merchant_hint,
             expected_amount, duration_minutes, is_household, is_shared_with_partner,
-            recurrence_type, recurrence_day } = req.body;
+            recurrence_type, recurrence_day, parse_dates } = req.body;
+    let { due_date, due_time } = req.body;
+    let title = rawTitle;
     const userId = req.user.id;
     const pool = res.locals._pool;
 
-    if (!title?.trim()) return res.status(400).json({ success: false, message: 'What should this task be called?' });
+    if (typeof title !== 'string' || !title.trim()) return res.status(400).json({ success: false, message: 'What should this task be called?' });
     if (title.trim().length > 150) return res.status(400).json({ success: false, message: 'Task title must be 150 characters or fewer.' });
+
+    // Natural-language due date ("dentist Tuesday 3pm"): only for typed capture,
+    // and only when the client sent no date of its own. Parsed in the user's zone.
+    if (!due_date && !due_time && (!source || source === 'manual') && parse_dates !== false) {
+      try {
+        const tz = await fetchUserTimezone(pool, userId);
+        const nl = parseDueDate(title.trim(), tz);
+        if (nl.due_date) {
+          title = nl.title;
+          due_date = nl.due_date;
+          if (nl.due_time) due_time = nl.due_time;
+        }
+      } catch (e) {
+        // Capture still works without a parsed date; keep the title as typed.
+        console.error('[tasks] natural-language due date failed:', e.message, '| userId:', userId);
+      }
+    }
 
     // Free user task limit check
     try {
