@@ -107,6 +107,7 @@ const LEGACY_CATEGORY_MAP = {
 
 const { runBillGuardian, detectStreams, bucketFor, FREQUENCIES } = require('../lib/bill-guardian');
 const { cancelLinkFor } = require('../lib/cancel-links');
+const { cleanMerchantName } = require('../lib/merchant-normalize');
 const { cancelHelp } = require('../lib/cancel-help');
 const billsDb = require('../db/bills');
 const { logFailure } = require('../lib/log-failure');
@@ -1222,7 +1223,7 @@ module.exports = function(pool) {
         billsDb.getBillPreferences(pool, userId),
       ]);
       const prefsByKey = new Map(prefs.map(p => [p.merchant_key, p]));
-      const streams = detectStreams(txs, Date.now())
+      const streams = detectStreams(txs, Date.now(), prefs)
         .map(s => {
           const pref = prefsByKey.get(s.merchant_key) || {};
           return {
@@ -1231,7 +1232,7 @@ module.exports = function(pool) {
             kept_at: pref.kept_at || null,
             cancel_status: pref.cancel_status || null,
             cancel_expected_by: pref.cancel_expected_by || null,
-            cancel_link: cancelLinkFor(s.name),
+            cancel_link: cancelLinkFor(s.name) || cancelLinkFor(s.raw_name),
           };
         })
         .sort((a, b) => a.predicted_next.localeCompare(b.predicted_next));
@@ -1242,16 +1243,19 @@ module.exports = function(pool) {
       const cancellations = prefs
         .filter(p => p.cancel_status === 'charged_again' ||
           (p.cancel_status === 'confirmed' && p.cancel_resolved_at && new Date(p.cancel_resolved_at).getTime() >= monthAgo))
-        .map(p => ({
-          merchant_key: p.merchant_key,
-          name: p.merchant_display_name || p.merchant_key,
-          status: p.cancel_status,
-          amount: p.cancel_amount == null ? null : Number(p.cancel_amount),
-          frequency: p.cancel_frequency,
-          expected_by: p.cancel_expected_by,
-          resolved_at: p.cancel_resolved_at,
-          cancel_link: cancelLinkFor(p.merchant_display_name || p.merchant_key),
-        }));
+        .map(p => {
+          const name = cleanMerchantName(p.merchant_display_name) || p.merchant_key;
+          return {
+            merchant_key: p.merchant_key,
+            name,
+            status: p.cancel_status,
+            amount: p.cancel_amount == null ? null : Number(p.cancel_amount),
+            frequency: p.cancel_frequency,
+            expected_by: p.cancel_expected_by,
+            resolved_at: p.cancel_resolved_at,
+            cancel_link: cancelLinkFor(name) || cancelLinkFor(p.merchant_display_name),
+          };
+        });
       res.json({ success: true, streams, ask, cancellations });
     } catch (err) {
       console.error('[BillGuardian] GET /recurring failed:', err.message, '| user:', userId);
@@ -1363,7 +1367,9 @@ module.exports = function(pool) {
          ORDER BY bp.merchant_display_name`,
         [userId]
       );
-      res.json({ success: true, bills: rows });
+      // Stored names can be raw bank strings ("SQ *JOES COFFEE 4421"): show them cleaned.
+      const bills = rows.map(r => ({ ...r, merchant_display_name: cleanMerchantName(r.merchant_display_name) || r.merchant_display_name }));
+      res.json({ success: true, bills });
     } catch (err) { console.error('[BillTasks] Error fetching bills:', err); res.status(500).json({ success: false, message: 'Failed to fetch bill preferences' }); }
   });
 
