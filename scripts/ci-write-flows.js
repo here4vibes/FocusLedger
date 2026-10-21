@@ -16,7 +16,7 @@
  * sweep, scripts/ci-harness.js), or a wrong follow-up state.
  *
  * Flows: tasks (create → list/today → edit → steps → complete → reopen →
- * delete; recurring spawn), routine capture (starter routine → streak 1), the
+ * delete; recurring spawn), routine capture (starter routine → streak 1, habit strength 5%), the
  * form check-in (mode preference, login check-in, daily plan, accept), Buddy
  * morning / mid-day / evening + evening-data, ideas, journal, values (add,
  * rename, delete), expenses (manual add + triage), budget, the spending
@@ -201,6 +201,17 @@ async function main() {
     await call('GET', `/api/tasks/${id}`, 404, { token });
   });
 
+  await flow('tasks: natural-language due date in the user\'s zone; an explicit date wins', async () => {
+    const nl = (await call('POST', '/api/tasks', 201, { token, body: { title: 'CI dentist tomorrow' } })).task;
+    expect(nl.title === 'CI dentist', `date phrase not stripped: "${nl.title}"`);
+    expect(String(nl.due_date).slice(0, 10) === localDate(1), `due_date ${nl.due_date} is not the user's local tomorrow (${localDate(1)})`);
+    const explicit = (await call('POST', '/api/tasks', 201, { token, body: { title: 'CI call tomorrow', due_date: today } })).task;
+    expect(explicit.title === 'CI call tomorrow', `title changed despite an explicit date: "${explicit.title}"`);
+    expect(String(explicit.due_date).slice(0, 10) === today, `explicit due_date ${explicit.due_date} was overridden`);
+    await call('DELETE', `/api/tasks/${nl.id}`, 200, { token });
+    await call('DELETE', `/api/tasks/${explicit.id}`, 200, { token });
+  });
+
   // 2 ── Routines ─────────────────────────────────────────────────────────────
   await flow('routines: finish the starter routine → streak 1', async () => {
     let routines = (await call('GET', '/api/routines', 200, { token })).routines || [];
@@ -216,6 +227,7 @@ async function main() {
       expect(routine, 'created routine missing from GET /api/routines (saved inactive?)');
     }
     expect(routine.is_active === true, `routine is_active=${routine.is_active}`);
+    expect(routine.strength === 0, `habit strength before any completion: ${routine.strength}, expected 0`);
     const open = routine.tasks.filter(t => !t.is_completed);
     expect(open.length > 0, 'routine has no open tasks to complete');
     let last;
@@ -231,6 +243,14 @@ async function main() {
     // Recording the completion again the same day must not double-count.
     const again = await call('POST', `/api/routines/${routine.id}/complete`, 200, { token, body: {} });
     expect(Number(again.streak && again.streak.current_streak) === 1, `same-day re-complete changed the streak: ${JSON.stringify(again.streak)}`);
+
+    // Habit strength (routine_completions log, user-local date): one day done
+    // on the routine's first day = one half-life-14 step = 5%, and the
+    // same-day re-complete above must not log a second day.
+    const listed = ((await call('GET', '/api/routines', 200, { token })).routines || []).find(r => r.id === routine.id);
+    expect(listed, 'routine missing from GET /api/routines after completing it');
+    expect(listed.strength === 5, `habit strength after one completion: ${listed.strength}, expected 5`);
+    expect(listed.current_streak === 1, `GET /api/routines current_streak=${listed.current_streak}, expected 1`);
   });
 
   // 3 ── Form check-in (public/checkin-form.html) ──────────────────────────────

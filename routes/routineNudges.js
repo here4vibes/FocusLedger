@@ -5,7 +5,7 @@
 //               or scheduled nudge check logic (see lib/routineNudgeEngine.js).
 //
 // Endpoints:
-//   GET  /api/routines               — list user's routines + tasks + streaks
+//   GET  /api/routines               — list user's routines + tasks + streak + habit strength (0-100)
 //   POST /api/routines               — create a new routine
 //   GET  /api/routines/templates     — list all pre-built routine templates
 //   POST /api/routines/from-template — create a routine + tasks from a template
@@ -24,7 +24,7 @@
 
 const express = require('express');
 const { authenticateToken } = require('../middleware/auth');
-const { fetchUserTimezone, getUserLocalDate } = require('../lib/timezone');
+const { fetchUserTimezone, getUserLocalDate, validateTimezone } = require('../lib/timezone');
 const { sendPushToUser } = require('../lib/sendPushToUser');
 const {
   createRoutine,
@@ -72,7 +72,8 @@ module.exports = function(pool) {
   router.get('/', async (req, res) => {
     try {
       await refreshRoutineTasks(pool, req.user.id).catch(logFailure('[routines]', 'refreshRoutineTasks', { userId: req.user.id }, 0));
-      const routines = await getUserRoutines(pool, req.user.id);
+      const tz = validateTimezone(await fetchUserTimezone(pool, req.user.id)) || 'America/New_York';
+      const routines = await getUserRoutines(pool, req.user.id, tz);
       res.json({ success: true, routines });
     } catch (err) {
       console.error('[routines] GET / error:', err.message);

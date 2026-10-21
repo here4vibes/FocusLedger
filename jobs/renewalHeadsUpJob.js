@@ -33,7 +33,7 @@ async function runForUser(pool, userId, { now = new Date(), push = sendPushToUse
 
   const [txs, prefs] = await Promise.all([billsDb.getRecentOutflows(pool, userId), billsDb.getBillPreferences(pool, userId)]);
   const prefsByKey = new Map(prefs.map(p => [p.merchant_key, p]));
-  const due = renewalHeadsUps(detectStreams(txs, todayMs), prefsByKey, todayMs);
+  const due = renewalHeadsUps(detectStreams(txs, todayMs, prefs), prefsByKey, todayMs);
 
   let attempted = 0;
   for (const s of due) {
