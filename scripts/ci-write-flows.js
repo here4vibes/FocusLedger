@@ -201,6 +201,17 @@ async function main() {
     await call('GET', `/api/tasks/${id}`, 404, { token });
   });
 
+  await flow('tasks: natural-language due date in the user\'s zone; an explicit date wins', async () => {
+    const nl = (await call('POST', '/api/tasks', 201, { token, body: { title: 'CI dentist tomorrow' } })).task;
+    expect(nl.title === 'CI dentist', `date phrase not stripped: "${nl.title}"`);
+    expect(String(nl.due_date).slice(0, 10) === localDate(1), `due_date ${nl.due_date} is not the user's local tomorrow (${localDate(1)})`);
+    const explicit = (await call('POST', '/api/tasks', 201, { token, body: { title: 'CI call tomorrow', due_date: today } })).task;
+    expect(explicit.title === 'CI call tomorrow', `title changed despite an explicit date: "${explicit.title}"`);
+    expect(String(explicit.due_date).slice(0, 10) === today, `explicit due_date ${explicit.due_date} was overridden`);
+    await call('DELETE', `/api/tasks/${nl.id}`, 200, { token });
+    await call('DELETE', `/api/tasks/${explicit.id}`, 200, { token });
+  });
+
   // 2 ── Routines ─────────────────────────────────────────────────────────────
   await flow('routines: finish the starter routine → streak 1', async () => {
     let routines = (await call('GET', '/api/routines', 200, { token })).routines || [];

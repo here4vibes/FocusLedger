@@ -36,6 +36,7 @@
     "@anthropic-ai/sdk": "^0.101.0",
     "@sentry/node": "^8.0.0",
     "apn": "^2.2.0",
+    "chrono-node": "^2.10.3",
     "connect-pg-simple": "^9.0.1",
     "cors": "^2.8.5",
     "express": "^4.18.2",
@@ -51,6 +52,7 @@
     "pg": "^8.11.3",
     "plaid": "latest",
     "resend": "^6.12.2",
+    "rrule": "^2.8.1",
     "stripe": "^22.2.0",
     "web-push": "^3.6.7"
   },
