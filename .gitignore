@@ -31,6 +31,8 @@ xcuserdata/
 .claude/*
 !.claude/agents/
 !.claude/skills/
+!.claude/hooks/
+!.claude/settings.json
 
 # SPM cache (local only — CI uses --clonedSourcePackagesDirPath)
 .build/
