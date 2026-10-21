@@ -41,4 +41,6 @@ test('our own CI is marked by header or UA token, even with a normal browser UA'
   expect(classifyTraffic({ 'user-agent': IPHONE, 'x-fl-automation': 'smoke' })).toBe('ci');
   expect(classifyTraffic({ 'user-agent': 'FocusLedger-signup-monitor (+https://github.com/x)' })).toBe('ci');
   expect(classifyTraffic({ 'user-agent': `${CHROME} FocusLedger-CI` })).toBe('ci');
+  expect(classifyTraffic({ 'user-agent': 'FocusLedger-uptime/1.0 (+https://github.com/x)' })).toBe('ci');
+  expect(classifyTraffic({ 'user-agent': 'FocusLedger-uptime/1.0', 'x-fl-automation': 'uptime' })).toBe('ci');
 });
