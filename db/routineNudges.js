@@ -1,8 +1,14 @@
-// Owns: routines, routine_task_links, routine_streaks, routine_nudge_events,
-//       routine_nudge_prefs tables.
+// Owns: routines, routine_task_links, routine_streaks, routine_completions,
+//       routine_nudge_events, routine_nudge_prefs tables.
 // Does NOT own: tasks table, buddy check-ins, push notification delivery, or user auth.
 
 'use strict';
+
+const { strengthForRoutine } = require('../lib/habit-strength');
+
+// Habit strength reads this much history; older days weigh < 0.1% (half-life
+// 14 days / 4 weeks, see lib/habit-strength.js).
+const STRENGTH_HISTORY_DAYS = 400;
 
 // ── Routines ─────────────────────────────────────────────────────────────────
 
@@ -28,9 +34,11 @@ async function createRoutine(pool, userId, data) {
 }
 
 /**
- * Get all active routines for a user, with their linked task IDs.
+ * Get all active routines for a user, with their linked tasks, streak, and
+ * habit strength (0–100, lib/habit-strength.js; null when no tz is given).
+ * @param {string} [tz] validated IANA timezone, for the user's local "today"
  */
-async function getUserRoutines(pool, userId) {
+async function getUserRoutines(pool, userId, tz) {
   const routinesResult = await pool.query(
     `SELECT * FROM routines WHERE user_id = $1 AND is_active = true ORDER BY created_at ASC`,
     [userId]
@@ -56,10 +64,45 @@ async function getUserRoutines(pool, userId) {
     });
   }
 
-  return routinesResult.rows.map(r => ({
-    ...r,
-    tasks: tasksByRoutine[r.id] || []
-  }));
+  const [streaksResult, completionsResult] = await Promise.all([
+    pool.query(
+      `SELECT routine_id, current_streak, best_streak, last_completed_date::text AS last_completed_date
+       FROM routine_streaks WHERE routine_id = ANY($1)`,
+      [routineIds]
+    ),
+    pool.query(
+      `SELECT routine_id, local_date::text AS local_date
+       FROM routine_completions
+       WHERE user_id = $1 AND routine_id = ANY($2)
+         AND local_date >= CURRENT_DATE - $3::int`,
+      [userId, routineIds, STRENGTH_HISTORY_DAYS]
+    ),
+  ]);
+  const streakByRoutine = {};
+  for (const s of streaksResult.rows) streakByRoutine[s.routine_id] = s;
+  const datesByRoutine = {};
+  for (const c of completionsResult.rows) {
+    (datesByRoutine[c.routine_id] = datesByRoutine[c.routine_id] || []).push(c.local_date);
+  }
+
+  return routinesResult.rows.map(r => {
+    const streak = streakByRoutine[r.id];
+    return {
+      ...r,
+      tasks: tasksByRoutine[r.id] || [],
+      current_streak: streak ? Number(streak.current_streak) || 0 : 0,
+      best_streak: streak ? Number(streak.best_streak) || 0 : 0,
+      last_completed_date: streak ? streak.last_completed_date : null,
+      strength: tz
+        ? strengthForRoutine({
+          completions: datesByRoutine[r.id] || [],
+          createdAt: r.created_at,
+          routineType: r.routine_type,
+          tz,
+        })
+        : null,
+    };
+  });
 }
 
 /**
@@ -205,6 +248,8 @@ async function recordRoutineCompletion(pool, userId, routineId, localDate) {
   const newBest = Math.max(newStreak, streak.best_streak);
   const freezeUsedDate = freezeUsed ? localDate : (streak.last_freeze_used_date || null);
 
+  await logRoutineCompletion(pool, userId, routineId, localDate);
+
   await pool.query(
     `UPDATE routine_streaks
      SET current_streak = $1, best_streak = $2, last_completed_date = $3,
@@ -219,6 +264,20 @@ async function recordRoutineCompletion(pool, userId, routineId, localDate) {
     freeze_used: freezeUsed,
     freeze_available: freezeLeft,
   };
+}
+
+/**
+ * Log a completion day for habit strength. Idempotent per routine per day.
+ * @returns {Promise<boolean>} true if a new day was recorded
+ */
+async function logRoutineCompletion(pool, userId, routineId, localDate) {
+  const { rowCount } = await pool.query(
+    `INSERT INTO routine_completions (routine_id, user_id, local_date)
+     VALUES ($1, $2, $3::date)
+     ON CONFLICT (routine_id, local_date) DO NOTHING`,
+    [routineId, userId, localDate]
+  );
+  return rowCount > 0;
 }
 
 /**
@@ -428,6 +487,7 @@ module.exports = {
   removeTaskFromRoutine,
   getOrCreateStreak,
   recordRoutineCompletion,
+  logRoutineCompletion,
   reopenStaleRoutineTasks,
   getRoutinesFinishedByTasks,
   getUserStreaks,

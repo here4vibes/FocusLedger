@@ -16,7 +16,7 @@
  * sweep, scripts/ci-harness.js), or a wrong follow-up state.
  *
  * Flows: tasks (create → list/today → edit → steps → complete → reopen →
- * delete; recurring spawn), routine capture (starter routine → streak 1), the
+ * delete; recurring spawn), routine capture (starter routine → streak 1, habit strength 5%), the
  * form check-in (mode preference, login check-in, daily plan, accept), Buddy
  * morning / mid-day / evening + evening-data, ideas, journal, values (add,
  * rename, delete), expenses (manual add + triage), budget, the spending
@@ -227,6 +227,7 @@ async function main() {
       expect(routine, 'created routine missing from GET /api/routines (saved inactive?)');
     }
     expect(routine.is_active === true, `routine is_active=${routine.is_active}`);
+    expect(routine.strength === 0, `habit strength before any completion: ${routine.strength}, expected 0`);
     const open = routine.tasks.filter(t => !t.is_completed);
     expect(open.length > 0, 'routine has no open tasks to complete');
     let last;
@@ -242,6 +243,14 @@ async function main() {
     // Recording the completion again the same day must not double-count.
     const again = await call('POST', `/api/routines/${routine.id}/complete`, 200, { token, body: {} });
     expect(Number(again.streak && again.streak.current_streak) === 1, `same-day re-complete changed the streak: ${JSON.stringify(again.streak)}`);
+
+    // Habit strength (routine_completions log, user-local date): one day done
+    // on the routine's first day = one half-life-14 step = 5%, and the
+    // same-day re-complete above must not log a second day.
+    const listed = ((await call('GET', '/api/routines', 200, { token })).routines || []).find(r => r.id === routine.id);
+    expect(listed, 'routine missing from GET /api/routines after completing it');
+    expect(listed.strength === 5, `habit strength after one completion: ${listed.strength}, expected 5`);
+    expect(listed.current_streak === 1, `GET /api/routines current_streak=${listed.current_streak}, expected 1`);
   });
 
   // 3 ── Form check-in (public/checkin-form.html) ──────────────────────────────
