@@ -215,6 +215,7 @@ Four places plus a Settings gear. One small PR per phase; old URLs keep working 
 - **Errors and health:**
   - Sentry: `lib/sentry.js` (`initSentry(name)` in every process).
   - `/health` migration status: `lib/migration-manifest.js` and `db/migrations-status.js`.
+  - Uptime: `.github/workflows/uptime.yml` checks `/`, `/pricing`, `/signup` every 5 min and `/health` hourly (hourly so Neon can sleep); a failure opens a GitHub issue labelled `uptime`, recovery closes it. See `docs/uptime.md` (also the optional full-Upptime status page).
 - **Billing and admin:**
   - Billing: `lib/billing.js`, `db/billing.js`, `lib/stripe-client.js`.
   - OAuth callbacks: every flow signs `state` with `lib/oauth-state.js` (purpose-bound HMAC, constant-time, 10 min, no fallback secret): `signUserState(purpose, userId)` for connect flows (Calendar `gcal`, `email-gmail`/`-outlook`/`-yahoo`), `signPayload` for Google sign-in (`returnTo` login|signup, trusted host only). Never put a login token in it.
