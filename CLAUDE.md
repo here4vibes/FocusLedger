@@ -230,6 +230,7 @@ Four places plus a Settings gear. One small PR per phase; old URLs keep working 
     - Settles pending subscription cancellations from bank data (`cancellationVerdict`).
     - Runs in `jobs/plaid-sync.js` and after a bucket answer.
   - API: `GET /api/plaid/recurring` (streams, the one `ask`, settled `cancellations`); `POST …/:key/bucket|keep|cancel`; `DELETE …/:key/cancel`.
+  - Merchant names: `lib/merchant-normalize.js` (processor prefixes, store numbers, locations, ref IDs stripped; title case after Actual Budget, see `THIRD_PARTY_NOTICES.md`). Streams group on the normalized key; `resolvePrefKeys` maps a stream onto an existing `bill_preferences` row keyed the old raw way (`legacy_keys`), so answers aren't orphaned. Never re-key `bill_preferences` rows.
   - Cancel pages: `lib/cancel-links.js`. In-card steps: `lib/cancel-help.js` (`POST …/:key/cancel-help`).
   - Agent duplicate-task guard: `lib/task-dedupe.js`, used by `create_task` in `lib/agent-tools.js`.
 - **Weightless** (`public/weightless.html`, the one home):

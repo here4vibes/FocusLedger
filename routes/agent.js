@@ -11,6 +11,7 @@ const { TOOL_DEFS, tierOf, scopeOf, isKnown, dispatch, reverse } = require('../l
 const { logAction, getAction, markUndone, markExecuted, markCancelled, markFailed, recentActionCount } = require('../db/agent-actions');
 const { checkProStatus } = require('../middleware/proUtils');
 const { getBillPreferences } = require('../db/bills');
+const { cleanMerchantName } = require('../lib/merchant-normalize');
 const { logFailure } = require('../lib/log-failure');
 
 // Daily cap on real-world sends per user (guardrail; see spec).
@@ -140,7 +141,7 @@ async function runAgentTurn(pool, userId, message, clientHistory, systemPromptBu
   let cancelling = [];
   try {
     const prefs = await getBillPreferences(pool, userId);
-    cancelling = prefs.filter(p => p.cancel_status === 'pending').map(p => p.merchant_display_name || p.merchant_key);
+    cancelling = prefs.filter(p => p.cancel_status === 'pending').map(p => cleanMerchantName(p.merchant_display_name) || p.merchant_key);
   } catch (e) {
     console.error('[Agent] load pending cancellations failed:', e.message, '| userId:', userId);
   }
