@@ -237,6 +237,7 @@ Four places plus a Settings gear. One small PR per phase; old URLs keep working 
   - Tap-to-complete radar with a reward loop (`public/js/reward.js`, undo, next task steps up).
   - Bills · next 7 days card.
   - Subscription review: cancel (pending → confirmed / charged again from bank data) / keep (rests 90 days) / it's a bill.
+- **Recurring dates:** `lib/recurrence.js` (rrule.js) is the only next-occurrence math: `nextTaskOccurrence` for `tasks.recurrence_type` (adds `biweekly`, `monthly_last_weekday`; month ends clamp; never spawns before the user's local today) and `nextScheduleDate` for `recurring_tasks`/`recurring_expenses`. New third-party packages go in `THIRD_PARTY_NOTICES.md`.
 - **Routine capture:** `lib/routine-capture.js`.
   - `onTasksCompleted` runs at every task-completion point (Tasks API toggle, update and steps; Buddy; the agent's `mark_task_done`). When a tick finishes a routine's last open task, it records the routine completion and streak.
   - `refreshRoutineTasks` reopens routine tasks finished on an earlier local day (weekly routines after 7 days). It runs when `/api/tasks`, `/api/buddy/status`, `/api/routines` and `/api/today/timeline` load, so there's no cron to set up.
