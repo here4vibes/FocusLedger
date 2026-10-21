@@ -820,6 +820,56 @@
                 transition-duration: 0.001ms !important;
             }
         }
+
+        /* ── Away prompt (idle detection, public/js/focus-idle.js) ───────── */
+        #away-prompt {
+            position: fixed;
+            inset: 0;
+            display: none;
+            align-items: flex-end;
+            justify-content: center;
+            background: rgba(1, 30, 92, 0.35);
+            z-index: 120;
+            padding: 16px;
+        }
+        #away-prompt.visible { display: flex; }
+        .away-card {
+            width: 100%;
+            max-width: 420px;
+            background: var(--surface);
+            color: var(--text-dark);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-md);
+            padding: 22px 20px 18px;
+            text-align: center;
+        }
+        .away-card h2 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.2rem;
+            color: var(--navy);
+            margin: 0 0 6px;
+        }
+        .away-card p {
+            font-size: 0.88rem;
+            color: var(--text-mid);
+            margin: 0 0 16px;
+            line-height: 1.4;
+        }
+        .away-actions { display: flex; flex-direction: column; gap: 8px; }
+        .away-actions button {
+            width: 100%;
+            min-height: 44px;
+            border-radius: var(--radius-pill);
+            font-family: inherit;
+            font-size: 0.92rem;
+            font-weight: 600;
+            cursor: pointer;
+            border: 1.5px solid var(--border);
+            background: var(--surface);
+            color: var(--navy);
+        }
+        .away-actions button.primary { background: var(--navy); border-color: var(--navy); color: white; }
+        @media (min-width: 600px) { #away-prompt { align-items: center; } }
     </style>
 </head>
 <body>
@@ -957,9 +1007,23 @@
         </div>
     </div>
 
+    <!-- Away prompt: shown when the user comes back after being idle -->
+    <div id="away-prompt" role="dialog" aria-modal="true" aria-labelledby="away-title" aria-describedby="away-desc">
+        <div class="away-card">
+            <h2 id="away-title">Welcome back</h2>
+            <p id="away-desc">You were away <strong id="away-duration">5 min</strong>. The timer waited for you. What was that time?</p>
+            <div class="away-actions">
+                <button type="button" class="primary" data-away-choice="focus">Count it as focus</button>
+                <button type="button" data-away-choice="break">Take it as a break</button>
+                <button type="button" data-away-choice="end">End session</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Toast -->
     <div id="toast"></div>
 
+<script src="/js/focus-idle.js"></script>
 <script>
 // Ambient audio tracks (stable public URLs, looped, muted by default)
 const AUDIO_TRACKS = {
@@ -1048,13 +1112,21 @@ const AUDIO_TRACKS = {
     let timerLeft       = timerSecs;
     let timerInterval   = null;
     let timesUp         = false;
+    let focusedSecs     = 0;    // real focus time; what actual_duration_seconds reports
+    let lastTickAt      = 0;    // wall clock of the last whole second counted
+
+    // Idle detection (pure accounting lives in /js/focus-idle.js)
+    const IDLE_MS        = FocusIdle.DEFAULT_IDLE_MINUTES * 60 * 1000;
+    let lastActivityAt   = Date.now();
+    let snapshot         = null;  // timer state at the last sign of the user
+    let awayOpen         = false; // the "welcome back" prompt is showing
+    let awayStartedAt    = null;
 
     // Pomodoro state
     let pomodoroMode   = false;
     let pomodoroPhase  = 'work'; // 'work' | 'break'
     let pomodoroCount  = 0;      // completed work cycles
-    const POM_WORK_SECS  = 25 * 60;
-    const POM_BREAK_SECS = 5 * 60;
+    const POM_WORK_SECS  = FocusIdle.POM_WORK_SECS;
 
     // Body Double state
     let bdEnabled       = false;
@@ -1407,17 +1479,66 @@ const AUDIO_TRACKS = {
         const s = timerLeft % 60;
         document.getElementById('timer-display').textContent =
             String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
-        document.getElementById('timer-sublabel').textContent = timesUp ? "time's up" : 'remaining';
+        document.getElementById('timer-sublabel').textContent =
+            awayOpen ? 'paused' : (timesUp ? "time's up" : 'remaining');
         updateRing();
     }
 
-    function startTimer() {
+    function getState() {
+        return { timerSecs, timerLeft, timesUp, pomodoroMode, pomodoroPhase, pomodoroCount, focusedSecs };
+    }
+
+    function setState(st) {
+        timerSecs = st.timerSecs;
+        timerLeft = st.timerLeft;
+        timesUp = st.timesUp;
+        pomodoroPhase = st.pomodoroPhase;
+        pomodoroCount = st.pomodoroCount;
+        focusedSecs = st.focusedSecs;
+    }
+
+    function stopTimer() {
         clearInterval(timerInterval);
+        timerInterval = null;
+    }
+
+    function timerRunning() {
+        return timerInterval !== null && !timesUp;
+    }
+
+    function showTimesUp() {
+        stopTimer();
+        document.getElementById('times-up-banner').classList.add('visible');
+        document.getElementById('btn-complete').classList.add('pulse');
+    }
+
+    // Count the whole seconds since the last tick. Wall-clock based, so a
+    // throttled background tab still counts the right time.
+    function catchUp(now) {
+        const secs = Math.floor((now - lastTickAt) / 1000);
+        if (secs <= 0) return;
+        lastTickAt += secs * 1000;
+        const r = FocusIdle.advance(getState(), secs);
+        setState(r.state);
+        if (r.phaseChanged) updatePomodoroUI();
+        updateTimerDisplay();
+        if (r.becameTimesUp) showTimesUp();
+    }
+
+    function takeSnapshot(now) {
+        lastActivityAt = now;
+        snapshot = getState();
+    }
+
+    function startTimer() {
+        stopTimer();
+        lastTickAt = Date.now();
+        takeSnapshot(lastTickAt);
         timerInterval = setInterval(tick, 1000);
     }
 
     function restartTimer() {
-        if (timerInterval) clearInterval(timerInterval);
+        stopTimer();
         if (!pomodoroMode) {
             pomodoroPhase = 'work';
             pomodoroCount = 0;
@@ -1428,36 +1549,88 @@ const AUDIO_TRACKS = {
         document.getElementById('btn-complete').classList.remove('pulse');
         updateTimerDisplay();
         updatePomodoroUI();
-        timerInterval = setInterval(tick, 1000);
+        startTimer();
     }
 
     function tick() {
-        timerLeft--;
-        updateTimerDisplay();
-        if (timerLeft <= 0) {
-            clearInterval(timerInterval);
-            if (pomodoroMode) {
-                // Auto-advance to next Pomodoro phase
-                if (pomodoroPhase === 'work') {
-                    pomodoroCount++;
-                    pomodoroPhase = 'break';
-                    timerSecs = POM_BREAK_SECS;
-                } else {
-                    pomodoroPhase = 'work';
-                    timerSecs = POM_WORK_SECS;
-                }
-                timerLeft = timerSecs;
-                timesUp = false;
-                updatePomodoroUI();
-                updateTimerDisplay();
-                timerInterval = setInterval(tick, 1000);
-            } else {
-                timesUp = true;
-                document.getElementById('times-up-banner').classList.add('visible');
-                document.getElementById('btn-complete').classList.add('pulse');
-            }
+        const now = Date.now();
+        if (awayOpen) {
+            document.getElementById('away-duration').textContent = FocusIdle.formatAway(now - awayStartedAt);
+            return;
         }
+        if (FocusIdle.isAway(lastActivityAt, now, IDLE_MS)) {
+            enterAway();
+            return;
+        }
+        catchUp(now);
     }
+
+    // ── Idle detection ──────────────────────────────────────────────────────────
+    // Away = no pointer/keyboard/touch input and no tab switch for IDLE_MS.
+    // The timer rolls back to the last sign of the user and waits; on return a
+    // prompt asks what the time was. Returns true when it opened the prompt.
+    function enterAway() {
+        if (awayOpen || !snapshot) return false;
+        awayOpen = true;
+        awayStartedAt = lastActivityAt;
+        setState(snapshot);
+        updatePomodoroUI();
+        updateTimerDisplay();
+        document.getElementById('away-duration').textContent = FocusIdle.formatAway(Date.now() - awayStartedAt);
+        document.getElementById('away-prompt').classList.add('visible');
+        const primary = document.querySelector('[data-away-choice="focus"]');
+        if (primary) primary.focus();
+        return true;
+    }
+
+    function onActivity(e) {
+        if (awayOpen) return;
+        const now = Date.now();
+        if (!timerRunning()) {
+            lastActivityAt = now;
+            return;
+        }
+        if (FocusIdle.isAway(lastActivityAt, now, IDLE_MS)) {
+            // The first touch after coming back only wakes the prompt; it must
+            // not also press whatever button was under the finger.
+            if (enterAway() && e && e.type !== 'visibilitychange') e.stopPropagation();
+            return;
+        }
+        const forced = e && e.type === 'visibilitychange';
+        if (!forced && now - lastActivityAt < 1000) return; // pointermove is chatty
+        catchUp(now);
+        takeSnapshot(now);
+    }
+
+    function resolveAway(choice) {
+        if (!awayOpen) return;
+        const now = Date.now();
+        const awaySecs = Math.floor((now - awayStartedAt) / 1000);
+        const r = FocusIdle.resolveAway(choice, getState(), awaySecs);
+        awayOpen = false;
+        document.getElementById('away-prompt').classList.remove('visible');
+        setState(r.state);
+        lastTickAt = now; // the away time is settled; don't count it again
+        if (r.end) {
+            endSession(false);
+            return;
+        }
+        takeSnapshot(now);
+        updatePomodoroUI();
+        updateTimerDisplay();
+        if (timesUp) showTimesUp();
+        showToast(choice === 'focus' ? 'Counted as focus ✓' : 'Break taken. Welcome back 🌿');
+    }
+
+    ['pointerdown', 'pointermove', 'keydown', 'wheel', 'touchstart', 'scroll'].forEach(type => {
+        window.addEventListener(type, onActivity, { capture: true, passive: true });
+    });
+    document.addEventListener('visibilitychange', onActivity);
+
+    document.getElementById('away-prompt').addEventListener('click', e => {
+        const btn = e.target.closest('[data-away-choice]');
+        if (btn) resolveAway(btn.dataset.awayChoice);
+    });
 
     function updatePomodoroUI() {
         const phaseLabel = document.getElementById('pom-phase-label');
@@ -1474,7 +1647,9 @@ const AUDIO_TRACKS = {
 
     // ── End session (complete or skip) ─────────────────────────────────────────
     async function endSession(completed) {
-        clearInterval(timerInterval);
+        if (awayOpen) return; // answer the welcome-back prompt first
+        if (timerRunning()) catchUp(Date.now());
+        stopTimer();
 
         // Stop audio on exit
         if (audioEl) {
@@ -1482,7 +1657,8 @@ const AUDIO_TRACKS = {
             audioEl = null;
         }
 
-        const actualSeconds = timerSecs - timerLeft;
+        // Real focus only: away time the user called a break is not in here.
+        const actualSeconds = focusedSecs;
 
         if (sessionId) {
             try {
@@ -1537,7 +1713,11 @@ const AUDIO_TRACKS = {
     // ── Keyboard shortcuts ──────────────────────────────────────────────────────
     document.addEventListener('keydown', e => {
         if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
-        if (e.key === 'Escape') endSession(false);
+        if (e.key === 'Escape') {
+            if (awayOpen) resolveAway('break');
+            else endSession(false);
+            return;
+        }
         if (e.key === 'Enter' && e.ctrlKey) endSession(true);
     });
 

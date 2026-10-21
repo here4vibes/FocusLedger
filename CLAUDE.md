@@ -216,12 +216,14 @@ Four places plus a Settings gear. One small PR per phase; old URLs keep working 
 - **Errors and health:**
   - Sentry: `lib/sentry.js` (`initSentry(name)` in every process).
   - `/health` migration status: `lib/migration-manifest.js` and `db/migrations-status.js`.
+  - Uptime: `.github/workflows/uptime.yml` checks `/`, `/pricing`, `/signup` every 5 min and `/health` hourly (hourly so Neon can sleep); a failure opens a GitHub issue labelled `uptime`, recovery closes it. See `docs/uptime.md` (also the optional full-Upptime status page).
 - **Billing and admin:**
   - Billing: `lib/billing.js`, `db/billing.js`, `lib/stripe-client.js`.
   - OAuth callbacks: every flow signs `state` with `lib/oauth-state.js` (purpose-bound HMAC, constant-time, 10 min, no fallback secret): `signUserState(purpose, userId)` for connect flows (Calendar `gcal`, `email-gmail`/`-outlook`/`-yahoo`), `signPayload` for Google sign-in (`returnTo` login|signup, trusted host only). Never put a login token in it.
   - Admin gate: `lib/admin-access.js` (`requireAdmin(pool)` middleware after `authenticateToken`, judged from the DB row; sets `req.admin`). Every admin route uses it (`routes/analytics.js` still has its own lookup). It holds the only `isAdminUser`; import it, don't copy it.
   - Activation: `db/activation.js` and `GET /api/admin/activation`.
 - **Analytics:** bot/CI filter `lib/analytics-filter.js` (UA patterns, missing UA, `X-FL-Automation` header or `FocusLedger-` UA token from our Playwright configs and `prod-signup-check`); filtered hits are counted in `analytics_filtered_daily`, not stored. First-touch attribution (utm_*, truncated fbclid/gclid, referrer domain only) is captured by `public/js/analytics.js` into `localStorage.fl_attribution`, rides on `funnel_*`/`cta_*` events, and is saved at signup (email, One Tap, OAuth `google_new=1` → `PATCH /api/auth/attribution`, 24h) to `users.utm_*` + `users.first_touch` (sanitizer `lib/attribution.js`). Report: `GET /api/admin/attribution?from&to` (`db/analytics.js`), shown as the admin Acquisition card. The live landing page is `views/index.html`, not `public/index.html`.
+- **Email HTML (MJML):** the transactional templates in `lib/emailTemplates.js` render from MJML in `lib/email-mjml/sources.js`. After editing a source, run `npm run build:emails` and commit `lib/email-mjml/compiled/*.html`; a test fails on stale output. Runtime never loads mjml (a devDependency) and `renderEmail` escapes every value. The other templates still use `shell()`.
 - **Best-effort work:** use `.catch(logFailure('[Module]', 'op', { userId }, fallback))` from `lib/log-failure.js`. Never use `.catch(() => {})`.
 - **AI:** every AI call goes through `lib/claude-client.js` (`createMessage`/`complete`). Per-user daily budget: `lib/ai-budget.js` (Free 100 / Pro 500).
 - **Bills and subscriptions:**
@@ -237,6 +239,7 @@ Four places plus a Settings gear. One small PR per phase; old URLs keep working 
   - Tap-to-complete radar with a reward loop (`public/js/reward.js`, undo, next task steps up).
   - Bills · next 7 days card.
   - Subscription review: cancel (pending → confirmed / charged again from bank data) / keep (rests 90 days) / it's a bill.
+- **Recurring dates:** `lib/recurrence.js` (rrule.js) is the only next-occurrence math: `nextTaskOccurrence` for `tasks.recurrence_type` (adds `biweekly`, `monthly_last_weekday`; month ends clamp; never spawns before the user's local today) and `nextScheduleDate` for `recurring_tasks`/`recurring_expenses`. New third-party packages go in `THIRD_PARTY_NOTICES.md`.
 - **Routine capture:** `lib/routine-capture.js`.
   - `onTasksCompleted` runs at every task-completion point (Tasks API toggle, update and steps; Buddy; the agent's `mark_task_done`). When a tick finishes a routine's last open task, it records the routine completion and streak.
   - `refreshRoutineTasks` reopens routine tasks finished on an earlier local day (weekly routines after 7 days). It runs when `/api/tasks`, `/api/buddy/status`, `/api/routines` and `/api/today/timeline` load, so there's no cron to set up.
@@ -246,9 +249,11 @@ Four places plus a Settings gear. One small PR per phase; old URLs keep working 
   - **Capture plan, still to do:** bank-charge suggestions.
 - **Spending check-in** (`/checkin`, `public/checkin-spending.html`, `/api/v1/spending-sessions`): `services/ClassificationService.js` + `db/spendingSessions.js`. Queue = the user's posted, money-out `plaid_transactions` with `is_confirmed = false` plus Plaid `expenses` with `is_impulse` NULL (sync auto-confirms most charges into these), last 14 local days. Classify runs the money tab's `confirmTransaction` + `triageExpense` in one transaction; `expenses.is_impulse` is the record (legacy `transactions` / `transaction_classifications` no longer used).
 - **Tandem recap:** `lib/tandem-recap.js` and `db/tandem-recap.js`.
+- **Focus Mode idle** (`public/app/focus.html`, pure accounting in `public/js/focus-idle.js`): no input or tab switch for 5 min → the timer rolls back to the last activity and waits; on return the user picks focus / break / end. `actual_duration_seconds` is now real focus time (Pomodoro breaks excluded), sent through the existing `POST /api/v1/focus-sessions/:id/complete`; no schema change. Browser test: `npm run test:local` against a local server (`tests/local/`, not in CI). Attribution in `THIRD_PARTY_NOTICES.md`.
 - **Insights cron:** `jobs/crossDomainInsightsJob.js` (exports helpers; runs only when executed directly).
 - **Claude Code helpers (`.claude/`, committed):** agents `silent-failure-hunter`, `database-reviewer` and `security-reviewer`, plus the skill `postgres-patterns`.
   - They're adapted from ECC (`affaan-m/everything-claude-code`, MIT, commit `b92f181`) and rewritten around this file's rules.
+  - Skills from Anthropic's repos, also rewritten: `webapp-testing` (local Playwright checks, Pre-Ship viewports and Buddy tap) and `helper-authoring` (how to write or import a helper), both from `anthropics/skills` (Apache-2.0, `dbd4588`); `buddy-tool-use` (tool schemas, the tool_result loop, tool_choice, retries for `lib/agent-tools.js`), distilled from `anthropics/claude-cookbooks` (MIT, `a162e01`). Sources and licenses: `THIRD_PARTY_NOTICES.md`. Take only MIT/Apache-2.0 items: `anthropics/skills`' docx/pdf/pptx/xlsx and all of `anthropics/claude-code` are proprietary.
   - Use them for reviews and the hardening backlog, e.g. the silent `catch {}` sweep.
   - **Don't install the full ECC plugin, its hooks, its MCP configs or its auto-update in this repo;** only reviewed copies go in.
   - `.gitignore` keeps the rest of `.claude/` (worktrees, local settings) local.
