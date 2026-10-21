@@ -496,11 +496,22 @@ body[data-nav-shell="desktop"] #shared-bottom-nav {
 }
 
 .shared-menu-link .shared-menu-icon {
-  font-size: 20px;
   width: 24px;
-  text-align: center;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
+  color: #6b7280;
 }
+.shared-menu-link.active .shared-menu-icon,
+.shared-menu-link:hover .shared-menu-icon { color: currentColor; }
+.shared-menu-icon svg { width: 20px; height: 20px; }
+
+/* Lucide icons (public/js/icons.js): stroke="currentColor", sized per slot. */
+.fl-icon { display: block; flex-shrink: 0; }
+.shared-menu-close svg { width: 18px; height: 18px; }
+.shared-nav-fab svg { width: 24px; height: 24px; stroke-width: 2.25; }
 
 /* Active state: highlight the current page in the slide-out menu */
 .shared-menu-link.active {

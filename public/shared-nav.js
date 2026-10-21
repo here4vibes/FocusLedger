@@ -18,6 +18,36 @@
     (document.head || document.documentElement).appendChild(_ah);
   }
 
+  // Icons: Lucide paths vendored in /js/icons.js (window.FLIcons). The nav is
+  // built synchronously as before (pages look it up on DOMContentLoaded); each
+  // icon slot carries data-fl-icon and is filled as soon as icons.js is in.
+  // If the file fails, the nav keeps its text labels and the text fallbacks.
+  var _iconsLoaded = !!window.FLIcons;
+  if (!_iconsLoaded) {
+    var _ic = document.querySelector('script[data-fl-icons]');
+    if (!_ic) {
+      _ic = document.createElement('script');
+      _ic.src = '/js/icons.js';
+      _ic.setAttribute('data-fl-icons', '1');
+      (document.head || document.documentElement).appendChild(_ic);
+    }
+    _ic.addEventListener('load', function () { _iconsLoaded = true; hydrateIcons(); });
+    _ic.addEventListener('error', function () {
+      console.warn('[shared-nav] icons.js failed to load; nav keeps text labels only');
+    });
+  }
+  function setIcon(el, name) {
+    el.setAttribute('data-fl-icon', name);
+    if (_iconsLoaded && window.FLIcons) el.innerHTML = window.FLIcons.svg(name);
+    return el;
+  }
+  function hydrateIcons() {
+    if (!window.FLIcons || !document.body) return;
+    document.querySelectorAll('[data-fl-icon]').forEach(function (el) {
+      if (!el.querySelector('svg')) el.innerHTML = window.FLIcons.svg(el.getAttribute('data-fl-icon'));
+    });
+  }
+
   // ── Global utilities ─────────────────────────────────────────────────────
   // Set on window so every page can use them.
   // Guards (window.X || ...) mean page-local definitions always win — no
@@ -72,23 +102,21 @@
   // Routes use /app/* namespace for true isolation — each tab is its own route, not a CSS toggle
   // UI consolidation: four places. Home is Weightless (Buddy + radar + bills).
   // Mobile bottom nav renders Home · Tasks · (+) · Money · Life.
-  const SVG = function (paths) {
-    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + paths + '</svg>';
-  };
+  // `icon` is a Lucide name from /js/icons.js.
   const NAV_ITEMS = [
-    { label: 'Home',  href: '/weightless', icon: SVG('<path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/>') },
-    { label: 'Tasks', href: '/app/tasks',  icon: SVG('<rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 12l2 2 4-4"/>') },
-    { label: 'Money', href: '/app/money',  icon: SVG('<line x1="12" y1="2" x2="12" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>') },
-    { label: 'Life',  href: '/app/life',   icon: SVG('<path d="M12 21s-7-4.5-9.5-9A5.5 5.5 0 0 1 12 6a5.5 5.5 0 0 1 9.5 6c-2.5 4.5-9.5 9-9.5 9z"/>') },
+    { label: 'Home',  href: '/weightless', icon: 'house' },
+    { label: 'Tasks', href: '/app/tasks',  icon: 'square-check-big' },
+    { label: 'Money', href: '/app/money',  icon: 'wallet' },
+    { label: 'Life',  href: '/app/life',   icon: 'heart' },
   ];
 
   // Everything not inside a place's sub-tabs (PLACE_TABS): Tasks, Money and
   // Life pages live in their hubs now, so "More" is settings-type pages only.
   const MENU_ITEMS = [
-    { label: 'Email → Tasks',     href: '/email',             icon: '📧' },
-    { label: 'Partner Dashboard', href: '/partner-dashboard', icon: '👥' },
-    { label: 'Settings',          href: '/settings',          icon: '⚙️' },
-    { label: 'Help & Contact',    href: '/contact',           icon: '💬' },
+    { label: 'Email → Tasks',     href: '/email',             icon: 'mail' },
+    { label: 'Partner Dashboard', href: '/partner-dashboard', icon: 'users' },
+    { label: 'Settings',          href: '/settings',          icon: 'settings' },
+    { label: 'Help & Contact',    href: '/contact',           icon: 'circle-help' },
   ];
 
   // Desktop sidebar: all items merged with a section divider between them
@@ -232,7 +260,7 @@
     var iconEl = document.createElement('span');
     iconEl.className = 'shared-nav-icon';
     iconEl.setAttribute('aria-hidden', 'true');
-    iconEl.innerHTML = item.icon;
+    setIcon(iconEl, item.icon);
 
     var labelEl = document.createElement('span');
     labelEl.className = 'shared-nav-label';
@@ -263,6 +291,7 @@
     fab.className = 'shared-nav-fab';
     fab.setAttribute('aria-label', 'Quick add');
     fab.textContent = '+';
+    setIcon(fab, 'plus');
     fab.addEventListener('click', function () {
       if (typeof window.flQuickAdd === 'function') {
         window.flQuickAdd();
@@ -348,7 +377,7 @@
     var signOutIcon = document.createElement('span');
     signOutIcon.className = 'shared-nav-icon';
     signOutIcon.setAttribute('aria-hidden', 'true');
-    signOutIcon.textContent = '🚪';
+    setIcon(signOutIcon, 'log-out');
 
     var signOutLabel = document.createElement('span');
     signOutLabel.className = 'shared-nav-label';
@@ -461,6 +490,7 @@
     closeBtn.type = 'button';
     closeBtn.setAttribute('aria-label', 'Close menu');
     closeBtn.textContent = '✕';
+    setIcon(closeBtn, 'x');
 
     header.appendChild(logo);
     header.appendChild(proBadge);
@@ -480,7 +510,7 @@
       var iconEl = document.createElement('span');
       iconEl.className = 'shared-menu-icon';
       iconEl.setAttribute('aria-hidden', 'true');
-      iconEl.textContent = item.icon;
+      setIcon(iconEl, item.icon);
 
       var labelEl = document.createElement('span');
       labelEl.textContent = item.label;
@@ -503,7 +533,7 @@
     var signOutIcon = document.createElement('span');
     signOutIcon.className = 'shared-menu-icon';
     signOutIcon.setAttribute('aria-hidden', 'true');
-    signOutIcon.textContent = '🚪';
+    setIcon(signOutIcon, 'log-out');
 
     var signOutLabel = document.createElement('span');
     signOutLabel.textContent = 'Sign Out';
@@ -840,8 +870,7 @@
     btn.setAttribute('aria-haspopup', 'dialog');
     btn.setAttribute('aria-expanded', 'false');
     btn.title = 'Talk to Buddy';
-    btn.innerHTML = SVG('<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>');
-    btn.firstChild.setAttribute('aria-hidden', 'true');
+    setIcon(btn, 'message-circle');
 
     btn.addEventListener('click', function () {
       if (btn.classList.contains('loading')) return;
