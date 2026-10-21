@@ -8,6 +8,8 @@ const { complete } = require('../lib/claude-client');
 const { logFailure } = require('../lib/log-failure');
 const { parseAiJson } = require('../lib/ai-json');
 const { onTasksCompleted, refreshRoutineTasks } = require('../lib/routine-capture');
+const { nextTaskOccurrence } = require('../lib/recurrence');
+const { parseDueDate } = require('../lib/nl-due-date');
 
 // ── Helpers: time string normalization ───────────────────────────────────────
 // DB stores time as 'time without time zone'; pg returns it as a string "HH:MM:SS".
@@ -22,44 +24,28 @@ function normTask(t) {
   };
 }
 
-// Spawn the next occurrence of a recurring task
-function spawnNextOccurrence(task, userId) {
-  if (!task.due_date) return null;
-  if (!task.recurrence_type || task.recurrence_type === 'none') return null;
-
-  const freq = task.recurrence_type;
-  const base = new Date(task.due_date);
-
-  let nextDate;
-  if (freq === 'daily') {
-    nextDate = new Date(base.getTime() + 86400000);
-  } else if (freq === 'weekdays') {
-    do { base.setDate(base.getDate() + 1); } while (base.getDay() === 0 || base.getDay() === 6);
-    nextDate = base;
-  } else if (freq === 'weekly') {
-    const targetDay = task.recurrence_day != null ? task.recurrence_day : base.getDay();
-    const currentDay = base.getDay();
-    const daysToAdd = (targetDay - currentDay + 7) % 7 || 7;
-    nextDate = new Date(base.getTime() + daysToAdd * 86400000);
-  } else if (freq === 'monthly') {
-    const targetDom = task.recurrence_day != null ? task.recurrence_day : base.getDate();
-    nextDate = new Date(base.getFullYear(), base.getMonth() + 1, targetDom);
-  } else {
-    return null;
-  }
+// Spawn the next occurrence of a recurring task. The date math (month ends,
+// weekdays, every other week, the user's local today) lives in lib/recurrence.js.
+function spawnNextOccurrence(task, userId, tz) {
+  const next = nextTaskOccurrence({
+    type: task.recurrence_type, day: task.recurrence_day, from: task.due_date, tz,
+  });
+  if (!next) return null;
 
   return {
     user_id: userId,
     title: task.title,
     description: task.description || null,
     priority: task.priority || 'medium',
-    due_date: nextDate,
+    due_date: next.due_date,
     due_time: task.due_time || null,
     source: 'recurring',
     value_id: task.value_id || null,
     notes: task.notes || null,
     recurrence_type: task.recurrence_type,
-    recurrence_day: task.recurrence_day,
+    // Pinned from the due date when the task had none, so monthly-on-the-31st
+    // goes Jan 31 → Feb 28 → Mar 31 instead of drifting to the 28th.
+    recurrence_day: next.recurrence_day,
   };
 }
 
@@ -320,14 +306,33 @@ async function getTask(req, res) {
 // ── POST /api/tasks ────────────────────────────────────────────────────────────
 async function createTask(req, res) {
   try {
-    const { title, description, priority, due_date, due_time, steps, source, merchant_hint,
+    const { title: rawTitle, description, priority, steps, source, merchant_hint,
             expected_amount, duration_minutes, is_household, is_shared_with_partner,
-            recurrence_type, recurrence_day } = req.body;
+            recurrence_type, recurrence_day, parse_dates } = req.body;
+    let { due_date, due_time } = req.body;
+    let title = rawTitle;
     const userId = req.user.id;
     const pool = res.locals._pool;
 
-    if (!title?.trim()) return res.status(400).json({ success: false, message: 'What should this task be called?' });
+    if (typeof title !== 'string' || !title.trim()) return res.status(400).json({ success: false, message: 'What should this task be called?' });
     if (title.trim().length > 150) return res.status(400).json({ success: false, message: 'Task title must be 150 characters or fewer.' });
+
+    // Natural-language due date ("dentist Tuesday 3pm"): only for typed capture,
+    // and only when the client sent no date of its own. Parsed in the user's zone.
+    if (!due_date && !due_time && (!source || source === 'manual') && parse_dates !== false) {
+      try {
+        const tz = await fetchUserTimezone(pool, userId);
+        const nl = parseDueDate(title.trim(), tz);
+        if (nl.due_date) {
+          title = nl.title;
+          due_date = nl.due_date;
+          if (nl.due_time) due_time = nl.due_time;
+        }
+      } catch (e) {
+        // Capture still works without a parsed date; keep the title as typed.
+        console.error('[tasks] natural-language due date failed:', e.message, '| userId:', userId);
+      }
+    }
 
     // Free user task limit check
     try {
@@ -563,7 +568,8 @@ async function toggleTask(req, res) {
     let nextRecurring = null;
     if (newCompleted && task_before.recurrence_type && task_before.recurrence_type !== 'none') {
       try {
-        const nextData = spawnNextOccurrence(task_before, userId);
+        const tz = await fetchUserTimezone(pool, userId);
+        const nextData = spawnNextOccurrence(task_before, userId, tz);
         if (nextData) {
           const cols = ['user_id', 'title', 'priority', 'source', 'recurrence_type'];
           const vals = [nextData.user_id, nextData.title, nextData.priority, nextData.source, nextData.recurrence_type];
@@ -583,7 +589,7 @@ async function toggleTask(req, res) {
           nextRecurring = normTask(nextRows[0]);
         }
       } catch (spawnErr) {
-        console.error('[tasks] failed to spawn next occurrence:', spawnErr.message);
+        console.error('[tasks] failed to spawn next occurrence:', spawnErr.message, '| userId:', userId, '| taskId:', task_before.id);
       }
     }
 

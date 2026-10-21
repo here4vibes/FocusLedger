@@ -47,7 +47,7 @@ function buildSystemPrompt(today, tasks) {
     'How reminders/nudges work here: FocusLedger sends a push notification when a task with a due',
     'date AND time is within an hour of being due, or overdue (plus a morning and evening nudge). So to',
     'remind or nudge someone at a time, give a task a due date and time. For a REPEATING reminder set',
-    'recurrence (daily/weekdays/weekly/monthly). To change a task ALREADY on the list — e.g. "the clean',
+    'recurrence (daily/weekdays/weekly/biweekly/monthly/monthly_last_weekday). To change a task ALREADY on the list — e.g. "the clean',
     'kitchen task should be nightly" — use update_task with that task\'s id (recurrence "daily"); do NOT',
     `create a duplicate. Convert natural language relative to today (${today}) — e.g. "nudge me to pack`,
     'tomorrow evening" → create a task for tomorrow\'s date with a time like 18:00.',
