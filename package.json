@@ -20,6 +20,7 @@
     "test:boot": "node scripts/ci-boot-smoke.js",
     "test:sweep": "node scripts/ci-api-sweep.js",
     "test:flows": "node scripts/ci-write-flows.js",
+    "build:emails": "node scripts/build-emails.js",
     "lint": "eslint --config eslint.config.mjs server.js routes/*.js middleware/*.js lib/*.js",
     "lint:fix": "eslint --config eslint.config.mjs --fix server.js routes/*.js middleware/*.js lib/*.js",
     "typecheck": "tsc --noEmit"
@@ -64,6 +65,7 @@
     "eslint": "^10.2.1",
     "globals": "^17.5.0",
     "jest": "^29.7.0",
+    "mjml": "^5.4.1",
     "supertest": "^6.3.3",
     "typescript": "^6.0.3"
   }
