@@ -248,6 +248,7 @@ Four places plus a Settings gear. One small PR per phase; old URLs keep working 
 - **Insights cron:** `jobs/crossDomainInsightsJob.js` (exports helpers; runs only when executed directly).
 - **Claude Code helpers (`.claude/`, committed):** agents `silent-failure-hunter`, `database-reviewer` and `security-reviewer`, plus the skill `postgres-patterns`.
   - They're adapted from ECC (`affaan-m/everything-claude-code`, MIT, commit `b92f181`) and rewritten around this file's rules.
+  - Skills from Anthropic's repos, also rewritten: `webapp-testing` (local Playwright checks, Pre-Ship viewports and Buddy tap) and `helper-authoring` (how to write or import a helper), both from `anthropics/skills` (Apache-2.0, `dbd4588`); `buddy-tool-use` (tool schemas, the tool_result loop, tool_choice, retries for `lib/agent-tools.js`), distilled from `anthropics/claude-cookbooks` (MIT, `a162e01`). Sources and licenses: `THIRD_PARTY_NOTICES.md`. Take only MIT/Apache-2.0 items: `anthropics/skills`' docx/pdf/pptx/xlsx and all of `anthropics/claude-code` are proprietary.
   - Use them for reviews and the hardening backlog, e.g. the silent `catch {}` sweep.
   - **Don't install the full ECC plugin, its hooks, its MCP configs or its auto-update in this repo;** only reviewed copies go in.
   - `.gitignore` keeps the rest of `.claude/` (worktrees, local settings) local.
