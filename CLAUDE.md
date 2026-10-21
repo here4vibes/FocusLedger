@@ -70,6 +70,7 @@ Node.js + Express · PostgreSQL (Neon) · Render deployment · Vanilla HTML/CSS/
 - `task_substeps` — AI-generated micro-step breakdowns for "I'm stuck" flow; persisted for resume; cascade-deletes with task
 - `routines + routine_task_links` — user-defined routine groups (AM/PM/weekly) with many-to-many task links; nudge_after_hour trigger, optional day_of_week for weekly
 - `routine_streaks` — per-routine consecutive-day tracking: current_streak, best_streak, last_completed_date
+- `routine_completions` — one row per routine per user-local day completed (unique routine_id+local_date), written by `recordRoutineCompletion`; feeds the forgiving habit-strength score (`lib/habit-strength.js`, half-life 14 days / 4 weeks) returned as `strength` by `GET /api/routines`
 - `routine_nudge_events + routine_nudge_prefs` — event log (status, skip_count) + per-user nudge prefs (enabled, frequency); nudge_after_hour trigger on routines table
 - `detected_patterns` — AI-detected recurring task patterns per user: pattern_type (time/day/sequence/category), confidence_score, occurrence_count, is_active flag; stores task IDs + metadata
 - `routine_suggestions` — surfaceable suggestions from detected patterns: status (pending/accepted/dismissed); presented_count for ephemeral expiry (auto-remove after 3 ignored sessions); accepted links to created routine

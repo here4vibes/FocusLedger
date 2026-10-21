@@ -469,6 +469,37 @@
       font-style: italic;
     }
 
+    /* Streak + habit strength: gentle, informational, never a scoreboard. */
+    .routine-progress {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.35rem 0.9rem;
+      margin-top: 0.7rem;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+    .routine-strength {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      min-width: 0;
+    }
+    .strength-bar {
+      width: 72px;
+      height: 6px;
+      border-radius: 99px;
+      background: var(--border);
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+    .strength-fill {
+      display: block;
+      height: 100%;
+      border-radius: 99px;
+      background: var(--green);
+    }
+
     .routine-actions {
       display: flex;
       gap: 0.5rem;
@@ -952,6 +983,7 @@
             <span class="routine-badge ${badgeClass}">${badgeLabel}</span>
           </div>
           ${taskList}
+          ${progressRow(r)}
           <div class="routine-actions">
             <button class="btn-sm btn-complete" id="complete-btn-${r.id}" onclick="completeRoutine(${r.id}, this)">Mark complete</button>
             <button class="btn-sm btn-delete" onclick="deleteRoutine(${r.id})">Remove</button>
@@ -959,6 +991,28 @@
         </div>
       `;
     }).join('');
+  }
+
+  // Streak + habit strength. Strength (0–100) is forgiving: one missed day
+  // barely moves it, so it shows progress a broken streak would hide.
+  function progressRow(r) {
+    const streak = Number(r.current_streak) || 0;
+    const weekly = r.routine_type === 'weekly';
+    const parts = [];
+    // The streak counts consecutive days, which a weekly routine rarely has;
+    // for weekly routines strength is the meaningful number.
+    if (streak > 1 || !weekly) {
+      parts.push(`<span class="routine-streak">${streak > 0 ? `🔥 ${streak}-day streak` : 'No streak yet'}</span>`);
+    }
+    if (r.strength != null) {
+      const pct = Math.max(0, Math.min(100, Math.round(Number(r.strength) || 0)));
+      const title = `Habit strength grows with every ${weekly ? 'week' : 'day'} you do it and fades slowly when you miss one.`;
+      parts.push(`<span class="routine-strength" title="${escAttr(title)}">
+        <span class="strength-bar" role="img" aria-label="Habit strength ${pct}%"><span class="strength-fill" style="width:${pct}%"></span></span>
+        <span>${pct > 0 ? `Habit strength ${pct}%` : 'Habit strength grows from your first day'}</span>
+      </span>`);
+    }
+    return `<div class="routine-progress">${parts.join('')}</div>`;
   }
 
   async function completeRoutine(routineId, btn) {
@@ -977,6 +1031,11 @@
       } else {
         showToast('Routine complete!');
       }
+      // Refresh streak + strength on the card, keeping the button in its done state.
+      loadMyRoutines().then(() => {
+        const fresh = document.getElementById('complete-btn-' + routineId);
+        if (fresh) { fresh.disabled = true; fresh.textContent = '✓ Done'; fresh.classList.add('done'); }
+      }).catch(err => console.error('[routines] reload after complete failed:', err.message));
     } else {
       btn.disabled = false;
       btn.textContent = 'Mark complete';
