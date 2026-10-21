@@ -193,8 +193,8 @@ function parseNaturalLanguage(text) {
 /**
  * Detect recurrence patterns in task title text.
  * Returns { type, day, label, phrase } or null.
- *   type: 'daily' | 'weekdays' | 'weekly' | 'monthly'
- *   day:  0-6 (JS day-of-week) for weekly, null otherwise
+ *   type: 'daily' | 'weekdays' | 'weekly' | 'biweekly' | 'monthly' | 'monthly_last_weekday'
+ *   day:  0-6 (JS day-of-week) for weekly/biweekly, null otherwise
  *   label: human-readable chip text
  *   phrase: the matched text to strip from the title
  */
@@ -211,6 +211,20 @@ function parseRecurrence(text) {
   // "every weekday" / "weekdays" / "each weekday"
   const wdM = t.match(/\b(every\s+weekday|each\s+weekday|weekdays)\b/);
   if (wdM) return { type: 'weekdays', day: null, label: '🔄 Weekdays', phrase: wdM[0] };
+
+  // "last weekday of the month" / "last business day of the month"
+  const lastWdM = t.match(/\blast\s+(?:weekday|business\s+day|work\s*day)\s+of\s+(?:the|each|every)\s+month\b/);
+  if (lastWdM) return { type: 'monthly_last_weekday', day: null, label: '🔄 Last weekday of the month', phrase: lastWdM[0] };
+
+  // "every other friday" / "every 2 weeks" / "biweekly" — checked before the
+  // plain weekday patterns, which would otherwise read "friday" as weekly.
+  const otherDayM = t.match(/\bevery\s+(?:other|2nd|second)\s+(sun|mon|tue|wed|thu|fri|sat|sunday|monday|tuesday|wednesday|thursday|friday|saturday)\b/);
+  if (otherDayM) {
+    const dayNum = RECUR_DAY_MAP[otherDayM[1]];
+    if (dayNum !== undefined) return { type: 'biweekly', day: dayNum, label: '🔄 Every other ' + RECUR_DAY_NAMES[dayNum], phrase: otherDayM[0] };
+  }
+  const biweekM = t.match(/\b(every\s+other\s+week|every\s+(?:2|two)\s+weeks|bi-?weekly)\b/);
+  if (biweekM) return { type: 'biweekly', day: null, label: '🔄 Every 2 weeks', phrase: biweekM[0] };
 
   // "every monday" / "each friday" / "mondays" / "tuesdays" etc.
   const dayNamePat = /\b(?:every|each)\s+(sun|mon|tue|wed|thu|fri|sat|sunday|monday|tuesday|wednesday|thursday|friday|saturday)\b/;

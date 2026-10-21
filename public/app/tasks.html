@@ -691,7 +691,9 @@
                     <button class="recur-pill" data-val="daily">Daily</button>
                     <button class="recur-pill" data-val="weekdays">Weekdays</button>
                     <button class="recur-pill" data-val="weekly">Weekly</button>
+                    <button class="recur-pill" data-val="biweekly">Every 2 weeks</button>
                     <button class="recur-pill" data-val="monthly">Monthly</button>
+                    <button class="recur-pill" data-val="monthly_last_weekday">Last weekday</button>
                 </div>
                 <div class="recur-day-row" id="recurDayRow">
                     <label id="recurDayLabel">On</label>
@@ -1126,7 +1128,7 @@
         const label = document.getElementById('recurDayLabel');
         const sel = document.getElementById('recurDay');
         sel.innerHTML = '';
-        if (type === 'weekly') {
+        if (type === 'weekly' || type === 'biweekly') {
             label.textContent = 'On';
             for (let i = 0; i < 7; i++) {
                 const o = document.createElement('option');
@@ -1210,7 +1212,7 @@
     document.getElementById('modalSave').addEventListener('click', async () => {
         if (!state.editingId) return;
         const rtype = document.querySelector('#recurPills .recur-pill.active')?.dataset.val || 'none';
-        const needsDay = rtype === 'weekly' || rtype === 'monthly';
+        const needsDay = rtype === 'weekly' || rtype === 'biweekly' || rtype === 'monthly';
         const rday = needsDay ? parseInt(document.getElementById('recurDay').value) : null;
         const rawValueId = document.getElementById('editValue').value;
         const data = {
