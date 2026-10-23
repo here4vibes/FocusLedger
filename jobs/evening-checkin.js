@@ -45,8 +45,13 @@ async function fetchUsersWithEveningEnabled() {
     SELECT u.id, COALESCE(NULLIF(u.timezone, ''), 'America/New_York') AS tz,
            COALESCE(NULLIF(p.evening_time, ''), '20:00') AS evening_time
     FROM users u
-    JOIN user_notification_prefs p ON p.user_id = u.id
-    WHERE p.evening_enabled = true
+    LEFT JOIN user_notification_prefs p ON p.user_id = u.id
+    -- No prefs row means the defaults (evening on, 20:00), the same as
+    -- db/userNotificationPrefs getPreferences and what Settings shows. Requiring
+    -- a row matched nobody, so this push never went out.
+    WHERE (p.user_id IS NULL OR p.evening_enabled = true)
+      AND (EXISTS (SELECT 1 FROM plaid_items pi WHERE pi.user_id = u.id)
+           OR EXISTS (SELECT 1 FROM plaid_tokens pt WHERE pt.user_id = u.id))
       AND COALESCE(u.is_qa_user, false) = false
   `);
   return result.rows;

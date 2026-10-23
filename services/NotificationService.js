@@ -29,6 +29,9 @@ const { getActiveSubscriptions }                  = require('../db/notifications
 const { logFailure }                             = require('../lib/log-failure');
 const { getPushTokens, deletePushToken }          = require('../db/push-tokens');
 const { getUserLocalDate }                        = require('../lib/timezone');
+const { getCheckinQueue }                         = require('../db/spendingSessions');
+const { ClassificationService }                   = require('./ClassificationService');
+const { reviewPushBody }                          = require('../lib/work-hours');
 
 // ── Condition checks ─────────────────────────────────────────────────────────
 
@@ -84,6 +87,24 @@ async function isSessionIncomplete(pool, userId, timezone) {
   );
   if (result.rows.length === 0) return true; // no session = not complete
   return !result.rows[0].complete;
+}
+
+/**
+ * What the spending check-in would show right now (same queue and window as
+ * /checkin), plus the user's hourly rate for the "hours of work" framing.
+ */
+async function getReviewSummary(pool, userId, localToday) {
+  const since = new Date(`${localToday}T00:00:00Z`);
+  since.setUTCDate(since.getUTCDate() - (ClassificationService.QUEUE_DAYS - 1));
+  const [queue, rateRes] = await Promise.all([
+    getCheckinQueue(pool, userId, since.toISOString().slice(0, 10)),
+    pool.query('SELECT hourly_rate FROM users WHERE id = $1', [userId]),
+  ]);
+  return {
+    count: queue.length,
+    totalCents: queue.reduce((sum, item) => sum + Number(item.amount || 0), 0),
+    hourlyRate: rateRes.rows[0] ? rateRes.rows[0].hourly_rate : null,
+  };
 }
 
 // ── Push sending ──────────────────────────────────────────────────────────────
@@ -187,10 +208,18 @@ async function send_evening_checkin(pool, userId) {
     return { sent: false, reason: 'session_already_complete' };
   }
 
-  // All conditions pass → send push
+  // Nothing waiting in the check-in → nothing to announce.
+  const review = await getReviewSummary(pool, userId, localToday);
+  if (review.count === 0) {
+    await insertEvent(pool, { userId, eventType: 'evening_checkin.skipped', payload: { reason: 'nothing_to_review', date: localToday } });
+    return { sent: false, reason: 'nothing_to_review' };
+  }
+
+  // All conditions pass → send push, with the total in hours of work when the
+  // user has set an hourly rate (Settings).
   const title = 'FocusLedger';
-  const body  = "Let's wrap up today's spending — tap to check in.";
-  const url   = '/app/money';
+  const body  = reviewPushBody(review);
+  const url   = '/checkin';
 
   let sentCount = 0;
   try {
@@ -235,4 +264,4 @@ async function update_preferences(pool, userId, prefs) {
 // Wrapper for deleteSubscriptionByEndpoint (needs to be imported from db/notifications)
 const { deleteSubscriptionByEndpoint } = require('../db/notifications');
 
-module.exports = { send_evening_checkin, get_preferences, update_preferences };
+module.exports = { send_evening_checkin, get_preferences, update_preferences, getReviewSummary };
