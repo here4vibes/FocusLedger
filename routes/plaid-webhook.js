@@ -5,6 +5,7 @@ const express = require('express');
 const jwt     = require('jsonwebtoken');
 const { syncItemByPlaidId } = require('../plaidDailySync');
 const { sendApnsNotification, isApnsConfigured } = require('../lib/apns-sender');
+const { workHoursPhrase } = require('../lib/work-hours');
 
 // ── Plaid webhook signature verification ────────────────────────────────────
 // Plaid signs each webhook with an ES256 JWT in the Plaid-Verification header.
@@ -131,7 +132,8 @@ async function handleWebhookAsync(pool, item_id) {
 
   const rateRes = await pool.query('SELECT hourly_rate FROM users WHERE id = $1', [userId]);
   const hourlyRate = parseFloat(rateRes.rows[0]?.hourly_rate || 0);
-  const hoursCtx = hourlyRate > 0 ? ` · ${(dollars / hourlyRate).toFixed(1)}h of work` : '';
+  const hours = workHoursPhrase(dollars, hourlyRate);
+  const hoursCtx = hours ? ` · ${hours}` : '';
 
   const title = 'New transaction';
   const body = `$${dollars.toFixed(2)} at ${merchant}${hoursCtx} — tap to review`;
