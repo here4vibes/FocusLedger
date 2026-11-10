@@ -1,0 +1,42 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git fetch)",
+      "Bash(git fetch *)",
+      "mcp__github__pull_request_read",
+      "Bash(npx jest)",
+      "Bash(npx jest __tests__/*)",
+      "Bash(npm test)",
+      "Bash(npm run test:boot)",
+      "Bash(npm run test:sweep)",
+      "Bash(npm run test:flows)",
+      "Bash(npm run lint)",
+      "mcp__Render__list_deploys",
+      "mcp__Render__get_deploy",
+      "mcp__Render__list_logs",
+      "Bash(psql postgres://fl:fl@localhost:5432/focusledger -c \"SELECT *)",
+      "Bash(psql postgres://fl:fl@localhost:5432/focusledger -tAc \"SELECT *)",
+      "mcp__github__list_pull_requests",
+      "mcp__github__actions_list",
+      "mcp__github__get_check_run",
+      "mcp__github__get_job_logs",
+      "mcp__Sentry__search_issues",
+      "mcp__Sentry__get_sentry_resource",
+      "Bash(node --check *)",
+      "Bash(pg_isready *)",
+      "Bash(pg_lsclusters)"
+    ]
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/session-start.sh"
+          }
+        ]
+      }
+    ]
+  }
+}

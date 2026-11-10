@@ -257,9 +257,12 @@ Four places plus a Settings gear. One small PR per phase; old URLs keep working 
   - Skills from Anthropic's repos, also rewritten: `webapp-testing` (local Playwright checks, Pre-Ship viewports and Buddy tap) and `helper-authoring` (how to write or import a helper), both from `anthropics/skills` (Apache-2.0, `dbd4588`); `buddy-tool-use` (tool schemas, the tool_result loop, tool_choice, retries for `lib/agent-tools.js`), distilled from `anthropics/claude-cookbooks` (MIT, `a162e01`). Sources and licenses: `THIRD_PARTY_NOTICES.md`. Take only MIT/Apache-2.0 items: `anthropics/skills`' docx/pdf/pptx/xlsx and all of `anthropics/claude-code` are proprietary.
   - Use them for reviews and the hardening backlog, e.g. the silent `catch {}` sweep.
   - **Don't install the full ECC plugin, its hooks, its MCP configs or its auto-update in this repo;** only reviewed copies go in.
-  - `.gitignore` keeps the rest of `.claude/` (worktrees, local settings) local.
+  - Skill `steward`: how to handle CI/review events and merges on PRs Claude drives (conflict helper `scripts/resolve-changelog.js --git`).
+  - `.claude/settings.json` (committed): the SessionStart hook and a read-only permission allowlist (no pushes, merges or prod writes; personal additions go in `settings.local.json`).
+  - `.gitignore` keeps the rest of `.claude/` (worktrees, `settings.local.json`) local.
 
 ### Cloud-session gotchas
+- **SessionStart hook** (`.claude/hooks/session-start.sh`, cloud sessions only): installs deps (`npm ci`, else the apn workaround below, manifests always restored), starts Postgres, creates role/DB, runs `node migrate.js`, and exports `DATABASE_URL`/`JWT_SECRET`/`SESSION_SECRET`. It never fails the session; logs are in `/tmp/fl-session-start/`. Rerun by hand with `FL_SESSION_SETUP=force .claude/hooks/session-start.sh`.
 - **Prod isn't reachable from here:** the egress proxy blocks focusledger.net and onrender.com. Test prod via GitHub Actions or the Render/Sentry MCPs. Render service `srv-d8bpimul51nc73cjdg90`. Sentry org `sean-hendler` (`https://us.sentry.io`).
 - **Neon:** project `weathered-cherry-58315264`, prod branch `br-plain-darkness-aphya16p`. `get_connection_string` is blocked by a guardrail; don't work around it.
 - **`npm ci` on `main`** fails on `apn`'s GitHub tarball until #218 merges. Workaround: remove `apn` from `package.json`, `npm install`, then `git checkout -- package.json package-lock.json`.
