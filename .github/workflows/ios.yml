@@ -21,7 +21,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22" # Capacitor 8 CLI requires Node >= 22 (every run failed at `cap copy`)
           cache: npm
 
       - name: Install dependencies
@@ -36,7 +36,36 @@ jobs:
             "Set :CFBundleVersion ${{ github.run_number }}" \
             ios/App/App/Info.plist
 
+      # Signing needs three repo secrets (App Store Connect API key). Without
+      # them, compile unsigned for the simulator so we still know the app builds.
+      - name: Check signing secrets
+        id: signing
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_CONTENT: ${{ secrets.ASC_KEY_CONTENT }}
+        run: |
+          if [ -n "$ASC_KEY_ID" ] && [ -n "$ASC_ISSUER_ID" ] && [ -n "$ASC_KEY_CONTENT" ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::ASC_KEY_ID / ASC_ISSUER_ID / ASC_KEY_CONTENT are not set: building unsigned, nothing goes to TestFlight."
+          fi
+
+      - name: Unsigned simulator build (no signing secrets)
+        if: steps.signing.outputs.ready != 'true'
+        run: |
+          xcodebuild build \
+            -project ios/App/App.xcodeproj \
+            -scheme App \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            -clonedSourcePackagesDirPath ~/.spm-cache \
+            CODE_SIGNING_ALLOWED=NO
+
       - name: Write App Store Connect API key
+        if: steps.signing.outputs.ready == 'true'
         env:
           ASC_KEY_CONTENT: ${{ secrets.ASC_KEY_CONTENT }}
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
@@ -53,6 +82,7 @@ jobs:
             -clonedSourcePackagesDirPath ~/.spm-cache
 
       - name: Archive
+        if: steps.signing.outputs.ready == 'true'
         env:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
@@ -68,6 +98,7 @@ jobs:
             -authenticationKeyIssuerID "$ASC_ISSUER_ID"
 
       - name: Export & upload to TestFlight
+        if: steps.signing.outputs.ready == 'true'
         env:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
@@ -96,7 +127,7 @@ jobs:
 
       - name: Upload IPA as artifact
         uses: actions/upload-artifact@v4
-        if: always()
+        if: steps.signing.outputs.ready == 'true'
         with:
           name: FocusLedger-${{ github.run_number }}.ipa
           path: "${{ runner.temp }}/output/*.ipa"
