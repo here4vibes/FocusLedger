@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 /**
  * jobs/routineNudgeCheck.js — Scheduled routine nudge evaluation job.
- * Runs via render.yaml [[crons]] every 15 minutes.
+ * Runs hourly via render.yaml. A routine nudges once it is past its
+ * nudge_after_hour (user-local), on its day if weekly, and not done today.
  *
  * For each user with active routines, checks whether any routines are missed
  * (past the nudge_after_hour trigger and no tasks completed) and generates

@@ -39,3 +39,17 @@ describe('console message grouping', () => {
     expect(excEvt.fingerprint).toBeUndefined();
   });
 });
+
+describe('Node process warnings are not reported as errors', () => {
+  const { _internal: { beforeSend } } = require('../lib/sentry');
+  test.each([
+    "(node:52) Warning: SECURITY WARNING: The SSL modes 'prefer', 'require', and 'verify-ca' are treated as aliases for 'verify-full'.",
+    '(node:7) [DEP0005] DeprecationWarning: Buffer() is deprecated',
+  ])('dropped: %s', (message) => {
+    expect(beforeSend({ logger: 'console', message })).toBeNull();
+  });
+
+  test('real logged errors still go through', () => {
+    expect(beforeSend({ logger: 'console', message: '[emailCron] Re-engagement error: boom' })).not.toBeNull();
+  });
+});
