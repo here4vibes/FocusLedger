@@ -9,7 +9,7 @@ on:
 jobs:
   smoke:
     name: Nav smoke tests
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04 # pinned: Playwright 1.49 has no Chromium build for ubuntu-latest (26.04)
     # A hang anywhere (historically: apt-get inside install-deps) fails the job
     # instead of holding a merge for half an hour or more.
     timeout-minutes: 20
