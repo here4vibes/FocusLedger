@@ -1,12 +1,13 @@
 // pricing-service.js — initiates Stripe checkout from any page.
 //
 // When the user is logged in, calls POST /api/subscription/checkout to get a
-// personalized URL (email pre-filled, user metadata attached). Falls back to
-// the raw buy.stripe.com links for unauthenticated visitors.
+// personalized URL (email pre-filled, user metadata attached). Signed-out
+// visitors go to /signup first; the raw buy.stripe.com links are only a
+// fallback when the checkout API fails.
 (function(global) {
   'use strict';
 
-  // Fallback links for unauthenticated visitors or API errors.
+  // Fallback links for when the checkout API fails.
   // These match config/pricing.js — update both if the links change.
   var FALLBACK = {
     autopilot: {
@@ -43,7 +44,17 @@
       var originalText = btn ? btn.textContent : null;
       if (btn) { btn.disabled = true; btn.textContent = 'Redirecting…'; }
 
-      var token = localStorage.getItem('token');
+      // fl_token is the app's session key; 'token' is the legacy name. Reading
+      // only 'token' sent signed-in buyers to the bare payment link, without
+      // their user id on the Stripe session.
+      var token = localStorage.getItem('fl_token') || localStorage.getItem('token');
+      if (!token) {
+        // Signed-out visitor (e.g. from an ad): create the account first. A
+        // payment-link purchase with no matching account is paid but never
+        // granted (lib/billing.js returns 'no_user').
+        window.location.href = '/signup?plan=' + encodeURIComponent(plan) + '&billing=' + encodeURIComponent(billing);
+        return;
+      }
       if (token) {
         try {
           var res = await fetch('/api/subscription/checkout', {
@@ -60,11 +71,11 @@
             return;
           }
         } catch (e) {
-          // fall through to fallback link
+          console.warn('[pricing] checkout API failed, using payment link:', e && e.message);
         }
       }
 
-      // Unauthenticated or API error — use raw payment link
+      // API error — use raw payment link (the webhook matches by email)
       var url = (FALLBACK[plan] || {})[billing];
       if (url) {
         window.location.href = url;

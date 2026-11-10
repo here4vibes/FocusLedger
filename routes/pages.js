@@ -41,6 +41,7 @@ router.get('/security',  (_, res) => res.sendFile(pub('security.html')));
 router.get('/adhd-tax',  (_, res) => res.sendFile(pub('adhd-tax.html')));
 router.get('/contact',   (_, res) => res.sendFile(pub('contact.html')));
 router.get('/story',     (_, res) => res.sendFile(pub('story.html')));
+router.get('/thanks',    (_, res) => res.sendFile(pub('thanks.html')));   // post-checkout Pixel Purchase
 router.get('/changelog', (_, res) => res.sendFile(pub('changelog.html')));
 // WHY no-store: science.html has 78KB of inline CSS. Previous deploys proved
 // that browser HTTP cache + service worker can serve stale versions indefinitely,
@@ -65,7 +66,7 @@ router.get('/recap',     (_, res) => res.sendFile(pub('recap.html')));   // link
 router.get('/email',     (_, res) => res.sendFile(pub('email.html')));
 router.get('/journal',   (_, res) => res.sendFile(pub('journal.html')));
 router.get('/share',     (_, res) => res.sendFile(pub('share.html')));
-router.get('/news',      (_, res) => res.sendFile(pub('news.html')));
+router.get('/news',      (_, res) => res.redirect(301, '/weightless'));   // news feed removed
 router.get('/transactions', (_, res) => res.sendFile(pub('transactions.html')));
 // /documents, /vault, /money, /buddy → redirected to /app/* canonical routes below
 router.get('/checkin',           (_, res) => res.sendFile(pub('checkin-spending.html')));
@@ -163,5 +164,14 @@ router.get('/portal/legacy', (_, res) => res.sendFile(pub('portal.html')));
 // Weightless — conversation-first surface (coexists with the classic app).
 // New users will default here; existing users opt in. See CLAUDE.md "Recent changes".
 router.get('/weightless', (_, res) => res.sendFile(pub('weightless.html')));
+
+// Unknown URL: a real 404 status with a branded page (Express's default was a
+// bare "Cannot GET" page). Must stay the last route in this router.
+router.use((req, res) => {
+  if ((req.method === 'GET' || req.method === 'HEAD') && req.accepts('html')) {
+    return res.status(404).sendFile(pub('404.html'));
+  }
+  res.status(404).json({ success: false, message: 'Not found' });
+});
 
 module.exports = router;

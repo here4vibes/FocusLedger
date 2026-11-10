@@ -20,7 +20,7 @@ async function getBillPreferences(pool, userId) {
   const { rows } = await pool.query(
     `SELECT merchant_key, merchant_display_name, bill_type, is_disabled, bucket, kept_at,
             cancel_requested_at, cancel_expected_by::text AS cancel_expected_by, cancel_amount,
-            cancel_frequency, cancel_status, cancel_resolved_at
+            cancel_frequency, cancel_status, cancel_resolved_at, updated_at
      FROM bill_preferences WHERE user_id = $1`,
     [userId]);
   return rows;
@@ -39,18 +39,21 @@ async function getAvailableCash(pool, userId) {
 
 /**
  * Create the pre-due reminder unless one already exists for this merchant and
- * date (done or not, so finishing it doesn't make it come back).
+ * date (done or not, so finishing it doesn't make it come back). Reminders made
+ * before merchant-name normalization carry the raw-name key, so the check also
+ * covers the stream's legacy keys.
  * @returns {Promise<boolean>} true when a task was created
  */
 async function createBillReminder(pool, userId, stream, task) {
+  const keys = [stream.merchant_key, ...(stream.legacy_keys || [])];
   const { rows } = await pool.query(`
     INSERT INTO tasks (user_id, title, description, priority, due_date, source, bill_merchant_key, bill_type)
     SELECT $1, $2, $3, 'medium', $4::date, 'auto_bill', $5, 'obligation'
     WHERE NOT EXISTS (
       SELECT 1 FROM tasks
-      WHERE user_id = $1 AND source = 'auto_bill' AND bill_merchant_key = $5 AND due_date = $4::date)
+      WHERE user_id = $1 AND source = 'auto_bill' AND bill_merchant_key = ANY($6::text[]) AND due_date = $4::date)
     RETURNING id`,
-    [userId, task.title, task.description, task.due_date, stream.merchant_key]);
+    [userId, task.title, task.description, task.due_date, stream.merchant_key, keys]);
   return rows.length > 0;
 }
 

@@ -185,8 +185,13 @@
     });
   }
 
-  // Update links if user is already logged in
-  fetch('/api/auth/me', { credentials: 'include' })
+  // Update links if user is already logged in. Signed-out visitors (most ad
+  // traffic) have no fl_token, so skip the call instead of logging a 401 on
+  // every public page.
+  var navToken = null;
+  try { navToken = localStorage.getItem('fl_token'); } catch (e) { navToken = null; }
+  if (!navToken) return;
+  fetch('/api/auth/me', { credentials: 'include', headers: { Authorization: 'Bearer ' + navToken } })
     .then(function (r) { return r.ok ? r.json() : null; })
     .then(function (data) {
       if (!data || !data.user) return;

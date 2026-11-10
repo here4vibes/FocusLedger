@@ -1,0 +1,199 @@
+name: Uptime
+
+# Is focusledger.net up? Checks the public pages every 5 minutes and /health
+# once an hour. A failing check opens a GitHub issue labelled "uptime" (GitHub
+# emails the repo owner); later failures comment on it at most once an hour;
+# the first passing run closes it. Inspired by Upptime (MIT). See docs/uptime.md.
+#
+# Why /health is hourly: it runs `SELECT 1` against Neon. Hitting it every
+# 5 minutes would keep Neon's compute awake around the clock and burn the free
+# compute-hour allowance (see the "cron diet" note in render.yaml). The public
+# pages are served without touching the database, so they're safe every 5 min.
+on:
+  schedule:
+    - cron: "*/5 * * * *"   # public pages
+    - cron: "1 * * * *"     # hourly: public pages + /health
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: uptime
+  cancel-in-progress: false
+
+env:
+  BASE_URL: https://focusledger.net
+  # A check fails if its final attempt is not 2xx/3xx or takes longer than
+  # this many seconds. 15s is far slower than a warm response (well under 1s),
+  # so it means "something is wrong", not "a bit slow".
+  SLOW_THRESHOLD_SECONDS: "15"
+  # Hard timeout per request. Longer than a Render cold start (~60s on the free
+  # plan) so a waking server answers instead of timing out.
+  MAX_TIME_SECONDS: "90"
+  # A failed or slow first attempt is retried once after this pause, and only
+  # the retry decides. A cold start (first hit slow, second fast) is therefore
+  # recorded in the run summary but does not open an issue.
+  RETRY_DELAY_SECONDS: "20"
+  # During an outage, add a comment to the open issue at most this often
+  # (sooner if the set of failing URLs changes).
+  COMMENT_EVERY_MINUTES: "60"
+  # X-FL-Automation + the "FocusLedger-uptime" UA token mark this as our own
+  # automation for lib/analytics-filter.js (classifyTraffic → 'ci').
+  USER_AGENT: "FocusLedger-uptime/1.0 (+https://github.com/here4vibes/FocusLedger/blob/main/.github/workflows/uptime.yml)"
+
+jobs:
+  check:
+    name: Check focusledger.net
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check URLs
+        id: check
+        env:
+          INCLUDE_HEALTH: ${{ github.event_name != 'schedule' || github.event.schedule == '1 * * * *' }}
+        run: |
+          set -u
+          paths="/ /pricing /signup"
+          if [ "$INCLUDE_HEALTH" = "true" ]; then paths="/health $paths"; fi
+
+          probe() {
+            # prints "<status> <seconds>"; status 000 = no response / timeout
+            curl -sS -o /dev/null -w '%{http_code} %{time_total}' \
+              --max-time "$MAX_TIME_SECONDS" \
+              -H 'X-FL-Automation: uptime' -A "$USER_AGENT" \
+              "$BASE_URL$1" 2>/dev/null || true
+          }
+          ok() {
+            # ok <status> <seconds>
+            [ "${1:0:1}" = "2" ] || [ "${1:0:1}" = "3" ] || return 1
+            awk -v t="$2" -v max="$SLOW_THRESHOLD_SECONDS" 'BEGIN { exit !(t + 0 <= max + 0) }'
+          }
+
+          down=false
+          echo '[]' > results.json
+          {
+            echo "### Uptime check"
+            echo
+            echo "| URL | Status | Time (s) | Result |"
+            echo "|---|---|---|---|"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          for p in $paths; do
+            read -r status secs <<< "$(probe "$p")"
+            status=${status:-000}; secs=${secs:-0}
+            note=""
+            if ! ok "$status" "$secs"; then
+              first="$status in ${secs}s"
+              sleep "$RETRY_DELAY_SECONDS"
+              read -r status secs <<< "$(probe "$p")"
+              status=${status:-000}; secs=${secs:-0}
+              note="retried (first try: $first)"
+            fi
+            if ok "$status" "$secs"; then result=up; else result=down; down=true; fi
+            echo "$p -> $status ${secs}s $result $note"
+            echo "| \`$p\` | $status | $secs | $result $note |" >> "$GITHUB_STEP_SUMMARY"
+            jq --arg path "$p" --arg status "$status" --arg secs "$secs" \
+               --arg result "$result" --arg note "$note" \
+               '. + [{path: $path, status: $status, seconds: ($secs | tonumber), result: $result, note: $note}]' \
+               results.json > results.tmp && mv results.tmp results.json
+          done
+          echo "down=$down" >> "$GITHUB_OUTPUT"
+
+      - name: Open, update or close the uptime issue
+        uses: actions/github-script@v7
+        env:
+          DOWN: ${{ steps.check.outputs.down }}
+        with:
+          script: |
+            const fs = require('fs');
+            const results = JSON.parse(fs.readFileSync('results.json', 'utf8'));
+            const down = process.env.DOWN === 'true';
+            const base = process.env.BASE_URL;
+            const threshold = process.env.SLOW_THRESHOLD_SECONDS;
+            const everyMin = Number(process.env.COMMENT_EVERY_MINUTES) || 60;
+            const { owner, repo } = context.repo;
+            const runUrl = `${context.serverUrl}/${owner}/${repo}/actions/runs/${context.runId}`;
+            const checked = new Set(results.map(r => r.path));
+            const failingNow = results.filter(r => r.result === 'down').map(r => r.path);
+            const table = [
+              '| URL | Status | Time (s) | Result |',
+              '|---|---|---|---|',
+              ...results.map(r => `| ${base}${r.path} | ${r.status === '000' ? 'no response' : r.status} | ${r.seconds} | ${r.result}${r.note ? ` (${r.note})` : ''} |`),
+            ].join('\n');
+
+            const open = await github.paginate(github.rest.issues.listForRepo, {
+              owner, repo, state: 'open', labels: 'uptime', per_page: 100,
+            });
+            const issue = open[0];
+
+            // The latest note on the open issue (its body, or its last comment).
+            let last = null, lastFailing = null;
+            if (issue) {
+              const comments = await github.paginate(github.rest.issues.listComments, {
+                owner, repo, issue_number: issue.number, per_page: 100,
+              });
+              const notes = [issue, ...comments].filter(c => /<!-- uptime-failing: /.test(c.body || ''));
+              last = notes.length ? notes[notes.length - 1] : issue;
+              lastFailing = ((last.body || '').match(/<!-- uptime-failing: (.*?) -->/) || [])[1];
+            }
+            // Paths that were failing but weren't checked this run (a 5-minute run
+            // skips /health) stay in the failing set until a run re-checks them.
+            const carried = (lastFailing || '').split(',').filter(p => p && !checked.has(p));
+            const failing = [...new Set([...failingNow, ...(down ? carried : [])])].sort().join(',');
+            const marker = `<!-- uptime-failing: ${failing} -->`;
+
+            if (!down) {
+              if (!issue) { core.info('All checks passed; no open uptime issue.'); return; }
+              // Only close once everything that was failing has been re-checked:
+              // a 5-minute run doesn't check /health, so it can't clear a /health outage.
+              if (carried.length) {
+                core.info(`#${issue.number} stays open: ${carried.join(', ')} not checked in this run.`);
+                return;
+              }
+              await github.rest.issues.createComment({
+                owner, repo, issue_number: issue.number,
+                body: `Recovered: every check passed.\n\n${table}\n\n[Run](${runUrl})`,
+              });
+              await github.rest.issues.update({
+                owner, repo, issue_number: issue.number, state: 'closed', state_reason: 'completed',
+              });
+              core.info(`Closed #${issue.number}.`);
+              return;
+            }
+
+            if (!issue) {
+              try {
+                await github.rest.issues.createLabel({
+                  owner, repo, name: 'uptime', color: 'd73a4a',
+                  description: 'Opened and closed by the Uptime workflow',
+                });
+              } catch (e) {
+                if (e.status !== 422) throw e; // 422 = label already exists
+              }
+              const created = await github.rest.issues.create({
+                owner, repo, labels: ['uptime'],
+                title: `Uptime: focusledger.net check failing (${failing})`,
+                body: [
+                  `The uptime check failed (non-2xx/3xx, no response, or slower than ${threshold}s after one retry).`,
+                  '', table, '',
+                  `[Run](${runUrl}) · This issue closes itself when a later run passes. See docs/uptime.md.`,
+                  marker,
+                ].join('\n'),
+              });
+              core.setFailed(`Opened #${created.data.number}.`);
+              return;
+            }
+
+            // Already open: comment if the failing set changed or the last note is old.
+            const ageMin = (Date.now() - new Date(last.created_at).getTime()) / 60000;
+            if (lastFailing !== failing || ageMin >= everyMin) {
+              await github.rest.issues.createComment({
+                owner, repo, issue_number: issue.number,
+                body: `Still failing.\n\n${table}\n\n[Run](${runUrl})\n${marker}`,
+              });
+            } else {
+              core.info(`#${issue.number} is open and was updated ${Math.round(ageMin)} min ago; not commenting.`);
+            }
+            core.setFailed(`Still down; see #${issue.number}.`);

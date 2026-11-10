@@ -30,7 +30,6 @@ const NAV_CONFIG = {
     { label: 'Home', icon: '🏠', route: '/home', visibility: 'authenticated', type: 'app', id: 'tabHome' },
     { label: 'Tasks', icon: '✅', route: '/app', visibility: 'authenticated', type: 'app', id: 'tabTasks' },
     { label: 'Money', icon: '💰', route: '/money', visibility: 'authenticated', type: 'app', id: 'tabMoney' },
-    { label: 'News', icon: '📰', route: '/news', visibility: 'authenticated', type: 'app', id: 'tabNews' },
     { label: 'Buddy', icon: '💬', route: '/app/buddy', visibility: 'authenticated', type: 'app', id: 'tabBuddy' },
     { label: 'More', icon: '⚙️', route: '/settings', visibility: 'authenticated', type: 'app', id: 'tabMore' },
   ],

@@ -7,7 +7,7 @@ const { sendEmail } = require('../lib/emailService');
 const { proWelcomeTemplate } = require('../lib/emailTemplates');
 const { PLANS } = require('../config/pricing');
 
-const FREE_TASK_LIMIT = 10;
+const { FREE_TASK_LIMIT, countCappedOpenTasks } = require('../db/task-cap');
 
 // Stripe client is lazy (null without STRIPE_SECRET_KEY). When price IDs are also
 // set, POST /checkout creates real Checkout Sessions with email pre-fill; otherwise
@@ -74,7 +74,7 @@ module.exports = function(pool) {
     try {
       const userId = req.user.id;
 
-      const [subResult, userResult, taskCountResult] = await Promise.all([
+      const [subResult, userResult, activeTaskCount] = await Promise.all([
         pool.query(
           'SELECT * FROM app_subscription WHERE user_id = $1 ORDER BY id DESC LIMIT 1',
           [userId]
@@ -83,17 +83,14 @@ module.exports = function(pool) {
           'SELECT admin_pro_override, pro_granted_by, pro_granted_until, autopilot_expires_at, tandem_plan, tandem_expires_at FROM users WHERE id = $1',
           [userId]
         ),
-        pool.query(
-          'SELECT COUNT(*) as count FROM tasks WHERE is_completed = false AND user_id = $1',
-          [userId]
-        )
+        // Routine tasks don't use up free slots (db/task-cap.js).
+        countCappedOpenTasks(pool, userId)
       ]);
 
       const sub = subResult.rows[0] || { plan: 'free', status: 'active' };
       const user = userResult.rows[0] || {};
       const adminProOverride = isAdminProActive(user);
       const promoActive = !!(user.autopilot_expires_at && new Date(user.autopilot_expires_at) > new Date());
-      const activeTaskCount = parseInt(taskCountResult.rows[0].count);
 
       const ownPaidPro = sub.plan === 'pro' && sub.status === 'active';
       // A paid Tandem partner includes Autopilot (and the Tandem features) for this user.
@@ -157,15 +154,16 @@ module.exports = function(pool) {
       .catch(err => console.error('[billing] welcome email failed:', err.message, '| user:', userId));
   }
 
-  // Success redirect after checkout. Carries what was bought so Settings can
-  // report the Meta Pixel Purchase with the REAL price (from config/pricing.js)
-  // and dedupe it on the checkout session id (ref).
+  // Success redirect after checkout. Goes through the public /thanks page,
+  // which reports the Meta Pixel Purchase with the REAL price (from
+  // config/pricing.js), deduped on the checkout session id (ref), then
+  // continues to Settings. The Pixel never loads inside the signed-in app.
   function upgradedRedirect(res, sessionId, summary) {
     const plan = summary && summary.tandem ? 'tandem' : 'autopilot';
     const cycle = summary && summary.billing_cycle === 'annual' ? 'annual' : 'monthly';
     const value = cycle === 'annual' ? PLANS[plan].price_annual : PLANS[plan].price_monthly;
     const qs = new URLSearchParams({ upgraded: 'true', plan, billing_cycle: cycle, value: String(value), ref: sessionId });
-    return res.redirect('/app/settings?' + qs.toString());
+    return res.redirect('/thanks?' + qs.toString());
   }
 
   // GET /activate — where Stripe sends the browser after checkout.

@@ -14,10 +14,11 @@
  * - Bank Sync (Plaid connection)
  * - Recurring tasks (unlimited)
  * - Recurring expenses (unlimited)
- * - Task count limit (10 for free, unlimited for Pro)
+ * - Task count limit (10 for free, unlimited for Pro; routine tasks don't count)
  */
 
 const { hasPartnerPaidTandem } = require('../db/partnerships');
+const { countCappedOpenTasks, isAtFreeTaskCap } = require('../db/task-cap');
 
 async function queryRaw(db, text, params) {
   const result = await db.query(text, params);
@@ -95,7 +96,7 @@ async function checkProStatus(pool, userId) {
 
 /**
  * Check if user is at/exceeds the free task limit (10 tasks).
- * Returns true if free user with 10+ active tasks, false otherwise.
+ * Routine tasks don't count (see db/task-cap.js).
  *
  * @param {object} pool - PostgreSQL connection pool
  * @param {string|number} userId - User ID to check
@@ -104,36 +105,23 @@ async function checkProStatus(pool, userId) {
  */
 async function isAtFreeTaskLimit(pool, userId, isPro) {
   if (isPro) return false; // Pro users have no limit
-
-  const FREE_TASK_LIMIT = 10;
   try {
-    const result = await queryRaw(
-      pool,
-      'SELECT COUNT(*) as count FROM tasks WHERE user_id = $1 AND is_completed = false',
-      [userId]
-    );
-    const activeCount = parseInt(result[0].count, 10);
-    return activeCount >= FREE_TASK_LIMIT;
+    return await isAtFreeTaskCap(pool, userId);
   } catch (err) {
     throw new Error(`Task count check failed: ${err.message}`);
   }
 }
 
 /**
- * Get active task count for a user.
+ * Open tasks that count toward the free cap (routine tasks excluded).
  *
  * @param {object} pool - PostgreSQL connection pool
  * @param {string|number} userId - User ID
- * @returns {Promise<number>} Number of active (non-completed) tasks
+ * @returns {Promise<number>} Number of capped open tasks
  */
 async function getActiveTaskCount(pool, userId) {
   try {
-    const result = await queryRaw(
-      pool,
-      'SELECT COUNT(*) as count FROM tasks WHERE user_id = $1 AND is_completed = false',
-      [userId]
-    );
-    return parseInt(result[0].count, 10);
+    return await countCappedOpenTasks(pool, userId);
   } catch (err) {
     throw new Error(`Failed to count tasks: ${err.message}`);
   }

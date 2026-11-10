@@ -2,7 +2,9 @@ const express = require('express');
 const router = express.Router();
 const { authenticateToken } = require('../middleware/auth');
 const { checkProStatus } = require('../middleware/proUtils');
+const { isAtFreeTaskCap } = require('../db/task-cap');
 const { fetchUserLocalDate } = require('../lib/timezone');
+const { nextScheduleDate } = require('../lib/recurrence');
 
 module.exports = function(pool) {
 
@@ -12,43 +14,12 @@ module.exports = function(pool) {
   // ============================================================
   // HELPER: Calculate next occurrence date
   // ============================================================
-  function calculateNextDate(fromDate, frequency) {
-    // fromDate might be a string like "2025-01-15" — parse as local date to avoid UTC offset issues
-    // Normalize to YYYY-MM-DD — handles both string and Date inputs
-    const dateStr = (fromDate instanceof Date)
-      ? fromDate.toISOString().split('T')[0]
-      : String(fromDate).split('T')[0];
-    const [year, month, day] = dateStr.split('-').map(Number);
-    const base = new Date(year, month - 1, day);
-
-    switch (frequency) {
-      case 'daily':
-        base.setDate(base.getDate() + 1);
-        break;
-      case 'weekly':
-        base.setDate(base.getDate() + 7);
-        break;
-      case 'biweekly':
-        base.setDate(base.getDate() + 14);
-        break;
-      case 'monthly':
-        base.setMonth(base.getMonth() + 1);
-        break;
-      case 'quarterly':
-        base.setMonth(base.getMonth() + 3);
-        break;
-      case 'yearly':
-        base.setFullYear(base.getFullYear() + 1);
-        break;
-      default:
-        base.setDate(base.getDate() + 7);
-    }
-
-    // Return as YYYY-MM-DD string
-    const y = base.getFullYear();
-    const m = String(base.getMonth() + 1).padStart(2, '0');
-    const dd = String(base.getDate()).padStart(2, '0');
-    return `${y}-${m}-${dd}`;
+  // rrule-based (lib/recurrence.js). startDate keeps month-based series on their
+  // day of month: Jan 31 → Feb 28 → Mar 31 (the old setMonth math gave Mar 3).
+  function calculateNextDate(fromDate, frequency, startDate) {
+    const next = nextScheduleDate(fromDate, frequency, startDate);
+    if (!next) throw new Error(`[Recurring] invalid date for next occurrence: ${fromDate}`);
+    return next;
   }
 
   // WHY: removed hardcoded server-time todayStr(). Now uses getUserLocalDate(tz)
@@ -139,13 +110,9 @@ module.exports = function(pool) {
         let canCreate = true;
         let limitMessage = null;
         if (!userIsPro) {
-          const activeCount = await client.query(
-            'SELECT COUNT(*) as count FROM tasks WHERE is_completed = false AND user_id = $1',
-            [userId]
-          );
-          if (parseInt(activeCount.rows[0].count) >= 10) {
+          if (await isAtFreeTaskCap(client, userId)) {
             canCreate = false;
-            limitMessage = 'Free plan is limited to 10 active tasks. Upgrade to Pro for unlimited tasks!';
+            limitMessage = 'Free plan is limited to 10 active tasks of your own (routine tasks don’t count). Upgrade to Autopilot for unlimited tasks!';
           }
         }
 
@@ -505,13 +472,9 @@ module.exports = function(pool) {
 
           // Check free-tier task limit
           if (!userIsPro) {
-            const activeCount = await client.query(
-              'SELECT COUNT(*) as count FROM tasks WHERE is_completed = false AND user_id = $1',
-              [userId]
-            );
-            if (parseInt(activeCount.rows[0].count) >= 10) {
+            if (await isAtFreeTaskCap(client, userId)) {
               // Don't generate — limit reached; advance date so we try again next time
-              const nextDate = calculateNextDate(rt.next_due_date, rt.frequency);
+              const nextDate = calculateNextDate(rt.next_due_date, rt.frequency, rt.start_date);
               await client.query(
                 'UPDATE recurring_tasks SET next_due_date = $1 WHERE id = $2',
                 [nextDate, rt.id]
@@ -529,7 +492,7 @@ module.exports = function(pool) {
           generated.tasks.push(taskResult.rows[0]);
 
           // Advance next_due_date
-          const nextDate = calculateNextDate(rt.next_due_date, rt.frequency);
+          const nextDate = calculateNextDate(rt.next_due_date, rt.frequency, rt.start_date);
           await client.query(
             'UPDATE recurring_tasks SET next_due_date = $1 WHERE id = $2',
             [nextDate, rt.id]
@@ -553,7 +516,7 @@ module.exports = function(pool) {
           generated.expenses.push(expResult.rows[0]);
 
           // Advance next_due_date
-          const nextDate = calculateNextDate(re.next_due_date, re.frequency);
+          const nextDate = calculateNextDate(re.next_due_date, re.frequency, re.start_date);
           await client.query(
             'UPDATE recurring_expenses SET next_due_date = $1 WHERE id = $2',
             [nextDate, re.id]

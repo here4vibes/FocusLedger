@@ -15,6 +15,7 @@ const express = require('express');
 const { complete } = require('../lib/claude-client');
 const { authenticateToken } = require('../middleware/auth');
 const { checkProStatus } = require('../middleware/proUtils');
+const { isAtFreeTaskCap } = require('../db/task-cap');
 const { fetchUserTimezone, getUserLocalDate, getUserLocalHour } = require('../lib/timezone');
 const { logFailure } = require('../lib/log-failure');
 
@@ -423,14 +424,10 @@ Generate ${batchSize} personalized, highly specific task suggestions tied to the
       // Check free task limit
       const isPro = await checkProStatus(pool, userId).catch(logFailure('[AI Suggestions]', 'checkProStatus', { userId }, false));
       if (!isPro) {
-        const activeCount = await pool.query(
-          'SELECT COUNT(*) as count FROM tasks WHERE is_completed = false AND user_id = $1',
-          [userId]
-        );
-        if (parseInt(activeCount.rows[0].count) >= 10) {
+        if (await isAtFreeTaskCap(pool, userId)) {
           return res.status(402).json({
             success: false,
-            message: 'You have 10 active tasks — the free plan cap. Finish a few, or open it up with Pro.',
+            message: 'You have 10 active tasks of your own — the free plan cap (routine tasks don’t count). Finish a few, or open it up with Pro.',
             code: 'TASK_LIMIT_REACHED',
             upgrade_required: true
           });

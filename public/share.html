@@ -487,7 +487,7 @@
                     saveBtn.disabled = false;
                     saveBtn.textContent = 'Save task';
                     showAlert(
-                        'You\'ve hit the 10-task free limit. <a href="/pricing">Switch to Autopilot</a> to keep going.',
+                        'You\'ve hit the 10-task free limit (routine tasks don\'t count). <a href="/pricing">Switch to Autopilot</a> to keep going.',
                         true
                     );
                 } else if (res.status === 401) {

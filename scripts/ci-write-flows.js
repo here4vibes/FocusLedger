@@ -16,7 +16,7 @@
  * sweep, scripts/ci-harness.js), or a wrong follow-up state.
  *
  * Flows: tasks (create → list/today → edit → steps → complete → reopen →
- * delete; recurring spawn), routine capture (starter routine → streak 1), the
+ * delete; recurring spawn), routine capture (starter routine → streak 1, habit strength 5%), the
  * form check-in (mode preference, login check-in, daily plan, accept), Buddy
  * morning / mid-day / evening + evening-data, ideas, journal, values (add,
  * rename, delete), expenses (manual add + triage), budget, the spending
@@ -24,12 +24,13 @@
  * sessions + prefs, time estimates, insurance, settings prefs (notifications,
  * nudges, follow-up emails, routine nudges), routine from template, Tandem
  * invite → accept → share → feed → dissolve (second user), promo redemption
- * error paths, the push "Done ✓" action, account-deletion request.
+ * error paths, the push "Done ✓" action, account-deletion request, the free
+ * 10-task cap with the starter routine excluded (third user).
  * Not covered (no endpoint, or needs admin / an external service): values
  * alignment check-in (no write endpoint), promo redemption success (codes are
  * admin-created), Plaid itself (bank rows are seeded with SQL), Stripe, AI chat and AI breakdowns, documents upload.
  *
- * ~140 requests, two signups: under the global (300/15min) and signup (5/h)
+ * ~160 requests, three signups: under the global (300/15min) and signup (5/h)
  * limiters, which reset with each server process.
  *
  * Prereqs: DATABASE_URL points at a migrated DB, JWT_SECRET set.
@@ -200,6 +201,17 @@ async function main() {
     await call('GET', `/api/tasks/${id}`, 404, { token });
   });
 
+  await flow('tasks: natural-language due date in the user\'s zone; an explicit date wins', async () => {
+    const nl = (await call('POST', '/api/tasks', 201, { token, body: { title: 'CI dentist tomorrow' } })).task;
+    expect(nl.title === 'CI dentist', `date phrase not stripped: "${nl.title}"`);
+    expect(String(nl.due_date).slice(0, 10) === localDate(1), `due_date ${nl.due_date} is not the user's local tomorrow (${localDate(1)})`);
+    const explicit = (await call('POST', '/api/tasks', 201, { token, body: { title: 'CI call tomorrow', due_date: today } })).task;
+    expect(explicit.title === 'CI call tomorrow', `title changed despite an explicit date: "${explicit.title}"`);
+    expect(String(explicit.due_date).slice(0, 10) === today, `explicit due_date ${explicit.due_date} was overridden`);
+    await call('DELETE', `/api/tasks/${nl.id}`, 200, { token });
+    await call('DELETE', `/api/tasks/${explicit.id}`, 200, { token });
+  });
+
   // 2 ── Routines ─────────────────────────────────────────────────────────────
   await flow('routines: finish the starter routine → streak 1', async () => {
     let routines = (await call('GET', '/api/routines', 200, { token })).routines || [];
@@ -215,6 +227,7 @@ async function main() {
       expect(routine, 'created routine missing from GET /api/routines (saved inactive?)');
     }
     expect(routine.is_active === true, `routine is_active=${routine.is_active}`);
+    expect(routine.strength === 0, `habit strength before any completion: ${routine.strength}, expected 0`);
     const open = routine.tasks.filter(t => !t.is_completed);
     expect(open.length > 0, 'routine has no open tasks to complete');
     let last;
@@ -230,6 +243,14 @@ async function main() {
     // Recording the completion again the same day must not double-count.
     const again = await call('POST', `/api/routines/${routine.id}/complete`, 200, { token, body: {} });
     expect(Number(again.streak && again.streak.current_streak) === 1, `same-day re-complete changed the streak: ${JSON.stringify(again.streak)}`);
+
+    // Habit strength (routine_completions log, user-local date): one day done
+    // on the routine's first day = one half-life-14 step = 5%, and the
+    // same-day re-complete above must not log a second day.
+    const listed = ((await call('GET', '/api/routines', 200, { token })).routines || []).find(r => r.id === routine.id);
+    expect(listed, 'routine missing from GET /api/routines after completing it');
+    expect(listed.strength === 5, `habit strength after one completion: ${listed.strength}, expected 5`);
+    expect(listed.current_streak === 1, `GET /api/routines current_streak=${listed.current_streak}, expected 1`);
   });
 
   // 3 ── Form check-in (public/checkin-form.html) ──────────────────────────────
@@ -595,6 +616,25 @@ async function main() {
     const got = routines.find(x => x.id === id);
     expect(got && got.tasks.length > 0, 'template routine missing from GET /api/routines or has no tasks');
     await call('DELETE', `/api/routines/${id}`, 200, { token });
+  });
+
+  // 13 ── Free task cap ───────────────────────────────────────────────────────
+  // A fresh free user's starter routine tasks must not use up the 10 free
+  // slots (db/task-cap.js): 10 own tasks fit, the 11th is refused with 402.
+  await flow('free cap: starter routine tasks don\'t count → 10 own tasks, 11th is 402', async () => {
+    const C = await signup('c');
+    await sleep(1500); // starter routine seeding is fire-and-forget
+    const routines = (await call('GET', '/api/routines', 200, { token: C.token })).routines || [];
+    const openRoutineTasks = routines.flatMap(r => (r.tasks || []).filter(t => !t.is_completed));
+    expect(openRoutineTasks.length > 0, 'new user has no open starter routine tasks to exclude from the cap');
+    for (let i = 1; i <= 10; i++) {
+      await call('POST', '/api/tasks', 201, { token: C.token, body: { title: `CI cap task ${i}` } });
+    }
+    const over = await call('POST', '/api/tasks', 402, { token: C.token, body: { title: 'CI cap task 11' } });
+    expect(over.code === 'TASK_LIMIT_REACHED', `11th task code=${over.code}, expected TASK_LIMIT_REACHED`);
+    const limits = (await call('GET', '/api/subscription/status', 200, { token: C.token })).limits || {};
+    expect(limits.active_tasks === 10 && limits.max_tasks === 10 && limits.can_create_task === false,
+      `subscription limits should count only own tasks: ${JSON.stringify(limits)}`);
   });
 
   await flow('logged-out writes are refused', async () => {

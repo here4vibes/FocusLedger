@@ -70,6 +70,7 @@ Node.js + Express · PostgreSQL (Neon) · Render deployment · Vanilla HTML/CSS/
 - `task_substeps` — AI-generated micro-step breakdowns for "I'm stuck" flow; persisted for resume; cascade-deletes with task
 - `routines + routine_task_links` — user-defined routine groups (AM/PM/weekly) with many-to-many task links; nudge_after_hour trigger, optional day_of_week for weekly
 - `routine_streaks` — per-routine consecutive-day tracking: current_streak, best_streak, last_completed_date
+- `routine_completions` — one row per routine per user-local day completed (unique routine_id+local_date), written by `recordRoutineCompletion`; feeds the forgiving habit-strength score (`lib/habit-strength.js`, half-life 14 days / 4 weeks) returned as `strength` by `GET /api/routines`
 - `routine_nudge_events + routine_nudge_prefs` — event log (status, skip_count) + per-user nudge prefs (enabled, frequency); nudge_after_hour trigger on routines table
 - `detected_patterns` — AI-detected recurring task patterns per user: pattern_type (time/day/sequence/category), confidence_score, occurrence_count, is_active flag; stores task IDs + metadata
 - `routine_suggestions` — surfaceable suggestions from detected patterns: status (pending/accepted/dismissed); presented_count for ephemeral expiry (auto-remove after 3 ignored sessions); accepted links to created routine
@@ -108,6 +109,15 @@ Node.js + Express · PostgreSQL (Neon) · Render deployment · Vanilla HTML/CSS/
     - Re-engagement emails resume; only Miles (user 35) is eligible. 22 users are paused via `user_email_preferences.re_engagement='false'`; flip them back at relaunch.
     - `render.yaml` moves `cold-start-nudge` and `evening-checkin` to hourly. Confirm in Render if Blueprint sync is off.
 
+### Launch decisions (the user, 2026-10-18)
+- **Re-engagement:** resume the 22 paused users on launch day (when the user says "launched"), not before.
+- **Backups:** stay on Neon free's 6-hour point-in-time restore, with no snapshot schedule, until the first paying users.
+- **News:** dropped (#268).
+- **Meta Pixel:** public pages only (landing, pricing, signup, login, story, science, changelog, `/thanks`), never after sign-in. Purchases are reported from `/thanks`.
+- **Free cap:** routine-linked tasks don't count (#265). **Buddy:** floating button on every app page (#267).
+- **Privacy policy:** Claude drafts, the founder approves before it merges. #266 (merged) rewrote it; Stripe checkout now returns via the public `/thanks` page, which fires the Pixel `Purchase`. Its retention lines state Render logs 7 days and Neon's 6-hour restore window, so update them if either plan changes.
+- **Next focus after launch:** polish the first session.
+
 ### Next up: the bug-hunt plan (agreed with the user, 2026-10-18)
 The user asked to finish the big bug classes in about 4 sessions:
 1. **Schema audit (done: #252 code fixes, #253 defaults migration).** The genesis migration was generated from prod's catalog, so a from-scratch DB reproduces prod; a SQL error locally is a prod bug.
@@ -119,7 +129,7 @@ The user asked to finish the big bug classes in about 4 sessions:
 4. **Retire legacy pages:** `app.html`, `home.html` and `landing-old` are gone (#251), and `buddy.html` in #256: the form check-in is `public/checkin-form.html` at `/app/checkin/form`. **Still to do:** `portal.html`, after #218 merges (it changes `/home` and `/portal`).
 
 **Smaller items:**
-- **News sync** uses an in-process `setInterval` (`routes/news.js`). Move it to the commented-out `rss-sync` cron in `render.yaml`, or drop the feature.
+- **News feed removed:** the `rss_feeds`, `news_cache` and `news_source_bias` tables (and `users.city`/`state_region`/`zip_code`/`country`) are now unused. Drop them later only with the founder's OK.
 - **Capture, still to do:** bank-charge suggestions, i.e. a known recurring charge such as a gym or pharmacy suggests ticking the related task.
 - **Ideas discussed, not agreed:** show renewals and Bills in hours of work at the user's income rate; a risky-time spending nudge. The user noted purchases don't happen in the app, so these are reflection and planning views, not in-the-moment ones.
 
@@ -150,8 +160,10 @@ Four places plus a Settings gear. One small PR per phase; old URLs keep working 
 
 ### Waiting on the user
 - **Live Stripe purchase test.** Expected: Settings shows Autopilot $9.95 with a renewal date; after cancelling, "Cancelled — you won't be charged again" and a "Keep Autopilot" button.
+- **`STRIPE_WEBHOOK_SECRET` is missing in Render** (found 2026-10-18 after the first live purchase): every Stripe webhook gets a 503, so renewals, cancellations made in Stripe and failed payments never reach the app. The first purchase (user 67) activated through the checkout redirect instead. Stripe retries for up to 3 days, so adding the secret now recovers those events.
 - **Render `DATABASE_URL`:** change `sslmode=require` → `verify-full` in both the `focusledger` env group and the web service (NODE-EXPRESS-4).
 - **`SENTRY_DSN`** must be in the `focusledger` env group so cron errors reach Sentry.
+- **`beta-reengagement-blast` cron:** removed from `render.yaml`; if Render Blueprint sync is off, delete it in the Render dashboard (it would email every user that Autopilot is "free during beta" on Feb 29, 2028).
 - **Neon and Stripe MCP connectors** fail to connect in cloud sessions, and Neon drops out mid-session too. Stripe needs re-authorizing. Reconnect both at claude.ai/customize/connectors.
 - **`renewal-heads-up` cron (#237):** if Render Blueprint sync is off, create it in the dashboard with the `focusledger` env group.
 - **Plaid:** the MCP shows zero production usage on team `69e2d08b7146d5000d5a94d1`. Confirm `PLAID_ENV`, and whether Liabilities and Recurring Transactions are enabled. If so, layer them onto the bill guardian.
@@ -167,14 +179,13 @@ Four places plus a Settings gear. One small PR per phase; old URLs keep working 
 - **Hardening:**
   1. `user_id NOT NULL` and foreign keys on core tables. Check for orphans first; use a Neon branch.
   2. ~~Silent catches~~ done: #239 (one-liners, `lib/log-failure.js`) and #240 (block catches). `__tests__/no-silent-catches.test.js` now fails CI on any new empty or comment-only catch in server code. Since part 3 it also fails on catches that don't log (e.g. `catch { return null; }`).
-  3. Neon point-in-time restore and snapshot schedule.
+  3. Neon point-in-time restore and snapshot schedule: decided to stay on the free 6-hour window until there are paying users.
   4. ~~`routine_task_links` unique key~~ done in #242.
   5. 23 moderate npm advisories.
 - **Strategy (decided):**
   - Agentic **type 2** (Buddy acts: bills, subscriptions, start-it-for-me) and **type 3** (shareable outcomes, e.g. "cancelled Netflix, $186/yr back") come first.
   - The MCP server for Claude/ChatGPT/Meta Muse is deferred.
   - Positioning: ADHD-native; the "ADHD tax" from a CPA founder; privacy; partner accountability.
-- **News sync runs on an in-process `setInterval`** (`routes/news.js` `startRssCron`), which breaks the no-in-process-schedulers rule. The `rss-sync` cron in `render.yaml` is commented out. Either move it to that cron or drop the feature.
 - **AI JSON:** parse model replies with `parseAiJson` from `lib/ai-json.js` (it handles code fences and surrounding prose). Never call `JSON.parse` on a raw model reply.
 - **Plaid v1 `connect`** stores the institution *id* as the bank name (`services/PlaidService.js`). The legacy path isn't used by the frontend.
 - **`weekly_stats` is never populated** (0 rows in prod; the "P2 cron" was never built). Its columns are integers since #241, so it's ready if a rollup job is ever added.
@@ -195,21 +206,24 @@ Four places plus a Settings gear. One small PR per phase; old URLs keep working 
   - Missing defaults: `routines.is_active` and `created_at` had none, so every routine was saved inactive (fixed in #242). #253 added about 30 more (tasks, plaid_transactions, partnerships, nudges…). **When you add an INSERT that omits a column, check that column has a default in prod.**
   - Counters stored as text, boolean or timestamp: `routine_streaks.current_streak`/`best_streak`, `routine_suggestions.presented_count`, `routines.day_of_week`, `task_substeps.step_order` and the `weekly_stats` counters (all fixed in #241). If you suspect another one, find it with a prod `information_schema.columns` query.
 - **Traffic:** real traffic is about 50–80 visitors a month (Jun–Oct 2026). Visitor counts before the bot/CI filter (Oct 18) were inflated by bots and our own Playwright smoke runs (~1,900/month in Jun–Jul, mostly one landing + pricing hit with no scroll or duration); for old ranges, trust `engaged_visitors`.
+- **CSP and inline handlers:** Helmet defaults `script-src-attr` to `'none'`, which silently blocked every inline `onclick=` (fixed in `middleware/security.js`, guarded by `__tests__/csp-inline-handlers.test.js`). When adding a CSP directive, check the browser console for "Refused to execute inline event handler".
 - **Silent failures:** many routes catch DB errors, log them and return 200. Sentry captures every `console.error`. The CI boot smoke fails on any logged "column/relation … does not exist".
 - **Migrations run on every deploy** (`npm start` = `node migrate.js && node server.js`). A failed migration aborts the deploy and the old version keeps serving. Test risky migrations on a Neon branch.
 - **Key user IDs:** Sean = 2, **QA user = 25 (never touch)**, Miles = 35.
-- **Free plan cap:** free users are capped at **10 active tasks**. `POST /api/tasks` returns 402 `TASK_LIMIT_REACHED`.
+- **Free plan cap:** free users are capped at **10 active tasks**, not counting tasks linked to an active routine (the starter routine included). `POST /api/tasks` returns 402 `TASK_LIMIT_REACHED`. The count lives only in `db/task-cap.js` (`countCappedOpenTasks`, `isAtFreeTaskCap`); every cap check and `/api/subscription/status` use it.
 
 ### Where things live (Oct 2026 additions)
 - **Errors and health:**
   - Sentry: `lib/sentry.js` (`initSentry(name)` in every process).
   - `/health` migration status: `lib/migration-manifest.js` and `db/migrations-status.js`.
+  - Uptime: `.github/workflows/uptime.yml` checks `/`, `/pricing`, `/signup` every 5 min and `/health` hourly (hourly so Neon can sleep); a failure opens a GitHub issue labelled `uptime`, recovery closes it. See `docs/uptime.md` (also the optional full-Upptime status page).
 - **Billing and admin:**
   - Billing: `lib/billing.js`, `db/billing.js`, `lib/stripe-client.js`.
   - OAuth callbacks: every flow signs `state` with `lib/oauth-state.js` (purpose-bound HMAC, constant-time, 10 min, no fallback secret): `signUserState(purpose, userId)` for connect flows (Calendar `gcal`, `email-gmail`/`-outlook`/`-yahoo`), `signPayload` for Google sign-in (`returnTo` login|signup, trusted host only). Never put a login token in it.
   - Admin gate: `lib/admin-access.js` (`requireAdmin(pool)` middleware after `authenticateToken`, judged from the DB row; sets `req.admin`). Every admin route uses it (`routes/analytics.js` still has its own lookup). It holds the only `isAdminUser`; import it, don't copy it.
   - Activation: `db/activation.js` and `GET /api/admin/activation`.
 - **Analytics:** bot/CI filter `lib/analytics-filter.js` (UA patterns, missing UA, `X-FL-Automation` header or `FocusLedger-` UA token from our Playwright configs and `prod-signup-check`); filtered hits are counted in `analytics_filtered_daily`, not stored. First-touch attribution (utm_*, truncated fbclid/gclid, referrer domain only) is captured by `public/js/analytics.js` into `localStorage.fl_attribution`, rides on `funnel_*`/`cta_*` events, and is saved at signup (email, One Tap, OAuth `google_new=1` → `PATCH /api/auth/attribution`, 24h) to `users.utm_*` + `users.first_touch` (sanitizer `lib/attribution.js`). Report: `GET /api/admin/attribution?from&to` (`db/analytics.js`), shown as the admin Acquisition card. The live landing page is `views/index.html`, not `public/index.html`.
+- **Email HTML (MJML):** the transactional templates in `lib/emailTemplates.js` render from MJML in `lib/email-mjml/sources.js`. After editing a source, run `npm run build:emails` and commit `lib/email-mjml/compiled/*.html`; a test fails on stale output. Runtime never loads mjml (a devDependency) and `renderEmail` escapes every value. The other templates still use `shell()`.
 - **Best-effort work:** use `.catch(logFailure('[Module]', 'op', { userId }, fallback))` from `lib/log-failure.js`. Never use `.catch(() => {})`.
 - **AI:** every AI call goes through `lib/claude-client.js` (`createMessage`/`complete`). Per-user daily budget: `lib/ai-budget.js` (Free 100 / Pro 500).
 - **Bills and subscriptions:**
@@ -219,12 +233,14 @@ Four places plus a Settings gear. One small PR per phase; old URLs keep working 
     - Settles pending subscription cancellations from bank data (`cancellationVerdict`).
     - Runs in `jobs/plaid-sync.js` and after a bucket answer.
   - API: `GET /api/plaid/recurring` (streams, the one `ask`, settled `cancellations`); `POST …/:key/bucket|keep|cancel`; `DELETE …/:key/cancel`.
+  - Merchant names: `lib/merchant-normalize.js` (processor prefixes, store numbers, locations, ref IDs stripped; title case after Actual Budget, see `THIRD_PARTY_NOTICES.md`). Streams group on the normalized key; `resolvePrefKeys` maps a stream onto an existing `bill_preferences` row keyed the old raw way (`legacy_keys`), so answers aren't orphaned. Never re-key `bill_preferences` rows.
   - Cancel pages: `lib/cancel-links.js`. In-card steps: `lib/cancel-help.js` (`POST …/:key/cancel-help`).
   - Agent duplicate-task guard: `lib/task-dedupe.js`, used by `create_task` in `lib/agent-tools.js`.
 - **Weightless** (`public/weightless.html`, the one home):
   - Tap-to-complete radar with a reward loop (`public/js/reward.js`, undo, next task steps up).
   - Bills · next 7 days card.
   - Subscription review: cancel (pending → confirmed / charged again from bank data) / keep (rests 90 days) / it's a bill.
+- **Recurring dates:** `lib/recurrence.js` (rrule.js) is the only next-occurrence math: `nextTaskOccurrence` for `tasks.recurrence_type` (adds `biweekly`, `monthly_last_weekday`; month ends clamp; never spawns before the user's local today) and `nextScheduleDate` for `recurring_tasks`/`recurring_expenses`. New third-party packages go in `THIRD_PARTY_NOTICES.md`.
 - **Routine capture:** `lib/routine-capture.js`.
   - `onTasksCompleted` runs at every task-completion point (Tasks API toggle, update and steps; Buddy; the agent's `mark_task_done`). When a tick finishes a routine's last open task, it records the routine completion and streak.
   - `refreshRoutineTasks` reopens routine tasks finished on an earlier local day (weekly routines after 7 days). It runs when `/api/tasks`, `/api/buddy/status`, `/api/routines` and `/api/today/timeline` load, so there's no cron to set up.
@@ -234,9 +250,11 @@ Four places plus a Settings gear. One small PR per phase; old URLs keep working 
   - **Capture plan, still to do:** bank-charge suggestions.
 - **Spending check-in** (`/checkin`, `public/checkin-spending.html`, `/api/v1/spending-sessions`): `services/ClassificationService.js` + `db/spendingSessions.js`. Queue = the user's posted, money-out `plaid_transactions` with `is_confirmed = false` plus Plaid `expenses` with `is_impulse` NULL (sync auto-confirms most charges into these), last 14 local days. Classify runs the money tab's `confirmTransaction` + `triageExpense` in one transaction; `expenses.is_impulse` is the record (legacy `transactions` / `transaction_classifications` no longer used).
 - **Tandem recap:** `lib/tandem-recap.js` and `db/tandem-recap.js`.
+- **Focus Mode idle** (`public/app/focus.html`, pure accounting in `public/js/focus-idle.js`): no input or tab switch for 5 min → the timer rolls back to the last activity and waits; on return the user picks focus / break / end. `actual_duration_seconds` is now real focus time (Pomodoro breaks excluded), sent through the existing `POST /api/v1/focus-sessions/:id/complete`; no schema change. Browser test: `npm run test:local` against a local server (`tests/local/`, not in CI). Attribution in `THIRD_PARTY_NOTICES.md`.
 - **Insights cron:** `jobs/crossDomainInsightsJob.js` (exports helpers; runs only when executed directly).
 - **Claude Code helpers (`.claude/`, committed):** agents `silent-failure-hunter`, `database-reviewer` and `security-reviewer`, plus the skill `postgres-patterns`.
   - They're adapted from ECC (`affaan-m/everything-claude-code`, MIT, commit `b92f181`) and rewritten around this file's rules.
+  - Skills from Anthropic's repos, also rewritten: `webapp-testing` (local Playwright checks, Pre-Ship viewports and Buddy tap) and `helper-authoring` (how to write or import a helper), both from `anthropics/skills` (Apache-2.0, `dbd4588`); `buddy-tool-use` (tool schemas, the tool_result loop, tool_choice, retries for `lib/agent-tools.js`), distilled from `anthropics/claude-cookbooks` (MIT, `a162e01`). Sources and licenses: `THIRD_PARTY_NOTICES.md`. Take only MIT/Apache-2.0 items: `anthropics/skills`' docx/pdf/pptx/xlsx and all of `anthropics/claude-code` are proprietary.
   - Use them for reviews and the hardening backlog, e.g. the silent `catch {}` sweep.
   - **Don't install the full ECC plugin, its hooks, its MCP configs or its auto-update in this repo;** only reviewed copies go in.
   - `.gitignore` keeps the rest of `.claude/` (worktrees, local settings) local.
@@ -294,9 +312,9 @@ Four places plus a Settings gear. One small PR per phase; old URLs keep working 
 
 Before any shared CSS change ships, verify all of the following:
 
-1. **Buddy bubble tap test (mobile)** — Open the Buddy panel via the floating bubble on a phone. Verify the panel opens, displays messages, and the send button works. Buddy bubble uses `#bw-bubble` in `public/buddy-widget.css` — ensure no CSS change breaks it.
-2. **Mobile viewport check (< 900px)** — Open `/app` at 375px, 428px, and 768px widths. Verify the bottom nav bar renders, task cards display without overflow, and the Chevron (›) buttons are tappable.
-3. **Desktop viewport check (≥ 900px)** — Open `/app` at 1280px and 1440px. Verify the left sidebar renders, task cards use the warm-white background, and no new horizontal scrollbar appears.
+1. **Buddy tap test (mobile)** — Buddy entry points: Home (`/weightless`) is the Buddy chat itself; every other signed-in app page gets the floating `#fl-buddy-btn` (`initBuddyButton` in `public/shared-nav.js`, styles in `shared-nav.css`), which lazy-loads `public/buddy-widget.js` and calls `window.openBuddyPanel()` (`#bw-panel`). Flow screens (check-in, `/app/done`, focus, onboarding) have none. On a phone, tap the button: the panel opens, shows messages, send works, Esc/✕ closes it.
+2. **Mobile viewport check (< 900px)** — Open `/weightless` and `/app/tasks` at 375px, 428px, and 768px widths. Verify the bottom nav bar renders, task cards display without overflow, and the Chevron (›) buttons are tappable.
+3. **Desktop viewport check (≥ 900px)** — Open `/weightless` and `/app/tasks` at 1280px and 1440px. Verify the left sidebar renders, task cards use the warm-white background, and no new horizontal scrollbar appears.
 4. **No new horizontal overflow** — Check `overflow-x: hidden` on body and `max-width` constraints on `.page-content-wrapper`. A removed `border` can change element width calculations — verify no layout reflows.
 5. **Sidebar/nav renders correctly** — Verify the 200px left sidebar (desktop) and 60px bottom bar (mobile) both function. Check `shared-nav.css` and `public/shared-nav.js` — these are shared across all 17 app pages.
 6. **Update changelog.html** — Every feature, improvement, or fix that ships must get a dated entry in `public/changelog.html`. Format: `<div class="entry">` with day/month + title + 1–2 sentence description + badge (new/improvement/fix/design). If the feature is ADHD-relevant, end the description with a science tie-in: "This maps to [concept] from the [science page](/science) — [1-sentence explanation]." Use the June 2026 section as a template for new month sections.

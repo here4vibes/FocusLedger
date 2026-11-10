@@ -167,8 +167,6 @@ app.get('/health', async (req, res) => {
 // =============================================================================
 // 5. API ROUTES
 // =============================================================================
-const newsRouteFactory = require('./routes/news');
-
 app.use('/api/auth',            require('./routes/auth')(pool, loginLimiter, signupLimiter));
 app.use('/api/contact',         require('./routes/contact')(pool));
 app.use('/api/comeback',        require('./routes/comeback')(pool));
@@ -193,7 +191,6 @@ app.use('/api/v1/notifications', require('./routes/notifications-v1')(pool));
 app.use('/api/v1/spending-sessions', require('./routes/spending-sessions')(pool));
 app.use('/api/adhd-tax',        require('./routes/adhd-tax')(pool));
 app.use('/api/analytics',       require('./routes/analytics')(pool));
-app.use('/api/news',            newsRouteFactory(pool));
 app.use('/api/alignment-score', require('./routes/alignment-score')(pool));
 app.use('/api/momentum-score',  require('./routes/momentum-score')(pool));
 app.use('/api/home-context',    require('./routes/home-context')(pool));

@@ -18,6 +18,36 @@
     (document.head || document.documentElement).appendChild(_ah);
   }
 
+  // Icons: Lucide paths vendored in /js/icons.js (window.FLIcons). The nav is
+  // built synchronously as before (pages look it up on DOMContentLoaded); each
+  // icon slot carries data-fl-icon and is filled as soon as icons.js is in.
+  // If the file fails, the nav keeps its text labels and the text fallbacks.
+  var _iconsLoaded = !!window.FLIcons;
+  if (!_iconsLoaded) {
+    var _ic = document.querySelector('script[data-fl-icons]');
+    if (!_ic) {
+      _ic = document.createElement('script');
+      _ic.src = '/js/icons.js';
+      _ic.setAttribute('data-fl-icons', '1');
+      (document.head || document.documentElement).appendChild(_ic);
+    }
+    _ic.addEventListener('load', function () { _iconsLoaded = true; hydrateIcons(); });
+    _ic.addEventListener('error', function () {
+      console.warn('[shared-nav] icons.js failed to load; nav keeps text labels only');
+    });
+  }
+  function setIcon(el, name) {
+    el.setAttribute('data-fl-icon', name);
+    if (_iconsLoaded && window.FLIcons) el.innerHTML = window.FLIcons.svg(name);
+    return el;
+  }
+  function hydrateIcons() {
+    if (!window.FLIcons || !document.body) return;
+    document.querySelectorAll('[data-fl-icon]').forEach(function (el) {
+      if (!el.querySelector('svg')) el.innerHTML = window.FLIcons.svg(el.getAttribute('data-fl-icon'));
+    });
+  }
+
   // ── Global utilities ─────────────────────────────────────────────────────
   // Set on window so every page can use them.
   // Guards (window.X || ...) mean page-local definitions always win — no
@@ -72,23 +102,21 @@
   // Routes use /app/* namespace for true isolation — each tab is its own route, not a CSS toggle
   // UI consolidation: four places. Home is Weightless (Buddy + radar + bills).
   // Mobile bottom nav renders Home · Tasks · (+) · Money · Life.
-  const SVG = function (paths) {
-    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + paths + '</svg>';
-  };
+  // `icon` is a Lucide name from /js/icons.js.
   const NAV_ITEMS = [
-    { label: 'Home',  href: '/weightless', icon: SVG('<path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/>') },
-    { label: 'Tasks', href: '/app/tasks',  icon: SVG('<rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 12l2 2 4-4"/>') },
-    { label: 'Money', href: '/app/money',  icon: SVG('<line x1="12" y1="2" x2="12" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>') },
-    { label: 'Life',  href: '/app/life',   icon: SVG('<path d="M12 21s-7-4.5-9.5-9A5.5 5.5 0 0 1 12 6a5.5 5.5 0 0 1 9.5 6c-2.5 4.5-9.5 9-9.5 9z"/>') },
+    { label: 'Home',  href: '/weightless', icon: 'house' },
+    { label: 'Tasks', href: '/app/tasks',  icon: 'square-check-big' },
+    { label: 'Money', href: '/app/money',  icon: 'wallet' },
+    { label: 'Life',  href: '/app/life',   icon: 'heart' },
   ];
 
   // Everything not inside a place's sub-tabs (PLACE_TABS): Tasks, Money and
   // Life pages live in their hubs now, so "More" is settings-type pages only.
   const MENU_ITEMS = [
-    { label: 'Email → Tasks',     href: '/email',             icon: '📧' },
-    { label: 'Partner Dashboard', href: '/partner-dashboard', icon: '👥' },
-    { label: 'Settings',          href: '/settings',          icon: '⚙️' },
-    { label: 'Help & Contact',    href: '/contact',           icon: '💬' },
+    { label: 'Email → Tasks',     href: '/email',             icon: 'mail' },
+    { label: 'Partner Dashboard', href: '/partner-dashboard', icon: 'users' },
+    { label: 'Settings',          href: '/settings',          icon: 'settings' },
+    { label: 'Help & Contact',    href: '/contact',           icon: 'circle-help' },
   ];
 
   // Desktop sidebar: all items merged with a section divider between them
@@ -232,7 +260,7 @@
     var iconEl = document.createElement('span');
     iconEl.className = 'shared-nav-icon';
     iconEl.setAttribute('aria-hidden', 'true');
-    iconEl.innerHTML = item.icon;
+    setIcon(iconEl, item.icon);
 
     var labelEl = document.createElement('span');
     labelEl.className = 'shared-nav-label';
@@ -263,6 +291,7 @@
     fab.className = 'shared-nav-fab';
     fab.setAttribute('aria-label', 'Quick add');
     fab.textContent = '+';
+    setIcon(fab, 'plus');
     fab.addEventListener('click', function () {
       if (typeof window.flQuickAdd === 'function') {
         window.flQuickAdd();
@@ -348,7 +377,7 @@
     var signOutIcon = document.createElement('span');
     signOutIcon.className = 'shared-nav-icon';
     signOutIcon.setAttribute('aria-hidden', 'true');
-    signOutIcon.textContent = '🚪';
+    setIcon(signOutIcon, 'log-out');
 
     var signOutLabel = document.createElement('span');
     signOutLabel.className = 'shared-nav-label';
@@ -461,6 +490,7 @@
     closeBtn.type = 'button';
     closeBtn.setAttribute('aria-label', 'Close menu');
     closeBtn.textContent = '✕';
+    setIcon(closeBtn, 'x');
 
     header.appendChild(logo);
     header.appendChild(proBadge);
@@ -480,7 +510,7 @@
       var iconEl = document.createElement('span');
       iconEl.className = 'shared-menu-icon';
       iconEl.setAttribute('aria-hidden', 'true');
-      iconEl.textContent = item.icon;
+      setIcon(iconEl, item.icon);
 
       var labelEl = document.createElement('span');
       labelEl.textContent = item.label;
@@ -503,7 +533,7 @@
     var signOutIcon = document.createElement('span');
     signOutIcon.className = 'shared-menu-icon';
     signOutIcon.setAttribute('aria-hidden', 'true');
-    signOutIcon.textContent = '🚪';
+    setIcon(signOutIcon, 'log-out');
 
     var signOutLabel = document.createElement('span');
     signOutLabel.textContent = 'Sign Out';
@@ -694,6 +724,8 @@
 
     setupMenuLogic(hamburgerBtn, overlay, menu, closeBtn);
 
+    initBuddyButton();
+
     // Sections: a sticky strip on phones; on desktop they're sub-items under the
     // active place in the sidebar (see buildDesktopSidebar), so nothing can
     // collide with a page's own header.
@@ -766,6 +798,124 @@
     });
   }
 
+  // ── Floating Buddy button ────────────────────────────────────────
+  // One way into Buddy from every signed-in app page. Home (/weightless) IS
+  // the Buddy chat and doesn't load this file; flow screens are skipped so the
+  // button never sits on top of their own input. The panel code
+  // (buddy-widget.js) is loaded on first tap if the page didn't include it.
+  var NO_BUDDY_BTN_PATHS = ['/weightless', '/buddy', '/app/buddy', '/checkin', '/app/checkin',
+    '/check-in', '/app/done', '/app/focus', '/onboarding'];
+
+  function buddyBtnExcluded() {
+    var path = window.location.pathname;
+    return NO_BUDDY_BTN_PATHS.some(function (p) {
+      return path === p || path === p + '/' || path.indexOf(p + '/') === 0;
+    });
+  }
+
+  function hasSession() {
+    try { return !!localStorage.getItem('fl_token'); }
+    catch (e) { console.warn('[shared-nav] localStorage unavailable:', e.message); return false; }
+  }
+
+  var _buddyLoading = null;
+  function loadBuddyWidget() {
+    if (typeof window.openBuddyPanel === 'function') return Promise.resolve();
+    if (_buddyLoading) return _buddyLoading;
+    _buddyLoading = new Promise(function (resolve, reject) {
+      var pending = 2;
+      function done() { if (--pending === 0) resolve(); }
+      // Stylesheet first so the panel never flashes unstyled (the widget
+      // skips its own <link> when this id exists).
+      var css = document.getElementById('buddy-widget-styles');
+      if (css) { done(); } else {
+        css = document.createElement('link');
+        css.id = 'buddy-widget-styles';
+        css.rel = 'stylesheet';
+        css.href = '/buddy-widget.css';
+        css.onload = done;
+        css.onerror = done; // the panel still works, just plainer
+        document.head.appendChild(css);
+      }
+      var s = document.createElement('script');
+      s.src = '/buddy-widget.js';
+      s.onload = done;
+      s.onerror = function () { reject(new Error('buddy-widget.js failed to load')); };
+      document.head.appendChild(s);
+    });
+    _buddyLoading.catch(function () { _buddyLoading = null; }); // silent-ok: caller logs; this only allows a retry
+    return _buddyLoading;
+  }
+
+  // Sit above any page FAB in the bottom-right corner instead of covering it.
+  function placeBuddyBtn(btn) {
+    btn.style.bottom = '';
+    var mine = btn.getBoundingClientRect();
+    var lift = 0;
+    document.querySelectorAll('.fab, [data-fab]').forEach(function (f) {
+      var r = f.getBoundingClientRect();
+      if (!r.width || !r.height || getComputedStyle(f).position !== 'fixed') return;
+      var overlapX = r.left < mine.right && r.right > mine.left;
+      var overlapY = r.top < mine.bottom + 12 && r.bottom > mine.top - 12;
+      if (overlapX && overlapY) lift = Math.max(lift, mine.bottom - r.top + 12);
+    });
+    if (lift) btn.style.bottom = (parseFloat(getComputedStyle(btn).bottom) + lift) + 'px';
+  }
+
+  function buildBuddyButton() {
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.id = 'fl-buddy-btn';
+    btn.setAttribute('aria-label', 'Open Buddy');
+    btn.setAttribute('aria-haspopup', 'dialog');
+    btn.setAttribute('aria-expanded', 'false');
+    btn.title = 'Talk to Buddy';
+    setIcon(btn, 'message-circle');
+
+    btn.addEventListener('click', function () {
+      if (btn.classList.contains('loading')) return;
+      btn.classList.add('loading');
+      loadBuddyWidget().then(function () {
+        btn.classList.remove('loading');
+        if (typeof window.openBuddyPanel === 'function') { window.openBuddyPanel(); return; }
+        // The widget declined this page (e.g. not signed in): Home is Buddy.
+        console.warn('[shared-nav] Buddy panel unavailable:', window.__buddySkip || window.__buddyError || 'unknown');
+        window.location.href = '/weightless';
+      }, function (err) {
+        btn.classList.remove('loading');
+        console.error('[shared-nav] Buddy load failed:', err.message, '| path:', window.location.pathname);
+        window.location.href = '/weightless';
+      });
+    });
+
+    // buddy-widget.js announces open/close so the button can step aside and
+    // take focus back when the panel closes.
+    document.addEventListener('fl:buddy-panel', function (e) {
+      var open = !!(e.detail && e.detail.open);
+      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+      btn.classList.toggle('panel-open', open);
+      if (!open) {
+        var a = document.activeElement;
+        if (!a || a === document.body || (a.closest && a.closest('#bw-panel'))) btn.focus();
+      }
+    });
+    return btn;
+  }
+
+  function initBuddyButton() {
+    if (buddyBtnExcluded() || !hasSession() || document.getElementById('fl-buddy-btn')) return;
+    var btn = buildBuddyButton();
+    document.body.appendChild(btn);
+    document.body.classList.add('fl-has-buddy-btn');
+    placeBuddyBtn(btn);
+    var t = null;
+    window.addEventListener('resize', function () {
+      clearTimeout(t);
+      t = setTimeout(function () { placeBuddyBtn(btn); }, 150);
+    });
+    window.addEventListener('load', function () { placeBuddyBtn(btn); });
+  }
+
   // ── FLNav public API ─────────────────────────────────────────────
   // window.FLNav.collapse() — shrink nav to dot and move to top-bar corner.
   // window.FLNav.restore()  — expand back to full pill at bottom.
@@ -777,6 +927,7 @@
   window.FLNav = {
     collapse: function () {
       _overlayDepth++;
+      document.body.classList.add('fl-overlay-open');
       var nav = document.getElementById('shared-bottom-nav');
       if (!nav) return;
       nav.classList.add('nav-collapsed', 'nav-overlay-mode');
@@ -784,12 +935,14 @@
     restore: function () {
       _overlayDepth = Math.max(0, _overlayDepth - 1);
       if (_overlayDepth > 0) return;
+      document.body.classList.remove('fl-overlay-open');
       var nav = document.getElementById('shared-bottom-nav');
       if (!nav) return;
       nav.classList.remove('nav-collapsed', 'nav-overlay-mode');
     },
     forceRestore: function () {
       _overlayDepth = 0;
+      document.body.classList.remove('fl-overlay-open');
       var nav = document.getElementById('shared-bottom-nav');
       if (nav) nav.classList.remove('nav-collapsed', 'nav-overlay-mode');
     }

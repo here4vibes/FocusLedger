@@ -16,18 +16,6 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/buddy-widget.css">
-    <!-- Meta Pixel base + PageView -->
-    <script>
-    !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-    n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
-    n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
-    t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,
-    document,'script','https://connect.facebook.net/en_US/fbevents.js');
-    fbq('init','1597499061553078');
-    fbq('track','PageView');
-    </script>
-    <noscript><img height="1" width="1" style="display:none"
-    src="https://www.facebook.com/tr?id=1597499061553078&ev=PageView&noscript=1"/></noscript>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -1210,41 +1198,6 @@
             <div id="timeEstHistoryList" style="display:none;"></div>
         </div>
 
-        <!-- LOCATION SECTION (for local news + weather) -->
-        <div class="settings-section" id="locationSection">
-            <h2>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-                Location
-            </h2>
-            <p style="font-size:0.875rem;color:var(--text-muted);margin-bottom:1rem">Used for local news and weather. Not shared with third parties.</p>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:0.75rem">
-                <div>
-                    <label style="font-size:0.8rem;font-weight:600;color:var(--navy);display:block;margin-bottom:0.3rem">City</label>
-                    <input type="text" id="locCity" placeholder="e.g. Chicago" style="width:100%;padding:0.55rem 0.75rem;border:1px solid var(--border);border-radius:4px;font-size:0.875rem;font-family:system-ui,sans-serif;outline:none;min-height:40px" maxlength="100">
-                </div>
-                <div>
-                    <label style="font-size:0.8rem;font-weight:600;color:var(--navy);display:block;margin-bottom:0.3rem">State / Region</label>
-                    <input type="text" id="locState" placeholder="e.g. IL" style="width:100%;padding:0.55rem 0.75rem;border:1px solid var(--border);border-radius:4px;font-size:0.875rem;font-family:system-ui,sans-serif;outline:none;min-height:40px" maxlength="100">
-                </div>
-                <div>
-                    <label style="font-size:0.8rem;font-weight:600;color:var(--navy);display:block;margin-bottom:0.3rem">ZIP Code</label>
-                    <input type="text" id="locZip" placeholder="e.g. 60601" style="width:100%;padding:0.55rem 0.75rem;border:1px solid var(--border);border-radius:4px;font-size:0.875rem;font-family:system-ui,sans-serif;outline:none;min-height:40px" maxlength="20">
-                </div>
-                <div>
-                    <label style="font-size:0.8rem;font-weight:600;color:var(--navy);display:block;margin-bottom:0.3rem">Country</label>
-                    <select id="locCountry" style="width:100%;padding:0.55rem 0.75rem;border:1px solid var(--border);border-radius:4px;font-size:0.875rem;font-family:system-ui,sans-serif;outline:none;min-height:40px;background:white">
-                        <option value="US">United States</option>
-                        <option value="CA">Canada</option>
-                        <option value="GB">United Kingdom</option>
-                        <option value="AU">Australia</option>
-                        <option value="OTHER">Other</option>
-                    </select>
-                </div>
-            </div>
-            <button id="saveLocationBtn" style="padding:0.55rem 1.5rem;background:var(--navy);color:white;border:none;border-radius:4px;font-size:0.875rem;font-weight:600;cursor:pointer;font-family:system-ui,sans-serif;min-height:40px">Save Location</button>
-            <span id="locationSaveMsg" style="display:none;margin-left:0.75rem;font-size:0.8rem;color:var(--green-muted)">✓ Saved</span>
-        </div>
-
         <!-- EMAIL PREFERENCES SECTION -->
         <div class="settings-section" id="emailPrefsSection">
             <h2>
@@ -1490,7 +1443,7 @@
     <div class="modal-overlay" id="cancelModal">
         <div class="modal-card">
             <h3>Cancel Autopilot subscription?</h3>
-            <p>You'll keep Autopilot features until the end of your current billing period. After that, you'll move to the Free plan (10 active tasks).</p>
+            <p>You'll keep Autopilot features until the end of your current billing period. After that, you'll move to the Free plan (10 active tasks; routine tasks don’t count).</p>
             <div class="modal-actions">
                 <button class="btn-keep" id="keepProBtn">Keep Autopilot</button>
                 <button class="btn-confirm-cancel" id="confirmCancelBtn">Cancel Autopilot</button>
@@ -1609,7 +1562,7 @@
                 html += '<div class="plan-info"><span class="plan-badge free">FREE</span><span class="plan-name-label">Free Plan</span></div>';
                 html += '</div>';
                 html += '<div class="plan-details">';
-                html += '<div class="detail-row"><span class="detail-label">Active tasks</span><span class="detail-value">' + limits.active_tasks + ' / ' + limits.max_tasks + '</span></div>';
+                html += '<div class="detail-row"><span class="detail-label">Active tasks <small>(routines don&rsquo;t count)</small></span><span class="detail-value">' + limits.active_tasks + ' / ' + limits.max_tasks + '</span></div>';
                 html += '<div class="detail-row"><span class="detail-label">Price</span><span class="detail-value">Free forever</span></div>';
                 html += '</div>';
                 html += '<button class="btn-upgrade" onclick="openUpgradeModal()">Switch to Autopilot &mdash; from $8.33/mo</button>';
@@ -1631,7 +1584,7 @@
             if (sub.is_pro) {
                 html += '<span class="usage-count">' + limits.active_tasks + ' (unlimited)</span>';
             } else {
-                html += '<span class="usage-count">' + limits.active_tasks + ' / ' + limits.max_tasks + '</span>';
+                html += '<span class="usage-count">' + limits.active_tasks + ' / ' + limits.max_tasks + ' <small>(routines don&rsquo;t count)</small></span>';
             }
 
             html += '</div>';
@@ -1919,23 +1872,7 @@
                     toast.classList.add('visible');
                     setTimeout(function() { toast.classList.remove('visible'); }, 6000);
                 }
-                // Meta Pixel Purchase. Checkout returns here, but the event only
-                // ever fired on the legacy app.html, so ad conversions went
-                // unreported. Value is the real price, set server-side from
-                // config/pricing.js; eventID = checkout session, so Meta drops
-                // duplicates (e.g. a back-button revisit).
-                var value = parseFloat(params.get('value'));
-                if (typeof fbq === 'function' && value > 0) {
-                    var planName = params.get('plan') === 'tandem' ? 'Tandem' : 'Autopilot';
-                    var cycleName = params.get('billing_cycle') === 'annual' ? 'Annual' : 'Monthly';
-                    var ref = params.get('ref');
-                    try {
-                        fbq('track', 'Purchase',
-                            { value: value, currency: 'USD', content_name: planName + ' ' + cycleName },
-                            ref ? { eventID: 'purchase_' + ref } : undefined);
-                    } catch (e) { console.error('[settings] Pixel Purchase failed:', e.message); }
-                }
-                // Clean URL (also stops a refresh from re-firing the Purchase)
+                // Clean URL (also stops a refresh from re-showing the toast)
                 try { history.replaceState({}, '', window.location.pathname); } catch(e) {}
             }
         })();
@@ -2585,35 +2522,6 @@
             status.textContent = h ? 'Saved — spending alerts will now show hours of work.' : 'Cleared.';
             status.style.display = 'block';
             setTimeout(function() { status.style.display = 'none'; }, 3000);
-          }
-        }).catch(function() { saveBtn.disabled = false; });
-      });
-    })();
-    </script>
-    <!-- Location Save -->
-    <script>
-    (function() {
-      var saveBtn = document.getElementById('saveLocationBtn');
-      if (!saveBtn) return;
-      saveBtn.addEventListener('click', function() {
-        var token = localStorage.getItem('fl_token');
-        if (!token) return;
-        var city = (document.getElementById('locCity').value || '').trim();
-        var state = (document.getElementById('locState').value || '').trim();
-        var zip = (document.getElementById('locZip').value || '').trim();
-        var country = document.getElementById('locCountry').value || 'US';
-        saveBtn.disabled = true;
-        fetch('/api/news/location', {
-          method: 'POST',
-          headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ city: city, state_region: state, zip_code: zip, country: country })
-        }).then(function(r) { return r.json(); }).then(function(data) {
-          saveBtn.disabled = false;
-          if (data.success) {
-            // Clear weather cache so portal picks up the new location immediately
-            try { localStorage.removeItem('fl_weather_v1'); } catch(e) {}
-            var msg = document.getElementById('locationSaveMsg');
-            if (msg) { msg.style.display = 'inline'; setTimeout(function() { msg.style.display = 'none'; }, 2500); }
           }
         }).catch(function() { saveBtn.disabled = false; });
       });

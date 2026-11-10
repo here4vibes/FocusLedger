@@ -3,6 +3,7 @@
 // Does NOT own: Plaid Link setup (routes/plaid.js), auth middleware beyond session/JWT support.
 const { fetchUserLocalDate } = require('../lib/timezone');
 const { getSession } = require('../db/spendingSessions');
+const { cleanMerchantName } = require('../lib/merchant-normalize');
 const {
   createExpense,
   getExpenses,
@@ -439,7 +440,9 @@ async function getBills(req, res) {
   try {
     const userId = req.user.id;
     const pool = res.locals._pool;
-    const bills = await getBillPreferences(pool, userId);
+    const rows = await getBillPreferences(pool, userId);
+    // Stored names can be raw bank strings ("SQ *JOES COFFEE 4421"): show them cleaned.
+    const bills = rows.map(r => ({ ...r, merchant_display_name: cleanMerchantName(r.merchant_display_name) || r.merchant_display_name }));
     res.json({ success: true, bills });
   } catch (err) {
     console.error('[money] bills error:', err);

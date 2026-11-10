@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="light">
+    <meta name="robots" content="noindex">
+    <title>You're on Autopilot — FocusLedger</title>
+    <link rel="icon" type="image/svg+xml" href="/icons/fl-icon.svg">
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/fl-icon.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+    <!-- Meta Pixel. This public page exists so the Purchase event can be
+         reported without the Pixel ever loading inside the signed-in app.
+         Stripe checkout → /api/subscription/activate → here → Settings. -->
+    <script>
+    !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+    n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
+    n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
+    t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,
+    document,'script','https://connect.facebook.net/en_US/fbevents.js');
+    fbq('init','1597499061553078');
+    fbq('track','PageView');
+    </script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'DM Sans', sans-serif; color: #1a1a1a; background: #faf9f7;
+            min-height: 100vh; display: flex; align-items: center; justify-content: center;
+            padding: 2rem 1rem; text-align: center;
+        }
+        main { max-width: 420px; }
+        .mark { font-size: 3rem; line-height: 1; }
+        h1 { font-family: 'Space Grotesk', sans-serif; font-size: 1.6rem; margin: 0.75rem 0; color: #011e5c; }
+        p { color: #6b6b6b; line-height: 1.55; margin-bottom: 1.75rem; }
+        a.btn { display: inline-block; padding: 0.75rem 1.4rem; border-radius: 10px; text-decoration: none; font-weight: 500; background: #011e5c; color: #fff; }
+    </style>
+</head>
+<body>
+    <main>
+        <div class="mark" aria-hidden="true">✓</div>
+        <h1 id="title">You're on Autopilot.</h1>
+        <p>Thank you. Taking you to your settings&hellip;</p>
+        <a class="btn" id="continue" href="/app/settings?upgraded=true">Continue</a>
+    </main>
+    <script>
+    (function() {
+        var params = new URLSearchParams(window.location.search);
+        var plan = params.get('plan') === 'tandem' ? 'tandem' : 'autopilot';
+        var planName = plan === 'tandem' ? 'Tandem' : 'Autopilot';
+        var cycleName = params.get('billing_cycle') === 'annual' ? 'Annual' : 'Monthly';
+        var value = parseFloat(params.get('value'));
+        var ref = params.get('ref');
+        if (plan === 'tandem') document.getElementById('title').textContent = "You're on Tandem.";
+
+        // Value is the real price, set server-side from config/pricing.js.
+        // eventID = checkout session, so Meta drops duplicates (refresh, back button).
+        if (typeof fbq === 'function' && value > 0) {
+            try {
+                fbq('track', 'Purchase',
+                    { value: value, currency: 'USD', content_name: planName + ' ' + cycleName },
+                    ref ? { eventID: 'purchase_' + ref } : undefined);
+            } catch (e) { console.error('[thanks] Pixel Purchase failed:', e.message); }
+        }
+
+        // Give the Pixel a moment to send, then continue into the app. An ad
+        // blocker only drops the event; the redirect still happens.
+        setTimeout(function() {
+            window.location.replace('/app/settings?upgraded=true');
+        }, 1500);
+    })();
+    </script>
+</body>
+</html>

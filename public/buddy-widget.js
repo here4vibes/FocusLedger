@@ -474,7 +474,9 @@
     panelOverlay.classList.add('open');
     panelOverlay.style.pointerEvents = 'auto';
     panelEl.classList.add('open');
+    panelEl.inert = false;
     panelOverlay.setAttribute('aria-hidden', 'false');
+    announcePanel(true);
 
     // Show context prompt if available
     showContextPrompt();
@@ -499,7 +501,14 @@
     panelOverlay.classList.remove('open');
     panelOverlay.style.pointerEvents = 'none';
     panelEl.classList.remove('open');
+    panelEl.inert = true; // closed sheet stays off the Tab order
     panelOverlay.setAttribute('aria-hidden', 'true');
+    announcePanel(false);
+  }
+
+  // shared-nav.js's floating Buddy button listens to step aside and refocus.
+  function announcePanel(open) {
+    document.dispatchEvent(new CustomEvent('fl:buddy-panel', { detail: { open: open } }));
   }
 
   // ── Context Prompt ─────────────────────────────────────────────────
@@ -1175,6 +1184,7 @@
       var parts = buildPanel();
       panelOverlay = parts.overlay;
       panelEl = parts.panel;
+      panelEl.inert = true;
 
       // Expose for nav tap integration — Buddy tab calls window.openBuddyPanel()
       window.openBuddyPanel = openPanel;
