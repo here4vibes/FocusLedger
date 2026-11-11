@@ -29,9 +29,14 @@ describe('agent create_task refuses a duplicate', () => {
     expect(pool.query.mock.calls.some(c => /INSERT INTO tasks/.test(c[0]))).toBe(false);
   });
   test('still creates a genuinely new task', async () => {
-    const pool = { query: jest.fn()
-      .mockResolvedValueOnce({ rows: [{ id: 42, title: 'Cancel MySubaru before it renews' }] })
-      .mockResolvedValueOnce({ rows: [{ id: 43, title: 'Call the dentist' }] }) };
+    // Answers by query: open tasks, the plan and cap checks (free, 1 open task), the insert.
+    const pool = { query: jest.fn(async (sql) => {
+      if (/SELECT id, title FROM tasks/.test(sql)) return { rows: [{ id: 42, title: 'Cancel MySubaru before it renews' }] };
+      if (/SELECT admin_pro_override/.test(sql)) return { rows: [{ admin_pro_override: false }] };
+      if (/COUNT\(\*\)::int AS c/.test(sql)) return { rows: [{ c: 1 }] };
+      if (/INSERT INTO tasks/.test(sql)) return { rows: [{ id: 43, title: 'Call the dentist' }] };
+      return { rows: [] };
+    }) };
     const out = await dispatch(pool, 7, 'create_task', { title: 'Call the dentist' });
     expect(out.result.task_id).toBe(43);
     expect(out.undo).toEqual({ tool: 'create_task', task_id: 43 });

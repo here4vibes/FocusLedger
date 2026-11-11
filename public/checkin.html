@@ -680,6 +680,7 @@
         <div class="completion-heading" id="completionHeading">Plan's being built</div>
         <div class="completion-sub" id="completionSub">Based on what you shared, I'm picking your top 3 tasks for today.</div>
         <div id="insightBox" style="display:none;"></div>
+        <div id="taskCapNote" role="status" style="display:none;margin:0 0 14px;padding:10px 12px;border-radius:10px;background:#FFF7E6;color:#5c4a12;font-size:0.88rem;line-height:1.45;text-align:left;"></div>
         <div id="planTasksList"></div>
         <div id="installTip" style="display:none;"></div>
         <button class="complete-btn" id="completionBtn" type="button" disabled>Building your plan…</button>
@@ -1236,9 +1237,16 @@
                 body: JSON.stringify({ tasks: selected })
             })
             .then(function(r) { return r.json(); })
-            .catch(function() { return null; })
-            .then(function() {
+            .catch(function(e) { console.warn('[checkin] saving tasks failed:', e && e.message); return null; })
+            .then(function(result) {
                 proceeedToCompletion();
+                // Free plan cap: say which tasks weren't added instead of
+                // moving on as if they all were.
+                if (result && result.code === 'TASK_LIMIT_REACHED' && result.message) {
+                    var note = el('taskCapNote');
+                    note.textContent = result.message;
+                    note.style.display = 'block';
+                }
             });
         });
     }

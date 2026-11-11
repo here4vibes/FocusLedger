@@ -36,4 +36,9 @@ async function isAtFreeTaskCap(db, userId) {
   return (await countCappedOpenTasks(db, userId)) >= FREE_TASK_LIMIT;
 }
 
-module.exports = { FREE_TASK_LIMIT, countCappedOpenTasks, isAtFreeTaskCap };
+/** How many more tasks of their own a free user can add (0 at the cap). */
+async function freeTaskSlotsLeft(db, userId) {
+  return Math.max(0, FREE_TASK_LIMIT - (await countCappedOpenTasks(db, userId)));
+}
+
+module.exports = { FREE_TASK_LIMIT, countCappedOpenTasks, isAtFreeTaskCap, freeTaskSlotsLeft };
