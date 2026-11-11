@@ -15,7 +15,7 @@ Node.js + Express · PostgreSQL (Neon) · Render deployment · Vanilla HTML/CSS/
 - `lib/` — shared service utilities: email, AI tagging, nudge generation, queryWithRetry, documentExtraction, ai-service
 - `public/js/services/` — shared frontend service modules (values-service.js, ai-service.js)
 - `services/` — PlaidService, TransactionService, ClassificationService, EventBus, InsightsService, TimeEstimationService
-- `jobs/` — scheduled recurring work declared in `render.yaml` cron services; no in-process schedulers
+- `jobs/` — scheduled recurring work declared in `render.yaml` cron services; no in-process schedulers. Blueprint sync is off: a cron only exists or changes when edited in the Render dashboard, and `docs/render-crons.md` tracks expected vs live
 - `migrations/` — node-postgres JS migrations; each exports `{ name, up: async (client) => {} }`
 - `config/test-users.js` — canonical QA user (qa@focusledger.net)
 
@@ -107,7 +107,7 @@ Node.js + Express · PostgreSQL (Neon) · Render deployment · Vanilla HTML/CSS/
     - Migrations `user_email_preferences_boolean` (NODE-EXPRESS-5) and `events_id_default`.
   - **On deploy:**
     - Re-engagement emails resume; only Miles (user 35) is eligible. 22 users are paused via `user_email_preferences.re_engagement='false'`; flip them back at relaunch.
-    - `render.yaml` moves `cold-start-nudge` and `evening-checkin` to hourly. Confirm in Render if Blueprint sync is off.
+    - `render.yaml` moves `cold-start-nudge` and `evening-checkin` to hourly. **Not applied live yet:** see `docs/render-crons.md`.
 
 ### Launch decisions (the user, 2026-10-18)
 - **Re-engagement:** resume the 22 paused users on launch day (when the user says "launched"), not before.
@@ -160,12 +160,8 @@ Four places plus a Settings gear. One small PR per phase; old URLs keep working 
 
 ### Waiting on the user
 - **Live Stripe purchase test.** Expected: Settings shows Autopilot $9.95 with a renewal date; after cancelling, "Cancelled — you won't be charged again" and a "Keep Autopilot" button.
-- **`STRIPE_WEBHOOK_SECRET` is missing in Render** (found 2026-10-18 after the first live purchase): every Stripe webhook gets a 503, so renewals, cancellations made in Stripe and failed payments never reach the app. The first purchase (user 67) activated through the checkout redirect instead. Stripe retries for up to 3 days, so adding the secret now recovers those events.
-- **Render `DATABASE_URL`:** change `sslmode=require` → `verify-full` in both the `focusledger` env group and the web service (NODE-EXPRESS-4).
-- **`SENTRY_DSN`** must be in the `focusledger` env group so cron errors reach Sentry.
-- **`beta-reengagement-blast` cron:** removed from `render.yaml`; if Render Blueprint sync is off, delete it in the Render dashboard (it would email every user that Autopilot is "free during beta" on Feb 29, 2028).
+- **Render dashboard fixes: `docs/render-crons.md`** (Blueprint sync is off, so `render.yaml` is documentation only). Seven items, most urgent first: set `evening-checkin-sender` and `cold-start-nudge` to `0 * * * *` (live they still run once a day, so those pushes don't go out; both jobs log an error to Sentry on every run until fixed, via `lib/cron-cadence.js` and the `cron_heartbeats` table); delete `rss-sync` and `beta-reengagement-blast`; add `STRIPE_WEBHOOK_SECRET` (every Stripe webhook gets a 503 without it); `DATABASE_URL` `sslmode=verify-full` (NODE-EXPRESS-4); `SENTRY_DSN` in the `focusledger` env group. Also a decision: four "disabled pre-launch" crons are still running.
 - **Neon and Stripe MCP connectors** fail to connect in cloud sessions, and Neon drops out mid-session too. Stripe needs re-authorizing. Reconnect both at claude.ai/customize/connectors.
-- **`renewal-heads-up` cron (#237):** if Render Blueprint sync is off, create it in the dashboard with the `focusledger` env group.
 - **Plaid:** the MCP shows zero production usage on team `69e2d08b7146d5000d5a94d1`. Confirm `PLAID_ENV`, and whether Liabilities and Recurring Transactions are enabled. If so, layer them onto the bill guardian.
 - **Phone check of the live Weightless page:** tap a radar box, open a subscription review, and confirm the Buddy bubble still opens.
 
@@ -500,6 +496,7 @@ If a new env var is needed: add to `.env.example` (with a placeholder value, nev
 **Cron job:**
 1. Write job file in `jobs/` — standalone Node.js script: create pool, do work, `pool.end()`, exit.
 2. Add `type: cron` entry to `render.yaml` with schedule, buildCommand, and startCommand.
+   Then create it by hand in the Render dashboard (Blueprint sync is off) and add its row to `docs/render-crons.md`. A job that filters users by local hour calls `checkHourlyCadence` (`lib/cron-cadence.js`) first.
 3. Env vars: attach the "focusledger" Env Group in the Render dashboard (or copy from web service).
 4. Never use `setInterval` or `node-cron` in process.
 
