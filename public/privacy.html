@@ -3,6 +3,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <script src="/js/native-app.js"></script>
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#E8913A">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -330,7 +331,7 @@
         <!-- MAIN CONTENT -->
         <article class="legal-content">
             <h1>Privacy Policy</h1>
-            <p class="last-updated">Last updated: October 18, 2026</p>
+            <p class="last-updated">Last updated: November 11, 2026</p>
 
             <h2 id="overview">1. Overview</h2>
             <p>FocusLedger is built for people with ADHD who want to understand their money and manage their tasks in one place. We take your privacy seriously. This policy explains what data we collect, why we need it, how we protect it, and what rights you have.</p>
@@ -406,7 +407,7 @@
             <h2 id="storage">3. How We Store &amp; Protect Data</h2>
             <p>All personal data is stored in a PostgreSQL database hosted on Neon (a fully managed PostgreSQL service by Neon Technologies). Data is encrypted at rest on Neon servers.</p>
             <p><strong>Access tokens</strong> for bank connections (Plaid) and email connections are encrypted at rest using AES-256-GCM before being stored in our database. These tokens are only accessible to your own account and are never shared between users.</p>
-            <p><strong>Passwords</strong> are salted and hashed using PBKDF2 (SHA-512, 100,000 iterations). We never store plaintext passwords. If you sign in with Google, we don't have a password for you at all.</p>
+            <p><strong>Passwords</strong> are salted and hashed using PBKDF2 (SHA-512, 100,000 iterations). We never store plaintext passwords. If you sign in with Google or Apple, we don't have a password for you at all.</p>
             <p><strong>Uploaded documents</strong> are stored in S3-compatible cloud object storage (Cloudflare R2).</p>
             <p><strong>Data isolation:</strong> Each user can only access their own data. We enforce this at the application layer via authenticated session tokens.</p>
             <p>Data transit is protected by TLS 1.2+. We do not support outdated cipher suites.</p>
@@ -454,6 +455,7 @@
 
             <h3>Google (Sign-in, Gmail and Calendar)</h3>
             <p>If you sign in with Google, we receive your name, email address and basic profile from Google. If you connect Google Calendar, FocusLedger requests <strong>read-only</strong> access to your calendar to show your events alongside your tasks; you can disconnect it from Settings.</p>
+            <p><strong>Sign in with Apple.</strong> If you sign in with Apple, we receive an identifier for your Apple account, your email address (or the private relay address Apple creates if you choose &ldquo;Hide My Email&rdquo;) and, the first time only, your name if you share it. We keep a sign-in token from Apple, encrypted, so that we can revoke it when you delete your account. Inside the FocusLedger iOS app the Meta Pixel is never loaded.</p>
             <p>When you connect Gmail via Google OAuth (Autopilot feature), FocusLedger requests <strong>read-only</strong> access to your inbox. We use this access to surface actionable emails as suggested tasks — we do not send email, modify your inbox, or access your contacts.</p>
             <p><strong>What FocusLedger accesses via Gmail:</strong></p>
             <ul>

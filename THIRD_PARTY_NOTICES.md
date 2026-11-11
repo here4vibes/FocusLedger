@@ -155,6 +155,16 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ```
 
+## Capacitor Haptics
+
+- **What:** the `@capacitor/haptics` plugin, linked into the iOS app
+  (`ios/App/CapApp-SPM/Package.swift`) for the tap felt when a task is
+  completed (`public/js/reward.js`, `public/js/haptics.js`). Not modified.
+- **Source:** https://github.com/ionic-team/capacitor-plugins, npm package
+  `@capacitor/haptics` 8.x
+- **License:** MIT, Copyright (c) Ionic (Drifty Co.); full text in the
+  package's `LICENSE` file under `node_modules/@capacitor/haptics`.
+
 ## Lucide
 
 - **What:** SVG path data for the navigation icons, copied into

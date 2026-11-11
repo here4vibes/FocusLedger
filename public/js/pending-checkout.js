@@ -60,6 +60,8 @@
   // or to fallbackDest when there is none or checkout can't start.
   function continueOr(token, fallbackDest) {
     var pending = take();
+    // iOS app: never continue to web checkout (App Store guideline 3.1.1).
+    if (global.FLNativeApp && global.FLNativeApp.isNative()) pending = null;
     if (!pending || !token) { global.location.href = fallbackDest; return; }
     function fallback(reason) {
       console.warn('[checkout] could not start checkout after signup:', reason, '| plan:', pending.plan, pending.billing);

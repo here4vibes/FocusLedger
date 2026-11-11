@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <script src="/js/native-app.js"></script>
     <link rel="icon" type="image/svg+xml" href="/icons/fl-icon.svg">
     <link rel="apple-touch-icon" sizes="180x180" href="/icons/fl-icon.png">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -486,8 +487,9 @@
                 } else if (res.status === 402 || (res.data && res.data.code === 'TASK_LIMIT_REACHED')) {
                     saveBtn.disabled = false;
                     saveBtn.textContent = 'Save task';
-                    showAlert(
-                        'You\'ve hit the 10-task free limit (routine tasks don\'t count). <a href="/pricing">Switch to Autopilot</a> to keep going.',
+                    showAlert((window.FLNativeApp && FLNativeApp.isNative())
+                        ? FLNativeApp.planMessage('task_limit')
+                        : 'You\'ve hit the 10-task free limit (routine tasks don\'t count). <a href="/pricing">Switch to Autopilot</a> to keep going.',
                         true
                     );
                 } else if (res.status === 401) {

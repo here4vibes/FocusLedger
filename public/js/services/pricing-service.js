@@ -20,14 +20,17 @@
     }
   };
 
-  // Inside the native iOS app, Apple requires in-app purchase — we must NOT
-  // show Stripe/web checkout there (App Store guideline 3.1.1).
+  // Inside the native iOS app there is no web checkout and no pointer to one
+  // (App Store guideline 3.1.1). Detection lives in /js/native-app.js; the
+  // server refuses POST /api/subscription/checkout from the app as well.
   function isNativeIOS() {
+    if (global.FLNativeApp) return global.FLNativeApp.isNative();
     try {
-      return !!(global.Capacitor
-        && global.Capacitor.isNativePlatform && global.Capacitor.isNativePlatform()
-        && global.Capacitor.getPlatform && global.Capacitor.getPlatform() === 'ios');
-    } catch (e) { return false; }
+      return !!(global.Capacitor && global.Capacitor.isNativePlatform && global.Capacitor.isNativePlatform());
+    } catch (e) {
+      console.warn('[pricing] native check failed:', e && e.message);
+      return false;
+    }
   }
 
   var PricingService = {
@@ -36,7 +39,7 @@
     // billing: 'monthly'   | 'annual'
     // btn:     optional button element to disable during redirect
     checkout: async function(plan, billing, btn) {
-      // On iOS, hand off to native IAP (RevenueCat) — never Stripe.
+      // In the iOS app: native in-app purchase if the shell provides it, else nothing.
       if (isNativeIOS()) {
         return PricingService.nativePurchase(plan, billing, btn);
       }
@@ -85,19 +88,18 @@
       }
     },
 
-    // nativePurchase — iOS in-app purchase via the native bridge. The native
-    // layer (RevenueCat Capacitor plugin) injects window.FLNative.purchase;
-    // RevenueCat's webhook then grants Autopilot server-side. Until that ships,
-    // we never fall back to Stripe inside the app (compliance).
+    // nativePurchase — iOS in-app purchase via the native bridge, if the shell
+    // ever ships one (window.FLNative.purchase). Without it this does nothing:
+    // no Stripe, no message about where else to buy.
     nativePurchase: function(plan, billing, btn) {
       if (global.FLNative && typeof global.FLNative.purchase === 'function') {
         if (btn) { btn.disabled = true; btn.textContent = 'Opening…'; }
-        try { global.FLNative.purchase(plan, billing); } catch (e) { /* native handles UI */ }
-        return;
-      }
-      // Bridge not present yet — do NOT show web checkout in-app.
-      if (global.alert) {
-        global.alert('In-app upgrade is coming to the FocusLedger app very soon. For now you can manage Autopilot at focusledger.net.');
+        try {
+          global.FLNative.purchase(plan, billing);
+        } catch (e) {
+          console.warn('[pricing] native purchase failed to start:', e && e.message);
+          if (btn) { btn.disabled = false; }
+        }
       }
     },
 

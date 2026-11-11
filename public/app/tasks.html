@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <script src="/js/native-app.js"></script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="color-scheme" content="light">
     <title>Tasks — FocusLedger</title>
@@ -609,8 +610,10 @@
 
         <!-- Upgrade banner (free users at task limit) -->
         <div class="upgrade-banner" id="upgradeBanner" style="display:none">
-            <div class="upgrade-banner-text">You've reached the free task limit (10 active tasks; routine tasks don't count). Upgrade to Autopilot for unlimited tasks.</div>
-            <button class="upgrade-btn" onclick="location.href='/settings'">Upgrade →</button>
+            <div class="upgrade-banner-text" data-web-purchase>You've reached the free task limit (10 active tasks; routine tasks don't count). Upgrade to Autopilot for unlimited tasks.</div>
+            <button class="upgrade-btn" data-web-purchase onclick="location.href='/settings'">Upgrade →</button>
+            <!-- iOS app: the fact only, no upgrade path (App Store 3.1.1) -->
+            <div class="upgrade-banner-text" data-native-only>You’ve reached the Free plan’s task limit.</div>
         </div>
 
         <!-- Add task form -->
@@ -1057,7 +1060,9 @@
             fetchSummary();
         } else if (data.upgrade_required) {
             document.getElementById('upgradeBanner').style.display = 'flex';
-            showToast(data.message || 'Free plan limit reached');
+            showToast((window.FLNativeApp && FLNativeApp.isNative())
+                ? FLNativeApp.planMessage('task_limit')
+                : (data.message || 'Free plan limit reached'));
         } else {
             showToast(data.message || 'Failed to add task');
         }

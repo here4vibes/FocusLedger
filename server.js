@@ -64,6 +64,7 @@ const { getMigrationStatus } = require('./db/migrations-status');
 const { requestContext } = require('./lib/request-context');
 const { quotaAwareResponses } = require('./lib/ai-budget');
 const { logFailure } = require('./lib/log-failure');
+const { nativeAppResponses, nativeAppRedirects } = require('./lib/native-app');
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -96,6 +97,7 @@ pool.on('error', (err) => {
 app.use(helmetMiddleware);
 app.use(permissionsPolicyMiddleware);
 app.use(corsMiddleware);
+app.use(nativeAppResponses, nativeAppRedirects); // iOS app: no sales pages, no upsell copy (App Store 3.1.1)
 
 // =============================================================================
 // 2. REQUEST PARSING
@@ -167,6 +169,7 @@ app.get('/health', async (req, res) => {
 // =============================================================================
 // 5. API ROUTES
 // =============================================================================
+app.use('/api/auth/apple',      require('./routes/auth-apple')(pool)); // before /api/auth
 app.use('/api/auth',            require('./routes/auth')(pool, loginLimiter, signupLimiter));
 app.use('/api/contact',         require('./routes/contact')(pool));
 app.use('/api/comeback',        require('./routes/comeback')(pool));
