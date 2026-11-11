@@ -1,6 +1,10 @@
 #!/usr/bin/env node
 /**
- * jobs/coldStartNudge.js — Hourly job (render.yaml); sends at 10:00 user-local only.
+ * jobs/coldStartNudge.js — Must run HOURLY (Render cron "cold-start-nudge",
+ * schedule 0 * * * *); sends at 10:00 user-local only. On a once-a-day schedule
+ * only the users for whom that one UTC hour is 10:00 ever match, so every run
+ * checks its own cadence and logs an error naming the Render cron to fix
+ * (lib/cron-cadence.js, docs/render-crons.md).
  *
  * Finds tasks that are 2+ days overdue with no focus session in the last 48 hours
  * and sends one proactive push nudge: "Want one tiny first step to get [Task] moving?"
@@ -19,6 +23,7 @@ initSentry('coldStartNudge'); // console.error → Sentry for this cron (see lib
 
 const { Pool } = require('pg');
 const { getLocalDateParts } = require('../lib/timezone');
+const { checkHourlyCadence } = require('../lib/cron-cadence');
 
 // 10:00 local: a gentle mid-morning prompt. The job used to run once at 09:00
 // UTC, which is 05:00 Eastern and 02:00 Pacific.
@@ -93,6 +98,14 @@ async function sendApnsPush(userId, payload) {
 
 async function run() {
   console.log('[cold-start-nudge] Starting…');
+
+  // Blueprint sync is off, so the live schedule can differ from render.yaml.
+  await checkHourlyCadence(pool, {
+    job: 'cold-start-nudge',
+    prefix: '[cold-start-nudge]',
+    renderCron: 'cold-start-nudge',
+    sends: 'the cold-start push at 10:00 in each user\'s own timezone',
+  });
 
   // One overdue task per user: 2+ days overdue in the USER's calendar, no focus
   // session in 48h, nudged fewer than MAX_NUDGES_PER_TASK times. Only users for
