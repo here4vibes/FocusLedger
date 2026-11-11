@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"/>
+    <script src="/js/native-app.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
 <meta name="theme-color" content="#011e5c"/>
 <title>FocusLedger</title>
@@ -1182,6 +1183,11 @@
 
   // ── real-world confirmation: draft an email, review/edit, then send ──────────
   function upsell(){
+    // iOS app: no upgrade pitch or pricing link (App Store 3.1.1).
+    if (window.FLNativeApp && FLNativeApp.isNative()) {
+      buddy(fmt("I've got the email drafted for you. **Sending it on your behalf** isn’t included in your current plan, so copy it from here and send it yourself."), true);
+      return;
+    }
     buddy(fmt("I've got the whole email drafted for you — but **sending it on your behalf** is an Autopilot thing. Upgrade and I'll handle sends like this end to end."), true);
     raw('<a class="chiplink today" style="align-self:flex-start;text-decoration:none" href="/pricing">See Autopilot →</a>');
   }

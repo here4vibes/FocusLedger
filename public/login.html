@@ -2,6 +2,7 @@
 <html lang='en'>
 <head>
     <meta charset='UTF-8'>
+    <script src="/js/native-app.js"></script>
     <link rel='manifest' href='/manifest.json'>
     <meta name='theme-color' content='#011e5c'>
     <meta name='apple-mobile-web-app-capable' content='yes'>
@@ -280,6 +281,7 @@
 <noscript><p style="padding:2rem;text-align:center;font-family:'DM Sans',sans-serif;color:#374151">FocusLedger requires JavaScript.</p></noscript>
 
     <script src="/js/public-nav.js"></script>
+    <script src="/js/apple-signin.js"></script>
 
     <div class='auth-container'>
         <div class='auth-card'>
@@ -339,15 +341,23 @@
         var postLoginDest = (redirectParam === 'share' || hasPendingShare) ? '/share'
                           : '/weightless';
 
+        // Google and Apple return the same way: ?google_token=… or ?apple_token=…
+        // (and _email, _linked, _new, _error). One reader for both providers.
+        var _authQs = new URLSearchParams(window.location.search);
+        var viaApple = _authQs.has('apple_token') || _authQs.has('apple_error');
+        function flAuthParam(name) { return _authQs.get((viaApple ? 'apple_' : 'google_') + name); }
+        var authProvider = viaApple ? 'Apple' : 'Google';
+        window._flSignupEvent = viaApple ? 'signup_apple' : 'signup_google';
+
         // ── Handle Google OAuth callback ────────────────────────────────────────
         // After Google redirects back with google_token=..., store token and go to app
-        var googleToken  = new URLSearchParams(window.location.search).get('google_token');
-        var googleLinked = new URLSearchParams(window.location.search).get('google_linked');
-        var googleEmail  = new URLSearchParams(window.location.search).get('google_email');
-        var googleError  = new URLSearchParams(window.location.search).get('google_error');
+        var googleToken  = flAuthParam('token');
+        var googleLinked = flAuthParam('linked');
+        var googleEmail  = flAuthParam('email');
+        var googleError  = flAuthParam('error');
         // google_new=1: the OAuth callback created this account (a new person who
         // tapped "Continue with Google" on the login page). Count it as a signup.
-        var googleNew    = new URLSearchParams(window.location.search).get('google_new') === '1';
+        var googleNew    = flAuthParam('new') === '1';
 
         if (googleToken) {
             history.replaceState(null, '', '/login');
@@ -371,15 +381,15 @@
             if (googleEmail) {
                 localStorage.setItem('fl_user', JSON.stringify({ email: googleEmail }));
             }
-            if (typeof FLA !== 'undefined') FLA.trackEvent('login_google');
+            if (typeof FLA !== 'undefined') FLA.trackEvent(viaApple ? 'login_apple' : 'login_google');
             // Migrate demo session if the user came from the landing page demo
             migrateDemoSession(googleToken);
             // Show brief success message then redirect
             var successMsg = document.getElementById('errorMsg');
             if (googleLinked === '1') {
-                successMsg.textContent = 'Welcome back! We have linked your Google account.';
+                successMsg.textContent = 'Welcome back! We have linked your ' + authProvider + ' account.';
             } else {
-                successMsg.textContent = 'Signed in with Google! Redirecting...';
+                successMsg.textContent = 'Signed in with ' + authProvider + '! Redirecting...';
             }
             successMsg.style.background = '#EAFAF0';
             successMsg.style.color = '#2E7D32';
@@ -400,6 +410,7 @@
                 'email_taken':     'An account with that Google email already has a password set. Log in with your email and password.'
             };
             var msg = errorMessages[googleError] || 'Google sign-in failed. Please try again or use your email and password.';
+            if (viaApple && window.FLAppleSignIn) msg = FLAppleSignIn.errorMessage(googleError);
             var errorEl = document.getElementById('errorMsg');
             errorEl.textContent = msg;
             errorEl.classList.add('visible');
@@ -445,6 +456,8 @@
 
         // ── Google Sign-In button ───────────────────────────────────────────────
         var googleBtn = document.getElementById('googleBtn');
+        // Sign in with Apple: rendered above Google only when the server has it configured.
+        if (window.FLAppleSignIn) FLAppleSignIn.mount({ before: googleBtn, mode: 'login' });
 
         // Save original button HTML so we can restore it on error without escaping issues
         var googleBtnOriginalHTML = googleBtn.innerHTML;
@@ -637,7 +650,7 @@
     FLA.trackPage('login'); FLA.trackEvent('funnel_login_visit');
     if (window._flDeferSignupComplete) {
         FLA.trackEvent('funnel_signup_complete');
-        FLA.trackEvent('signup_google');
+        FLA.trackEvent(window._flSignupEvent || 'signup_google');
         window._flDeferSignupComplete = false;
     }
     </script>

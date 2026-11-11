@@ -128,6 +128,21 @@
   function show(opts) {
     opts = opts || {};
     _inject();
+    // iOS app: say what the plan doesn't include; no price, no checkout
+    // (App Store guideline 3.1.1; detection in /js/native-app.js).
+    if (global.FLNativeApp && global.FLNativeApp.isNative()) {
+      document.getElementById('flPgTitle').textContent = opts.feature
+        ? opts.feature + ' isn’t included in your current plan'
+        : global.FLNativeApp.planMessage('feature');
+      ['.fl-pg-badge', '.fl-pg-toggle', '.fl-pg-price', '#flPgDesc', '#flPgPeriod', '#flPgCta'].forEach(function(sel) {
+        var el = _modalEl.querySelector(sel);
+        if (el) el.remove();
+      });
+      document.getElementById('flPgDismiss').textContent = 'OK';
+      _modalEl.classList.add('visible');
+      document.body.style.overflow = 'hidden';
+      return;
+    }
     var title = document.getElementById('flPgTitle');
     var desc  = document.getElementById('flPgDesc');
     if (title) title.textContent = opts.feature ? opts.feature + ' is an Autopilot feature' : 'This is an Autopilot feature';

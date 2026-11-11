@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <script src="/js/native-app.js"></script>
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#011e5c">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -364,6 +365,7 @@
     </div>
 
     <script src="/js/pending-checkout.js"></script>
+    <script src="/js/apple-signin.js"></script>
     <script>
     (function() {
         'use strict';
@@ -385,18 +387,26 @@
             else window.location.href = postAuthDest;
         }
 
+        // Google and Apple return the same way: ?google_token=… or ?apple_token=…
+        // (and _email, _linked, _new, _error). One reader for both providers.
+        var _authQs = new URLSearchParams(window.location.search);
+        var viaApple = _authQs.has('apple_token') || _authQs.has('apple_error');
+        function flAuthParam(name) { return _authQs.get((viaApple ? 'apple_' : 'google_') + name); }
+        var authProvider = viaApple ? 'Apple' : 'Google';
+        window._flSignupEvent = viaApple ? 'signup_apple' : 'signup_google';
+
         // ── Handle Google OAuth callback ────────────────────────────────────────
         // After Google redirects back with google_token=..., store token and go to app
-        var googleToken   = new URLSearchParams(window.location.search).get('google_token');
-        var googleLinked  = new URLSearchParams(window.location.search).get('google_linked');
-        var googleError   = new URLSearchParams(window.location.search).get('google_error');
+        var googleToken   = flAuthParam('token');
+        var googleLinked  = flAuthParam('linked');
+        var googleError   = flAuthParam('error');
 
         if (googleToken) {
             // Capture google_email BEFORE replaceState wipes the query string
-            var googleEmail = new URLSearchParams(window.location.search).get('google_email');
+            var googleEmail = flAuthParam('email');
             // google_new=1: the callback created this account (absent = existing
             // account signing in through the signup button: not a conversion).
-            var googleNew = new URLSearchParams(window.location.search).get('google_new') === '1';
+            var googleNew = flAuthParam('new') === '1';
             // Clean URL immediately (remove token from history)
             history.replaceState(null, '', '/signup');
             localStorage.setItem('fl_token', googleToken);
@@ -408,7 +418,7 @@
                 if (typeof FLA !== 'undefined') {
                     FLA.trackEvent('funnel_signup_start');
                     FLA.trackEvent('funnel_signup_complete');
-                    FLA.trackEvent('signup_google');
+                    FLA.trackEvent(window._flSignupEvent);
                 } else {
                     window._flDeferSignupComplete = true;
                 }
@@ -447,10 +457,11 @@
                 'email_taken':      'An account with that Google email already exists. Try logging in.'
             };
             var msg = errorMessages[googleError] || 'Google sign-in failed. Please try again or use your email.';
+            if (viaApple && window.FLAppleSignIn) msg = FLAppleSignIn.errorMessage(googleError);
             var errorMsgEl = document.getElementById('errorMsg');
             if (googleLinked === '1') {
                 // Account linked successfully — show positive message
-                errorMsgEl.textContent = 'Welcome back! We\'ve linked your Google account.';
+                errorMsgEl.textContent = 'Welcome back! We\'ve linked your ' + authProvider + ' account.';
                 errorMsgEl.style.background = '#EAFAF0';
                 errorMsgEl.style.color = '#2E7D32';
             } else {
@@ -474,6 +485,8 @@
 
         // ── Google Sign-In button ───────────────────────────────────────────────
         var googleBtn = document.getElementById('googleBtn');
+        // Sign in with Apple: rendered above Google only when the server has it configured.
+        if (window.FLAppleSignIn) FLAppleSignIn.mount({ before: googleBtn, mode: 'signup' });
 
         googleBtn.addEventListener('click', function() {
             // Count Google OAuth as a signup start — user initiated the flow
@@ -633,7 +646,7 @@
         if (window._flDeferSignupComplete) {
             FLA.trackEvent('funnel_signup_start');
             FLA.trackEvent('funnel_signup_complete');
-            FLA.trackEvent('signup_google');
+            FLA.trackEvent(window._flSignupEvent || 'signup_google');
             window._flDeferSignupComplete = false;
         }
 

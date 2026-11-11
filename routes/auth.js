@@ -254,7 +254,9 @@ module.exports = function(pool, loginLimiter, signupLimiter) {
       const user = result.rows[0];
 
       if (!user.password_hash) {
-        const msg = (user.auth_method === 'google')
+        const msg = (user.auth_method === 'apple')
+          ? 'Your account uses Sign in with Apple. Use the Apple button above to continue.'
+          : (user.auth_method === 'google')
           ? 'Your account uses Google sign-in. Click \"Log in with Google\" above to continue.'
           : 'Please use Google sign-in or set a password from your account settings.';
         return res.status(401).json({ success: false, message: msg });
@@ -537,8 +539,9 @@ module.exports = function(pool, loginLimiter, signupLimiter) {
 
       const user = userResult.rows[0];
 
-      // Google-only users have no password to reset
-      if (!user.password_hash) {
+      // Google-only users have no password to reset. (Apple-only accounts get
+      // the normal reset link below, which lets them add a password.)
+      if (!user.password_hash && user.auth_method !== 'apple') {
         const { subject, html } = passwordResetGoogleOnlyTemplate({ name: user.name });
         sendEmail(pool, {
           to: user.email,

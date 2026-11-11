@@ -16,6 +16,7 @@ const { getStripe } = require('../lib/stripe-client');
 const billing = require('../lib/billing');
 const billingDb = require('../db/billing');
 const { hasPartnerPaidTandem } = require('../db/partnerships');
+const { refuseNativePurchase } = require('../lib/native-app');
 
 // Legacy: kept for backward compat with any code that still imports STRIPE_LINKS directly.
 // New code should use PLANS from config/pricing.js.
@@ -31,7 +32,9 @@ module.exports = function(pool) {
   // When STRIPE_SECRET_KEY + STRIPE_PRICE_* env vars are set, creates a real Checkout Session
   // so the user's email is pre-filled and user_id is attached as metadata.
   // When price IDs are absent, returns a buy.stripe.com link with ?prefilled_email appended.
-  router.post('/checkout', authenticateToken, async (req, res) => {
+  // Inside the iOS app this refuses with 403 NATIVE_APP_PURCHASE_UNAVAILABLE
+  // (App Store guideline 3.1.1); the app's UI never offers it, this is the backstop.
+  router.post('/checkout', authenticateToken, refuseNativePurchase, async (req, res) => {
     try {
       const { plan, billing } = req.body;
       if (!['autopilot', 'tandem'].includes(plan))   return res.status(400).json({ success: false, message: 'Invalid plan' });
@@ -338,7 +341,7 @@ module.exports = function(pool) {
 
   // POST /portal — open Stripe's hosted billing portal (update card, invoices,
   // cancel/undo). Changes made there come back through /stripe-webhook.
-  router.post('/portal', authenticateToken, async (req, res) => {
+  router.post('/portal', authenticateToken, refuseNativePurchase, async (req, res) => {
     const userId = req.user.id;
     try {
       const sub = await billingDb.getLatestSubscription(pool, userId);
