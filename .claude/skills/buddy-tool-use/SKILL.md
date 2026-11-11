@@ -72,7 +72,7 @@ The cookbook's customer-service agent loops: call the model, run tools, send res
 ## 6. Errors, retries and stop reasons
 
 - The Anthropic SDK already retries connection errors, 408/409/429 and 5xx with backoff (2 retries by default). Don't wrap calls in another retry loop; it multiplies cost and budget use.
-- **Never retry `AiQuotaError`.** It's the user's daily limit. `quotaAwareResponses` only rewrites a **5xx** response into a 429 with `userMessage`, so a catch that answers 200 with "I couldn't think that through" hides the real reason. In a new catch, test `isQuotaError(err)` (`lib/ai-budget.js`) and show `err.userMessage`, or let the route answer 5xx.
+- **Never retry `AiQuotaError`.** It's the user's daily limit. `quotaAwareResponses` only rewrites a **5xx** response into a 429 with `userMessage`, so a catch that answers 200 with "I couldn't think that through" hides the real reason. In a new catch, test `isQuotaError(err)` (`lib/ai-budget.js`) and `return sendAiLimit(res, err)` (429, code `AI_DAILY_LIMIT`), or let the route answer 5xx. After a helper that swallows AI errors, check `quotaHit()`. Pages render it with `FLAiLimit.text(data)` from `public/js/ai-limit.js`.
 - Check `resp.stop_reason`: `max_tokens` can cut a `tool_use` input short, so validate before dispatching (the regexes in section 2 catch most of it) and consider raising `maxTokens` for long drafts like emails; `refusal` means no tools ran, so return the text as-is.
 - Log every AI failure with `[Agent]` (or the module's prefix), the operation and `userId`, as the existing `turn AI error` line does. Sentry picks up every `console.error`.
 
