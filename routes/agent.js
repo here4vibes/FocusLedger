@@ -15,6 +15,8 @@ const { getBillPreferences } = require('../db/bills');
 const { cleanMerchantName } = require('../lib/merchant-normalize');
 const { logFailure } = require('../lib/log-failure');
 const { parsePlainAddTask } = require('../lib/plain-add-task');
+const { TASK_LIMIT_CODE, taskCapReply } = require('../lib/task-cap-reply');
+const { isNativeAppRequest } = require('../lib/native-app');
 
 // What Buddy says when the model can't be reached. `degraded` lets the page add
 // a way forward (the Tasks page) instead of leaving the user at a dead end.
@@ -29,11 +31,23 @@ function aiDownReply() {
 // The model is down, but a literal "Add a task: <title>" needs no model: add it
 // as typed through the same tool (duplicate guard, action log, undo) and say so.
 // Returns null when the message isn't that form or the add didn't happen.
-async function addPlainTaskWithoutAi(pool, userId, message) {
+// A full list (free plan cap) is answered as such, not as "try again".
+async function addPlainTaskWithoutAi(pool, userId, message, { native = false } = {}) {
   const title = parsePlainAddTask(message);
   if (!title) return null;
   try {
     const out = await dispatch(pool, userId, 'create_task', { title });
+    if (!out.ok && out.code === TASK_LIMIT_CODE) {
+      await logAction(pool, {
+        userId, actionType: 'create_task', status: 'failed', riskTier: 'auto',
+        params: { title }, error: out.error,
+      }).catch(logFailure('[Agent]', 'logAction', { userId, tool: 'create_task' }));
+      return {
+        reply: taskCapReply({ native }),
+        receipts: [{ id: null, action: 'create_task', summary: out.error, undoable: false, ok: false, code: out.code, scope: scopeOf('create_task') }],
+        confirmation: null, degraded: true,
+      };
+    }
     if (!out.ok) return null;
     const row = await logAction(pool, {
       userId, actionType: 'create_task', status: 'executed', riskTier: 'auto',
@@ -48,6 +62,16 @@ async function addPlainTaskWithoutAi(pool, userId, message) {
     console.error('[Agent] plain add without AI failed:', e.message, '| userId:', userId);
     return null;
   }
+}
+
+// The model writes its reply before its tools run, so it can say "added" for a
+// task the free plan's cap then refused. When that happened, the reply is
+// replaced with the plain truth: what wasn't added and why.
+function truthfulReply(reply, receipts, { native = false } = {}) {
+  const blocked = receipts.filter(r => !r.ok && r.code === TASK_LIMIT_CODE);
+  if (!blocked.length) return reply;
+  const added = receipts.filter(r => r.ok && r.action === 'create_task').length;
+  return taskCapReply({ native, added, skipped: blocked.map(r => r.title).filter(Boolean) });
 }
 
 // Daily cap on real-world sends per user (guardrail; see spec).
@@ -163,7 +187,7 @@ function buildUnifiedSystemPrompt(today, tasks, ctx = {}) {
 // Shared agent turn used by /act and the unified /chat: load context, run the
 // tool-capable model with the given system prompt, execute auto-tier tools
 // (confirm-tier → a confirmation card), and return reply + receipts.
-async function runAgentTurn(pool, userId, message, clientHistory, systemPromptBuilder) {
+async function runAgentTurn(pool, userId, message, clientHistory, systemPromptBuilder, { native = false } = {}) {
   const tz = await fetchUserTimezone(pool, userId);
   const today = getUserLocalDate(tz);
   const tasksResult = await pool.query(
@@ -202,7 +226,7 @@ async function runAgentTurn(pool, userId, message, clientHistory, systemPromptBu
     // Today's AI limit: the route answers 429 with the real reason.
     if (isQuotaError(aiErr)) throw aiErr;
     console.error('[Agent] turn AI error:', aiErr.message, '| userId:', userId);
-    return (await addPlainTaskWithoutAi(pool, userId, message)) || aiDownReply();
+    return (await addPlainTaskWithoutAi(pool, userId, message, { native })) || aiDownReply();
   }
 
   const blocks = Array.isArray(resp.content) ? resp.content : [];
@@ -245,7 +269,7 @@ async function runAgentTurn(pool, userId, message, clientHistory, systemPromptBu
           userId, actionType: tu.name, status: 'failed', riskTier: 'auto',
           params: tu.input || {}, error: out.error || 'unknown',
         });
-        receipts.push({ id: null, action: tu.name, summary: out.error || "I couldn't do that one", undoable: false, ok: false, scope: scopeOf(tu.name) });
+        receipts.push({ id: null, action: tu.name, summary: out.error || "I couldn't do that one", undoable: false, ok: false, code: out.code, title: out.result && out.result.title, scope: scopeOf(tu.name) });
       }
     } catch (dispErr) {
       console.error('[Agent] dispatch failed:', dispErr.message, '| tool:', tu.name, '| userId:', userId);
@@ -257,7 +281,7 @@ async function runAgentTurn(pool, userId, message, clientHistory, systemPromptBu
     }
   }
 
-  return { reply, receipts, confirmation };
+  return { reply: truthfulReply(reply, receipts, { native }), receipts, confirmation };
 }
 
 module.exports = function (pool) {
@@ -353,7 +377,7 @@ module.exports = function (pool) {
               userId, actionType: tu.name, status: 'failed', riskTier: 'auto',
               params: tu.input || {}, error: out.error || 'unknown',
             });
-            receipts.push({ id: null, summary: out.error || "I couldn't do that one", undoable: false, ok: false, scope: scopeOf(tu.name) });
+            receipts.push({ id: null, action: tu.name, summary: out.error || "I couldn't do that one", undoable: false, ok: false, code: out.code, title: out.result && out.result.title, scope: scopeOf(tu.name) });
           }
         } catch (dispErr) {
           console.error('[Agent] dispatch failed:', dispErr.message, '| tool:', tu.name, '| userId:', userId);
@@ -365,7 +389,7 @@ module.exports = function (pool) {
         }
       }
 
-      res.json({ success: true, reply, receipts, confirmation });
+      res.json({ success: true, reply: truthfulReply(reply, receipts, { native: isNativeAppRequest(req) }), receipts, confirmation });
     } catch (err) {
       console.error('[Agent] POST /act error:', err.message, '| userId:', req.user && req.user.id);
       res.status(500).json({ success: false, message: 'Agent failed' });
@@ -405,7 +429,7 @@ module.exports = function (pool) {
         console.error('[Agent] /chat log user turn failed:', e.message, '| userId:', userId);
       }
 
-      const out = await runAgentTurn(pool, userId, message, req.body.history, buildUnifiedSystemPrompt);
+      const out = await runAgentTurn(pool, userId, message, req.body.history, buildUnifiedSystemPrompt, { native: isNativeAppRequest(req) });
 
       if (out.reply) {
         pool.query(

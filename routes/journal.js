@@ -24,6 +24,8 @@ const { fetchUserLocalDate } = require('../lib/timezone');
 const { complete } = require('../lib/claude-client');
 const { authenticateToken } = require('../middleware/auth');
 const { logFailure } = require('../lib/log-failure');
+const { taskSlotsLeft } = require('../middleware/proUtils');
+const { TASK_LIMIT_CODE } = require('../lib/task-cap-reply');
 
 const _CONFIDENCE_HIGH = 0.85;   // Suggest auto-complete (comment reference only; threshold enforced in AI prompt)
 const CONFIDENCE_MED  = 0.60;    // "Did you mean?" suggestion
@@ -582,6 +584,16 @@ Analyze the journal and return the JSON response.`;
 
       if (!title || typeof title !== 'string' || title.trim().length < 2) {
         return res.status(400).json({ success: false, message: 'Task title is required.' });
+      }
+
+      // The free plan's cap, as on POST /api/tasks (same code and message).
+      if ((await taskSlotsLeft(pool, userId)) <= 0) {
+        return res.status(402).json({
+          success: false,
+          message: 'You have 10 active tasks of your own — the free plan cap (routine tasks don’t count). Finish a few, or open it up with Autopilot.',
+          code: TASK_LIMIT_CODE,
+          upgrade_required: true,
+        });
       }
 
       // Build due_date with optional time

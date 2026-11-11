@@ -18,7 +18,7 @@
  */
 
 const { hasPartnerPaidTandem } = require('../db/partnerships');
-const { countCappedOpenTasks, isAtFreeTaskCap } = require('../db/task-cap');
+const { countCappedOpenTasks, isAtFreeTaskCap, freeTaskSlotsLeft } = require('../db/task-cap');
 
 async function queryRaw(db, text, params) {
   const result = await db.query(text, params);
@@ -113,6 +113,32 @@ async function isAtFreeTaskLimit(pool, userId, isPro) {
 }
 
 /**
+ * How many more tasks of their own this user may add right now: Infinity on
+ * Autopilot, otherwise the free slots left (0 at the cap). The one check every
+ * task-creating path outside POST /api/tasks uses (Buddy's create_task, brain
+ * dump, check-in confirm, journal), so the cap can't be bypassed by asking
+ * Buddy. Routine-linked tasks don't count (db/task-cap.js).
+ *
+ * If the plan lookup fails the user is treated as free, as POST /api/tasks
+ * does: a paying user may be told the list is full during an outage, but a
+ * free user never slips past the cap. A failing count throws.
+ *
+ * @param {object} db - pool or transaction client
+ * @param {string|number} userId
+ * @returns {Promise<number>}
+ */
+async function taskSlotsLeft(db, userId) {
+  let isPro = false;
+  try {
+    isPro = await checkProStatus(db, userId);
+  } catch (err) {
+    console.error('[task-cap] plan check failed, treating as free:', err.message, '| userId:', userId);
+  }
+  if (isPro) return Infinity;
+  return freeTaskSlotsLeft(db, userId);
+}
+
+/**
  * Open tasks that count toward the free cap (routine tasks excluded).
  *
  * @param {object} pool - PostgreSQL connection pool
@@ -178,6 +204,7 @@ async function requirePro(pool, userId, featureName = 'Feature') {
 module.exports = {
   checkProStatus,
   isAtFreeTaskLimit,
+  taskSlotsLeft,
   getActiveTaskCount,
   isAtFreeRecurringLimit,
   requirePro

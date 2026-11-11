@@ -68,8 +68,9 @@ const failures = [];
 const results = [];
 
 /** One HTTP call. A 5xx (except 503) fails the step on the spot. */
-async function api(method, path, { token, body } = {}) {
+async function api(method, path, { token, body, userAgent } = {}) {
   const headers = {};
+  if (userAgent) headers['User-Agent'] = userAgent;
   if (token) headers.Authorization = `Bearer ${token}`;
   if (body !== undefined) headers['Content-Type'] = 'application/json';
   let res;
@@ -652,6 +653,36 @@ async function main() {
     const limits = (await call('GET', '/api/subscription/status', 200, { token: C.token })).limits || {};
     expect(limits.active_tasks === 10 && limits.max_tasks === 10 && limits.can_create_task === false,
       `subscription limits should count only own tasks: ${JSON.stringify(limits)}`);
+
+    // The cap holds on every other way to add a task, and nothing claims an add.
+    const ownOpen = async () => (await call('GET', '/api/subscription/status', 200, { token: C.token })).limits.active_tasks;
+    const j = await call('POST', '/api/journal/create-task', 402, { token: C.token, body: { title: 'CI cap via journal' } });
+    expect(j.code === 'TASK_LIMIT_REACHED', `journal create-task at the cap: ${JSON.stringify(j).slice(0, 200)}`);
+    const conf = await call('POST', '/api/buddy/confirm-tasks', 200, { token: C.token, body: { tasks: [{ title: 'CI cap via check-in' }] } });
+    expect(conf.count === 0 && conf.code === 'TASK_LIMIT_REACHED' && (conf.not_added || []).length === 1 && /list is full/.test(conf.message || ''),
+      `confirm-tasks at the cap: ${JSON.stringify(conf).slice(0, 300)}`);
+    if (!process.env.ANTHROPIC_API_KEY) {
+      // No AI key: "Add a task: …" runs Buddy's create_task tool directly.
+      const web = await call('POST', '/api/agent/chat', 200, { token: C.token, body: { message: 'Add a task: CI cap via Buddy', history: [] } });
+      expect((web.receipts || []).length === 1 && web.receipts[0].ok === false && web.receipts[0].code === 'TASK_LIMIT_REACHED',
+        `Buddy add at the cap should be refused: ${JSON.stringify(web).slice(0, 300)}`);
+      expect(/list is full/.test(web.reply || '') && /didn’t add/.test(web.reply || '') && /Autopilot/.test(web.reply || ''),
+        `Buddy should say plainly that nothing was added: ${JSON.stringify(web.reply)}`);
+      const app = await call('POST', '/api/agent/chat', 200, { token: C.token, userAgent: 'Mozilla/5.0 (iPhone) FocusLedgerApp',
+        body: { message: 'Add a task: CI cap via Buddy in the app', history: [] } });
+      expect(/list is full/.test(app.reply || '') && !/Autopilot|upgrade|pricing/i.test(app.reply || ''),
+        `inside the iOS app Buddy must not mention a plan: ${JSON.stringify(app.reply)}`);
+    }
+    expect((await ownOpen()) === 10, 'a path other than POST /api/tasks added a task past the free cap');
+
+    // Finishing one frees a slot, and then Buddy's confirm path adds for real.
+    const mine = (await listTasks(C.token)).filter(t => /^CI cap task /.test(t.title));
+    await call('DELETE', `/api/tasks/${mine[0].id}`, 200, { token: C.token });
+    const room = await call('POST', '/api/buddy/confirm-tasks', 200, { token: C.token,
+      body: { tasks: [{ title: 'CI cap fits' }, { title: 'CI cap does not fit' }] } });
+    expect(room.count === 1 && (room.not_added || []).join() === 'CI cap does not fit' && /added what fit/.test(room.message || ''),
+      `confirm-tasks with one slot: ${JSON.stringify(room).slice(0, 300)}`);
+    expect((await ownOpen()) === 10, 'one free slot should take exactly one task');
   });
 
   // 14 ── The first-run funnel (ad → landing → signup → first task → upgrade) ──

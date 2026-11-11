@@ -59,6 +59,9 @@ const { getAdhdProfile, updateAdhdProfile, buildProfilePromptAddition, bootstrap
 const { logFailure } = require('../lib/log-failure');
 const { parseAiJson } = require('../lib/ai-json');
 const { onTasksCompleted, refreshRoutineTasks } = require('../lib/routine-capture');
+const { taskSlotsLeft } = require('../middleware/proUtils');
+const { TASK_LIMIT_CODE, taskCapReply } = require('../lib/task-cap-reply');
+const { isNativeAppRequest } = require('../lib/native-app');
 
 // ── Scoring weights ─────────────────────────────────────────────────────────
 // Deadline urgency (40%), values alignment (25%), avoidance detection (20%),
@@ -444,9 +447,19 @@ module.exports = function(pool) {
         // was today's AI limit, say that instead of "try again in a moment".
         if (!dumpTasks.length && quotaHit()) return sendAiLimit(res, quotaHit());
 
-        // Auto-create actionable tasks (do_today + do_soon); park the rest
+        // Auto-create actionable tasks (do_today + do_soon); park the rest.
+        // The free plan's cap applies: today's items take the free slots
+        // first, and whatever doesn't fit is named, never claimed as added.
+        const DUMP_RANK = { do_today: 0, do_soon: 1 };
+        const ranked = dumpTasks
+          .map((t, i) => ({ t, i, rank: DUMP_RANK[t.category] != null ? DUMP_RANK[t.category] : 2 }))
+          .sort((a, b) => a.rank - b.rank || a.i - b.i)
+          .map(x => x.t);
+        let slots = dumpTasks.length ? await taskSlotsLeft(pool, userId) : 0;
         const created = [];
-        for (const t of dumpTasks) {
+        const notAdded = [];
+        for (const t of ranked) {
+          if (slots <= 0) { notAdded.push((t.title || '').slice(0, 80)); continue; }
           try {
             const priority = t.category === 'do_today' ? 'high' : t.category === 'do_soon' ? 'medium' : 'low';
             const ins = await pool.query(
@@ -454,7 +467,7 @@ module.exports = function(pool) {
                VALUES ($1, $2, $3, $4, false, NOW()) RETURNING id, title`,
               [userId, (t.title || '').slice(0, 200), priority, t.value_id || null]
             );
-            if (ins.rows[0]) created.push({ ...ins.rows[0], category: t.category });
+            if (ins.rows[0]) { created.push({ ...ins.rows[0], category: t.category }); slots--; }
           } catch (e) {
             console.error('[buddy] brain-dump task insert failed, skipping it:', e.message, '| userId:', userId);
           }
@@ -464,15 +477,20 @@ module.exports = function(pool) {
         const doSoon   = created.filter(t => t.category === 'do_soon');
         const parked   = created.filter(t => t.category === 'parked');
 
+        const native = isNativeAppRequest(req);
         let buddyReply;
-        if (!created.length) {
+        if (!created.length && notAdded.length) {
+          buddyReply = taskCapReply({ native, skipped: notAdded });
+        } else if (!created.length) {
           buddyReply = "I couldn't sort that into tasks just now, so nothing was added. Try again in a moment, or send them to me one at a time.";
         } else {
           buddyReply = (dumpSummary || 'Got your brain dump.') + '\n\n';
           if (doToday.length)  buddyReply += `✅ **Do Today (${doToday.length}):** ${doToday.map(t => t.title).join(', ')}\n`;
           if (doSoon.length)   buddyReply += `📋 **Do Soon (${doSoon.length}):** ${doSoon.map(t => t.title).join(', ')}\n`;
           if (parked.length)   buddyReply += `🗂 **Parked (${parked.length}):** ${parked.map(t => t.title).join(', ')}\n`;
-          buddyReply += '\nAll added to your task list. Want to start on anything from the Do Today pile?';
+          buddyReply += notAdded.length
+            ? '\n' + taskCapReply({ native, added: created.length, skipped: notAdded })
+            : '\nAll added to your task list. Want to start on anything from the Do Today pile?';
         }
 
         const buddyTurn = nextTurn + 1;
@@ -493,6 +511,8 @@ module.exports = function(pool) {
           capturedExpenses: [],
           isBrainDump: true,
           brainDumpTasks: created,
+          brainDumpNotAdded: notAdded,
+          ...(notAdded.length ? { code: TASK_LIMIT_CODE } : {}),
         });
       }
       // ── End brain dump fast path ─────────────────────────────────────────
@@ -1729,9 +1749,14 @@ Example output: ["Walk to the kitchen","Pick up one item from the counter","Put 
         return res.status(400).json({ success: false, message: 'tasks array required' });
       }
 
+      // The free plan's cap applies here as on POST /api/tasks: fill the
+      // free slots, then report the rest as not added.
+      let slots = await taskSlotsLeft(pool, userId);
       const created = [];
+      const notAdded = [];
       for (const t of tasks.slice(0, 10)) {
         if (!t || !t.title || !t.title.trim()) continue;
+        if (slots <= 0) { notAdded.push(t.title.trim().slice(0, 80)); continue; }
         try {
           const r = await pool.query(
             `INSERT INTO tasks (user_id, title, priority, value_id, is_completed, created_at)
@@ -1745,11 +1770,19 @@ Example output: ["Walk to the kitchen","Pick up one item from the counter","Put 
             ]
           );
           created.push(r.rows[0]);
+          slots--;
         } catch (insertErr) {
-          console.error('[buddy] confirm-tasks insert error:', insertErr.message);
+          console.error('[buddy] confirm-tasks insert error:', insertErr.message, '| userId:', userId);
         }
       }
 
+      if (notAdded.length) {
+        return res.json({
+          success: true, created, count: created.length,
+          not_added: notAdded, code: TASK_LIMIT_CODE,
+          message: taskCapReply({ native: isNativeAppRequest(req), added: created.length, skipped: notAdded }),
+        });
+      }
       res.json({ success: true, created, count: created.length });
     } catch (err) {
       console.error('[buddy] POST /confirm-tasks error:', err.message);
