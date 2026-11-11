@@ -14,13 +14,11 @@ const { checkProStatus } = require('../middleware/proUtils');
 const { getBillPreferences } = require('../db/bills');
 const { cleanMerchantName } = require('../lib/merchant-normalize');
 const { logFailure } = require('../lib/log-failure');
-const { isQuotaError } = require('../lib/ai-budget');
 
 // What Buddy says when the model can't be reached. `degraded` lets the page add
 // a way forward (the Tasks page) instead of leaving the user at a dead end.
-function aiDownReply(aiErr) {
-  // Over today's AI limit: say so plainly ("try again" would never work).
-  if (isQuotaError(aiErr)) return { reply: aiErr.userMessage, receipts: [], confirmation: null, degraded: true };
+// (Over-limit errors are handled separately by sendAiLimit.)
+function aiDownReply() {
   return {
     reply: "I couldn't think that through just now, so nothing was changed. Try again in a moment, or add it yourself on the Tasks page.",
     receipts: [], confirmation: null, degraded: true,
@@ -179,7 +177,7 @@ async function runAgentTurn(pool, userId, message, clientHistory, systemPromptBu
     // Today's AI limit: the route answers 429 with the real reason.
     if (isQuotaError(aiErr)) throw aiErr;
     console.error('[Agent] turn AI error:', aiErr.message, '| userId:', userId);
-    return aiDownReply(aiErr);
+    return aiDownReply();
   }
 
   const blocks = Array.isArray(resp.content) ? resp.content : [];
@@ -284,7 +282,7 @@ module.exports = function (pool) {
       } catch (aiErr) {
         if (isQuotaError(aiErr)) return sendAiLimit(res, aiErr);
         console.error('[Agent] act AI error:', aiErr.message, '| userId:', userId);
-        return res.json({ success: true, ...aiDownReply(aiErr) });
+        return res.json({ success: true, ...aiDownReply() });
       }
 
       const blocks = Array.isArray(resp.content) ? resp.content : [];
