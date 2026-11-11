@@ -88,7 +88,7 @@ Node.js + Express · PostgreSQL (Neon) · Render deployment · Vanilla HTML/CSS/
 - **Polsia Analytics** — first-party beacon pixel
 - **APNs** — iOS push via `apn` npm package; env vars: APNS_KEY_ID, APNS_TEAM_ID, APNS_KEY_P8, APNS_BUNDLE_ID
 
-## Current state & handoff (updated 2026-10-18)
+## Current state & handoff (updated 2026-11-10)
 
 **Read this section first.** It's the only context a new session gets.
 - **Every reply ends with a "Summary" section** (the user's standing request).
@@ -98,16 +98,15 @@ Node.js + Express · PostgreSQL (Neon) · Render deployment · Vanilla HTML/CSS/
 ### Open PRs (each needs the user's explicit "merge N")
 **When several PRs are open,** they usually all edit this file and `public/changelog.html`. After each merge, merge `main` into the next PR. Resolve `changelog.html` by taking `main`'s file and re-inserting the branch's entry at the top. Resolve CLAUDE.md by keeping both sides' lines. Check CI goes green, then merge with the full head SHA.
 
-- **#218** `claude/test-coverage-analysis-wAcNr`: billing portal, nudge-quality pass, "one home", security upgrades. **It waits only on the user's live Stripe purchase test.** `main` was merged in on 2026-10-18 (through #261); merge it again only if more PRs land first.
-  - **Contents:**
-    - `POST /api/subscription/portal`.
-    - Nudge fixes: lifecycle emails, Buddy lapse timing, deadline quiet hours 08:00–21:59 local, routine gating, cold-start nudge at 10am local, evening check-in at `evening_time`.
-    - `/home` and `/portal` → `/weightless` (Command Center at `/portal/legacy`).
-    - `apn` → native HTTP/2 sender; `imap` → `imapflow`.
-    - Migrations `user_email_preferences_boolean` (NODE-EXPRESS-5) and `events_id_default`.
-  - **On deploy:**
-    - Re-engagement emails resume; only Miles (user 35) is eligible. 22 users are paused via `user_email_preferences.re_engagement='false'`; flip them back at relaunch.
-    - `render.yaml` moves `cold-start-nudge` and `evening-checkin` to hourly. **Not applied live yet:** see `docs/render-crons.md`.
+- **#218 merged 2026-11-10** (billing portal, nudge-quality pass, one home, `apn`/`imap` removed; migrations `user_email_preferences_boolean` and `events_id_default` ran on prod). `npm ci` works on `main` again.
+  - Re-engagement emails are live again; only Miles (user 35) is eligible. 22 users are paused via `user_email_preferences.re_engagement = false`; flip them back only when the founder says "launched".
+  - **Render crons are NOT synced from `render.yaml`** (Blueprint sync is off). `evening-checkin-sender` (`0 20 * * *`) and `cold-start-nudge` (`0 9 * * *`) must be set to hourly (`0 * * * *`) in the dashboard, or their pushes never match a user's local hour. `rss-sync` and `beta-reengagement-blast` still exist there and should be deleted.
+- **In flight (2026-11-10):** `claude/ios-appstore-wAcNr` (no purchases in the iOS shell, Sign in with Apple, submission checklist), `claude/first-session-wAcNr` (signup → first task polish), `claude/ai-limit-message-wAcNr`, `claude/deps-audit-wAcNr`, `claude/render-yaml-truth-wAcNr`.
+
+### iOS / App Store
+- `.github/workflows/ios.yml` builds on Node 22 (Capacitor 8). Without the repo secrets `ASC_KEY_ID` / `ASC_ISSUER_ID` / `ASC_KEY_CONTENT` (base64 `.p8`) it does an unsigned simulator build; with them it archives and uploads to TestFlight. First green build: 2026-11-10.
+- The app is a Capacitor shell that loads focusledger.net. Review risks: web wrapper (4.2), Sign in with Apple (4.8), no web purchases in-app (3.1.1).
+- Nav smoke runs on `ubuntu-24.04` (pinned: Playwright 1.49 has no Chromium for `ubuntu-latest` 26.04).
 
 ### Launch decisions (the user, 2026-10-18)
 - **Re-engagement:** resume the 22 paused users on launch day (when the user says "launched"), not before.
@@ -126,7 +125,7 @@ The user asked to finish the big bug classes in about 4 sessions:
 3. **Main paths end to end in CI:** the GET sweep is in CI (`scripts/ci-api-sweep.js`, `npm run test:sweep`, after `test:boot`). It GETs every parameterless `/api` route as a new user and fails on a 5xx (503 is OK) or a logged SQL/TypeError line. Its first run's 20 routes are fixed. The from-scratch schema is prod's, so a hit is a prod bug.
    - **Write flows** (`scripts/ci-write-flows.js`, `npm run test:flows`, after `test:sweep`; shared boot/log code in `scripts/ci-harness.js`): two new users drive ~25 flows (tasks, routines, check-ins, Buddy evening, money, focus, settings prefs, Tandem invite → share → dissolve, push Done, account deletion) and assert the follow-up GET state. The user's zone is picked so its date differs from UTC's, so server-clock "today" bugs fail every run.
    - **Still to do:** not driven: AI chat/breakdowns, Plaid, Stripe, documents upload, admin routes. Server-clock dates remain in `buildPartnerContext` (`routes/buddy.js`), `archiveBuddyConversationToJournal`, `services/InsightsService.js` and the pattern/reveal jobs.
-4. **Retire legacy pages:** `app.html`, `home.html` and `landing-old` are gone (#251), and `buddy.html` in #256: the form check-in is `public/checkin-form.html` at `/app/checkin/form`. **Still to do:** `portal.html`, after #218 merges (it changes `/home` and `/portal`).
+4. **Retire legacy pages:** `app.html`, `home.html` and `landing-old` are gone (#251), and `buddy.html` in #256: the form check-in is `public/checkin-form.html` at `/app/checkin/form`. **Still to do:** `portal.html` (#218 has merged; `/home` and `/portal` now go to `/weightless`).
 
 **Smaller items:**
 - **News feed removed:** the `rss_feeds`, `news_cache` and `news_source_bias` tables (and `users.city`/`state_region`/`zip_code`/`country`) are now unused. Drop them later only with the founder's OK.
@@ -159,7 +158,9 @@ Four places plus a Settings gear. One small PR per phase; old URLs keep working 
 5. **Phase 5, visual pass:** Weightless tokens on every page.
 
 ### Waiting on the user
-- **Live Stripe purchase test.** Expected: Settings shows Autopilot $9.95 with a renewal date; after cancelling, "Cancelled — you won't be charged again" and a "Keep Autopilot" button.
+- ~~Live Stripe purchase test~~ done 2026-10-18 (user 67, Autopilot monthly; activation, DB row and both emails verified).
+- **App Store Connect secrets** in GitHub: `ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_KEY_CONTENT`. Until then iOS builds are unsigned and nothing reaches TestFlight.
+- **Scheduled tasks** "FocusLedger daily ops check" and "weekly maintenance" need the repo and the Sentry/Render/Neon/GitHub connectors attached in claude.ai.
 - **Render dashboard fixes: `docs/render-crons.md`** (Blueprint sync is off, so `render.yaml` is documentation only). Seven items, most urgent first: set `evening-checkin-sender` and `cold-start-nudge` to `0 * * * *` (live they still run once a day, so those pushes don't go out; both jobs log an error to Sentry on every run until fixed, via `lib/cron-cadence.js` and the `cron_heartbeats` table); delete `rss-sync` and `beta-reengagement-blast`; add `STRIPE_WEBHOOK_SECRET` (every Stripe webhook gets a 503 without it); `DATABASE_URL` `sslmode=verify-full` (NODE-EXPRESS-4); `SENTRY_DSN` in the `focusledger` env group. Also a decision: four "disabled pre-launch" crons are still running.
 - **Neon and Stripe MCP connectors** fail to connect in cloud sessions, and Neon drops out mid-session too. Stripe needs re-authorizing. Reconnect both at claude.ai/customize/connectors.
 - **Plaid:** the MCP shows zero production usage on team `69e2d08b7146d5000d5a94d1`. Confirm `PLAID_ENV`, and whether Liabilities and Recurring Transactions are enabled. If so, layer them onto the bill guardian.
@@ -221,7 +222,7 @@ Four places plus a Settings gear. One small PR per phase; old URLs keep working 
 - **Analytics:** bot/CI filter `lib/analytics-filter.js` (UA patterns, missing UA, `X-FL-Automation` header or `FocusLedger-` UA token from our Playwright configs and `prod-signup-check`); filtered hits are counted in `analytics_filtered_daily`, not stored. First-touch attribution (utm_*, truncated fbclid/gclid, referrer domain only) is captured by `public/js/analytics.js` into `localStorage.fl_attribution`, rides on `funnel_*`/`cta_*` events, and is saved at signup (email, One Tap, OAuth `google_new=1` → `PATCH /api/auth/attribution`, 24h) to `users.utm_*` + `users.first_touch` (sanitizer `lib/attribution.js`). Report: `GET /api/admin/attribution?from&to` (`db/analytics.js`), shown as the admin Acquisition card. The live landing page is `views/index.html`, not `public/index.html`.
 - **Email HTML (MJML):** the transactional templates in `lib/emailTemplates.js` render from MJML in `lib/email-mjml/sources.js`. After editing a source, run `npm run build:emails` and commit `lib/email-mjml/compiled/*.html`; a test fails on stale output. Runtime never loads mjml (a devDependency) and `renderEmail` escapes every value. The other templates still use `shell()`.
 - **Best-effort work:** use `.catch(logFailure('[Module]', 'op', { userId }, fallback))` from `lib/log-failure.js`. Never use `.catch(() => {})`.
-- **AI:** every AI call goes through `lib/claude-client.js` (`createMessage`/`complete`). Per-user daily budget: `lib/ai-budget.js` (Free 100 / Pro 500).
+- **AI:** every AI call goes through `lib/claude-client.js` (`createMessage`/`complete`). Per-user daily budget: `lib/ai-budget.js` (Free 100 / Pro 500). Over it, every AI route answers **429 `AI_DAILY_LIMIT`** with `message` (reset time in the user's clock; the day is the UTC day) and `upsell` (Free only). In a catch that answers 200, test `isQuotaError(err)` (or `quotaHit()` after a helper that swallows errors) and `return sendAiLimit(res, err)`; a 5xx is converted by `quotaAwareResponses`. Pages word it with `FLAiLimit.text(data)` (`public/js/ai-limit.js`), which drops the upsell inside the iOS app. Tests: `__tests__/ai-limit-routes.test.js`.
 - **Bills and subscriptions:**
   - Bill guardian: `lib/bill-guardian.js` and `db/bills.js`.
     - Detects recurring streams from `plaid_transactions` and buckets them as obligation / subscription / habit / unsure.
@@ -261,7 +262,6 @@ Four places plus a Settings gear. One small PR per phase; old URLs keep working 
 - **SessionStart hook** (`.claude/hooks/session-start.sh`, cloud sessions only): installs deps (`npm ci`, else the apn workaround below, manifests always restored), starts Postgres, creates role/DB, runs `node migrate.js`, and exports `DATABASE_URL`/`JWT_SECRET`/`SESSION_SECRET`. It never fails the session; logs are in `/tmp/fl-session-start/`. Rerun by hand with `FL_SESSION_SETUP=force .claude/hooks/session-start.sh`.
 - **Prod isn't reachable from here:** the egress proxy blocks focusledger.net and onrender.com. Test prod via GitHub Actions or the Render/Sentry MCPs. Render service `srv-d8bpimul51nc73cjdg90`. Sentry org `sean-hendler` (`https://us.sentry.io`).
 - **Neon:** project `weathered-cherry-58315264`, prod branch `br-plain-darkness-aphya16p`. `get_connection_string` is blocked by a guardrail; don't work around it.
-- **`npm ci` on `main`** fails on `apn`'s GitHub tarball until #218 merges. Workaround: remove `apn` from `package.json`, `npm install`, then `git checkout -- package.json package-lock.json`.
 - **Local Postgres:**
   - The container can restart mid-session and take Postgres down. Restart it with `pg_ctlcluster 16 main start`.
   - In a fresh container, first create the role: `su postgres -c "psql -c \"CREATE ROLE fl LOGIN PASSWORD 'fl' CREATEDB\""`, then create the `focusledger` DB owned by `fl`.

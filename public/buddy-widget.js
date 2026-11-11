@@ -86,6 +86,20 @@
     }).then(r => r.json());
   }
 
+  // ── Daily AI limit ────────────────────────────────────────────────────
+  // The server answers 429 { code: 'AI_DAILY_LIMIT', message, upsell } when the
+  // user is over today's AI budget. /js/ai-limit.js words it (and leaves the
+  // upgrade line out inside the iOS app); load it if the page didn't.
+  if (!window.FLAiLimit && !document.querySelector('script[src="/js/ai-limit.js"]')) {
+    var aiLimitScript = document.createElement('script');
+    aiLimitScript.src = '/js/ai-limit.js';
+    document.head.appendChild(aiLimitScript);
+  }
+  function isAiLimit(res) { return !!res && res.code === 'AI_DAILY_LIMIT'; }
+  function aiLimitText(res) {
+    return window.FLAiLimit ? window.FLAiLimit.text(res) : (res.message || "You've used today's AI help. Everything else still works.");
+  }
+
   // ── Session Memory ────────────────────────────────────────────────────
 
   /**
@@ -701,6 +715,9 @@
       if (res.success && res.reply) {
         addMessageEl(content, 'buddy', res.reply, 'just now', false);
         saveMessage('buddy', res.reply);
+      } else if (isAiLimit(res)) {
+        // Not saved to session memory: it's a notice, not part of the conversation.
+        addMessageEl(content, 'buddy', aiLimitText(res), 'just now', false);
       } else {
         addMessageEl(content, 'buddy', 'Hmm, something went wrong. Try again?', 'just now', false);
         saveMessage('buddy', 'Hmm, something went wrong. Try again?');
@@ -807,6 +824,11 @@
 
     try {
       var res = await api('/api/buddy/brain-dump-triage', { method: 'POST', body: JSON.stringify({ text }) });
+      if (isAiLimit(res)) {
+        results.innerHTML = '<div class="bw-tool-sub">' + escHtml(aiLimitText(res)) + '</div>';
+        btn.textContent = 'Sort it out'; btn.disabled = false;
+        return;
+      }
       if (!res.success) throw new Error('failed');
 
       var html = '';
@@ -891,6 +913,10 @@
 
     try {
       var res = await api('/api/buddy/dopamine-menu', { method: 'POST', body: JSON.stringify({ energy }) });
+      if (isAiLimit(res)) {
+        results.innerHTML = '<div class="bw-tool-sub">' + escHtml(aiLimitText(res)) + '</div>';
+        return;
+      }
       if (!res.success) throw new Error('failed');
 
       var sections = [
