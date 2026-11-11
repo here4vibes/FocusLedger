@@ -523,7 +523,8 @@ function api(path, opts = {}) {
 }
 
 // ─── Date helpers ─────────────────────────────────────────────────────────────
-function formatDate(d) { return d.toISOString().split('T')[0]; }
+// Local calendar day, not UTC: toISOString() is already "tomorrow" on a US evening.
+function formatDate(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
 function fmtCents(c) {
   const n = parseInt(c, 10) || 0;
   return '$' + (n / 100).toFixed(2);

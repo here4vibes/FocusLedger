@@ -364,6 +364,7 @@
     </div>
 
     <script src="/js/pending-checkout.js"></script>
+    <script src="/js/in-app-browser.js"></script>
     <script>
     (function() {
         'use strict';
@@ -474,6 +475,20 @@
 
         // ── Google Sign-In button ───────────────────────────────────────────────
         var googleBtn = document.getElementById('googleBtn');
+
+        // Google refuses sign-in inside in-app browsers (an ad opened in
+        // Facebook or Instagram): there, email is the one path that works.
+        if (window.FLInApp && FLInApp.isInApp()) {
+            googleBtn.style.display = 'none';
+            var orDivider = document.querySelector('.or-divider');
+            if (orDivider) orDivider.style.display = 'none';
+        }
+
+        // Coming from the ADHD Tax Calculator: the email was already typed once.
+        try {
+            var prefillEmail = sessionStorage.getItem('fl_prefill_email');
+            if (prefillEmail && !emailInput.value) emailInput.value = prefillEmail;
+        } catch (e) { console.warn('[signup] email prefill unavailable:', e && e.message); }
 
         googleBtn.addEventListener('click', function() {
             // Count Google OAuth as a signup start — user initiated the flow

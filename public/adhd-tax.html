@@ -938,7 +938,7 @@
       <!-- CTA Card -->
       <div class="cta-card">
         <h3>Cut your ADHD Tax down.</h3>
-        <p id="rCtaCopy">FocusLedger handles tasks + spending in one app built for ADHD brains. <strong>$180/year</strong> vs your ADHD tax.</p>
+        <p id="rCtaCopy">FocusLedger handles tasks + spending in one app built for ADHD brains. Free to start; Autopilot is <strong>$99.95/year</strong>.</p>
         <a href="/signup" class="btn-cta" id="ctaSignupBtn" onclick="track('cta_click_signup')">Try FocusLedger free →</a>
       </div>
 
@@ -1120,6 +1120,10 @@
         return;
       }
 
+      // Carry the email into signup so it isn't typed twice (this tab only).
+      try { sessionStorage.setItem('fl_prefill_email', email); }
+      catch (e) { console.warn('[adhd-tax] email carry-over unavailable:', e && e.message); }
+
       shareHash = res.data.shareHash;
       // Update URL with share hash (for bookmarking/sharing)
       if (history.replaceState) {
@@ -1161,12 +1165,14 @@
     var cmpChip = '<span class="comparison-chip ' + cmp + '">' + (cmp === 'above' ? '▲ above' : '▼ below') + ' average</span>';
     document.getElementById('rComparison').innerHTML =
       'The average ADHD adult pays ' + fmt(avg) + '/year. ' +
-      'You\'re ' + cmpChip + ' that — your total is ' + fmt(total) + '/year.';
+      'Yours is ' + fmt(total) + '/year: ' + cmpChip + '.';
 
-    var saving = total - 180;
+    // Autopilot's real annual price (see /pricing). Free to start.
+    var AUTOPILOT_YEARLY = 99.95;
+    var saving = total - AUTOPILOT_YEARLY;
     document.getElementById('rCtaCopy').innerHTML =
       'FocusLedger handles tasks + spending in one place built for ADHD. ' +
-      'At <strong>$180/year</strong>, it costs ' +
+      'It\'s free to start, and Autopilot is <strong>$99.95/year</strong>: ' +
       (saving > 0 ? fmt(saving) + ' less than your current ADHD tax.' : 'a fraction of your ADHD tax.');
 
     // Social share copy

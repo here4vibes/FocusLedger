@@ -280,6 +280,7 @@
 <noscript><p style="padding:2rem;text-align:center;font-family:'DM Sans',sans-serif;color:#374151">FocusLedger requires JavaScript.</p></noscript>
 
     <script src="/js/public-nav.js"></script>
+    <script src="/js/in-app-browser.js"></script>
 
     <div class='auth-container'>
         <div class='auth-card'>
@@ -421,6 +422,16 @@
         // which completes inside the app.
         var isStandalonePWA = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches)
                            || window.navigator.standalone === true;
+        // Google also refuses sign-in inside in-app browsers (Facebook, Instagram…).
+        if (window.FLInApp && FLInApp.isInApp()) {
+            var iaBtn = document.getElementById('googleBtn');
+            if (iaBtn && iaBtn.parentNode) {
+                var iaHint = document.createElement('p');
+                iaHint.textContent = 'Google sign-in doesn\u2019t work inside this app\u2019s browser. Use email below, or open this page in Safari or Chrome.';
+                iaHint.style.cssText = 'margin:10px 0 0;font-size:13px;line-height:1.4;color:#8a6d1a;background:#FFF7E6;border-radius:8px;padding:8px 12px;';
+                iaBtn.parentNode.insertBefore(iaHint, iaBtn.nextSibling);
+            }
+        }
         if (isStandalonePWA) {
             var gBtn = document.getElementById('googleBtn');
             if (gBtn && gBtn.parentNode) {

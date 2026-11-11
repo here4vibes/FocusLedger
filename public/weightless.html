@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"/>
+<link rel="icon" type="image/svg+xml" href="/icons/fl-icon.svg">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
 <meta name="theme-color" content="#011e5c"/>
 <title>FocusLedger</title>
@@ -37,6 +38,9 @@
     border:1px solid var(--line-2);border-radius:999px;padding:.3rem .65rem;background:var(--surface);white-space:nowrap;}
   .chiplink:active{background:var(--accent-soft);}
   .places{display:flex;align-items:center;gap:.3rem;}
+  /* Same look, bigger tap area (the pills are ~25px tall). */
+  .places .chiplink{position:relative;}
+  .places .chiplink::after{content:'';position:absolute;inset:-9px -1px;}
   .chiplink.gear{display:grid;place-items:center;padding:.3rem .42rem;}
   .chiplink.today{color:var(--accent);border-color:transparent;background:var(--accent-soft);}
 
@@ -208,6 +212,8 @@
   .inputbar .go{width:32px;height:32px;border-radius:50%;background:var(--accent);color:#fff;display:grid;
     place-items:center;font-size:.95rem;flex:none;border:none;cursor:pointer;}
   .inputbar .go:disabled{background:var(--line-2);cursor:default;}
+  .inputbar .go{position:relative;}
+  .inputbar .go::after{content:'';position:absolute;inset:-6px;}
 
   .loading{margin:auto;text-align:center;color:var(--faint);font-size:.85rem;}
 </style>
@@ -885,6 +891,24 @@
     card.appendChild(box); scroll();
   }
 
+  // True once, on the first Home visit after signing up. The signup pages set
+  // fl_just_signed_up; it was never cleared, so also require a young account
+  // (its oldest open task, e.g. the starter routine, is under a day old).
+  function isFirstVisit(tasks){
+    var flagged = false;
+    try{
+      flagged = localStorage.getItem('fl_just_signed_up')==='1';
+      if(flagged) localStorage.removeItem('fl_just_signed_up');
+    }catch(e){ console.warn('[weightless] storage unavailable:', e && e.message); }
+    if(!flagged) return false;
+    var oldest = Infinity;
+    (tasks||[]).forEach(function(t){
+      var c = new Date(t.created_at).getTime();
+      if(!isNaN(c) && c < oldest) oldest = c;
+    });
+    return oldest !== Infinity && (Date.now() - oldest) < 86400000;
+  }
+
   function greet(data, reveal, rec){
     document.getElementById('loading').remove();
     var tasks = (data.tasks||[]);
@@ -968,6 +992,21 @@
 
       var top = tasks.slice(0,3);
       var singular = top.length===1;
+
+      // First time here after signing up: say what the boxes do and offer ONE
+      // next step (a task of their own), not four chips to choose between.
+      if(isFirstVisit(tasks)){
+        buddy(hello(partOfDay)+' This is your radar: a short list, never the whole pile. Tap a box when one\'s done.', true);
+        renderRadar(tasks, today, done);
+        billsCard(rec, today, tasks);
+        buddy(fmt('What\'s one thing of your own that\'s been nagging at you? Type it below, like *add a task: call the dentist*, and I\'ll put it on your list.'));
+        chips([
+          { label:'＋ Add a task of my own', k:'solid', fn:function(){ input.value='Add a task: '; input.focus(); } },
+          { label:"I'm stuck", k:'warm', send:"I'm stuck" }
+        ]);
+        return;
+      }
+
       buddy(hello(partOfDay) + (done? ' '+done+' already done today — nice.' : '') +
         (singular ? ' Just one thing on your radar.' : ' Here\'s what\'s actually on your radar — not the whole pile.'), true);
 
@@ -1165,6 +1204,8 @@
         hideTyping();
         if(!data || !data.success){ pendingAct = false; buddy("I couldn't do that just now — mind trying again?"); return; }
         if(data.reply) buddy(fmt(data.reply), (data.reply||'').length < 140);
+        // Buddy's AI is unavailable (or over today's limit): the list still works.
+        if(data.degraded) raw('<a class="chiplink today" style="align-self:flex-start;text-decoration:none" href="/app/tasks">Open Tasks →</a>');
         (data.receipts||[]).forEach(receipt);
         if(data.confirmation) renderConfirm(data.confirmation);
         // Stay in the action flow only while Buddy is still asking for info.

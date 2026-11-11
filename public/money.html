@@ -229,7 +229,7 @@
 
     /* Note + date */
     .row-inputs{display:flex;gap:0.5rem;margin-bottom:1rem}
-    .note-input,.date-input{flex:1;padding:0.55rem 0.85rem;border:1.5px solid var(--border);border-radius:10px;font-family:'DM Sans',sans-serif;font-size:0.85rem;color:var(--text-dark);background:white;outline:none;transition:border-color 0.15s}
+    .note-input,.date-input{flex:1;min-width:0;padding:0.55rem 0.85rem;border:1.5px solid var(--border);border-radius:10px;font-family:'DM Sans',sans-serif;font-size:0.85rem;color:var(--text-dark);background:white;outline:none;transition:border-color 0.15s}
     .note-input:focus,.date-input:focus{border-color:var(--orange)}
     .date-input{max-width:140px}
 
@@ -661,10 +661,17 @@ let pendingExpenseData = null;
 let unlockState = { day1: true, day3: false, afterFirstSwipe: false, day7: false };
 let daysSinceFirstTx = 0;
 
+// The user's own calendar day (YYYY-MM-DD). toISOString() is UTC, which is
+// already "tomorrow" on a US evening and dated new spends a day ahead.
+function localToday() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+
 // ─── Init ────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   buildCatGrid();
-  document.getElementById('dateInput').value = new Date().toISOString().split('T')[0];
+  document.getElementById('dateInput').value = localToday();
   loadNudgeConfig();
   loadSpendingAlerts();
   checkUntriaged();
@@ -1351,8 +1358,8 @@ function getWeekStart(date) {
 function formatDate(d) {
   if (!d) return '';
   if (typeof d === 'string') return d.slice(0, 10);
-  if (typeof d.toISOString !== 'function') return '';
-  return d.toISOString().split('T')[0];
+  if (typeof d.getFullYear !== 'function') return '';
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');  // local day, not UTC
 }
 
 function relativeTime(isoString) {
@@ -2194,7 +2201,7 @@ function attachSwipeToCard(card, expenseId, amount) {
   function populateReceiptConfirm(d) {
     document.getElementById('cfMerchant').value = d.merchant || '';
     document.getElementById('cfAmount').value   = d.amount != null ? d.amount : '';
-    document.getElementById('cfDate').value     = d.date || new Date().toISOString().slice(0, 10);
+    document.getElementById('cfDate').value     = d.date || localToday();
     var catSel = document.getElementById('cfCategory');
     for (var i = 0; i < catSel.options.length; i++) {
       if (catSel.options[i].value === d.category) { catSel.selectedIndex = i; break; }
