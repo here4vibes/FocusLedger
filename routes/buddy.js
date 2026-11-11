@@ -34,7 +34,7 @@
 const express = require('express');
 const { authenticateToken } = require('../middleware/auth');
 const { chatMessages } = require('../lib/ai-chat');
-const { isQuotaError } = require('../lib/ai-budget');
+const { isQuotaError, sendAiLimit, quotaHit } = require('../lib/ai-budget');
 const { extractTasks, detectCompletions, extractPassiveCapture, isBrainDump, extractBrainDump } = require('../lib/taskParsingService');
 const {
   runPatternDetection,
@@ -440,6 +440,9 @@ module.exports = function(pool) {
           ? [] // values fetched separately below if needed
           : [];
         const { tasks: dumpTasks, summary: dumpSummary } = await extractBrainDump(message.trim(), userValues);
+        // extractBrainDump logs AI failures and returns no tasks; if the cause
+        // was today's AI limit, say that instead of "try again in a moment".
+        if (!dumpTasks.length && quotaHit()) return sendAiLimit(res, quotaHit());
 
         // Auto-create actionable tasks (do_today + do_soon); park the rest
         const created = [];
@@ -534,8 +537,8 @@ module.exports = function(pool) {
             const reply = await chatMessages(messages, { maxTokens: 450, model: 'claude-sonnet-4-6' });
             return { reply, error: false };
           } catch (aiErr) {
-            // Over today's AI limit: say so (a canned reply would hide it).
-            if (isQuotaError(aiErr)) return { reply: aiErr.userMessage, error: true };
+            // Over today's AI limit: answered as a 429 below (a canned reply would hide it).
+            if (isQuotaError(aiErr)) return { quota: aiErr };
             console.error('[buddy] conversation AI error:', aiErr.message);
             return { reply: getFallbackBuddyReply(userTurns), error: true };
           }
@@ -543,6 +546,9 @@ module.exports = function(pool) {
         detectCompletions(message.trim(), activeTasks),
         extractPassiveCapture(message.trim()).catch(logFailure('[buddy]', 'extractPassiveCapture', { userId }, { tasks: [], expenses: [] })),
       ]);
+
+      // No reply was written, so no Buddy turn is stored and the check-in isn't ended.
+      if (aiResult.quota) return sendAiLimit(res, aiResult.quota);
 
       let buddyReply = aiResult.reply;
       let isComplete = false;
@@ -671,7 +677,9 @@ module.exports = function(pool) {
         insight = parsed.insight || null;
         starterTaskTitles = Array.isArray(parsed.tasks) ? parsed.tasks.slice(0, 5) : [];
       } catch (aiErr) {
-        console.error('[buddy] generate-insights AI error:', aiErr.message);
+        // Not marked done, so the insight can still be made once the limit resets.
+        if (isQuotaError(aiErr)) return sendAiLimit(res, aiErr);
+        console.error('[buddy] generate-insights AI error:', aiErr.message, '| userId:', userId);
       }
 
       // OFFER, don't insert. Never silently add AI-generated tasks to the user's
@@ -1602,7 +1610,9 @@ Example output: ["Walk to the kitchen","Pick up one item from the counter","Put 
             .map(function(text, i) { return { text: text.trim(), order: i + 1 }; });
         }
       } catch (aiErr) {
-        console.error('[buddy] break-down AI error:', aiErr.message);
+        // Don't save placeholder steps as if Buddy had written them.
+        if (isQuotaError(aiErr)) return sendAiLimit(res, aiErr);
+        console.error('[buddy] break-down AI error:', aiErr.message, '| userId:', userId, '| taskId:', taskId);
         // Provide a minimal fallback so the user is never stranded
         steps = [
           { text: 'Open whatever you need to start this task', order: 1 },

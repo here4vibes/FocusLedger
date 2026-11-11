@@ -5,6 +5,7 @@ const { checkProStatus } = require('../middleware/proUtils');
 const { isAtFreeTaskCap } = require('../db/task-cap');
 const { fetchUserTimezone, getUserLocalDate } = require('../lib/timezone');
 const { complete } = require('../lib/claude-client');
+const { isQuotaError, sendAiLimit } = require('../lib/ai-budget');
 const { logFailure } = require('../lib/log-failure');
 const { parseAiJson } = require('../lib/ai-json');
 const { onTasksCompleted, refreshRoutineTasks } = require('../lib/routine-capture');
@@ -218,7 +219,8 @@ async function suggestSteps(req, res) {
         new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 3000)),
       ]);
     } catch (err) {
-      // Budget, API-key and network failures land here too, not just the 3s timeout.
+      // API-key and network failures land here too, not just the 3s timeout.
+      if (isQuotaError(err)) return sendAiLimit(res, err);
       console.warn('[tasks] suggest-steps AI call failed:', err.message, '| userId:', userId);
       return res.json({ success: true, suggestions: [], skip: true, reason: 'timeout' });
     }
@@ -258,6 +260,7 @@ async function suggestDuration(req, res) {
         new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 4000)),
       ]);
     } catch (err) {
+      if (isQuotaError(err)) return sendAiLimit(res, err);
       console.warn('[tasks] suggest-duration AI call failed:', err.message, '| userId:', req.user?.id);
       return res.json({ success: true, duration_minutes: null });
     }
@@ -457,6 +460,12 @@ async function createTask(req, res) {
             );
           }
         } catch (e) {
+          // The user didn't ask for this estimate, so over the daily AI limit
+          // it's skipped quietly (the task is saved; no error to report).
+          if (isQuotaError(e)) {
+            console.warn('[tasks] AI duration estimate skipped, daily AI limit | taskId:', taskRow.id);
+            return;
+          }
           console.error('[tasks] AI duration estimate failed:', e.message, '| taskId:', taskRow.id);
         }
       });

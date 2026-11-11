@@ -245,6 +245,7 @@
 
 <script src="/js/push-autoheal.js" defer></script>
 <script src="/js/reward.js" defer></script>
+<script src="/js/ai-limit.js" defer></script>
 <script>
 (function(){
   'use strict';
@@ -1163,6 +1164,12 @@
     api('/api/agent/chat', { method:'POST', body:{ message:text, history:history } })
       .then(function(data){
         hideTyping();
+        // Over today's AI limit (429 from lib/ai-budget.js): say why, plainly.
+        if(data && data.code==='AI_DAILY_LIMIT'){
+          pendingAct = false;
+          buddy(esc(window.FLAiLimit ? FLAiLimit.text(data) : data.message));
+          return;
+        }
         if(!data || !data.success){ pendingAct = false; buddy("I couldn't do that just now — mind trying again?"); return; }
         if(data.reply) buddy(fmt(data.reply), (data.reply||'').length < 140);
         (data.receipts||[]).forEach(receipt);
