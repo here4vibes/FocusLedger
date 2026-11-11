@@ -2,9 +2,12 @@
 /**
  * jobs/evening-checkin.js — Evening check-in notification sender.
  *
- * Runs hourly via render.yaml; each user is processed only in the hour of their
- * evening_time (default 20:00) in their own timezone. (It used to run once at
- * 20:00 UTC — 4pm Eastern, 1pm Pacific — and never read evening_time.)
+ * Must run HOURLY (Render cron "evening-checkin-sender", schedule 0 * * * *):
+ * each user is processed only in the hour of their evening_time (default 20:00)
+ * in their own timezone. (It used to run once at 20:00 UTC — 4pm Eastern, 1pm
+ * Pacific — and never read evening_time.) On a once-a-day schedule almost
+ * nobody matches, so every run checks its own cadence and logs an error naming
+ * the Render cron to fix (lib/cron-cadence.js, docs/render-crons.md).
  * Sends push notifications to users who:
  *   1. Have a Plaid token connected
  *   2. Have transactions today
@@ -24,6 +27,7 @@ initSentry('evening-checkin'); // console.error → Sentry for this cron (see li
 
 const { Pool } = require('pg');
 const { getLocalDateParts } = require('../lib/timezone');
+const { checkHourlyCadence } = require('../lib/cron-cadence');
 
 if (!process.env.DATABASE_URL) {
   console.error('[evening-checkin] DATABASE_URL not set — exiting');
@@ -95,6 +99,14 @@ async function processChunk(users) {
 
 async function main() {
   console.log('[evening-checkin] Starting evening check-in job...');
+
+  // Blueprint sync is off, so the live schedule can differ from render.yaml.
+  await checkHourlyCadence(pool, {
+    job: 'evening-checkin',
+    prefix: '[evening-checkin]',
+    renderCron: 'evening-checkin-sender',
+    sends: "the evening spending check-in push at each user's own evening_time",
+  });
 
   const enabled = await fetchUsersWithEveningEnabled();
   const users = dueNow(enabled);

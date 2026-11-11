@@ -1,3 +1,9 @@
+# ── READ FIRST ─────────────────────────────────────────────────────────────────
+# Render Blueprint sync is OFF for this account, so this file is documentation
+# of what the code expects. Editing it changes NOTHING in production: every
+# cron was created by hand in the Render dashboard and must be changed there.
+# docs/render-crons.md lists each cron's expected schedule next to the live
+# one and what still has to be fixed in the dashboard. Update both together.
 services:
   # ── Web service ──────────────────────────────────────────────────────────────
   # NOT declared here on purpose. The production web service predates this file
@@ -79,10 +85,13 @@ services:
     envVars:
       - fromGroup: focusledger
 
-  # ── DISABLED PRE-LAUNCH (uncomment to re-enable at launch) ────────────────────
+  # ── MEANT TO BE SUSPENDED PRE-LAUNCH (uncomment to re-enable at launch) ───────
   # These are non-essential or dormant for a single pre-launch user and were
   # extra DB wake-ups. Movement/impulse need frequent runs to be useful, so
   # they cost the most — re-enable them only when there are users to serve.
+  # NOT TRUE IN PRODUCTION YET: commenting them out here suspended nothing. On
+  # 2026-11-10 all four were still running in the dashboard on the schedules
+  # below (docs/render-crons.md, item 8).
   #
   # - type: cron
   #   name: movement-break-check      # movement nudges after focus sessions (needs frequent runs)
@@ -133,7 +142,10 @@ services:
   - type: cron
     name: evening-checkin-sender
     runtime: node
-    schedule: "0 * * * *"       # was 0 20 (20:00 UTC = 1-4pm in the US); the job now sends at each user's evening_time
+    # MUST be hourly: the job sends at each user's evening_time. Live it was still
+    # "0 20 * * *" on 2026-11-10 (20:00 UTC = 12-4pm in the US), so nobody in the
+    # US gets it; the job logs an error naming this cron until that's fixed.
+    schedule: "0 * * * *"
     buildCommand: npm install
     startCommand: node jobs/evening-checkin.js
     envVars:
@@ -151,7 +163,10 @@ services:
   - type: cron
     name: cold-start-nudge
     runtime: node
-    schedule: "0 * * * *"       # was 0 9 (09:00 UTC = 2-5am in the US); the job now sends at 10:00 user-local
+    # MUST be hourly: the job sends at 10:00 user-local. Live it was still
+    # "0 9 * * *" on 2026-11-10 (09:00 UTC = 1-5am in the US); the job logs an
+    # error naming this cron until that's fixed.
+    schedule: "0 * * * *"
     buildCommand: npm install
     startCommand: node jobs/coldStartNudge.js
     envVars:
