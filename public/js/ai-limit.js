@@ -11,11 +11,13 @@
 (function (global) {
   'use strict';
 
+  // Detection lives in /js/native-app.js (Capacitor bridge or the app's
+  // user-agent token). Pages that don't load it fall back to the bridge check.
   function isNativeIOS() {
     try {
+      if (global.FLNativeApp) return !!global.FLNativeApp.isNative();
       return !!(global.Capacitor
-        && global.Capacitor.isNativePlatform && global.Capacitor.isNativePlatform()
-        && global.Capacitor.getPlatform && global.Capacitor.getPlatform() === 'ios');
+        && global.Capacitor.isNativePlatform && global.Capacitor.isNativePlatform());
     } catch (e) {
       console.warn('[ai-limit] platform check failed, leaving the upgrade line out:', e && e.message);
       return true;

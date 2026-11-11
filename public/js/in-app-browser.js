@@ -76,7 +76,13 @@
     box.appendChild(msg); box.appendChild(copy);
     btn.parentNode.insertBefore(box, btn);
     btn.style.display = 'none';
-    if (divider) divider.style.display = 'none';
+    // With no button above it the "or" divider goes too, unless another
+    // sign-in button (Sign in with Apple, added later) keeps it meaningful.
+    if (divider) {
+      var syncDivider = function () { divider.style.display = doc.getElementById('appleBtn') ? '' : 'none'; };
+      syncDivider();
+      if (root.MutationObserver) new root.MutationObserver(syncDivider).observe(btn.parentNode, { childList: true });
+    }
     return box;
   }
 

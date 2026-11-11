@@ -49,8 +49,26 @@
     }
   }
 
+  // In the iOS app the burst comes with a real Taptic "success" tap (Capacitor
+  // Haptics plugin, ios/App/CapApp-SPM). A browser has no such plugin: no-op.
+  function nativeHaptic() {
+    try {
+      var cap = window.Capacitor;
+      var haptics = cap && typeof cap.isNativePlatform === 'function' && cap.isNativePlatform()
+        && cap.Plugins && cap.Plugins.Haptics;
+      if (!haptics) return;
+      var done = haptics.notification({ type: 'SUCCESS' });
+      if (done && typeof done.catch === 'function') {
+        done.catch(function (e) { console.warn('[reward] haptic failed:', e && e.message); });
+      }
+    } catch (e) {
+      console.warn('[reward] haptic failed:', e && e.message);
+    }
+  }
+
   function celebrate(opts) {
     opts = opts || {};
+    nativeHaptic();
     var x = opts.x, y = opts.y;
     // Default to just above screen-center when no anchor is given (e.g. a
     // conversational completion with no specific element to burst from).

@@ -78,6 +78,8 @@ const ALLOWED_EVENTS = new Set([
   'cta_pricing_tandem',        // tandem plan selected on pricing
   'signup_google',             // signup completed via the Google OAuth redirect
   'login_google',              // login via the Google OAuth redirect
+  'signup_apple',              // signup completed via Sign in with Apple
+  'login_apple',               // login via Sign in with Apple
 
   // Feature activation signals
   'feature_first_task',        // user created their first task

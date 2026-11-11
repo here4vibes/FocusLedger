@@ -237,6 +237,11 @@
       }
 
       // Not Pro
+      if (!data.is_pro && window.FLNativeApp && window.FLNativeApp.isNative()) {
+        // iOS app: state the plan fact only — no upgrade CTA (App Store 3.1.1).
+        container.innerHTML = '<p style="font-size:0.88rem;color:var(--text-muted);margin-bottom:0.75rem;">Bank sync isn’t included in your current plan.</p>';
+        return;
+      }
       if (!data.is_pro) {
         var upgradeBtn = opts.showUpgradeButton !== false
           ? '<button id="bankUpgradeBtn" style="background:var(--orange);color:white;border:none;padding:0.6rem 1.25rem;border-radius:8px;font-size:0.875rem;font-weight:600;cursor:pointer;min-height:44px;">Switch to Autopilot</button>'

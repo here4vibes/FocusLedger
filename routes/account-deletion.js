@@ -13,6 +13,8 @@ const { accountDeletionTemplate } = require('../lib/emailTemplates');
 const { getStripe } = require('../lib/stripe-client');
 const { cancelAllStripeSubscriptions } = require('../lib/billing');
 const { requireAdmin } = require('../lib/admin-access');
+const apple = require('../lib/apple-signin');
+const { getAppleRefreshToken } = require('../db/apple-auth');
 const {
   createDeletionToken,
   findValidToken,
@@ -21,6 +23,29 @@ const {
   getUserById,
   cancelActiveSubscription
 } = require('../db/account-deletion');
+
+/**
+ * Revoke the user's Sign in with Apple token before their row is deleted
+ * (Apple requires it for apps that offer Sign in with Apple). Best effort: a
+ * failure is logged with the user id and never blocks the deletion itself.
+ * @returns {Promise<'revoked'|'none'|'failed'>}
+ */
+async function revokeAppleAccess(pool, userId) {
+  try {
+    const encrypted = await getAppleRefreshToken(pool, userId);
+    if (!encrypted) return 'none';
+    if (!apple.isConfigured()) {
+      console.error('[account-deletion] Apple token NOT revoked: Sign in with Apple is not configured | user:', userId);
+      return 'failed';
+    }
+    await apple.revokeRefreshToken(apple.decryptRefreshToken(encrypted));
+    console.log(`[account-deletion] Apple token revoked for user ${userId}`);
+    return 'revoked';
+  } catch (e) {
+    console.error('[account-deletion] Apple token revocation failed:', e.message, '| user:', userId);
+    return 'failed';
+  }
+}
 
 module.exports = function(pool) {
   const router = express.Router();
@@ -52,6 +77,7 @@ module.exports = function(pool) {
       console.log(`[account-deletion] Admin ${req.admin.email} deleting user ${target.email} (id=${targetId})`);
 
       await cancelActiveSubscription(pool, targetId);
+      await revokeAppleAccess(pool, targetId);
       await deleteUserCascade(pool, targetId);
 
       res.json({
@@ -158,6 +184,7 @@ module.exports = function(pool) {
         });
       }
       await cancelActiveSubscription(pool, userId);
+      await revokeAppleAccess(pool, userId);
 
       await deleteUserCascade(pool, userId);
 
@@ -175,3 +202,4 @@ module.exports = function(pool) {
 
   return router;
 };
+module.exports.revokeAppleAccess = revokeAppleAccess;

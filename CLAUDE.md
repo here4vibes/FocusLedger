@@ -15,7 +15,7 @@ Node.js + Express · PostgreSQL (Neon) · Render deployment · Vanilla HTML/CSS/
 - `lib/` — shared service utilities: email, AI tagging, nudge generation, queryWithRetry, documentExtraction, ai-service
 - `public/js/services/` — shared frontend service modules (values-service.js, ai-service.js)
 - `services/` — PlaidService, TransactionService, ClassificationService, EventBus, InsightsService, TimeEstimationService
-- `jobs/` — scheduled recurring work declared in `render.yaml` cron services; no in-process schedulers
+- `jobs/` — scheduled recurring work declared in `render.yaml` cron services; no in-process schedulers. Blueprint sync is off: a cron only exists or changes when edited in the Render dashboard, and `docs/render-crons.md` tracks expected vs live
 - `migrations/` — node-postgres JS migrations; each exports `{ name, up: async (client) => {} }`
 - `config/test-users.js` — canonical QA user (qa@focusledger.net)
 
@@ -101,11 +101,17 @@ Node.js + Express · PostgreSQL (Neon) · Render deployment · Vanilla HTML/CSS/
 - **#218 merged 2026-11-10** (billing portal, nudge-quality pass, one home, `apn`/`imap` removed; migrations `user_email_preferences_boolean` and `events_id_default` ran on prod). `npm ci` works on `main` again.
   - Re-engagement emails are live again; only Miles (user 35) is eligible. 22 users are paused via `user_email_preferences.re_engagement = false`; flip them back only when the founder says "launched".
   - **Render crons are NOT synced from `render.yaml`** (Blueprint sync is off). `evening-checkin-sender` (`0 20 * * *`) and `cold-start-nudge` (`0 9 * * *`) must be set to hourly (`0 * * * *`) in the dashboard, or their pushes never match a user's local hour. `rss-sync` and `beta-reengagement-blast` still exist there and should be deleted.
-- **In flight (2026-11-10):** `claude/ios-appstore-wAcNr` (no purchases in the iOS shell, Sign in with Apple, submission checklist), `claude/first-session-wAcNr` (signup → first task polish), `claude/ai-limit-message-wAcNr`, `claude/deps-audit-wAcNr`, `claude/render-yaml-truth-wAcNr`.
+- **In flight (2026-11-10):** `claude/ios-appstore-wAcNr` (no purchases in the iOS shell, Sign in with Apple, submission checklist), `claude/first-run-polish-wAcNr` (signup → first task polish; the old remote `claude/first-session-wAcNr` is unrelated), `claude/ai-limit-message-wAcNr`, `claude/deps-audit-wAcNr`, `claude/render-yaml-truth-wAcNr`.
 
 ### iOS / App Store
 - `.github/workflows/ios.yml` builds on Node 22 (Capacitor 8). Without the repo secrets `ASC_KEY_ID` / `ASC_ISSUER_ID` / `ASC_KEY_CONTENT` (base64 `.p8`) it does an unsigned simulator build; with them it archives and uploads to TestFlight. First green build: 2026-11-10.
 - The app is a Capacitor shell that loads focusledger.net. Review risks: web wrapper (4.2), Sign in with Apple (4.8), no web purchases in-app (3.1.1).
+- **No web purchases in the app (3.1.1):** one detection module per side, `lib/native-app.js` (server; UA token `FocusLedgerApp` from `capacitor.config.ts` `ios.appendUserAgent`) and `public/js/native-app.js` (browser; Capacitor bridge or the UA token; loaded first in every page's `<head>`, exposes `FLNativeApp.isNative()` / `planMessage()`).
+  - In the app: `[data-web-purchase]` elements and links to `/pricing` or Stripe are hidden, `[data-native-only]` shown; the Meta Pixel never loads; `/` and `/pricing` go to `/login`; `POST /api/subscription/checkout` and `/portal` answer 403 `NATIVE_APP_PURCHASE_UNAVAILABLE`; upsell sentences (and the AI limit's `upsell`) are stripped from JSON replies.
+  - **New upgrade CTA or price?** Mark it `data-web-purchase` (or branch on `FLNativeApp.isNative()`), and never mention where to buy. Guard: `tests/local/native-app.spec.js` (`npm run test:local`, not in CI) and `__tests__/native-app.test.js`.
+- **Sign in with Apple (4.8):** web flow, `routes/auth-apple.js` (`/api/auth/apple/config|start|callback`, form_post), `lib/apple-signin.js` (JWKS verification, client secret, refresh-token encryption, revocation), `db/apple-auth.js` (find by `users.apple_sub`, link by verified email, create). Off until all four `APPLE_*` env vars are set: no button, routes 503. Account deletion revokes the stored Apple token.
+- **Founder checklist:** `docs/app-store-submission.md` (Apple Developer setup, env vars, listing drafts, App Privacy answers, reviewer account, review notes).
+- Native plugin: `@capacitor/haptics` (success tap on task completion, `public/js/reward.js`). A new plugin must be added to `ios/App/CapApp-SPM/Package.swift` and the iOS workflow must stay green.
 - Nav smoke runs on `ubuntu-24.04` (pinned: Playwright 1.49 has no Chromium for `ubuntu-latest` 26.04).
 
 ### Launch decisions (the user, 2026-10-18)
@@ -161,12 +167,8 @@ Four places plus a Settings gear. One small PR per phase; old URLs keep working 
 - ~~Live Stripe purchase test~~ done 2026-10-18 (user 67, Autopilot monthly; activation, DB row and both emails verified).
 - **App Store Connect secrets** in GitHub: `ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_KEY_CONTENT`. Until then iOS builds are unsigned and nothing reaches TestFlight.
 - **Scheduled tasks** "FocusLedger daily ops check" and "weekly maintenance" need the repo and the Sentry/Render/Neon/GitHub connectors attached in claude.ai.
-- **`STRIPE_WEBHOOK_SECRET` is missing in Render** (found 2026-10-18 after the first live purchase): every Stripe webhook gets a 503, so renewals, cancellations made in Stripe and failed payments never reach the app. The first purchase (user 67) activated through the checkout redirect instead. Stripe retries for up to 3 days, so adding the secret now recovers those events.
-- **Render `DATABASE_URL`:** change `sslmode=require` → `verify-full` in both the `focusledger` env group and the web service (NODE-EXPRESS-4).
-- **`SENTRY_DSN`** must be in the `focusledger` env group so cron errors reach Sentry.
-- **`beta-reengagement-blast` cron:** removed from `render.yaml`; if Render Blueprint sync is off, delete it in the Render dashboard (it would email every user that Autopilot is "free during beta" on Feb 29, 2028).
+- **Render dashboard fixes: `docs/render-crons.md`** (Blueprint sync is off, so `render.yaml` is documentation only). Seven items, most urgent first: set `evening-checkin-sender` and `cold-start-nudge` to `0 * * * *` (live they still run once a day, so those pushes don't go out; both jobs log an error to Sentry on every run until fixed, via `lib/cron-cadence.js` and the `cron_heartbeats` table); delete `rss-sync` and `beta-reengagement-blast`; add `STRIPE_WEBHOOK_SECRET` (every Stripe webhook gets a 503 without it); `DATABASE_URL` `sslmode=verify-full` (NODE-EXPRESS-4); `SENTRY_DSN` in the `focusledger` env group. Also a decision: four "disabled pre-launch" crons are still running.
 - **Neon and Stripe MCP connectors** fail to connect in cloud sessions, and Neon drops out mid-session too. Stripe needs re-authorizing. Reconnect both at claude.ai/customize/connectors.
-- **`renewal-heads-up` cron (#237):** if Render Blueprint sync is off, create it in the dashboard with the `focusledger` env group.
 - **Plaid:** the MCP shows zero production usage on team `69e2d08b7146d5000d5a94d1`. Confirm `PLAID_ENV`, and whether Liabilities and Recurring Transactions are enabled. If so, layer them onto the bill guardian.
 - **Phone check of the live Weightless page:** tap a radar box, open a subscription review, and confirm the Buddy bubble still opens.
 
@@ -225,8 +227,12 @@ Four places plus a Settings gear. One small PR per phase; old URLs keep working 
   - Activation: `db/activation.js` and `GET /api/admin/activation`.
 - **Analytics:** bot/CI filter `lib/analytics-filter.js` (UA patterns, missing UA, `X-FL-Automation` header or `FocusLedger-` UA token from our Playwright configs and `prod-signup-check`); filtered hits are counted in `analytics_filtered_daily`, not stored. First-touch attribution (utm_*, truncated fbclid/gclid, referrer domain only) is captured by `public/js/analytics.js` into `localStorage.fl_attribution`, rides on `funnel_*`/`cta_*` events, and is saved at signup (email, One Tap, OAuth `google_new=1` → `PATCH /api/auth/attribution`, 24h) to `users.utm_*` + `users.first_touch` (sanitizer `lib/attribution.js`). Report: `GET /api/admin/attribution?from&to` (`db/analytics.js`), shown as the admin Acquisition card. The live landing page is `views/index.html`, not `public/index.html`.
 - **Email HTML (MJML):** the transactional templates in `lib/emailTemplates.js` render from MJML in `lib/email-mjml/sources.js`. After editing a source, run `npm run build:emails` and commit `lib/email-mjml/compiled/*.html`; a test fails on stale output. Runtime never loads mjml (a devDependency) and `renderEmail` escapes every value. The other templates still use `shell()`.
+- **First run (ad → signup → first task):**
+  - In-app browsers (Facebook, Instagram, TikTok…) block Google sign-in. `public/js/in-app-browser.js` (`FLInApp.isInApp`, `replaceGoogleButton`) swaps the Google button on `/signup` and `/login` for an email-first note with "Copy link" (the link carries the saved `utm_*`); the landing hero keeps a plain "Start free" link (`#heroStartFree`) whenever Google's button didn't render.
+  - Home's first visit after signup (`isFirstVisit` in `public/weightless.html`, from `fl_just_signed_up`) explains the radar and offers one action: add a task of your own.
+  - AI unreachable: `/api/agent/chat` and `/api/buddy/conversation` answer `degraded: true`; a literal "Add a task: …" is still added as typed (`lib/plain-add-task.js`). Covered by the "first run" and "upgrade" flows in `scripts/ci-write-flows.js`.
 - **Best-effort work:** use `.catch(logFailure('[Module]', 'op', { userId }, fallback))` from `lib/log-failure.js`. Never use `.catch(() => {})`.
-- **AI:** every AI call goes through `lib/claude-client.js` (`createMessage`/`complete`). Per-user daily budget: `lib/ai-budget.js` (Free 100 / Pro 500). Over it, every AI route answers **429 `AI_DAILY_LIMIT`** with `message` (reset time in the user's clock; the day is the UTC day) and `upsell` (Free only). In a catch that answers 200, test `isQuotaError(err)` (or `quotaHit()` after a helper that swallows errors) and `return sendAiLimit(res, err)`; a 5xx is converted by `quotaAwareResponses`. Pages word it with `FLAiLimit.text(data)` (`public/js/ai-limit.js`), which drops the upsell inside the iOS app. Tests: `__tests__/ai-limit-routes.test.js`.
+- **AI:** every AI call goes through `lib/claude-client.js` (`createMessage`/`complete`). Per-user daily budget: `lib/ai-budget.js` (Free 100 / Pro 500). Over it, every AI route answers **429 `AI_DAILY_LIMIT`** with `message` (reset time in the user's clock; the day is the UTC day) and `upsell` (Free only). In a catch that answers 200, test `isQuotaError(err)` (or `quotaHit()` after a helper that swallows errors) and `return sendAiLimit(res, err)`; a 5xx is converted by `quotaAwareResponses`. Pages word it with `FLAiLimit.text(data)` (`public/js/ai-limit.js`), which drops the upsell inside the iOS app (the server also nulls it for the app's user agent). Tests: `__tests__/ai-limit-routes.test.js`.
 - **Bills and subscriptions:**
   - Bill guardian: `lib/bill-guardian.js` and `db/bills.js`.
     - Detects recurring streams from `plaid_transactions` and buckets them as obligation / subscription / habit / unsure.
@@ -471,6 +477,7 @@ Never hardcode. All secrets live in `.env` locally and in Render's environment d
 - `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` — OAuth
 - `ENCRYPTION_KEY` — AES-256-GCM for Plaid tokens (32-byte hex)
 - `APNS_KEY_ID`, `APNS_TEAM_ID`, `APNS_KEY_P8`, `APNS_BUNDLE_ID` — iOS push
+- `APPLE_CLIENT_ID` (Services ID), `APPLE_TEAM_ID`, `APPLE_KEY_ID`, `APPLE_PRIVATE_KEY` (.p8 contents) — Sign in with Apple; all four or the feature is off. Optional `APPLE_REDIRECT_URI`
 - `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` — Web Push
 
 If a new env var is needed: add to `.env.example` (with a placeholder value, never real), document it here, and add it to Render manually.
@@ -500,6 +507,7 @@ If a new env var is needed: add to `.env.example` (with a placeholder value, nev
 **Cron job:**
 1. Write job file in `jobs/` — standalone Node.js script: create pool, do work, `pool.end()`, exit.
 2. Add `type: cron` entry to `render.yaml` with schedule, buildCommand, and startCommand.
+   Then create it by hand in the Render dashboard (Blueprint sync is off) and add its row to `docs/render-crons.md`. A job that filters users by local hour calls `checkHourlyCadence` (`lib/cron-cadence.js`) first.
 3. Env vars: attach the "focusledger" Env Group in the Render dashboard (or copy from web service).
 4. Never use `setInterval` or `node-cron` in process.
 

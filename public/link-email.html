@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+    <script src="/js/native-app.js"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="color-scheme" content="light">
   <title>Connect Email — FocusLedger</title>
@@ -170,9 +171,11 @@
     <!-- Upgrade prompt (free user) -->
     <div id="state-upgrade" style="display:none;">
       <span class="icon">🚀</span>
-      <h1>Autopilot required</h1>
-      <p class="subtitle">Email-to-Tasks is an Autopilot feature. Upgrade to start creating tasks by email.</p>
-      <a href="/app/settings" class="btn">Upgrade to Autopilot</a>
+      <h1 data-web-purchase>Autopilot required</h1>
+      <p class="subtitle" data-web-purchase>Email-to-Tasks is an Autopilot feature. Upgrade to start creating tasks by email.</p>
+      <a href="/app/settings" class="btn" data-web-purchase>Upgrade to Autopilot</a>
+      <h1 data-native-only>Not on your plan</h1>
+      <p class="subtitle" data-native-only>Email-to-Tasks isn’t included in your current plan.</p>
       <a href="/app/tasks" class="btn btn-secondary">Back to app</a>
     </div>
   </div>

@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <script src="/js/native-app.js"></script>
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#011e5c">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -826,7 +827,7 @@
         </div>
 
         <!-- PROMO CODE SECTION -->
-        <div class="settings-section" id="promoSection">
+        <div class="settings-section" id="promoSection" data-web-purchase>
             <h2>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg>
                 Have a promo code?
@@ -1392,7 +1393,7 @@
     </div>
 
     <!-- UPGRADE MODAL -->
-    <div class="upgrade-modal-overlay" id="upgradeModal">
+    <div class="upgrade-modal-overlay" id="upgradeModal" data-web-purchase>
         <div class="upgrade-modal-card">
             <button class="upgrade-modal-close" id="upgradeModalClose" aria-label="Close">✕</button>
             <div class="upgrade-modal-badge">FocusLedger Autopilot</div>
@@ -1488,7 +1489,12 @@
                 });
         }
 
+        // Inside the iOS app: plan status only — no prices, no checkout, no
+        // billing portal (App Store guideline 3.1.1; see /js/native-app.js).
+        function inNativeApp() { return !!(window.FLNativeApp && FLNativeApp.isNative()); }
+
         function renderSubscription(sub, limits, links, pricing) {
+            var nativeApp = inNativeApp();
             var content = document.getElementById('subContent');
             var loading = document.getElementById('subLoading');
             loading.style.display = 'none';
@@ -1522,7 +1528,7 @@
                 } else {
                     // Prices come from config/pricing.js via /status — one source of truth.
                     var planPrices = (pricing && (sub.is_tandem ? pricing.tandem : pricing.autopilot)) || null;
-                    var cycleText = planPrices
+                    var cycleText = (planPrices && !nativeApp)
                         ? (sub.billing_cycle === 'annual' ? '$' + planPrices.annual + '/year' : '$' + planPrices.monthly + '/month')
                         : (sub.billing_cycle === 'annual' ? 'Annual' : 'Monthly');
                     var periodEnd = sub.current_period_end ? new Date(sub.current_period_end).toLocaleDateString() : 'N/A';
@@ -1540,7 +1546,7 @@
 
                     var planName = sub.is_tandem ? 'Tandem' : 'Autopilot';
                     // Stripe's hosted portal: card, invoices, receipts. Changes sync back via webhook.
-                    if (sub.has_stripe_billing) {
+                    if (sub.has_stripe_billing && !nativeApp) {
                         html += '<button class="btn-manage-billing" id="manageBillingBtn" onclick="openBillingPortal()">Manage billing &amp; invoices</button>';
                     }
                     // cancel_scheduled: cancelled in Stripe, still paid through the period end.
@@ -1548,7 +1554,7 @@
                     // used to remove Pro instantly, so this whole block was skipped.)
                     if (sub.cancel_scheduled) {
                         html += '<div style="margin-top: 1rem; padding: 0.75rem 1rem; background: #FFF5F0; border-radius: 10px; font-size: 0.88rem; color: var(--text-dark);">Cancelled — you won’t be charged again. ' + planName + ' stays on until ' + periodEnd + '.</div>';
-                        html += '<button class="btn-upgrade" onclick="reactivate()" style="background: var(--green);">Keep ' + planName + '</button>';
+                        if (!nativeApp) html += '<button class="btn-upgrade" onclick="reactivate()" style="background: var(--green);">Keep ' + planName + '</button>';
                     } else if (sub.has_stripe_billing) {
                         html += '<button class="btn-cancel" onclick="showCancelModal()">Cancel subscription</button>';
                     }
@@ -1563,9 +1569,13 @@
                 html += '</div>';
                 html += '<div class="plan-details">';
                 html += '<div class="detail-row"><span class="detail-label">Active tasks <small>(routines don&rsquo;t count)</small></span><span class="detail-value">' + limits.active_tasks + ' / ' + limits.max_tasks + '</span></div>';
-                html += '<div class="detail-row"><span class="detail-label">Price</span><span class="detail-value">Free forever</span></div>';
+                if (!nativeApp) html += '<div class="detail-row"><span class="detail-label">Price</span><span class="detail-value">Free forever</span></div>';
                 html += '</div>';
-                html += '<button class="btn-upgrade" onclick="openUpgradeModal()">Switch to Autopilot &mdash; from $8.33/mo</button>';
+                if (nativeApp) {
+                    html += '<div id="nativePlanNote" style="margin-top:0.75rem;font-size:0.88rem;color:var(--text-muted);">' + FLNativeApp.planMessage('free') + '</div>';
+                } else {
+                    html += '<button class="btn-upgrade" onclick="openUpgradeModal()">Switch to Autopilot &mdash; from $8.33/mo</button>';
+                }
 
                 content.innerHTML = html;
             }
@@ -1600,6 +1610,8 @@
                 // De Botton: state the constraint plainly, without drama or shame
                 if (limits.tasks_remaining <= 2 && limits.tasks_remaining > 0) {
                     html += '<div style="margin-top: 0.5rem; font-size: 0.82rem; color: var(--orange);">' + limits.tasks_remaining + ' slot' + (limits.tasks_remaining === 1 ? '' : 's') + ' remaining.</div>';
+                } else if (limits.tasks_remaining === 0 && inNativeApp()) {
+                    html += '<div style="margin-top: 0.5rem; font-size: 0.82rem; color: var(--orange); font-weight: 600;">' + FLNativeApp.planMessage('task_limit') + '</div>';
                 } else if (limits.tasks_remaining === 0) {
                     html += '<div style="margin-top: 0.5rem; font-size: 0.82rem; color: var(--orange); font-weight: 600;">Ten active tasks — the free plan cap. <a href="#" onclick="event.preventDefault();openUpgradeModal();" style="color:var(--orange);">Open it up with Autopilot.</a></div>';
                 }
@@ -1689,7 +1701,9 @@
                         window.location.href = data.url;
                     } else {
                         var msg = data.message || 'Could not start Gmail connection.';
-                        if (msg === 'Pro required') {
+                        if (msg === 'Pro required' && inNativeApp()) {
+                            msg = FLNativeApp.planMessage('feature');
+                        } else if (msg === 'Pro required') {
                             msg = 'Gmail integration is an Autopilot feature. Switch to Autopilot to connect your inbox.';
                         }
                         if (btn) { btn.disabled = false; btn.textContent = 'Connect Gmail'; }
@@ -1838,6 +1852,7 @@
         }
 
         window.openUpgradeModal = function() {
+            if (inNativeApp()) return; // no web purchase inside the iOS app
             document.getElementById('upgradeModal').classList.add('visible');
             document.body.style.overflow = 'hidden';
         };
@@ -2969,6 +2984,8 @@
         // Shows Tandem subscription status + upsell below the partnership card.
         // Only shown when a partnership is active (trial or upsell makes sense in context).
         var statusHtml = '';
+        var nativeApp = !!(window.FLNativeApp && FLNativeApp.isNative());
+        if (!access.hasTandem && nativeApp) return ''; // iOS app: no plan offers
         if (access.hasTandem) {
             var reasonLabel = access.reason === 'trial' ? '14-day free trial'
                 : access.reason === 'partner_paid' ? 'via partner\'s subscription'
@@ -2980,7 +2997,7 @@
                 + '✓ Tandem active — ' + reasonLabel + expiryLabel + '</div>';
 
             // If on trial, show upsell to convert before it expires
-            if (access.reason === 'trial') {
+            if (access.reason === 'trial' && !nativeApp) {
                 statusHtml += '<div style="background:#fffbeb;border:1px solid #f59e0b;border-radius:10px;padding:12px 14px;margin-bottom:0.75rem;">'
                     + '<p style="font-size:0.83rem;color:#78350f;margin:0 0 10px;line-height:1.5;">'
                     + '🤝 Your 14-day free trial includes Buddy-mediated accountability + partner visibility. Subscribe to keep it after the trial.'

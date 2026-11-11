@@ -22,10 +22,17 @@ const config: CapacitorConfig = {
       // Google OAuth redirect domains
       'accounts.google.com',
       '*.googleapis.com',
+      // Sign in with Apple (web flow). Without this the Apple page opens in
+      // Safari and its form_post callback never returns to the app.
+      'appleid.apple.com',
     ],
   },
   ios: {
     scheme: 'focusledger',
+    // Lets the server and pages tell the App Store build from a browser, so
+    // they never show prices or web checkout in the app (guideline 3.1.1).
+    // Keep in sync with lib/native-app.js and public/js/native-app.js.
+    appendUserAgent: 'FocusLedgerApp/1.0',
     // Minimum deployment target is set in Xcode project (see README-ios.md).
     // contentInset: 'always' keeps content below the notch/Dynamic Island.
     contentInset: 'always',
