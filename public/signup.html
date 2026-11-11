@@ -478,11 +478,7 @@
 
         // Google refuses sign-in inside in-app browsers (an ad opened in
         // Facebook or Instagram): there, email is the one path that works.
-        if (window.FLInApp && FLInApp.isInApp()) {
-            googleBtn.style.display = 'none';
-            var orDivider = document.querySelector('.or-divider');
-            if (orDivider) orDivider.style.display = 'none';
-        }
+        if (window.FLInApp) FLInApp.replaceGoogleButton(googleBtn, document.querySelector('.or-divider'), 'Sign up');
 
         // Coming from the ADHD Tax Calculator: the email was already typed once.
         try {
