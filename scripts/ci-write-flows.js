@@ -701,6 +701,9 @@ async function main() {
       `loose message without AI: ${JSON.stringify(loose).slice(0, 300)}`);
     expect((await listTasks(token)).length === before, 'a message Buddy could not read changed the task list');
     await call('DELETE', `/api/tasks/${made.id}`, 200, { token });
+    // The coaching chat's stand-in reply is flagged, so pages can say Buddy is offline.
+    const coach = await call('POST', '/api/buddy/conversation', 200, { token, body: { message: 'hello' } });
+    expect(coach.success && coach.degraded === true, `conversation without AI should be flagged degraded: ${JSON.stringify(coach).slice(0, 200)}`);
   });
 
   await flow('upgrade: checkout request returns a Stripe URL; bank sync points free users at Autopilot', async () => {
