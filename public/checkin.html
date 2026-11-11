@@ -690,6 +690,7 @@
 <!-- Load shared utilities before inline script so el/apiFetch/escHtml are available -->
 <script src="/js/analytics.js"></script>
 <script src="/js/haptics.js"></script>
+<script src="/js/ai-limit.js"></script>
 <script src="/shared-nav.js"></script>
 
 <script>
@@ -1149,7 +1150,7 @@
                 }
             } else if (data.code === 'AI_DAILY_LIMIT') {
                 // Daily AI limit (lib/ai-budget.js): say so plainly instead of "try again".
-                appendBuddyMessage(data.message);
+                appendBuddyMessage(window.FLAiLimit ? FLAiLimit.text(data) : data.message);
                 sendBtn.disabled = false;
                 state.sending = false;
             } else {

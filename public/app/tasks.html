@@ -739,6 +739,7 @@
     <script src="/js/date-parser.js"></script>
     <script src="/js/reward.js"></script>
     <script src="/js/soft-release.js"></script>
+    <script src="/js/ai-limit.js"></script>
     <script>
     // ── Auth ──────────────────────────────────────────────────────────────────
     function getToken() { return localStorage.getItem('fl_token'); }
@@ -757,10 +758,10 @@
     const state = { filter: 'all', sort: 'default', tasks: [], editingId: null, breakdownOn: false, isPro: false, valuesMap: null };
 
     // ── Toast ─────────────────────────────────────────────────────────────────
-    function showToast(msg) {
+    function showToast(msg, ms) {
         const t = document.getElementById('toast');
         t.textContent = msg; t.classList.add('show');
-        setTimeout(() => t.classList.remove('show'), 2500);
+        setTimeout(() => t.classList.remove('show'), ms || 2500);
     }
 
     // ── Load tasks ─────────────────────────────────────────────────────────────
@@ -1074,6 +1075,11 @@
         loading.classList.add('visible');
         const data = await api('POST', '/api/tasks/suggest-steps', { title });
         loading.classList.remove('visible');
+        // Over today's AI limit: say why the steps didn't come (long enough to read).
+        if (data.code === 'AI_DAILY_LIMIT') {
+            showToast(window.FLAiLimit ? FLAiLimit.text(data) : data.message, 7000);
+            return;
+        }
         if (!data.is_pro) {
             document.getElementById('aiSection').style.display = 'block';
             renderAISuggestions([{ title, steps: data.suggestions || [] }]);

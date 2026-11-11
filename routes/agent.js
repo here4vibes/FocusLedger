@@ -7,6 +7,7 @@ const express = require('express');
 const { authenticateToken } = require('../middleware/auth');
 const { fetchUserTimezone, getUserLocalDate } = require('../lib/timezone');
 const { completeWithTools } = require('../lib/claude-client');
+const { isQuotaError, sendAiLimit } = require('../lib/ai-budget');
 const { TOOL_DEFS, tierOf, scopeOf, isKnown, dispatch, reverse } = require('../lib/agent-tools');
 const { logAction, getAction, markUndone, markExecuted, markCancelled, markFailed, recentActionCount } = require('../db/agent-actions');
 const { checkProStatus } = require('../middleware/proUtils');
@@ -163,6 +164,8 @@ async function runAgentTurn(pool, userId, message, clientHistory, systemPromptBu
       maxTokens: 700,
     });
   } catch (aiErr) {
+    // Today's AI limit: the route answers 429 with the real reason.
+    if (isQuotaError(aiErr)) throw aiErr;
     console.error('[Agent] turn AI error:', aiErr.message, '| userId:', userId);
     return { reply: "I couldn't think that through just now — mind trying again?", receipts: [], confirmation: null };
   }
@@ -267,6 +270,7 @@ module.exports = function (pool) {
           maxTokens: 700,
         });
       } catch (aiErr) {
+        if (isQuotaError(aiErr)) return sendAiLimit(res, aiErr);
         console.error('[Agent] act AI error:', aiErr.message, '| userId:', userId);
         return res.json({ success: true, reply: "I couldn't think that through just now — mind trying again?", receipts: [] });
       }
@@ -377,6 +381,7 @@ module.exports = function (pool) {
 
       res.json({ success: true, ...out });
     } catch (err) {
+      if (isQuotaError(err)) return sendAiLimit(res, err);
       console.error('[Agent] POST /chat error:', err.message, '| userId:', req.user && req.user.id);
       res.status(500).json({ success: false, message: 'Agent failed' });
     }
