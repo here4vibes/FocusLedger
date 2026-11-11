@@ -58,3 +58,44 @@ describe('parsePlainAddTask', () => {
     [null], [undefined], [42],
   ])('%p is left to the model', (msg) => expect(parsePlainAddTask(msg)).toBeNull());
 });
+
+// On a phone the signup form must be on the first screen: the pitch (subtitle,
+// benefits, stars) is pushed below it with CSS `order`, and desktop keeps the
+// source order. This fails if someone drops that rule or adds a new block
+// above the form without sending it below on small screens.
+describe('signup page: the form comes first on phones', () => {
+  const html = require('fs').readFileSync(require('path').join(__dirname, '..', 'public', 'signup.html'), 'utf8');
+  const cardStart = html.indexOf('<div class="auth-card">');
+  const card = html.slice(cardStart, html.indexOf('<div class="page-footer">'));
+  const mobile = (html.match(/@media \(max-width: 899px\) \{([\s\S]*?)\n {8}\}/) || [])[1] || '';
+  const orderOf = (cls) => Number((mobile.match(new RegExp('\\.' + cls + '\\s*\\{[^}]*\\border:\\s*(\\d+)')) || [])[1] || 0);
+
+  test('the card is a column on small screens and the pitch is ordered after the form', () => {
+    expect(mobile).toMatch(/\.auth-card\s*\{[^}]*display:\s*flex;[^}]*flex-direction:\s*column/);
+    for (const cls of ['subtitle', 'benefits', 'social-proof']) {
+      expect(card).toContain(`class="${cls}"`);
+      expect(orderOf(cls)).toBeGreaterThan(0);
+    }
+  });
+
+  test('everything above the form in the markup is a headline, an error, a sign-in option or reordered pitch', () => {
+    const beforeForm = card.slice(0, card.indexOf('<form id="signupForm"'));
+    // Direct children of the card: 12 spaces of indent in this file.
+    const children = [...beforeForm.matchAll(/\n {12}<(\w+)([^>]*)>/g)].map(m => ({ tag: m[1], attrs: m[2] }));
+    expect(children.length).toBeGreaterThan(3);
+    for (const { tag, attrs } of children) {
+      const cls = (attrs.match(/class="([^"]+)"/) || [])[1] || '';
+      const firstScreen = tag === 'h3' || /\b(error-msg|btn-google|or-divider)\b/.test(cls);
+      const sentBelow = cls.split(/\s+/).some(c => c && orderOf(c) > 0);
+      expect({ tag, cls, ok: firstScreen || sentBelow }).toEqual({ tag, cls, ok: true });
+    }
+  });
+
+  test('the form still has email, password and submit, in that order', () => {
+    const form = card.slice(card.indexOf('<form id="signupForm"'), card.indexOf('</form>'));
+    const at = (s) => form.indexOf(s);
+    expect(at('id="email"')).toBeGreaterThan(-1);
+    expect(at('id="password"')).toBeGreaterThan(at('id="email"'));
+    expect(at('id="submitBtn"')).toBeGreaterThan(at('id="password"'));
+  });
+});

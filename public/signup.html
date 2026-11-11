@@ -282,9 +282,34 @@
             color: var(--green);
         }
 
+        .social-proof {
+            text-align: center;
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            margin-bottom: 0.85rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        /* Phones and tablets: the form comes first. Headline, sign-in options
+           and the email + password fields fill the first screen; the pitch
+           (subtitle, benefits, stars) moves below the form. Desktop (>= 900px)
+           keeps the source order. Guarded by __tests__/first-run.test.js. */
+        @media (max-width: 899px) {
+            .auth-container { align-items: flex-start; padding: 1rem; }
+            .auth-card { display: flex; flex-direction: column; }
+            .auth-card h3 { margin-bottom: 1rem; }
+            .auth-card .auth-footer { order: 1; }
+            .auth-card .subtitle { order: 2; margin: 1.75rem 0 1rem; }
+            .auth-card .benefits { order: 2; margin-bottom: 1rem; }
+            .auth-card .social-proof { order: 2; margin-bottom: 0; }
+        }
         @media (max-width: 480px) {
-            .auth-card { padding: 2rem 1.5rem; }
+            .auth-card { padding: 1.5rem 1.25rem; }
             .auth-nav { padding: 1rem 1.25rem; }
+            .form-group { margin-bottom: 1rem; }
         }
     </style>
 <link rel="stylesheet" href="/css/design-system.css">
@@ -318,8 +343,8 @@
 
             <div class="error-msg" id="errorMsg"></div>
 
-            <!-- Social proof: quick trust signal before primary action -->
-            <div style="text-align:center;font-size:0.78rem;color:var(--text-muted);margin-bottom:0.85rem;display:flex;align-items:center;justify-content:center;gap:0.5rem;">
+            <!-- Social proof: quick trust signal before primary action (below the form on phones) -->
+            <div class="social-proof">
                 <span style="color:#5BA4A4;font-size:0.9rem;">★★★★★</span>
                 <span>Loved by ADHD brains tired of juggling apps</span>
             </div>
