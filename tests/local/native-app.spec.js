@@ -113,7 +113,7 @@ for (const mode of ['ua', 'capacitor']) {
     test('the other app and sign-in pages have nothing to buy either', async ({ browser }) => {
       const { context, page, requests } = await openContext(browser, mode);
       const pages = ['/app/tasks', '/app/money', '/app/money/bills', '/transactions', '/app/life', '/routines',
-        '/email', '/story', '/science', '/contact'];
+        '/email', '/story', '/science', '/contact', '/login', '/signup'];
       for (const path of pages) {
         await page.goto(path);
         await page.waitForLoadState('networkidle');

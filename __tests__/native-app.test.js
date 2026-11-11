@@ -129,6 +129,23 @@ describe('nativeAppResponses + nativeAppRedirects', () => {
     expect(res.status).toBe(200);
   });
 
+  test('the daily AI limit loses its Autopilot line in the iOS app only', async () => {
+    const a = express();
+    a.use(nativeAppResponses);
+    a.post('/api/ai', (_req, res) => res.status(429).json({
+      success: false, code: 'AI_DAILY_LIMIT',
+      message: 'You\'ve used today\'s AI help. It resets at 7 PM your time, and everything else still works.',
+      upsell: 'Autopilot raises the daily limit.',
+    }));
+    const inApp = await request(a).post('/api/ai').set('User-Agent', IOS_APP_UA);
+    expect(inApp.status).toBe(429);
+    expect(inApp.body.code).toBe('AI_DAILY_LIMIT');
+    expect(inApp.body.upsell).toBeNull();
+    expect(inApp.body.message).toMatch(/It resets at 7 PM/);
+    const web = await request(a).post('/api/ai').set('User-Agent', SAFARI_UA);
+    expect(web.body.upsell).toBe('Autopilot raises the daily limit.');
+  });
+
   test('the task-cap 402 keeps its code but loses the upgrade pitch in the iOS app', async () => {
     const res = await request(app()).post('/api/tasks').set('User-Agent', IOS_APP_UA);
     expect(res.status).toBe(402);
