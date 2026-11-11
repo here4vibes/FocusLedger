@@ -21,8 +21,11 @@ router.get('/', (req, res) => {
   }
 });
 
+// Browsers ask for /favicon.ico on pages with no <link rel="icon"> (Home, Tasks…).
+router.get('/favicon.ico', (_, res) => res.sendFile(pub('icons/fl-icon.png')));
+
 // Auth pages
-router.get('/login',           (_, res) => res.sendFile(pub('login.html')));
+router.get('/login',          (_, res) => res.sendFile(pub('login.html')));
 router.get('/signup',          (_, res) => res.sendFile(pub('signup.html')));
 router.get('/forgot-password', (_, res) => res.sendFile(pub('forgot-password.html')));
 router.get('/reset-password',  (_, res) => res.sendFile(pub('reset-password.html')));

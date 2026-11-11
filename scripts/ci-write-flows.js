@@ -121,17 +121,30 @@ async function flow(name, fn) {
   }
 }
 
-async function signup(label) {
+async function signup(label, extra) {
   const r = await api('POST', '/api/auth/signup', {
     body: {
       email: `ci-flows-${label}-${Date.now()}@example.com`,
       password: 'Fl0wsTest!pw',
       name: `CI Flows ${label}`,
       timezone: TZ,
+      ...(extra || {}),
     },
   });
   expect(r.body.token, `signup ${label} failed (status ${r.status}): ${JSON.stringify(r.body).slice(0, 200)}`);
   return { token: r.body.token, user: r.body.user || {} };
+}
+
+/** GET a page as a browser would; returns { status, type, text }. */
+async function page(path, headers) {
+  requestCount++;
+  let res;
+  try {
+    res = await fetch(server.base + path, { headers: headers || {}, redirect: 'manual', signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) });
+  } catch (err) {
+    throw new FlowError(`GET ${path} → network error: ${err.message}`);
+  }
+  return { status: res.status, type: res.headers.get('content-type') || '', text: await res.text() };
 }
 
 async function listTasks(token) {
@@ -144,8 +157,12 @@ async function main() {
   let B;
 
   await flow('signup (user A)', async () => {
-    A = await signup('a');
+    // The ad's campaign tags ride along from the landing page (fl_attribution).
+    A = await signup('a', { attribution: { utm_source: 'instagram', utm_medium: 'paid', utm_campaign: 'ci-first-run', landing_page: '/' } });
     await sleep(1500); // signup's fire-and-forget seeding (starter routine, welcome email) logs here
+    const saved = (await db.query('SELECT utm_source, utm_medium, utm_campaign FROM users WHERE id = $1', [A.user.id])).rows[0] || {};
+    expect(saved.utm_source === 'instagram' && saved.utm_medium === 'paid' && saved.utm_campaign === 'ci-first-run',
+      `signup attribution not saved on the user: ${JSON.stringify(saved)}`);
   });
   if (!A) throw new Error('cannot continue without user A');
   const token = A.token;
@@ -635,6 +652,69 @@ async function main() {
     const limits = (await call('GET', '/api/subscription/status', 200, { token: C.token })).limits || {};
     expect(limits.active_tasks === 10 && limits.max_tasks === 10 && limits.can_create_task === false,
       `subscription limits should count only own tasks: ${JSON.stringify(limits)}`);
+  });
+
+  // 14 ── The first-run funnel (ad → landing → signup → first task → upgrade) ──
+  await flow('first run: funnel pages serve, with an email path that needs no Google', async () => {
+    for (const p of ['/', '/signup', '/login', '/forgot-password', '/pricing', '/adhd-tax']) {
+      const r = await page(p);
+      expect(r.status === 200 && /text\/html/.test(r.type), `GET ${p} → ${r.status} ${r.type}`);
+    }
+    const landing = (await page('/')).text;
+    // "Start free" is in the HTML itself, so the hero has a button even when
+    // Google's script is blocked or refused (in-app browsers, ad blockers).
+    expect(/<a href="\/signup"[^>]*id="heroStartFree"/.test(landing), 'landing hero has no plain "Start free" link to /signup');
+    for (const p of ['/', '/signup', '/login']) {
+      expect((await page(p)).text.includes('/js/in-app-browser.js'), `${p} does not load /js/in-app-browser.js`);
+    }
+    const helper = await page('/js/in-app-browser.js');
+    expect(helper.status === 200 && helper.text.includes('replaceGoogleButton'), `in-app-browser.js → ${helper.status}`);
+    const icon = await page('/favicon.ico');
+    expect(icon.status === 200 && /^image\//.test(icon.type), `GET /favicon.ico → ${icon.status} ${icon.type}`);
+    const missing = await page('/no-such-page-ci', { Accept: 'text/html' });
+    expect(missing.status === 404 && missing.text.includes('href="/"'), `unknown page → ${missing.status}, expected a 404 page with a way home`);
+  });
+
+  await flow('first run: ADHD tax calculator → results → shared link', async () => {
+    const email = `ci-flows-tax-${Date.now()}@example.com`;
+    const answers = { appStack: '3-4', lateFees: 'monthly', impulse: '150_400', missedBills: 'monthly', unusedSubsYesNo: 'no' };
+    const r = await call('POST', '/api/adhd-tax/submit', 200, { body: { email, answers } });
+    expect(r.results && r.results.total === 4500 && /^[a-f0-9]{16}$/.test(r.shareHash || ''),
+      `calculator result: ${JSON.stringify(r).slice(0, 200)}`);
+    const again = await call('GET', `/api/adhd-tax/results/${r.shareHash}`, 200);
+    expect(JSON.stringify(again).includes('4500'), `shared results: ${JSON.stringify(again).slice(0, 200)}`);
+    await sleep(800); // the results email is sent after the response; let it log
+  });
+
+  await flow('first run: "Add a task: …" to Buddy lands on the list', async () => {
+    if (process.env.ANTHROPIC_API_KEY) return 'an AI key is set; this checks the no-AI path';
+    const title = `CI plain add ${Date.now()}`;
+    const r = await call('POST', '/api/agent/chat', 200, { token, body: { message: `Add a task: ${title}`, history: [] } });
+    expect(r.success && r.degraded === true && (r.receipts || []).some(x => x.ok && x.action === 'create_task'),
+      `plain add without AI: ${JSON.stringify(r).slice(0, 300)}`);
+    const made = (await listTasks(token)).find(t => t.title === title);
+    expect(made && !made.is_completed, 'the task Buddy said it added is not on the list');
+    // Anything looser still needs the model: it must say nothing changed, and change nothing.
+    const before = (await listTasks(token)).length;
+    const loose = await call('POST', '/api/agent/chat', 200, { token, body: { message: 'can you sort out my week for me', history: [] } });
+    expect(loose.degraded === true && !(loose.receipts || []).length && /nothing was changed/.test(loose.reply || ''),
+      `loose message without AI: ${JSON.stringify(loose).slice(0, 300)}`);
+    expect((await listTasks(token)).length === before, 'a message Buddy could not read changed the task list');
+    await call('DELETE', `/api/tasks/${made.id}`, 200, { token });
+    // The coaching chat's stand-in reply is flagged, so pages can say Buddy is offline.
+    const coach = await call('POST', '/api/buddy/conversation', 200, { token, body: { message: 'hello' } });
+    expect(coach.success && coach.degraded === true, `conversation without AI should be flagged degraded: ${JSON.stringify(coach).slice(0, 200)}`);
+  });
+
+  await flow('upgrade: checkout request returns a Stripe URL; bank sync points free users at Autopilot', async () => {
+    for (const [plan, billing] of [['autopilot', 'monthly'], ['autopilot', 'annual'], ['tandem', 'monthly']]) {
+      const r = await call('POST', '/api/subscription/checkout', 200, { token, body: { plan, billing } });
+      expect(r.success && /^https:\/\/(buy|checkout)\.stripe\.com\//.test(r.url || ''), `checkout ${plan}/${billing}: ${JSON.stringify(r).slice(0, 200)}`);
+    }
+    await call('POST', '/api/subscription/checkout', 400, { token, body: { plan: 'nope', billing: 'monthly' } });
+    await call('POST', '/api/subscription/checkout', 401, { body: { plan: 'autopilot', billing: 'monthly' } });
+    const bank = await call('POST', '/api/plaid/create-link-token', 403, { token });
+    expect(/Autopilot/.test(bank.message || ''), `free bank sync message: ${JSON.stringify(bank)}`);
   });
 
   await flow('logged-out writes are refused', async () => {

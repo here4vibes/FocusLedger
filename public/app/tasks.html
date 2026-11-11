@@ -480,7 +480,7 @@
             background: var(--navy); color: white; padding: 0.65rem 1.25rem; border-radius: 10px;
             font-size: 0.85rem; font-weight: 500; z-index: 9999; opacity: 0;
             transition: opacity 0.3s, transform 0.3s; pointer-events: none;
-            white-space: nowrap;
+            width: max-content; max-width: calc(100vw - 2rem); line-height: 1.4; text-align: center;
         }
         .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 

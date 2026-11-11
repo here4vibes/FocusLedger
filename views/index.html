@@ -2060,6 +2060,9 @@
             <div class="hero-cta-wrap">
                 <!-- Single primary CTA -->
                 <div id="google-signin-hero"></div>
+                <!-- Shown until (and unless) the Google button renders: blockers,
+                     in-app browsers and slow networks must still get a real button. -->
+                <a href="/signup" class="btn-primary" id="heroStartFree">Start free →</a>
                 <div class="cta-secondary-row">
                     <a href="/signup" id="heroEmailLink">Sign up with email →</a>
                     <a href="/login">Already have an account →</a>
@@ -3184,6 +3187,7 @@
 </footer>
 
 <script src="/js/analytics.js"></script>
+<script src="/js/in-app-browser.js"></script>
 <script>
 (function() {
     'use strict';
@@ -3297,11 +3301,24 @@ if ('serviceWorker' in navigator) {
         var emailLink = document.getElementById('heroEmailLink');
         if (!emailLink) return;
         emailLink.textContent = gsiRendered ? 'Or sign up with email \u2192' : 'Sign up with email \u2192';
+        // One primary action: the Google button when it rendered, else "Start free".
+        var startFree = document.getElementById('heroStartFree');
+        if (startFree) startFree.style.display = gsiRendered ? 'none' : '';
     }
 
+    var gsiRetried = false;
     function initGoogleSignIn() {
+        // Google refuses sign-in inside in-app browsers (Facebook, Instagram…):
+        // keep "Start free" and the email form as the one path there.
+        if (window.FLInApp && FLInApp.isInApp()) { updateEmailLinkCopy(false); return; }
         if (typeof google === 'undefined' || !google.accounts) {
             updateEmailLinkCopy(false);
+            // The Google script is async and often lands after DOMContentLoaded.
+            if (!gsiRetried) {
+                gsiRetried = true;
+                if (document.readyState === 'complete') setTimeout(initGoogleSignIn, 1500);
+                else window.addEventListener('load', function() { setTimeout(initGoogleSignIn, 300); });
+            }
             return;
         }
         var onloadEl = document.getElementById('g_id_onload');

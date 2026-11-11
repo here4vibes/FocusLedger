@@ -628,7 +628,9 @@ module.exports = function(pool) {
       );
       const capturedExpenses = passiveCapture.expenses || [];
 
-      res.json({ success: true, reply: buddyReply, turn: userTurns, isComplete, detectedMood, autoCompleted, capturedTasks, capturedExpenses });
+      // degraded: the reply is a canned stand-in (the model couldn't be reached),
+      // so the page can say so instead of passing it off as an answer.
+      res.json({ success: true, reply: buddyReply, turn: userTurns, isComplete, detectedMood, autoCompleted, capturedTasks, capturedExpenses, degraded: !!aiResult.error });
     } catch (err) {
       console.error('[buddy] POST /conversation error:', err.message);
       res.status(500).json({ success: false, message: 'Conversation error' });

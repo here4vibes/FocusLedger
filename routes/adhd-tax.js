@@ -203,8 +203,8 @@ You got this result from the FocusLedger ADHD Tax Calculator.
   <p style="color: #6B6B80; line-height: 1.6;">You're <strong>${comparedToAverage} average</strong> — the typical ADHD adult pays ${fmt(averageAnnual)}/year.</p>
 
   <div style="background: #FFF8F0; border-left: 4px solid #F26B3A; padding: 20px; border-radius: 0 8px 8px 0; margin: 24px 0;">
-    <p style="margin: 0; font-weight: 600;">FocusLedger is $180/year.</p>
-    <p style="margin: 8px 0 0; color: #6B6B80; line-height: 1.5;">Tasks + spending + reminders in one app built for ADHD. That's ${fmt(total - 180)} less than your current ADHD tax.</p>
+    <p style="margin: 0; font-weight: 600;">FocusLedger is free to start. Autopilot is $9.95/month ($99.95/year).</p>
+    <p style="margin: 8px 0 0; color: #6B6B80; line-height: 1.5;">Tasks + spending + reminders in one app built for ADHD. ${total > 99.95 ? `That's ${fmt(total - 99.95)} less than your current ADHD tax.` : 'A fraction of what your ADHD tax costs you.'}</p>
   </div>
 
   <a href="https://focusledger.net/signup" style="display: inline-block; background: #F26B3A; color: white; padding: 14px 28px; border-radius: 50px; text-decoration: none; font-weight: 600; margin: 8px 0 24px;">Try FocusLedger free →</a>

@@ -1132,6 +1132,12 @@
             hideTyping();
             if (data.success) {
                 appendBuddyMessage(data.reply || 'Got it.');
+                // The model couldn't be reached and this reply is a stand-in:
+                // say once that typed tasks aren't being captured right now.
+                if (data.degraded && !state.degradedNoted) {
+                    state.degradedNoted = true;
+                    appendBuddyMessage('Heads up: my thinking is offline for a moment, so I can\u2019t turn what you type into tasks right now. Keep going and I\u2019ll set up a simple starter plan, or tap Skip to go straight to your list.');
+                }
                 if (window.FLHaptics) FLHaptics.buddyMessage();
                 if (data.detectedMood) state.detectedMood = data.detectedMood;
 

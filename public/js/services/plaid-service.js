@@ -103,10 +103,21 @@
       method: 'POST',
       headers: authHeaders(),
     })
-    .then(function (r) { return r.json(); })
+    .then(function (r) { return r.json().then(function (d) { d._status = r.status; return d; }); })
     .then(function (data) {
       if (!data.success || !data.link_token) {
-        if (errEl) { errEl.textContent = data.message || 'Connection didn\u2019t start. Try again?'; errEl.style.display = 'block'; }
+        if (errEl) {
+          errEl.textContent = data.message || 'Connection didn\u2019t start. Try again?';
+          // 403 = bank sync isn't on this plan: give the next step, not a dead end.
+          if (data._status === 403) {
+            var up = document.createElement('a');
+            up.href = '/pricing';
+            up.textContent = 'See Autopilot \u2192';
+            up.style.cssText = 'display:inline-block;margin-left:.4rem;font-weight:600;color:inherit;text-decoration:underline;';
+            errEl.appendChild(up);
+          }
+          errEl.style.display = 'block';
+        }
         if (btn) { btn.disabled = false; if (originalText) btn.textContent = originalText; }
         return;
       }

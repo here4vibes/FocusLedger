@@ -282,6 +282,7 @@
 
     <script src="/js/public-nav.js"></script>
     <script src="/js/apple-signin.js"></script>
+    <script src="/js/in-app-browser.js"></script>
 
     <div class='auth-container'>
         <div class='auth-card'>
@@ -432,6 +433,8 @@
         // which completes inside the app.
         var isStandalonePWA = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches)
                            || window.navigator.standalone === true;
+        // Google also refuses sign-in inside in-app browsers (Facebook, Instagram…).
+        if (window.FLInApp) FLInApp.replaceGoogleButton(document.getElementById('googleBtn'), document.querySelector('.or-divider'), 'Log in');
         if (isStandalonePWA) {
             var gBtn = document.getElementById('googleBtn');
             if (gBtn && gBtn.parentNode) {

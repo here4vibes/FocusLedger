@@ -712,7 +712,11 @@
 
       typing.remove();
 
-      if (res.success && res.reply) {
+      if (res.success && res.degraded) {
+        // The model couldn't be reached: say so plainly rather than show the
+        // check-in's canned stand-in reply. A notice, so not saved to memory.
+        addMessageEl(content, 'buddy', 'My thinking is offline for a moment, so I can\u2019t answer that properly, and nothing was changed. Your lists still work; try me again in a few minutes.', 'just now', false);
+      } else if (res.success && res.reply) {
         addMessageEl(content, 'buddy', res.reply, 'just now', false);
         saveMessage('buddy', res.reply);
       } else if (isAiLimit(res)) {
