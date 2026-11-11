@@ -1211,9 +1211,9 @@
         }
         if(!data || !data.success){ pendingAct = false; buddy("I couldn't do that just now — mind trying again?"); return; }
         if(data.reply) buddy(fmt(data.reply), (data.reply||'').length < 140);
-        // Buddy's AI is unavailable (or over today's limit): the list still works.
-        if(data.degraded) raw('<a class="chiplink today" style="align-self:flex-start;text-decoration:none" href="/app/tasks">Open Tasks →</a>');
         (data.receipts||[]).forEach(receipt);
+        // Buddy's AI is unavailable: the list still works, so offer the way there.
+        if(data.degraded) raw('<a class="chiplink today" style="align-self:flex-start;text-decoration:none" href="/app/tasks">Open Tasks →</a>');
         if(data.confirmation) renderConfirm(data.confirmation);
         // Stay in the action flow only while Buddy is still asking for info.
         var acted = (data.receipts && data.receipts.length) || data.confirmation;
