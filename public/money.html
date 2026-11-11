@@ -1996,6 +1996,7 @@ function attachSwipeToCard(card, expenseId, amount) {
 </script>
 <script src="/js/services/plaid-service.js?v=3"></script>
 <script src="/js/reward.js"></script>
+<script src="/js/ai-limit.js"></script>
 <script src="/shared-nav.js"></script>
     <script src="/buddy-widget.js"></script>
 <script src="/js/date-parser.js"></script>
@@ -2177,7 +2178,9 @@ function attachSwipeToCard(card, expenseId, amount) {
       .then(function(r) { return r.json(); })
       .then(function(data) {
         if (!data.success) {
-          document.getElementById('captureErrorMsg').textContent = data.message || 'Couldn\'t read the image';
+          document.getElementById('captureErrorMsg').textContent = (data.code === 'AI_DAILY_LIMIT' && window.FLAiLimit)
+            ? FLAiLimit.text(data)
+            : (data.message || 'Couldn\'t read the image');
           showStep('error');
           return;
         }

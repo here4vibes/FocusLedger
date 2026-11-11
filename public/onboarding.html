@@ -252,6 +252,7 @@
 </div>
 
 <script src="/js/haptics.js"></script>
+<script src="/js/ai-limit.js"></script>
 <script src="/shared-nav.js"></script>
 <script>
 (function () {
@@ -359,6 +360,11 @@
             hideTyping();
             state.sending = false;
 
+            if (data.code === 'AI_DAILY_LIMIT') {
+                appendBuddyMessage(window.FLAiLimit ? FLAiLimit.text(data) : data.message);
+                enableInput();
+                return;
+            }
             if (!data.success) {
                 appendBuddyMessage("Sorry, something glitched. Try sending that again.");
                 enableInput();

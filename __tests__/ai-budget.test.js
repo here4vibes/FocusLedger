@@ -47,7 +47,10 @@ test('free user over the limit: AiQuotaError with a friendly message', async () 
     const err = await budget.reserve().catch(e => e);
     expect(budget.isQuotaError(err)).toBe(true);
     expect(err.status).toBe(429);
-    expect(err.userMessage).toMatch(/free AI help/);
+    // The pool here has no users row, so the app-wide default zone (New York) is used.
+    expect(err.userMessage).toMatch(/^You've used today's AI help\. It resets at [78] PM your time, and everything else still works\.$/);
+    expect(err.upsell).toBe('Autopilot raises the daily limit.');
+    expect(budget.quotaHit()).toBe(err);
   });
   warn.mockRestore();
 });
@@ -109,4 +112,66 @@ test('a route that handles AI failure itself (200 + canned reply) is left alone'
   });
   expect(sent).toEqual({ status: 200, body: { success: true, reply: 'Got it.' } });
   warn.mockRestore();
+});
+
+describe('when the limit resets, in the user\'s own clock', () => {
+  const winter = new Date('2026-01-15T15:00:00Z');
+  const summer = new Date('2026-07-15T15:00:00Z');
+
+  test('the budget day is the UTC day', () => {
+    expect(budget.nextResetAt(winter).toISOString()).toBe('2026-01-16T00:00:00.000Z');
+    expect(budget.nextResetAt(new Date('2026-12-31T23:59:59Z')).toISOString()).toBe('2027-01-01T00:00:00.000Z');
+  });
+
+  test('says the local time of midnight UTC, following daylight saving', () => {
+    expect(budget.resetPhrase('America/New_York', winter)).toBe('7 PM your time');
+    expect(budget.resetPhrase('America/New_York', summer)).toBe('8 PM your time');
+    expect(budget.resetPhrase('America/Los_Angeles', winter)).toBe('4 PM your time');
+    expect(budget.resetPhrase('Asia/Kolkata', winter)).toBe('5:30 AM your time');
+    expect(budget.resetPhrase('Europe/London', winter)).toBe('midnight your time');
+    expect(budget.resetPhrase('Pacific/Auckland', summer)).toBe('noon your time');
+  });
+
+  test('says "midnight UTC" when there is no usable timezone', () => {
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    expect(budget.resetPhrase(null)).toBe('midnight UTC');
+    expect(budget.resetPhrase('Not/AZone')).toBe('midnight UTC');
+    warn.mockRestore();
+  });
+
+  test('paid users get no upgrade line', () => {
+    const err = new budget.AiQuotaError('pro', 500, 'America/Chicago');
+    expect(err.upsell).toBeNull();
+    expect(budget.aiLimitBody(err)).toMatchObject({ success: false, code: 'AI_DAILY_LIMIT', tier: 'pro', limit: 500, upsell: null });
+  });
+});
+
+describe('public/js/ai-limit.js (what the pages show)', () => {
+  const load = (capacitor) => {
+    const win = capacitor ? { Capacitor: capacitor } : {};
+    const src = require('fs').readFileSync(require('path').join(__dirname, '..', 'public', 'js', 'ai-limit.js'), 'utf8');
+    new Function('window', src)(win); // eslint-disable-line no-new-func
+    return win.FLAiLimit;
+  };
+  const body = { code: 'AI_DAILY_LIMIT', message: 'You\'ve used today\'s AI help. It resets at 7 PM your time, and everything else still works.', upsell: 'Autopilot raises the daily limit.' };
+
+  test('recognises the code', () => {
+    const fl = load();
+    expect(fl.is(body)).toBe(true);
+    expect(fl.is({ success: false, message: 'nope' })).toBe(false);
+    expect(fl.is(null)).toBe(false);
+  });
+
+  test('on the web, Free users also see that Autopilot raises the limit', () => {
+    expect(load().text(body)).toBe(body.message + ' Autopilot raises the daily limit.');
+  });
+
+  test('inside the native iOS app the upgrade line is left out', () => {
+    const ios = { isNativePlatform: () => true, getPlatform: () => 'ios' };
+    expect(load(ios).text(body)).toBe(body.message);
+  });
+
+  test('paid users (no upsell) see just the message', () => {
+    expect(load().text({ ...body, upsell: null })).toBe(body.message);
+  });
 });

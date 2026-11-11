@@ -5,6 +5,7 @@
 const express = require('express');
 const { authenticateToken } = require('../middleware/auth');
 const { summarizeText, suggestTaskFromText, parseAIResponse } = require('../lib/ai-service');
+const { sendAiLimit, quotaHit } = require('../lib/ai-budget');
 
 module.exports = function(_pool) {
   const router = express.Router();
@@ -60,6 +61,9 @@ module.exports = function(_pool) {
 
     try {
       const tasks = await suggestTaskFromText(text, values || []);
+      // suggestTaskFromText logs AI failures and returns []; say so if the
+      // cause was today's AI limit.
+      if (!tasks.length && quotaHit()) return sendAiLimit(res, quotaHit());
       res.json({ success: true, tasks });
     } catch (err) {
       console.error('[ai] /suggest-tasks error:', err.message);
